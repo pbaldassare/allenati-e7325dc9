@@ -8,35 +8,61 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Fitness App Color Palette */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 5%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Energetic primary colors - Lime green */
+    --primary: 84 100% 45%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Electric blue */
+    --secondary: 195 100% 50%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted grays */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Vibrant yellow */
+    --accent: 60 100% 50%;
+    --accent-foreground: 0 0% 5%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 84 100% 45%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+
+    /* Custom fitness app colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 5%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(84 100% 45%), hsl(142 76% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(195 100% 50%), hsl(220 100% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(60 100% 50%), hsl(45 100% 50%));
+
+    /* Shadows */
+    --shadow-primary: 0 10px 30px -5px hsla(84, 100%, 45%, 0.3);
+    --shadow-secondary: 0 10px 30px -5px hsla(195, 100%, 50%, 0.3);
+    --shadow-card: 0 4px 20px -2px hsla(0, 0%, 0%, 0.1);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     --sidebar-background: 0 0% 98%;
 
