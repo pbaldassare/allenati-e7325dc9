@@ -1,6 +1,7 @@
-import { Home, TrendingUp, Calendar, CreditCard, User } from "lucide-react";
+import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -8,12 +9,14 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
+  const { isAdmin } = useAuth();
+  
   const tabs = [
     { id: "home", icon: Home, label: "Home" },
     { id: "leaderboard", icon: TrendingUp, label: "Classifica" },
     { id: "calendar", icon: Calendar, label: "Corsi" },
-    { id: "subscription", icon: CreditCard, label: "Abbonamenti" },
-    { id: "profile", icon: User, label: "Profilo" },
+    { id: "shop", icon: ShoppingBag, label: "Shop" },
+    ...(isAdmin ? [{ id: "admin", icon: Settings, label: "Admin" }] : [{ id: "profile", icon: User, label: "Profilo" }]),
   ];
 
   return (
