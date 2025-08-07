@@ -1,16 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, Trophy, Dumbbell } from "lucide-react";
+import { Calendar, Clock, Users, Trophy, Dumbbell, Settings } from "lucide-react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export const Dashboard = () => {
   const { courses, bookings, bookCourse, cancelBooking, getCourseById } = useAppData();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
 
   // Get user's bookings for today's courses
@@ -57,7 +59,20 @@ export const Dashboard = () => {
     <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
       <div className="pt-8 pb-6">
-        <h1 className="text-4xl font-bold gradient-text mb-2">Ciao, Marco! 👋</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold gradient-text">Ciao, {user?.name || 'Marco'}! 👋</h1>
+          {isAdmin && (
+            <Button 
+              onClick={() => navigate('/admin')}
+              variant="outline"
+              size="sm"
+              className="bg-gradient-primary/10 border-primary/30 hover:bg-gradient-primary/20 text-primary font-semibold"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Admin
+            </Button>
+          )}
+        </div>
         <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
       </div>
 
