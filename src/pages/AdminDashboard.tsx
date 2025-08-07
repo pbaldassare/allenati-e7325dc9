@@ -16,7 +16,6 @@ import {
   Download
 } from 'lucide-react';
 import { useAppData } from '@/contexts/AppDataContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const AdminDashboard = () => {
   const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
@@ -366,22 +365,20 @@ const AdminDashboard = () => {
   );
 
   return (
-    <ProtectedRoute requireAdmin>
-      <div className="min-h-screen bg-background p-4 pb-20">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Pannello Amministrativo
-              </h1>
-              <p className="text-muted-foreground">
-                Gestisci la tua palestra e monitora le performance
-              </p>
-            </div>
-            <Badge variant="default" className="bg-gradient-primary text-white">
-              Admin
-            </Badge>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Pannello Amministrativo
+          </h1>
+          <p className="text-muted-foreground">
+            Gestisci la tua palestra e monitora le performance
+          </p>
+        </div>
+        <Badge variant="default" className="bg-gradient-primary text-white">
+          Admin
+        </Badge>
+      </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
@@ -411,10 +408,8 @@ const AdminDashboard = () => {
             <TabsContent value="analytics">
               <AnalyticsTab />
             </TabsContent>
-          </Tabs>
-        </div>
-      </div>
-    </ProtectedRoute>
+        </Tabs>
+    </div>
   );
 };
 
