@@ -3,6 +3,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Dumbbell, 
   Zap, 
@@ -233,6 +236,62 @@ const fakeCourses: { [key: string]: Course[] } = {
 export const CourseCalendar = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [currentWeek, setCurrentWeek] = useState(0);
+  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
+  
+  const { courses, bookings, bookCourse, cancelBooking } = useAppData();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Get user's bookings
+  const userBookings = bookings.filter(b => b.userId === user?.id && b.status === 'confirmed');
+
+  const handleBooking = async (courseId: string, isBooked: boolean) => {
+    if (!user) return;
+    
+    setLoadingBooking(courseId);
+    try {
+      if (isBooked) {
+        const booking = userBookings.find(b => b.courseId === courseId);
+        if (booking) {
+          cancelBooking(booking.id);
+          toast({
+            title: "Prenotazione cancellata",
+            description: "Hai cancellato la prenotazione con successo",
+          });
+        }
+      } else {
+        const courseData = courses.find(c => c.id === courseId);
+        await bookCourse(courseId, new Date().toISOString().split('T')[0], courseData?.schedule[0]?.time || '19:00');
+        toast({
+          title: "Prenotazione confermata", 
+          description: "Corso prenotato con successo!",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'operazione",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
+    }
+  };
+
+  const isBooked = (courseId: string) => {
+    return userBookings.some(b => b.courseId === courseId);
+  };
+
+  // Group courses by day (using context data now)
+  const coursesByDay = courses.reduce((acc, course) => {
+    // Get day from schedule
+    const dayNumber = course.schedule[0]?.dayOfWeek ?? 1; // Default to Monday
+    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    const day = dayNames[dayNumber] || 'Lunedì';
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(course);
+    return acc;
+  }, {} as { [key: string]: any[] });
 
   const getStatusBadge = (status: Course['status']) => {
     switch (status) {
@@ -247,17 +306,40 @@ export const CourseCalendar = () => {
     }
   };
 
-  const getActionButton = (course: Course) => {
-    switch (course.status) {
-      case 'available':
-        return <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90">Prenota</Button>;
-      case 'booked':
-        return <Button size="sm" variant="outline">Disdici</Button>;
-      case 'full':
-        return <Button size="sm" variant="outline" disabled>Lista d'attesa</Button>;
-      case 'subscription-required':
-        return <Button size="sm" className="bg-warning text-warning-foreground hover:bg-warning/90">Attiva Abbonamento</Button>;
+  const getActionButton = (course: any) => {
+    const courseIsBooked = isBooked(course.id);
+    const isLoading = loadingBooking === course.id;
+    const isFull = course.currentParticipants >= course.maxParticipants;
+    
+    if (isLoading) {
+      return <Button size="sm" disabled>...</Button>;
     }
+    
+    if (courseIsBooked) {
+      return (
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => handleBooking(course.id, true)}
+        >
+          Disdici
+        </Button>
+      );
+    }
+    
+    if (isFull) {
+      return <Button size="sm" variant="outline" disabled>Completo</Button>;
+    }
+    
+    return (
+      <Button 
+        size="sm" 
+        className="bg-success text-success-foreground hover:bg-success/90"
+        onClick={() => handleBooking(course.id, false)}
+      >
+        Prenota
+      </Button>
+    );
   };
 
   return (
@@ -298,30 +380,30 @@ export const CourseCalendar = () => {
               {day}
             </h3>
             
-            {fakeCourses[day] && fakeCourses[day].length > 0 ? (
+            {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
-                {fakeCourses[day].map((course) => {
+                {coursesByDay[day].map((course) => {
                   const IconComponent = course.icon;
                   return (
                     <Card key={course.id} className="shadow-card hover:shadow-lg transition-all duration-300">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-4">
                           {/* Icon */}
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${course.gradient}`}>
-                            <IconComponent className="h-6 w-6 text-white" />
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-primary">
+                            <Dumbbell className="h-6 w-6 text-white" />
                           </div>
                           
                           {/* Course Info */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-semibold text-foreground">{course.name}</h4>
-                              <Badge variant="outline" className="text-xs">{course.level}</Badge>
+                              <Badge variant="outline" className="text-xs">{course.level || 'Generale'}</Badge>
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
-                                <span>{course.time}</span>
+                                <span>{course.schedule[0]?.time || "N/A"}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
@@ -336,7 +418,13 @@ export const CourseCalendar = () => {
                           
                           {/* Status and Action */}
                           <div className="flex flex-col items-end gap-2">
-                            {getStatusBadge(course.status)}
+                            {isBooked(course.id) ? (
+                              <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
+                            ) : course.currentParticipants >= course.maxParticipants ? (
+                              <Badge className="bg-destructive text-destructive-foreground">Completo</Badge>
+                            ) : (
+                              <Badge className="bg-success text-success-foreground">Disponibile</Badge>
+                            )}
                             {getActionButton(course)}
                           </div>
                         </div>

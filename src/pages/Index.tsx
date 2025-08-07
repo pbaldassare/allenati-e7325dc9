@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { Dashboard } from "@/components/Dashboard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -9,6 +10,22 @@ import { CourseCalendar } from "@/components/CourseCalendar";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const navigate = useNavigate();
+
+  const handleTabChange = (tab: string) => {
+    // Handle navigation for external routes
+    if (tab === "shop") {
+      navigate("/shop");
+      return;
+    }
+    if (tab === "admin") {
+      navigate("/admin");
+      return;
+    }
+    
+    // Handle internal tabs
+    setActiveTab(tab);
+  };
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -30,7 +47,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {renderActiveTab()}
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };

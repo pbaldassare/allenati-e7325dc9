@@ -2,8 +2,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, Trophy, Dumbbell } from "lucide-react";
+import { useAppData } from "@/contexts/AppDataContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export const Dashboard = () => {
+  const { courses, bookings, bookCourse, cancelBooking, getCourseById } = useAppData();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
+
+  // Get user's bookings for today's courses
+  const userBookings = bookings.filter(b => b.userId === user?.id && b.status === 'confirmed');
+  const upcomingCourses = courses.slice(0, 2); // Show next 2 courses
+
+  const handleBooking = async (courseId: string, isBooked: boolean) => {
+    if (!user) return;
+    
+    setLoadingBooking(courseId);
+    try {
+      if (isBooked) {
+        const booking = userBookings.find(b => b.courseId === courseId);
+        if (booking) {
+          cancelBooking(booking.id);
+          toast({
+            title: "Prenotazione cancellata",
+            description: "Hai cancellato la prenotazione con successo",
+          });
+        }
+      } else {
+        const courseData = getCourseById(courseId);
+        await bookCourse(courseId, new Date().toISOString().split('T')[0], courseData?.schedule[0]?.time || '19:00');
+        toast({
+          title: "Prenotazione confermata",
+          description: "Corso prenotato con successo!",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'operazione",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
+    }
+  };
+
+  const isBooked = (courseId: string) => {
+    return userBookings.some(b => b.courseId === courseId);
+  };
   return (
     <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
@@ -68,45 +117,44 @@ export const Dashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gradient-primary/10 rounded-2xl border border-primary/20 hover:scale-[1.02] transition-bounce">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-glow">
-                <Dumbbell className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-lg">BJJ Intermedio</p>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
-                  <Clock className="h-4 w-4" />
-                  <span>19:00 - 20:15</span>
-                  <Users className="h-4 w-4 ml-1" />
-                  <span>8/12</span>
+{upcomingCourses.map((course, index) => {
+            const courseIsBooked = isBooked(course.id);
+            const isLoading = loadingBooking === course.id;
+            
+            return (
+              <div key={course.id} className={`flex items-center justify-between p-4 rounded-2xl border hover:scale-[1.02] transition-bounce ${
+                index === 0 
+                  ? 'bg-gradient-primary/10 border-primary/20' 
+                  : 'bg-gradient-secondary/10 border-secondary/20'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-glow ${
+                    index === 0 ? 'bg-gradient-primary' : 'bg-gradient-secondary'
+                  }`}>
+                    <Dumbbell className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-lg">{course.name}</p>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
+                      <Clock className="h-4 w-4" />
+                      <span>{course.schedule[0]?.time || "N/A"}</span>
+                      <Users className="h-4 w-4 ml-1" />
+                      <span>{course.currentParticipants}/{course.maxParticipants}</span>
+                    </div>
+                  </div>
                 </div>
+                <Button 
+                  size="sm" 
+                  variant={courseIsBooked ? "success" : "outline"} 
+                  className="font-semibold" 
+                  onClick={() => handleBooking(course.id, courseIsBooked)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "..." : (courseIsBooked ? "Prenotato" : "Prenota")}
+                </Button>
               </div>
-            </div>
-            <Button size="sm" variant="success" className="font-semibold">
-              Prenotato
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-gradient-secondary/10 rounded-2xl border border-secondary/20 hover:scale-[1.02] transition-bounce">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-secondary rounded-2xl flex items-center justify-center shadow-glow">
-                <Dumbbell className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-lg">Yoga</p>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
-                  <Clock className="h-4 w-4" />
-                  <span>10:00 - 11:00</span>
-                  <Users className="h-4 w-4 ml-1" />
-                  <span>5/15</span>
-                </div>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" className="font-semibold hover:bg-secondary hover:text-secondary-foreground">
-              Prenota
-            </Button>
-          </div>
+            );
+          })}
         </CardContent>
       </Card>
     </div>
