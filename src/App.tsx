@@ -12,6 +12,15 @@ import Shop from "./pages/Shop";
 import BookingHistory from "./pages/BookingHistory";
 import NotFound from "./pages/NotFound";
 
+// Admin Course Management Pages
+import AdminCoursesList from "./pages/admin/AdminCoursesList";
+import AdminCourseNew from "./pages/admin/AdminCourseNew";
+import AdminCourseDetail from "./pages/admin/AdminCourseDetail";
+import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
+import AdminInstructors from "./pages/admin/AdminInstructors";
+import AdminRooms from "./pages/admin/AdminRooms";
+import AdminSchedule from "./pages/admin/AdminSchedule";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -31,6 +40,13 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/courses" element={<AdminCoursesList />} />
+                <Route path="/admin/courses/new" element={<AdminCourseNew />} />
+                <Route path="/admin/courses/:id" element={<AdminCourseDetail />} />
+                <Route path="/admin/courses/:id/edit" element={<AdminCourseEdit />} />
+                <Route path="/admin/instructors" element={<AdminInstructors />} />
+                <Route path="/admin/rooms" element={<AdminRooms />} />
+                <Route path="/admin/schedule" element={<AdminSchedule />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="*" element={<NotFound />} />

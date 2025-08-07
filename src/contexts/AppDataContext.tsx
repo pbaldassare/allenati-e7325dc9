@@ -12,10 +12,13 @@ export interface Course {
   duration: number;
   maxParticipants: number;
   currentParticipants: number;
+  benefits: string[];
+  requirements?: string[];
   schedule: {
     dayOfWeek: number; // 0-6 (Sunday-Saturday)
     time: string;
     date?: string; // For specific dates
+    day?: string;
   }[];
   price: number;
   image: string;
