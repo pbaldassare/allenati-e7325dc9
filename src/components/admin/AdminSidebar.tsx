@@ -71,7 +71,7 @@ const quickActions = [
 ];
 
 export function AdminSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const currentPath = location.pathname;
@@ -86,82 +86,76 @@ export function AdminSidebar() {
   const getNavCls = (path: string) => {
     const active = isActive(path);
     return active 
-      ? "bg-primary/10 text-primary font-medium border-r-2 border-primary" 
-      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+      ? "bg-gradient-primary text-white font-medium shadow-primary border border-primary/30" 
+      : "hover:bg-primary/10 text-foreground hover:text-primary border border-transparent hover:border-primary/20 transition-all duration-200";
   };
 
   return (
-    <Sidebar className={collapsed ? "w-16" : "w-64"}>
-      <SidebarContent>
-        {/* Header */}
-        <div className="p-4 border-b">
+    <div className="w-64 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-xl">
+      {/* Enhanced Header with better visibility */}
+      <div className="p-4 border-b border-border bg-gradient-primary/5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <LayoutDashboard className="h-4 w-4 text-white" />
+            <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-primary">
+              <LayoutDashboard className="h-5 w-5 text-white" />
             </div>
-            {!collapsed && (
-              <div>
-                <h2 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  FitCore
-                </h2>
-                <Badge variant="secondary" className="text-xs">
-                  Admin
-                </Badge>
-              </div>
-            )}
+            <div>
+              <h2 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+                FitCore Admin
+              </h2>
+              <Badge variant="default" className="text-xs bg-gradient-primary text-white border-0">
+                Pannello Admin
+              </Badge>
+            </div>
           </div>
-          <SidebarTrigger className="mt-2" />
+          <button 
+            onClick={toggleSidebar}
+            className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Enhanced Navigation with better contrast */}
+      <div className="p-4 space-y-6">
+        <div>
+          <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">
+            Navigazione Principale
+          </h3>
+          <div className="space-y-2">
+            {adminMenuItems.map((item) => (
+              <NavLink 
+                key={item.title}
+                to={item.url} 
+                end={item.url === '/admin'}
+                className={`flex items-center space-x-3 p-3 rounded-lg ${getNavCls(item.url)}`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.title}</span>
+              </NavLink>
+            ))}
+          </div>
         </div>
 
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {!collapsed && "Navigazione Principale"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.url === '/admin'}
-                      className={getNavCls(item.url)}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Quick Actions */}
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {!collapsed && "Azioni Rapide"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {quickActions.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+        <div className="border-t border-border pt-4">
+          <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">
+            Azioni Rapide
+          </h3>
+          <div className="space-y-2">
+            {quickActions.map((item) => (
+              <NavLink 
+                key={item.title}
+                to={item.url}
+                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 text-foreground hover:text-primary border border-transparent hover:border-primary/20 transition-all duration-200"
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.title}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
