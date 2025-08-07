@@ -24,6 +24,10 @@ const AdminDashboard = () => {
   const analytics = getAnalytics();
   const users = getAllUsers();
 
+  console.log('AdminDashboard - Analytics:', analytics);
+  console.log('AdminDashboard - Users:', users.length);
+  console.log('AdminDashboard - Courses:', courses.length);
+
   const StatsCard = ({ title, value, icon: Icon, trend }: any) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
