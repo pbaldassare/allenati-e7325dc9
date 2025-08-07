@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AdminDebugPanel } from "@/components/AdminDebugPanel";
 
 export const Dashboard = () => {
   const { courses, bookings, bookCourse, cancelBooking, getCourseById } = useAppData();
@@ -56,14 +57,19 @@ export const Dashboard = () => {
     return userBookings.some(b => b.courseId === courseId);
   };
   return (
-    <div className="pb-20 px-4 space-y-8">
+    <>
+      <AdminDebugPanel />
+      <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
       <div className="pt-8 pb-6">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-4xl font-bold gradient-text">Ciao, {user?.name || 'Marco'}! 👋</h1>
           {isAdmin && (
             <Button 
-              onClick={() => navigate('/admin')}
+              onClick={() => {
+                console.log('Admin button clicked, navigating to /admin');
+                navigate('/admin');
+              }}
               variant="outline"
               size="sm"
               className="bg-gradient-primary/10 border-primary/30 hover:bg-gradient-primary/20 text-primary font-semibold"
@@ -173,5 +179,6 @@ export const Dashboard = () => {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 };

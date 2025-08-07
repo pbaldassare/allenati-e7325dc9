@@ -18,6 +18,7 @@ import {
 import { useAppData } from '@/contexts/AppDataContext';
 
 const AdminDashboard = () => {
+  console.log('AdminDashboard rendering...'); // Debug log
   const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
   const [activeTab, setActiveTab] = useState('overview');
   const analytics = getAnalytics();
