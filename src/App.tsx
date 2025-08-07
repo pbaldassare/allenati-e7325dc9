@@ -8,11 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import Index from "./pages/Index";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminLayout from "./pages/admin/AdminLayout";
-import CoursesList from "./pages/admin/CoursesList";
-import CourseDetail from "./pages/admin/CourseDetail";
-import CourseCreate from "./pages/admin/CourseCreate";
-import CourseEdit from "./pages/admin/CourseEdit";
 import Shop from "./pages/Shop";
 import BookingHistory from "./pages/BookingHistory";
 import NotFound from "./pages/NotFound";
@@ -35,13 +30,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="courses" element={<CoursesList />} />
-                  <Route path="courses/new" element={<CourseCreate />} />
-                  <Route path="courses/:id" element={<CourseDetail />} />
-                  <Route path="courses/:id/edit" element={<CourseEdit />} />
-                </Route>
+                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="*" element={<NotFound />} />

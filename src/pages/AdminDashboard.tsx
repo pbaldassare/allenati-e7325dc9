@@ -16,17 +16,13 @@ import {
   Download
 } from 'lucide-react';
 import { useAppData } from '@/contexts/AppDataContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const AdminDashboard = () => {
-  console.log('AdminDashboard rendering...'); // Debug log
   const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
   const [activeTab, setActiveTab] = useState('overview');
   const analytics = getAnalytics();
   const users = getAllUsers();
-
-  console.log('AdminDashboard - Analytics:', analytics);
-  console.log('AdminDashboard - Users:', users.length);
-  console.log('AdminDashboard - Courses:', courses.length);
 
   const StatsCard = ({ title, value, icon: Icon, trend }: any) => (
     <Card>
@@ -370,99 +366,55 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-full">
-      {/* Enhanced Header with clear visibility indicators */}
-      <div className="bg-gradient-primary p-6 rounded-xl text-white shadow-primary">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              🎯 Dashboard Amministrativo
-            </h1>
-            <p className="text-white/90 text-lg">
-              Gestisci la tua palestra e monitora le performance
-            </p>
-            <div className="mt-3 flex items-center space-x-4 text-sm">
-              <span className="bg-white/20 px-3 py-1 rounded-full">
-                ✅ Admin Panel Attivo
-              </span>
-              <span className="bg-white/20 px-3 py-1 rounded-full">
-                📊 {analytics.totalUsers} Utenti
-              </span>
-              <span className="bg-white/20 px-3 py-1 rounded-full">
-                💰 €{analytics.revenue.toLocaleString()} Revenue
-              </span>
+    <ProtectedRoute requireAdmin>
+      <div className="min-h-screen bg-background p-4 pb-20">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Pannello Amministrativo
+              </h1>
+              <p className="text-muted-foreground">
+                Gestisci la tua palestra e monitora le performance
+              </p>
             </div>
-          </div>
-          <div className="text-right">
-            <Badge variant="secondary" className="bg-white text-primary text-lg px-4 py-2">
-              ADMIN MODE
+            <Badge variant="default" className="bg-gradient-primary text-white">
+              Admin
             </Badge>
-            <p className="text-white/80 text-sm mt-2">
-              {new Date().toLocaleDateString('it-IT')}
-            </p>
           </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="courses">Corsi</TabsTrigger>
+              <TabsTrigger value="users">Utenti</TabsTrigger>
+              <TabsTrigger value="messages">Messaggi</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <OverviewTab />
+            </TabsContent>
+            
+            <TabsContent value="courses">
+              <CoursesTab />
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <UsersTab />
+            </TabsContent>
+            
+            <TabsContent value="messages">
+              <MessagesTab />
+            </TabsContent>
+            
+            <TabsContent value="analytics">
+              <AnalyticsTab />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-
-      {/* Enhanced Tab Navigation with better visibility */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-card/50 backdrop-blur-sm border border-border p-1">
-          <TabsTrigger 
-            value="overview"
-            className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-medium"
-          >
-            📊 Overview
-          </TabsTrigger>
-          <TabsTrigger 
-            value="courses"
-            className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-medium"
-          >
-            🏋️ Corsi
-          </TabsTrigger>
-          <TabsTrigger 
-            value="users"
-            className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-medium"
-          >
-            👥 Utenti
-          </TabsTrigger>
-          <TabsTrigger 
-            value="messages"
-            className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-medium"
-          >
-            💬 Messaggi
-          </TabsTrigger>
-          <TabsTrigger 
-            value="analytics"
-            className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-medium"
-          >
-            📈 Analytics
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Content sections with enhanced visibility */}
-        <div className="bg-card/30 backdrop-blur-sm border border-border rounded-xl p-6 min-h-[600px]">
-          <TabsContent value="overview" className="mt-0">
-            <OverviewTab />
-          </TabsContent>
-          
-          <TabsContent value="courses" className="mt-0">
-            <CoursesTab />
-          </TabsContent>
-          
-          <TabsContent value="users" className="mt-0">
-            <UsersTab />
-          </TabsContent>
-          
-          <TabsContent value="messages" className="mt-0">
-            <MessagesTab />
-          </TabsContent>
-          
-          <TabsContent value="analytics" className="mt-0">
-            <AnalyticsTab />
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
+    </ProtectedRoute>
   );
 };
 
