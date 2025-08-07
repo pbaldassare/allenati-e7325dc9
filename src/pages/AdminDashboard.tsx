@@ -365,7 +365,7 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -380,35 +380,35 @@ const AdminDashboard = () => {
         </Badge>
       </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="courses">Corsi</TabsTrigger>
-              <TabsTrigger value="users">Utenti</TabsTrigger>
-              <TabsTrigger value="messages">Messaggi</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="courses">Corsi</TabsTrigger>
+          <TabsTrigger value="users">Utenti</TabsTrigger>
+          <TabsTrigger value="messages">Messaggi</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="overview">
-              <OverviewTab />
-            </TabsContent>
-            
-            <TabsContent value="courses">
-              <CoursesTab />
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <UsersTab />
-            </TabsContent>
-            
-            <TabsContent value="messages">
-              <MessagesTab />
-            </TabsContent>
-            
-            <TabsContent value="analytics">
-              <AnalyticsTab />
-            </TabsContent>
-        </Tabs>
+        <TabsContent value="overview">
+          <OverviewTab />
+        </TabsContent>
+        
+        <TabsContent value="courses">
+          <CoursesTab />
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <UsersTab />
+        </TabsContent>
+        
+        <TabsContent value="messages">
+          <MessagesTab />
+        </TabsContent>
+        
+        <TabsContent value="analytics">
+          <AnalyticsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

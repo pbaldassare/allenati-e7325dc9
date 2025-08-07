@@ -8,9 +8,9 @@ const AdminLayout = () => {
   return (
     <ProtectedRoute requireAdmin>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full">
+        <div className="min-h-screen flex w-full bg-background">
           <AdminSidebar />
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto bg-background">
             <Outlet />
           </main>
         </div>
