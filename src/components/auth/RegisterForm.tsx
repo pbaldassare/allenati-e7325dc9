@@ -61,26 +61,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     setIsLoading(true);
     
     try {
-      const success = await register({
+      const result = await register({
         email: formData.email,
         password: formData.password,
-        name: formData.name,
-        surname: formData.surname,
-        dateOfBirth: formData.dateOfBirth,
+        first_name: formData.name,
+        last_name: formData.surname,
         phone: formData.phone,
-        taxCode: formData.taxCode,
-        address: formData.address
+        city: formData.address
       });
       
-      if (success) {
+      if (!result.error) {
         toast({
           title: "Registrazione completata",
-          description: "Benvenuto in FitApp! Il tuo account trial è attivo."
+          description: "Controlla la tua email per confermare l'account."
         });
+        onSwitchToLogin(); // Switch to login after successful registration
       } else {
         toast({
           title: "Errore di registrazione",
-          description: "Email già registrata o dati non validi",
+          description: result.error,
           variant: "destructive"
         });
       }

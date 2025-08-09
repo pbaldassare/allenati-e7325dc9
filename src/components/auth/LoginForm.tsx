@@ -35,17 +35,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
     setIsLoading(true);
     
     try {
-      const success = await login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
       
-      if (success) {
+      if (!result.error) {
         toast({
           title: "Accesso effettuato",
-          description: "Benvenuto in FitApp!"
+          description: "Benvenuto!"
         });
       } else {
         toast({
           title: "Errore di accesso",
-          description: "Email o password non corretti",
+          description: result.error,
           variant: "destructive"
         });
       }

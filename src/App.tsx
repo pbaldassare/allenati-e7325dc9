@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import Index from "./pages/Index";
+import { Auth } from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import Shop from "./pages/Shop";
 import BookingHistory from "./pages/BookingHistory";
@@ -39,6 +40,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/courses" element={<AdminCoursesList />} />
                 <Route path="/admin/courses/new" element={<AdminCourseNew />} />

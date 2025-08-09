@@ -4,8 +4,28 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Settings, FileText, Calendar, TrendingUp, Award, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 export const Profile = () => {
+  const { user, logout } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logout effettuato",
+        description: "Arrivederci!"
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Errore durante il logout",
+        variant: "destructive"
+      });
+    }
+  };
+
   const recentClasses = [
     { name: "BJJ Morning", time: "10:00 - 11:00", date: "February 5", instructor: "Marco" },
     { name: "BJJ Intermediate", time: "19:00 - 20:15", date: "February 2", instructor: "Andrea" },
@@ -13,6 +33,9 @@ export const Profile = () => {
     { name: "BJJ Basic", time: "10:00 - 11:00", date: "January 31", instructor: "Luca" },
     { name: "Wrestling", time: "19:00 - 20:00", date: "January 30", instructor: "Marco" },
   ];
+
+  const userInitials = user?.first_name?.[0] + user?.last_name?.[0] || 'U';
+  const userName = `${user?.first_name || 'Utente'} ${user?.last_name || ''}`.trim();
 
   return (
     <div className="pb-20 px-4 space-y-6">
@@ -22,13 +45,18 @@ export const Profile = () => {
           <ThemeToggle />
         </div>
         <Avatar className="w-20 h-20 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20">
-          <AvatarFallback className="text-lg font-space font-bold">BR</AvatarFallback>
+          <AvatarFallback className="text-lg font-space font-bold">{userInitials}</AvatarFallback>
         </Avatar>
-        <h1 className="text-xl font-space font-bold">Brando Rossi</h1>
+        <h1 className="text-xl font-space font-bold">{userName}</h1>
         <Badge className="mt-2 bg-gradient-accent text-white font-medium">
           <Award className="w-3 h-3 mr-1" />
-          Brown Belt
+          {user?.role === 'admin' ? 'Admin' : 
+           user?.role === 'gym_owner' ? 'Proprietario' :
+           user?.role === 'instructor' ? 'Istruttore' : 'Utente'}
         </Badge>
+        {user?.gym_name && (
+          <p className="text-sm text-muted-foreground mt-1">{user.gym_name}</p>
+        )}
       </div>
 
       {/* Activity Stats */}
@@ -103,7 +131,11 @@ export const Profile = () => {
           Certificato Medico
         </Button>
         
-        <Button variant="outline" className="w-full justify-start text-sm h-10 text-destructive hover:text-destructive hover:scale-105 transition-all duration-300">
+        <Button 
+          onClick={handleLogout}
+          variant="outline" 
+          className="w-full justify-start text-sm h-10 text-destructive hover:text-destructive hover:scale-105 transition-all duration-300"
+        >
           <LogOut className="w-4 h-4 mr-3" />
           Esci
         </Button>
