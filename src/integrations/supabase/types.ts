@@ -1270,6 +1270,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_gym_id: {
+        Args: { _user_id: string }
+        Returns: string
+      }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _user_id: string
@@ -1279,6 +1287,10 @@ export type Database = {
       }
       is_backoffice_user: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: { _user_id: string; _permission_name: string }
         Returns: boolean
       }
     }
