@@ -266,6 +266,7 @@ export type Database = {
           color_hex: string | null
           created_at: string
           description: string | null
+          gym_id: string | null
           icon_name: string | null
           id: string
           is_active: boolean
@@ -275,6 +276,7 @@ export type Database = {
           color_hex?: string | null
           created_at?: string
           description?: string | null
+          gym_id?: string | null
           icon_name?: string | null
           id?: string
           is_active?: boolean
@@ -284,12 +286,21 @@ export type Database = {
           color_hex?: string | null
           created_at?: string
           description?: string | null
+          gym_id?: string | null
           icon_name?: string | null
           id?: string
           is_active?: boolean
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "course_categories_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_schedules: {
         Row: {
@@ -342,6 +353,7 @@ export type Database = {
           difficulty_level: number | null
           duration_minutes: number
           equipment_needed: string[] | null
+          gym_id: string | null
           id: string
           image_url: string | null
           instructor_id: string
@@ -361,6 +373,7 @@ export type Database = {
           difficulty_level?: number | null
           duration_minutes?: number
           equipment_needed?: string[] | null
+          gym_id?: string | null
           id?: string
           image_url?: string | null
           instructor_id: string
@@ -380,6 +393,7 @@ export type Database = {
           difficulty_level?: number | null
           duration_minutes?: number
           equipment_needed?: string[] | null
+          gym_id?: string | null
           id?: string
           image_url?: string | null
           instructor_id?: string
@@ -396,6 +410,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "course_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
             referencedColumns: ["id"]
           },
           {
@@ -482,12 +503,67 @@ export type Database = {
         }
         Relationships: []
       }
+      gyms: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          opening_hours: Json | null
+          owner_email: string | null
+          phone: string | null
+          postal_code: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          opening_hours?: Json | null
+          owner_email?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          opening_hours?: Json | null
+          owner_email?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       instructors: {
         Row: {
           bio: string | null
           certifications: string[] | null
           created_at: string
           experience_years: number | null
+          gym_id: string | null
           hourly_rate: number | null
           id: string
           is_active: boolean
@@ -500,6 +576,7 @@ export type Database = {
           certifications?: string[] | null
           created_at?: string
           experience_years?: number | null
+          gym_id?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
@@ -512,6 +589,7 @@ export type Database = {
           certifications?: string[] | null
           created_at?: string
           experience_years?: number | null
+          gym_id?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
@@ -519,7 +597,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "instructors_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mobile_notifications: {
         Row: {
@@ -1198,13 +1284,7 @@ export type Database = {
     }
     Enums: {
       access_level: "backoffice" | "mobile" | "both"
-      app_role:
-        | "super_admin"
-        | "admin"
-        | "instructor"
-        | "staff"
-        | "premium_user"
-        | "basic_user"
+      app_role: "admin" | "gym_owner" | "instructor" | "basic_user"
       booking_status:
         | "confirmed"
         | "waitlist"
@@ -1347,14 +1427,7 @@ export const Constants = {
   public: {
     Enums: {
       access_level: ["backoffice", "mobile", "both"],
-      app_role: [
-        "super_admin",
-        "admin",
-        "instructor",
-        "staff",
-        "premium_user",
-        "basic_user",
-      ],
+      app_role: ["admin", "gym_owner", "instructor", "basic_user"],
       booking_status: [
         "confirmed",
         "waitlist",
