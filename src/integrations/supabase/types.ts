@@ -607,6 +607,63 @@ export type Database = {
           },
         ]
       }
+      medical_certificates: {
+        Row: {
+          created_at: string
+          expiry_date: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          gym_id: string
+          id: string
+          issue_date: string | null
+          notes: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["medical_certificate_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expiry_date?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          gym_id: string
+          id?: string
+          issue_date?: string | null
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["medical_certificate_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expiry_date?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          gym_id?: string
+          id?: string
+          issue_date?: string | null
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["medical_certificate_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mobile_notifications: {
         Row: {
           created_at: string
@@ -1149,6 +1206,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_gym_memberships: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          gym_id: string
+          id: string
+          joined_at: string
+          membership_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          gym_id: string
+          id?: string
+          joined_at?: string
+          membership_type?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          gym_id?: string
+          id?: string
+          joined_at?: string
+          membership_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           auto_checkin: boolean | null
@@ -1303,6 +1396,11 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
+      medical_certificate_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "expired"
       notification_type:
         | "booking"
         | "payment"
@@ -1446,6 +1544,12 @@ export const Constants = {
         "cancelled",
         "completed",
         "no_show",
+      ],
+      medical_certificate_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "expired",
       ],
       notification_type: [
         "booking",
