@@ -60,18 +60,18 @@ const Settings = () => {
   const profileForm = useForm<ProfileData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      first_name: "",
-      last_name: "",
-      phone: "",
-      city: "",
-      address: "",
-      postal_code: "",
-      fiscal_code: "",
-      date_of_birth: "",
-      gender: "",
-      bio: "",
-      emergency_contact_name: "",
-      emergency_contact_phone: "",
+      first_name: profileData?.first_name || "",
+      last_name: profileData?.last_name || "",
+      phone: profileData?.phone || "",
+      city: profileData?.city || "",
+      address: profileData?.address || "",
+      postal_code: profileData?.postal_code || "",
+      fiscal_code: profileData?.fiscal_code || "",
+      date_of_birth: profileData?.date_of_birth || "",
+      gender: profileData?.gender || "",
+      bio: profileData?.bio || "",
+      emergency_contact_name: profileData?.emergency_contact_name || "",
+      emergency_contact_phone: profileData?.emergency_contact_phone || "",
     },
   });
 
@@ -96,6 +96,26 @@ const Settings = () => {
       fetchUserData();
     }
   }, [user]);
+
+  // Update form when profileData changes
+  useEffect(() => {
+    if (profileData) {
+      profileForm.reset({
+        first_name: profileData.first_name || "",
+        last_name: profileData.last_name || "",
+        phone: profileData.phone || "",
+        city: profileData.city || "",
+        address: profileData.address || "",
+        postal_code: profileData.postal_code || "",
+        fiscal_code: profileData.fiscal_code || "",
+        date_of_birth: profileData.date_of_birth || "",
+        gender: profileData.gender || "",
+        bio: profileData.bio || "",
+        emergency_contact_name: profileData.emergency_contact_name || "",
+        emergency_contact_phone: profileData.emergency_contact_phone || "",
+      });
+    }
+  }, [profileData, profileForm]);
 
   const fetchUserData = async () => {
     if (!user) return;
@@ -156,21 +176,7 @@ const Settings = () => {
       // Always use fresh data from database, set profile data state
       if (profile) {
         setProfileData(profile);
-        profileForm.reset({
-          first_name: profile.first_name || "",
-          last_name: profile.last_name || "",
-          phone: profile.phone || "",
-          city: profile.city || "",
-          address: profile.address || "",
-          postal_code: profile.postal_code || "",
-          fiscal_code: profile.fiscal_code || "",
-          date_of_birth: profile.date_of_birth || "",
-          gender: profile.gender || "",
-          bio: profile.bio || "",
-          emergency_contact_name: profile.emergency_contact_name || "",
-          emergency_contact_phone: profile.emergency_contact_phone || "",
-        });
-        console.log('Profile form reset with fresh data:', profile);
+        console.log('Profile form will be reset via useEffect with fresh data:', profile);
       }
 
       accountForm.reset({
