@@ -106,7 +106,7 @@ const Settings = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
 
@@ -115,28 +115,64 @@ const Settings = () => {
         .from('user_preferences')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (prefsError) throw prefsError;
 
-      setProfileData(profile);
-      setPreferences(prefs);
+      // Create profile if it doesn't exist
+      if (!profile) {
+        const { data: newProfile, error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+          })
+          .select()
+          .single();
 
-      // Update form with current data
-      profileForm.reset({
-        first_name: profile.first_name || "",
-        last_name: profile.last_name || "",
-        phone: profile.phone || "",
-        city: profile.city || "",
-        address: profile.address || "",
-        postal_code: profile.postal_code || "",
-        fiscal_code: profile.fiscal_code || "",
-        date_of_birth: profile.date_of_birth || "",
-        gender: profile.gender || "",
-        bio: profile.bio || "",
-        emergency_contact_name: profile.emergency_contact_name || "",
-        emergency_contact_phone: profile.emergency_contact_phone || "",
-      });
+        if (createProfileError) throw createProfileError;
+        setProfileData(newProfile);
+      } else {
+        setProfileData(profile);
+      }
+
+      // Create preferences if they don't exist
+      if (!prefs) {
+        const { data: newPrefs, error: createPrefsError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+          })
+          .select()
+          .single();
+
+        if (createPrefsError) throw createPrefsError;
+        setPreferences(newPrefs);
+      } else {
+        setPreferences(prefs);
+      }
+
+      // Update form with current data (use profileData state which is now set)
+      const currentProfile = profileData || profile;
+      const currentPrefs = preferences || prefs;
+      
+      if (currentProfile) {
+        profileForm.reset({
+          first_name: currentProfile.first_name || "",
+          last_name: currentProfile.last_name || "",
+          phone: currentProfile.phone || "",
+          city: currentProfile.city || "",
+          address: currentProfile.address || "",
+          postal_code: currentProfile.postal_code || "",
+          fiscal_code: currentProfile.fiscal_code || "",
+          date_of_birth: currentProfile.date_of_birth || "",
+          gender: currentProfile.gender || "",
+          bio: currentProfile.bio || "",
+          emergency_contact_name: currentProfile.emergency_contact_name || "",
+          emergency_contact_phone: currentProfile.emergency_contact_phone || "",
+        });
+      }
 
       accountForm.reset({
         email: user.email || "",
@@ -247,13 +283,13 @@ const Settings = () => {
       const fileName = `${user.id}/avatar.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('medical-certificates')
+        .from('avatars')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('medical-certificates')
+        .from('avatars')
         .getPublicUrl(fileName);
 
       const { error: updateError } = await supabase
@@ -516,34 +552,36 @@ const Settings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={profileForm.control}
-                name="emergency_contact_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome contatto</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={profileForm.control}
-                name="emergency_contact_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefono contatto</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <Form {...profileForm}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={profileForm.control}
+                  name="emergency_contact_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome contatto</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="emergency_contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefono contatto</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </Form>
           </CardContent>
         </Card>
 
