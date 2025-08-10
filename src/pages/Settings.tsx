@@ -153,9 +153,9 @@ const Settings = () => {
         setPreferences(prefs);
       }
 
-      // Update form with current data (use profileData state which is now set)
-      const currentProfile = profileData || profile;
-      const currentPrefs = preferences || prefs;
+      // Use the fetched data directly to update forms
+      const currentProfile = profile || profileData;
+      const currentPrefs = prefs || preferences;
       
       if (currentProfile) {
         profileForm.reset({
@@ -203,6 +203,9 @@ const Settings = () => {
         first_name: data.first_name,
         last_name: data.last_name,
       });
+
+      // Refresh data from database
+      await fetchUserData();
 
       toast({
         title: "Successo",
@@ -257,6 +260,7 @@ const Settings = () => {
       if (error) throw error;
 
       passwordForm.reset();
+      
       toast({
         title: "Successo",
         description: "Password aggiornata con successo",
@@ -299,7 +303,9 @@ const Settings = () => {
 
       if (updateError) throw updateError;
 
-      setProfileData({ ...profileData, profile_picture_url: publicUrl });
+      // Refresh data from database
+      await fetchUserData();
+
       toast({
         title: "Successo",
         description: "Avatar aggiornato con successo",
@@ -327,7 +333,9 @@ const Settings = () => {
 
       if (error) throw error;
 
-      setPreferences({ ...preferences, [key]: value });
+      // Refresh data from database
+      await fetchUserData();
+
       toast({
         title: "Successo",
         description: "Preferenza aggiornata",
