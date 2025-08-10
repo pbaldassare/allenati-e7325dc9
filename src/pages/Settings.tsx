@@ -234,6 +234,12 @@ const Settings = () => {
 
       if (error) throw error;
 
+      // Small delay to ensure database is updated, then refresh data
+      setTimeout(async () => {
+        await fetchUserData();
+        console.log('Email updated and data refreshed');
+      }, 100);
+
       toast({
         title: "Successo",
         description: "Email aggiornata con successo",
@@ -260,6 +266,12 @@ const Settings = () => {
       if (error) throw error;
 
       passwordForm.reset();
+
+      // Small delay to ensure database is updated, then refresh data
+      setTimeout(async () => {
+        await fetchUserData();
+        console.log('Password updated and data refreshed');
+      }, 100);
       
       toast({
         title: "Successo",
