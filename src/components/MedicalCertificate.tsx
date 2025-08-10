@@ -88,31 +88,45 @@ export const MedicalCertificate = () => {
     setUploading(true);
 
     try {
-      // Get user's gym ID from memberships or bookings
-      const { data: membership } = await supabase
+      console.log('Starting certificate upload for user:', user.id);
+      
+      // Get user's gym ID from memberships or bookings  
+      const { data: membership, error: membershipError } = await supabase
         .from('user_gym_memberships')
         .select('gym_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
+
+      if (membershipError) {
+        console.error('Error fetching membership:', membershipError);
+        throw membershipError;
+      }
 
       let gymId = membership?.gym_id;
+      console.log('Found gym ID from membership:', gymId);
 
       // If no membership, try to get gym from recent bookings
       if (!gymId) {
-        const { data: booking } = await supabase
+        const { data: booking, error: bookingError } = await supabase
           .from('bookings')
           .select('courses(gym_id)')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
+
+        if (bookingError) {
+          console.error('Error fetching booking:', bookingError);
+        }
 
         gymId = booking?.courses?.gym_id;
+        console.log('Found gym ID from booking:', gymId);
       }
 
       if (!gymId) {
-        toast.error('Non riesco a determinare la tua palestra di appartenenza');
+        console.error('No gym ID found for user:', user.id);
+        toast.error('Non riesco a determinare la tua palestra di appartenenza. Contatta il supporto.');
         return;
       }
 
@@ -120,12 +134,23 @@ export const MedicalCertificate = () => {
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
+      console.log('Uploading file to storage:', fileName);
       const { error: uploadError } = await supabase.storage
         .from('medical-certificates')
         .upload(fileName, selectedFile);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        if (uploadError.message.includes('policy')) {
+          toast.error('Errore di autorizzazione. Verifica di essere loggato correttamente.');
+        } else {
+          toast.error(`Errore caricamento file: ${uploadError.message}`);
+        }
+        throw uploadError;
+      }
 
+      console.log('File uploaded successfully, saving to database');
+      
       // Save certificate record to database
       const { error: dbError } = await supabase
         .from('medical_certificates')
@@ -140,16 +165,27 @@ export const MedicalCertificate = () => {
           expiry_date: expiryDate,
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        if (dbError.message.includes('policy')) {
+          toast.error('Errore di autorizzazione database. Contatta il supporto.');
+        } else {
+          toast.error(`Errore salvataggio: ${dbError.message}`);
+        }
+        throw dbError;
+      }
 
+      console.log('Certificate saved successfully');
       toast.success('Certificato caricato con successo!');
       setSelectedFile(null);
       setIssueDate('');
       setExpiryDate('');
       fetchCertificate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading certificate:', error);
-      toast.error('Errore durante il caricamento del certificato');
+      if (!error.message?.includes('policy')) {
+        toast.error('Errore durante il caricamento del certificato. Riprova o contatta il supporto.');
+      }
     } finally {
       setUploading(false);
     }
