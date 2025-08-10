@@ -25,6 +25,7 @@ import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminMedicalCertificates from "./pages/admin/AdminMedicalCertificates";
+import ChatPage from "./pages/ChatPage";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,11 @@ const App = () => (
                 </Route>
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
+                <Route path="/chat" element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <Settings />

@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings } from "lucide-react";
+import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
     { id: "home", icon: Home, label: "Home" },
     { id: "leaderboard", icon: TrendingUp, label: "Classifica" },
     { id: "calendar", icon: Calendar, label: "Corsi" },
+    { id: "chat", icon: MessageCircle, label: "Chat" },
     { id: "shop", icon: ShoppingBag, label: "Shop" },
     ...(isAdmin ? [{ id: "admin", icon: Settings, label: "Admin" }] : [{ id: "profile", icon: User, label: "Profilo" }]),
   ];

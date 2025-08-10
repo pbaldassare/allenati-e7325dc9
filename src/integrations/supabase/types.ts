@@ -261,6 +261,127 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          is_edited: boolean
+          message_type: string
+          metadata: Json | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          message_type?: string
+          metadata?: Json | null
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          message_type?: string
+          metadata?: Json | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_participants: {
+        Row: {
+          id: string
+          is_active: boolean
+          joined_at: string
+          last_read_at: string | null
+          role: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          gym_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          room_type: string
+          updated_at: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          gym_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          room_type: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          gym_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          room_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_categories: {
         Row: {
           color_hex: string | null
@@ -1363,6 +1484,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_course_chat: {
+        Args: { _course_id: string; _course_name: string; _created_by: string }
+        Returns: string
+      }
+      create_gym_general_chat: {
+        Args: { _gym_id: string; _created_by: string }
+        Returns: string
+      }
       get_user_gym_id: {
         Args: { _user_id: string }
         Returns: string
