@@ -190,13 +190,25 @@ const Settings = () => {
     if (!user) return;
 
     setLoading(true);
+    
+    console.log('🔍 DEBUGGING - Form data received in onProfileSubmit:', data);
+    console.log('🔍 Current form values from profileForm.getValues():', profileForm.getValues());
+    console.log('🔍 User ID:', user.id);
+    
     try {
+      console.log('📤 Sending data to Supabase profiles table:', data);
+      
       const { error } = await supabase
         .from('profiles')
         .update(data)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase update error:', error);
+        throw error;
+      }
+
+      console.log('✅ Profile updated successfully in database');
 
       await updateUser({
         first_name: data.first_name,
@@ -535,6 +547,28 @@ const Settings = () => {
 
                 <FormField
                   control={profileForm.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Genere</FormLabel>
+                      <FormControl>
+                        <select 
+                          {...field}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">Seleziona</option>
+                          <option value="M">Maschio</option>
+                          <option value="F">Femmina</option>
+                          <option value="O">Altro</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={profileForm.control}
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
@@ -547,8 +581,42 @@ const Settings = () => {
                   )}
                 />
 
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Contatto di emergenza</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={profileForm.control}
+                      name="emergency_contact_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome contatto</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={profileForm.control}
+                      name="emergency_contact_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefono contatto</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <Button type="submit" disabled={loading}>
-                  {loading ? 'Salvando...' : 'Salva profilo'}
+                  {loading ? 'Salvando...' : 'Salva tutto il profilo'}
                 </Button>
               </form>
             </Form>
@@ -563,40 +631,33 @@ const Settings = () => {
               Contatto di emergenza
             </CardTitle>
             <CardDescription>
-              Persona da contattare in caso di emergenza
+              Persona da contattare in caso di emergenza (incluso nel profilo principale)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...profileForm}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={profileForm.control}
-                  name="emergency_contact_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome contatto</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={profileForm.control}
-                  name="emergency_contact_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefono contatto</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Nome contatto
+                </label>
+                <div className="text-sm text-muted-foreground mt-1">
+                  {profileData?.emergency_contact_name || 'Non specificato'}
+                </div>
               </div>
-            </Form>
+              <div>
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Telefono contatto
+                </label>
+                <div className="text-sm text-muted-foreground mt-1">
+                  {profileData?.emergency_contact_phone || 'Non specificato'}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                💡 I dati del contatto di emergenza vengono modificati nel form del profilo principale sopra
+              </p>
+            </div>
           </CardContent>
         </Card>
 
