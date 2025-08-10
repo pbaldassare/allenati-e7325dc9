@@ -46,36 +46,65 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   // Fetch user profile and role data
-  const fetchUserData = async (userId: string): Promise<User | null> => {
+  const fetchUserData = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
       // Get profile data
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      // Get role data
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return null;
+      }
 
-      if (!profile || !userRole) return null;
+      // Get role data using the new utility function
+      const { data: roleData, error: roleError } = await supabase
+        .rpc('get_user_role', { _user_id: userId });
 
-      // For now, return basic user data - we'll add gym data later
+      const role = roleData || 'basic_user';
+
+      // Get gym data if user is instructor or gym_owner
+      let gymId: string | undefined;
+      let gymName: string | undefined;
+
+      if (role === 'instructor') {
+        const { data: instructorData } = await supabase
+          .from('instructors')
+          .select('gym_id, gyms(name)')
+          .eq('user_id', userId)
+          .single();
+
+        if (instructorData) {
+          gymId = instructorData.gym_id;
+          gymName = instructorData.gyms?.name;
+        }
+      } else if (role === 'gym_owner') {
+        const { data: gymData } = await supabase
+          .from('gyms')
+          .select('id, name')
+          .eq('owner_email', userEmail)
+          .single();
+
+        if (gymData) {
+          gymId = gymData.id;
+          gymName = gymData.name;
+        }
+      }
+
       return {
         id: userId,
-        email: session?.user?.email || '',
+        email: userEmail || '',
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
         phone: profile.phone,
         city: profile.city,
         profile_picture_url: profile.profile_picture_url,
-        role: userRole.role as 'admin' | 'gym_owner' | 'instructor' | 'basic_user',
-        gym_id: undefined,
-        gym_name: undefined,
+        role: role as 'admin' | 'gym_owner' | 'instructor' | 'basic_user',
+        gym_id: gymId,
+        gym_name: gymName,
       };
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -86,17 +115,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         
         if (session?.user) {
-          const userData = await fetchUserData(session.user.id);
-          setUser(userData);
+          // Use setTimeout to avoid blocking the auth state change
+          setTimeout(() => {
+            fetchUserData(session.user.id, session.user.email).then(userData => {
+              setUser(userData);
+              setLoading(false);
+            });
+          }, 0);
         } else {
           setUser(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -105,7 +138,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       
       if (session?.user) {
-        fetchUserData(session.user.id).then(userData => {
+        fetchUserData(session.user.id, session.user.email).then(userData => {
           setUser(userData);
           setLoading(false);
         });
@@ -119,23 +152,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        setLoading(false);
+        // Friendly Italian error messages
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'Email o password non corretti' };
+        }
+        if (error.message.includes('Email not confirmed')) {
+          return { error: 'Conferma la tua email prima di accedere' };
+        }
         return { error: error.message };
       }
 
       return {};
     } catch (error) {
+      setLoading(false);
       return { error: 'Errore di connessione. Riprova più tardi.' };
     }
   };
 
   const register = async (userData: RegisterData): Promise<{ error?: string }> => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -151,11 +195,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) {
+        setLoading(false);
+        // Friendly Italian error messages
+        if (error.message.includes('already registered')) {
+          return { error: 'Questa email è già registrata' };
+        }
+        if (error.message.includes('Password should be')) {
+          return { error: 'La password deve essere di almeno 6 caratteri' };
+        }
         return { error: error.message };
       }
 
+      setLoading(false);
       return {};
     } catch (error) {
+      setLoading(false);
       return { error: 'Errore di connessione. Riprova più tardi.' };
     }
   };

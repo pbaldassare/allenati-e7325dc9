@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { Dashboard } from "@/components/Dashboard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -45,10 +46,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {renderActiveTab()}
-      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-    </div>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
+        {renderActiveTab()}
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
+    </ProtectedRoute>
   );
 };
 

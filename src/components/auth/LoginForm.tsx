@@ -156,9 +156,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
 
         <div className="mt-6 pt-4 border-t border-border">
           <div className="text-xs text-muted-foreground space-y-1">
-            <p><strong>Account demo:</strong></p>
-            <p>Admin: admin@fitapp.com / admin123</p>
-            <p>User: user@fitapp.com / user123</p>
+            <p><strong>Primo accesso?</strong></p>
+            <p>Crea un account per iniziare ad utilizzare l'app</p>
           </div>
         </div>
       </CardContent>
