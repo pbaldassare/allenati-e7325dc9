@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { MedicalCertificate } from "./MedicalCertificate";
 
 export const Profile = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   const handleLogout = async () => {
     try {
@@ -125,7 +127,11 @@ export const Profile = () => {
 
       {/* Profile Actions */}
       <div className="space-y-2">
-        <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
+          onClick={() => navigate('/settings')}
+        >
           <Settings className="w-4 h-4 mr-3" />
           Impostazioni
         </Button>

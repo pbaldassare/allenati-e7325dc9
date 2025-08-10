@@ -12,7 +12,9 @@ import { Auth } from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import Shop from "./pages/Shop";
 import BookingHistory from "./pages/BookingHistory";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Admin Course Management Pages
 import AdminCoursesList from "./pages/admin/AdminCoursesList";
@@ -56,6 +58,11 @@ const App = () => (
                 </Route>
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
