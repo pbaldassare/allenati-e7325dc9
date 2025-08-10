@@ -153,25 +153,24 @@ const Settings = () => {
         setPreferences(prefs);
       }
 
-      // Use the fetched data directly to update forms
-      const currentProfile = profile || profileData;
-      const currentPrefs = prefs || preferences;
-      
-      if (currentProfile) {
+      // Always use fresh data from database, set profile data state
+      if (profile) {
+        setProfileData(profile);
         profileForm.reset({
-          first_name: currentProfile.first_name || "",
-          last_name: currentProfile.last_name || "",
-          phone: currentProfile.phone || "",
-          city: currentProfile.city || "",
-          address: currentProfile.address || "",
-          postal_code: currentProfile.postal_code || "",
-          fiscal_code: currentProfile.fiscal_code || "",
-          date_of_birth: currentProfile.date_of_birth || "",
-          gender: currentProfile.gender || "",
-          bio: currentProfile.bio || "",
-          emergency_contact_name: currentProfile.emergency_contact_name || "",
-          emergency_contact_phone: currentProfile.emergency_contact_phone || "",
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          phone: profile.phone || "",
+          city: profile.city || "",
+          address: profile.address || "",
+          postal_code: profile.postal_code || "",
+          fiscal_code: profile.fiscal_code || "",
+          date_of_birth: profile.date_of_birth || "",
+          gender: profile.gender || "",
+          bio: profile.bio || "",
+          emergency_contact_name: profile.emergency_contact_name || "",
+          emergency_contact_phone: profile.emergency_contact_phone || "",
         });
+        console.log('Profile form reset with fresh data:', profile);
       }
 
       accountForm.reset({
@@ -234,11 +233,9 @@ const Settings = () => {
 
       if (error) throw error;
 
-      // Small delay to ensure database is updated, then refresh data
-      setTimeout(async () => {
-        await fetchUserData();
-        console.log('Email updated and data refreshed');
-      }, 100);
+      // Refresh data immediately after successful update
+      await fetchUserData();
+      console.log('Email updated and data refreshed');
 
       toast({
         title: "Successo",
@@ -267,11 +264,9 @@ const Settings = () => {
 
       passwordForm.reset();
 
-      // Small delay to ensure database is updated, then refresh data
-      setTimeout(async () => {
-        await fetchUserData();
-        console.log('Password updated and data refreshed');
-      }, 100);
+      // Refresh data immediately after successful update
+      await fetchUserData();
+      console.log('Password updated and data refreshed');
       
       toast({
         title: "Successo",
