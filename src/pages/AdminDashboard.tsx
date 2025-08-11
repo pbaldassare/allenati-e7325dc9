@@ -13,15 +13,24 @@ import {
   Trash2,
   MessageSquare,
   BarChart3,
-  Download
+  Download,
+  Activity,
+  Target
 } from 'lucide-react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAnalytics, AnalyticsFilters } from '@/hooks/useAnalytics';
+import { KPICards } from '@/components/admin/KPICards';
+import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
+import { AnalyticsFilters as AnalyticsFiltersComponent } from '@/components/admin/AnalyticsFilters';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminDashboard = () => {
-  const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
+  const { getAllUsers, courses, bookings } = useAppData();
   const [activeTab, setActiveTab] = useState('overview');
-  const analytics = getAnalytics();
+  const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>({ period: 'month' });
+  const { analytics, loading: analyticsLoading, error: analyticsError, refetch } = useAnalytics(analyticsFilters);
+  const { toast } = useToast();
   const users = getAllUsers();
 
   const StatsCard = ({ title, value, icon: Icon, trend }: any) => (
@@ -41,87 +50,137 @@ const AdminDashboard = () => {
     </Card>
   );
 
+  const handleExportAnalytics = () => {
+    if (!analytics) return;
+    
+    const csvData = [
+      ['Metrica', 'Valore'],
+      ['Utenti Totali', analytics.totalUsers],
+      ['Abbonamenti Attivi', analytics.activeSubscriptions],
+      ['Prenotazioni Oggi', analytics.todayBookings],
+      ['Ricavi Mensili', `€${analytics.monthlyRevenue}`],
+      ['Tasso Occupazione', `${analytics.occupancyRate.toFixed(1)}%`],
+      ['Retention Rate', `${analytics.retentionRate}%`],
+      ['Rating Medio', analytics.averageRating]
+    ];
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Report esportato",
+      description: "Il report analytics è stato scaricato con successo.",
+    });
+  };
+
   const OverviewTab = () => (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Utenti Totali"
-          value={analytics.totalUsers}
-          icon={Users}
-          trend={12}
-        />
-        <StatsCard
-          title="Abbonamenti Attivi"
-          value={analytics.activeSubscriptions}
-          icon={TrendingUp}
-          trend={8}
-        />
-        <StatsCard
-          title="Prenotazioni Oggi"
-          value={analytics.totalBookings}
-          icon={Calendar}
-          trend={15}
-        />
-        <StatsCard
-          title="Ricavi Mensili"
-          value={`€${analytics.revenue.toLocaleString()}`}
-          icon={DollarSign}
-          trend={22}
-        />
-      </div>
+      {/* Analytics Filters */}
+      <AnalyticsFiltersComponent 
+        filters={analyticsFilters}
+        onFiltersChange={setAnalyticsFilters}
+        onRefresh={refetch}
+        onExport={handleExportAnalytics}
+        loading={analyticsLoading}
+      />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Corsi Più Popolari</CardTitle>
-            <CardDescription>Maggiori prenotazioni questo mese</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analytics.popularCourses.map((course: any, index: number) => (
-                <div key={course.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm font-medium">#{index + 1}</div>
-                    <div>
-                      <p className="text-sm font-medium">{course.name}</p>
-                      <p className="text-xs text-muted-foreground">{course.instructor}</p>
+      {/* KPI Cards */}
+      {analytics && (
+        <KPICards data={analytics} loading={analyticsLoading} />
+      )}
+
+      {/* Charts */}
+      {analytics && (
+        <AnalyticsCharts data={analytics} />
+      )}
+
+      {/* Error State */}
+      {analyticsError && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <Activity className="h-4 w-4" />
+              <span>Errore nel caricamento dei dati: {analyticsError}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Popular Courses and Recent Activity */}
+      {analytics && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Corsi Più Popolari</CardTitle>
+              <CardDescription>Maggiori prenotazioni questo periodo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.popularCourses.map((course, index) => (
+                  <div key={course.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gradient-primary text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        #{index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{course.name}</p>
+                        <p className="text-xs text-muted-foreground">{course.instructor}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="secondary">
+                        {course.currentParticipants}/{course.maxParticipants}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {course.bookingCount} prenotazioni
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">
-                    {course.currentParticipants}/{course.maxParticipants}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Attività Recente</CardTitle>
-            <CardDescription>Ultime prenotazioni e cancellazioni</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analytics.recentActivity.map((booking: any) => (
-                <div key={booking.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Prenotazione corso</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(booking.createdAt).toLocaleDateString()}
-                    </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Attività Recente</CardTitle>
+              <CardDescription>Ultime azioni degli utenti</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full" />
+                      <div>
+                        <p className="text-sm font-medium">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(activity.createdAt).toLocaleDateString()} alle{' '}
+                          {new Date(activity.createdAt).toLocaleTimeString('it-IT', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={activity.status === 'confirmed' ? 'default' : 'secondary'}
+                    >
+                      {activity.status}
+                    </Badge>
                   </div>
-                  <Badge 
-                    variant={booking.status === 'confirmed' ? 'default' : 'secondary'}
-                  >
-                    {booking.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 
@@ -295,64 +354,139 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Analytics & Reports</h3>
+          <h3 className="text-lg font-medium">Analytics Avanzate</h3>
           <p className="text-sm text-muted-foreground">
-            Analisi dettagliate e report
+            Analisi dettagliate in tempo reale e report personalizzati
           </p>
         </div>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Esporta Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={refetch} disabled={analyticsLoading}>
+            <Activity className="mr-2 h-4 w-4" />
+            Aggiorna Dati
+          </Button>
+          <Button variant="outline" onClick={handleExportAnalytics}>
+            <Download className="mr-2 h-4 w-4" />
+            Esporta Report
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Tasso di Occupazione</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">87%</div>
-            <p className="text-xs text-muted-foreground">Media settimanale</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Retention Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">92%</div>
-            <p className="text-xs text-muted-foreground">Ultimi 3 mesi</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Soddisfazione</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">4.8/5</div>
-            <p className="text-xs text-muted-foreground">Rating medio</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Analytics Filters */}
+      <AnalyticsFiltersComponent 
+        filters={analyticsFilters}
+        onFiltersChange={setAnalyticsFilters}
+        onRefresh={refetch}
+        onExport={handleExportAnalytics}
+        loading={analyticsLoading}
+      />
 
+      {/* Advanced KPIs */}
+      {analytics && (
+        <>
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Tasso Occupazione
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-success">
+                  {analytics.occupancyRate.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground">Media periodo</p>
+                <div className="mt-2">
+                  <div className="h-2 bg-muted rounded-full">
+                    <div 
+                      className="h-2 bg-gradient-primary rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(analytics.occupancyRate, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Retention Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">
+                  {analytics.retentionRate}%
+                </div>
+                <p className="text-xs text-muted-foreground">Ultimi 3 mesi</p>
+                <Badge variant="default" className="mt-2">
+                  Eccellente
+                </Badge>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Crescita Utenti
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-success">+12%</div>
+                <p className="text-xs text-muted-foreground">vs mese precedente</p>
+                <p className="text-xs text-primary">+{Math.floor(analytics.totalUsers * 0.12)} nuovi utenti</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Revenue/Utente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">
+                  €{Math.floor(analytics.monthlyRevenue / Math.max(analytics.totalUsers, 1))}
+                </div>
+                <p className="text-xs text-muted-foreground">ARPU mensile</p>
+                <Badge variant="secondary" className="mt-2">
+                  +5% MoM
+                </Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Interactive Charts */}
+          <AnalyticsCharts data={analytics} />
+        </>
+      )}
+
+      {/* Report Templates */}
       <Card>
         <CardHeader>
-          <CardTitle>Report Disponibili</CardTitle>
+          <CardTitle>Report Personalizzati</CardTitle>
+          <CardDescription>
+            Genera report dettagliati per diverse esigenze di business
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {[
-              'Report Presenze Mensili',
-              'Analisi Ricavi per Corso',
-              'Performance Istruttori',
-              'Trend Abbonamenti',
-              'Utilizzo Fasce Orarie'
+              { name: 'Report Presenze Mensili', icon: Calendar, color: 'bg-blue-100 text-blue-800' },
+              { name: 'Analisi Ricavi per Corso', icon: DollarSign, color: 'bg-green-100 text-green-800' },
+              { name: 'Performance Istruttori', icon: Users, color: 'bg-purple-100 text-purple-800' },
+              { name: 'Trend Abbonamenti', icon: TrendingUp, color: 'bg-orange-100 text-orange-800' },
+              { name: 'Utilizzo Fasce Orarie', icon: Activity, color: 'bg-pink-100 text-pink-800' },
+              { name: 'Customer Satisfaction', icon: Target, color: 'bg-indigo-100 text-indigo-800' }
             ].map((report, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-3">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{report}</span>
+                  <div className={`p-2 rounded-lg ${report.color}`}>
+                    <report.icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">{report.name}</span>
                 </div>
                 <Button variant="ghost" size="sm">
                   <Download className="h-4 w-4" />
@@ -362,6 +496,18 @@ const AdminDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Error State */}
+      {analyticsError && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <Activity className="h-4 w-4" />
+              <span>Errore nel caricamento dei dati analytics: {analyticsError}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
