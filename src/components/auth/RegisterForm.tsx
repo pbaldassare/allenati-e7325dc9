@@ -54,7 +54,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
         .order('name');
 
       if (error) throw error;
-      setGyms(data || []);
+      const gymsList = data || [];
+      setGyms(gymsList);
+      
+      // Auto-preselect if only one gym is available
+      if (gymsList.length === 1) {
+        setFormData(prev => ({ ...prev, gymId: gymsList[0].id }));
+      }
     } catch (error) {
       console.error('Error loading gyms:', error);
       toast({
