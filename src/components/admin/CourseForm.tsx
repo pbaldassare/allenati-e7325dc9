@@ -113,10 +113,28 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
         });
       } else {
         // Update existing course
-        console.log('Updating course:', data);
+        const { error } = await supabase
+          .from('courses')
+          .update({
+            name: data.name,
+            description: data.description,
+            instructor_id: data.instructor_id,
+            max_participants: data.maxParticipants,
+            duration_minutes: data.duration,
+            price_per_session: data.price,
+            image_url: data.image,
+            benefits: data.benefits.filter(b => b.trim() !== ''),
+            requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+            category_id: data.category_id,
+            difficulty_level: data.level === 'Principiante' ? 1 : data.level === 'Intermedio' ? 2 : data.level === 'Avanzato' ? 3 : 1
+          })
+          .eq('id', course!.id);
+
+        if (error) throw error;
+        
         toast({
           title: 'Corso aggiornato',
-          description: 'Le modifiche sono state salvate',
+          description: 'Le modifiche sono state salvate con successo',
         });
       }
 
@@ -440,7 +458,10 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
           <CardContent>
             <CourseScheduleManager 
               schedule={course?.schedule || []}
-              onChange={(schedule) => console.log('Schedule changed:', schedule)}
+              onChange={(schedule) => {
+                console.log('Schedule changed:', schedule);
+                // TODO: Save schedule to database
+              }}
             />
           </CardContent>
         </Card>
