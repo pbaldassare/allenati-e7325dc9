@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export const AdminLayout = () => {
   return (
-    <ProtectedRoute requireAdmin>
+    <ProtectedRoute requireBackoffice>
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background">
           <AdminSidebar />
