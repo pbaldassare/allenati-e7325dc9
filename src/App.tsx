@@ -15,6 +15,7 @@ import BookingHistory from "./pages/BookingHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { isAdminSubdomain } from "./utils/subdomain";
 
 // Admin Course Management Pages
 import AdminCoursesList from "./pages/admin/AdminCoursesList";
@@ -29,54 +30,69 @@ import ChatPage from "./pages/ChatPage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <AuthProvider>
-        <AppDataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="courses" element={<AdminCoursesList />} />
-                  <Route path="courses/new" element={<AdminCourseNew />} />
-                  <Route path="courses/:id" element={<AdminCourseDetail />} />
-                  <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
-                  <Route path="instructors" element={<AdminInstructors />} />
-                  <Route path="rooms" element={<AdminRooms />} />
-                  <Route path="schedule" element={<AdminSchedule />} />
-                  <Route path="medical-certificates" element={<AdminMedicalCertificates />} />
-                </Route>
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/bookings" element={<BookingHistory />} />
-                <Route path="/chat" element={
-                  <ProtectedRoute>
-                    <ChatPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AppDataProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const isAdmin = isAdminSubdomain();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <AuthProvider>
+          <AppDataProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  {isAdmin ? (
+                    // Admin subdomain routes
+                    <>
+                      <Route path="/" element={<AdminLayout />}>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="courses" element={<AdminCoursesList />} />
+                        <Route path="courses/new" element={<AdminCourseNew />} />
+                        <Route path="courses/:id" element={<AdminCourseDetail />} />
+                        <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
+                        <Route path="instructors" element={<AdminInstructors />} />
+                        <Route path="rooms" element={<AdminRooms />} />
+                        <Route path="schedule" element={<AdminSchedule />} />
+                        <Route path="medical-certificates" element={<AdminMedicalCertificates />} />
+                      </Route>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  ) : (
+                    // Main app routes
+                    <>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/shop" element={<Shop />} />
+                      <Route path="/bookings" element={<BookingHistory />} />
+                      <Route path="/chat" element={
+                        <ProtectedRoute>
+                          <ChatPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/settings" element={
+                        <ProtectedRoute>
+                          <Settings />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  )}
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AppDataProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

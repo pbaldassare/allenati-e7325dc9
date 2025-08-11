@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Users, Building2, ArrowRight, Palette } from 'lucide-react';
+import { getAdminUrl } from '@/utils/subdomain';
 
 // User App Components
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -19,7 +20,8 @@ export const RoleBasedApp = () => {
   const { user, isGymOwner, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("home");
-  const [showModeSelector, setShowModeSelector] = useState(isGymOwner || isAdmin);
+  // Don't show mode selector on main app - admin access only via subdomain
+  const [showModeSelector, setShowModeSelector] = useState(false);
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
@@ -28,7 +30,7 @@ export const RoleBasedApp = () => {
       return;
     }
     if (tab === "admin") {
-      navigate("/admin");
+      window.location.href = getAdminUrl('/');
       return;
     }
     if (tab === "chat") {
@@ -141,7 +143,7 @@ export const RoleBasedApp = () => {
                 <Button 
                   variant="secondary" 
                   className="w-full"
-                  onClick={() => navigate('/admin')}
+                  onClick={() => window.location.href = getAdminUrl('/')}
                 >
                   Vai al Backoffice
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -167,11 +169,6 @@ export const RoleBasedApp = () => {
     );
   };
 
-  // For basic users and instructors, go straight to user app
-  if (!isGymOwner && !isAdmin) {
-    return renderUserApp();
-  }
-
-  // For gym owners and admins, show mode selector or user app based on choice
-  return showModeSelector ? renderModeSelector() : renderUserApp();
+  // Always show user app on main domain
+  return renderUserApp();
 };
