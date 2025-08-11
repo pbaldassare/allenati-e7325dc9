@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  X
+  X,
+  Swords
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -31,11 +32,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Map database icon names to Lucide React components
+const iconMap = {
+  'shield': Shield,
+  'target': Target,
+  'swords': Swords,
+  'trophy': Trophy,
+  'flame': Flame,
+  'heart': Heart,
+  'activity': Activity,
+  'dumbbell': Dumbbell,
+  'zap': Zap
+};
+
+// Get icon component from database icon name
+const getIconComponent = (iconName: string | null) => {
+  if (!iconName) return Dumbbell;
+  return iconMap[iconName as keyof typeof iconMap] || Dumbbell;
+};
+
+// Keep category-based mapping for backward compatibility
 const courseIcons = {
+  'Brazilian Jiu-Jitsu': Shield,
   'BJJ': Shield,
-  'MMA': Zap,
+  'MMA': Swords,
   'Boxing': Target,
   'Wrestling': Trophy,
+  'Kickboxing': Flame,
   'Muay Thai': Flame,
   'Yoga': Heart,
   'Functional': Activity,
@@ -45,7 +68,7 @@ const courseIcons = {
 const weekDays = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
 
 // Filter options
-const categoryFilters = ['Tutti', 'BJJ', 'MMA', 'Boxing', 'Wrestling', 'Muay Thai', 'Yoga', 'Functional', 'Grappling'];
+const categoryFilters = ['Tutti', 'Brazilian Jiu-Jitsu', 'MMA', 'Boxing', 'Wrestling', 'Kickboxing', 'Muay Thai', 'Yoga', 'Functional', 'Grappling'];
 const levelFilters = ['Tutti', 'Beginner', 'Intermediate', 'Advanced'];
 const availabilityFilters = ['Tutti', 'Disponibili', 'Pieni', 'Prenotati'];
 
@@ -346,8 +369,8 @@ export const CourseCalendar = () => {
             
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
-                {coursesByDay[day].map((course) => {
-                  const IconComponent = courseIcons[course.category_name as keyof typeof courseIcons] || Dumbbell;
+                 {coursesByDay[day].map((course) => {
+                   const IconComponent = getIconComponent(course.category_icon) || courseIcons[course.category_name as keyof typeof courseIcons] || Dumbbell;
                   const levelText = course.difficulty_level === 1 ? 'Beginner' : 
                                     course.difficulty_level === 2 ? 'Intermediate' : 'Advanced';
                   return (

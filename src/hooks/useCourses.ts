@@ -8,6 +8,7 @@ export interface Course {
   description: string | null;
   category_id: string;
   category_name?: string;
+  category_icon?: string;
   instructor_id: string;
   instructor_name?: string;
   max_participants: number;
@@ -46,7 +47,8 @@ export const useCourses = () => {
             profiles(first_name, last_name)
           ),
           course_categories(
-            name
+            name,
+            icon_name
           ),
           course_schedules(
             id,
@@ -78,6 +80,7 @@ export const useCourses = () => {
             description: course.description,
             category_id: course.category_id,
             category_name: course.course_categories?.name,
+            category_icon: course.course_categories?.icon_name,
             instructor_id: course.instructor_id,
             instructor_name: (course.instructors as any)?.profiles 
               ? `${(course.instructors as any).profiles.first_name || ''} ${(course.instructors as any).profiles.last_name || ''}`.trim()
