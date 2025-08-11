@@ -4,23 +4,17 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogIn, UserPlus, Loader2 } from 'lucide-react';
-import { useSubdomainAccess, AppRole } from '@/hooks/useSubdomainAccess';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
-  requireBackoffice?: boolean;
-  allowedRoles?: AppRole[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false,
-  requireBackoffice = false,
-  allowedRoles
+  requireAdmin = false 
 }) => {
-  const { isAuthenticated, isAdmin, loading, user } = useAuth();
-  const { userRole, canAccessBackoffice, isOnAdminSubdomain } = useSubdomainAccess();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
@@ -81,15 +75,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Check role-based access
-  const hasRequiredAccess = () => {
-    if (requireAdmin && !isAdmin) return false;
-    if (requireBackoffice && !canAccessBackoffice) return false;
-    if (allowedRoles && userRole && !allowedRoles.includes(userRole)) return false;
-    return true;
-  };
-
-  if (!hasRequiredAccess()) {
+  if (requireAdmin && !isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">

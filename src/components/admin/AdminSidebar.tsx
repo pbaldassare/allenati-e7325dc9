@@ -24,19 +24,18 @@ import {
   List,
   FileText
 } from 'lucide-react';
-import { getAdminPath } from '@/utils/subdomain';
 
-const getMainItems = () => [
-  { title: "Dashboard", url: getAdminPath(""), icon: BarChart3 },
-  { title: "Tutti i Corsi", url: getAdminPath("/courses"), icon: List },
-  { title: "Nuovo Corso", url: getAdminPath("/courses/new"), icon: Plus },
+const mainItems = [
+  { title: "Dashboard", url: "/admin", icon: BarChart3 },
+  { title: "Tutti i Corsi", url: "/admin/courses", icon: List },
+  { title: "Nuovo Corso", url: "/admin/courses/new", icon: Plus },
 ];
 
-const getManagementItems = () => [
-  { title: "Istruttori", url: getAdminPath("/instructors"), icon: Users },
-  { title: "Sale", url: getAdminPath("/rooms"), icon: MapPin },
-  { title: "Calendario", url: getAdminPath("/schedule"), icon: CalendarClock },
-  { title: "Certificati Medici", url: getAdminPath("/medical-certificates"), icon: FileText },
+const managementItems = [
+  { title: "Istruttori", url: "/admin/instructors", icon: Users },
+  { title: "Sale", url: "/admin/rooms", icon: MapPin },
+  { title: "Calendario", url: "/admin/schedule", icon: CalendarClock },
+  { title: "Certificati Medici", url: "/admin/medical-certificates", icon: FileText },
 ];
 
 export function AdminSidebar() {
@@ -45,13 +44,9 @@ export function AdminSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const mainItems = getMainItems();
-  const managementItems = getManagementItems();
-
   const isActive = (path: string) => {
-    const adminPath = getAdminPath("");
-    if (path === adminPath) {
-      return currentPath === adminPath;
+    if (path === "/admin") {
+      return currentPath === "/admin";
     }
     return currentPath.startsWith(path);
   };

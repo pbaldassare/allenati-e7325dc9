@@ -48,8 +48,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch user profile and role data
   const fetchUserData = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
-      console.log('🔐 fetchUserData: Starting for user', { userId, userEmail });
-      
       // Get profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -58,22 +56,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (profileError) {
-        console.error('🔐 fetchUserData: Error fetching profile:', profileError);
+        console.error('Error fetching profile:', profileError);
         return null;
       }
-
-      console.log('🔐 fetchUserData: Profile data retrieved', profile);
 
       // Get role data using the new utility function
       const { data: roleData, error: roleError } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
-      if (roleError) {
-        console.error('🔐 fetchUserData: Error fetching role:', roleError);
-      }
-
       const role = roleData || 'basic_user';
-      console.log('🔐 fetchUserData: Role determined', { roleData, role });
 
       // Get gym data if user is instructor or gym_owner
       let gymId: string | undefined;
@@ -122,56 +113,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    console.log('🔐 AuthContext: Initializing auth state listener...');
-    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔐 AuthContext: Auth state changed', { event, session: !!session, userId: session?.user?.id });
         setSession(session);
         
         if (session?.user) {
-          console.log('🔐 AuthContext: User found, fetching user data...', session.user.email);
-          // Use setTimeout to avoid blocking the auth state change and prevent duplicates
+          // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
             fetchUserData(session.user.id, session.user.email).then(userData => {
-              console.log('🔐 AuthContext: User data fetched from state change', userData);
               setUser(userData);
-              setLoading(false);
-            }).catch(error => {
-              console.error('🔐 AuthContext: Error fetching user data from state change', error);
               setLoading(false);
             });
           }, 0);
         } else {
-          console.log('🔐 AuthContext: No user session, clearing user data');
           setUser(null);
           setLoading(false);
         }
       }
     );
 
-    // Check for existing session - only if no auth state change is in progress
-    console.log('🔐 AuthContext: Checking for existing session...');
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('🔐 AuthContext: Error getting session', error);
-        setLoading(false);
-        return;
-      }
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       
-      console.log('🔐 AuthContext: Initial session check', { hasSession: !!session, userId: session?.user?.id });
-      
-      // Only set session and user if they haven't been set by the auth state listener
       if (session?.user) {
-        console.log('🔐 AuthContext: Initial session found, setting session only');
-        setSession(session);
-        // Don't fetch user data here - let the auth state listener handle it
-        // This prevents duplicate calls to fetchUserData
+        fetchUserData(session.user.id, session.user.email).then(userData => {
+          setUser(userData);
+          setLoading(false);
+        });
       } else {
-        console.log('🔐 AuthContext: No initial session found');
-        setSession(null);
-        setUser(null);
         setLoading(false);
       }
     });

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubdomainAccess } from '@/hooks/useSubdomainAccess';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Users, Building2, ArrowRight, Palette, BarChart3, Calendar, MessageSquare } from 'lucide-react';
+import { Settings, Users, Building2, ArrowRight, Palette } from 'lucide-react';
 import { getAdminUrl } from '@/utils/subdomain';
 
 // User App Components
@@ -19,9 +18,10 @@ import { Chat } from '@/components/Chat';
 
 export const RoleBasedApp = () => {
   const { user, isGymOwner, isAdmin } = useAuth();
-  const { userRole } = useSubdomainAccess();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("home");
+  // Don't show mode selector on main app - admin access only via subdomain
+  const [showModeSelector, setShowModeSelector] = useState(false);
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
@@ -62,79 +62,8 @@ export const RoleBasedApp = () => {
       }
     };
 
-    // Show role-specific header for gym_owner and instructor
-    const renderRoleHeader = () => {
-      if (userRole === 'gym_owner') {
-        return (
-          <div className="bg-card border-b px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-sm">Modalità Gestore</h2>
-                  <p className="text-xs text-muted-foreground">{user?.gym_name || 'Palestra'}</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.location.href = getAdminUrl('/')}
-                className="text-xs"
-              >
-                <Settings className="w-3 h-3 mr-1" />
-                Backoffice
-              </Button>
-            </div>
-          </div>
-        );
-      }
-
-      if (userRole === 'instructor') {
-        return (
-          <div className="bg-card border-b px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-secondary rounded-lg flex items-center justify-center">
-                  <Users className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-sm">Modalità Istruttore</h2>
-                  <p className="text-xs text-muted-foreground">Dashboard personale</p>
-                </div>
-              </div>
-              <div className="flex space-x-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/chat')}
-                  className="text-xs"
-                >
-                  <MessageSquare className="w-3 h-3 mr-1" />
-                  Chat
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('calendar')}
-                  className="text-xs"
-                >
-                  <Calendar className="w-3 h-3 mr-1" />
-                  Corsi
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      return null;
-    };
-
     return (
       <div className="min-h-screen bg-background">
-        {renderRoleHeader()}
         {renderActiveTab()}
         <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
@@ -185,7 +114,7 @@ export const RoleBasedApp = () => {
                 </ul>
                 <Button 
                   className="w-full" 
-                  onClick={() => {/* Mode selector removed */}}
+                  onClick={() => setShowModeSelector(false)}
                 >
                   Entra nell'App
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -228,7 +157,7 @@ export const RoleBasedApp = () => {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => {/* Mode selector removed */}}
+              onClick={() => setShowModeSelector(false)}
               className="text-muted-foreground hover:text-foreground"
             >
               <Palette className="mr-2 h-4 w-4" />
