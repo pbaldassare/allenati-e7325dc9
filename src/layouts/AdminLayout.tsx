@@ -5,7 +5,11 @@ import { AdminBreadcrumb } from '@/components/admin/AdminBreadcrumb';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-export const AdminLayout = () => {
+interface AdminLayoutProps {
+  children?: React.ReactNode;
+}
+
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <ProtectedRoute requireAdmin>
       <SidebarProvider>
@@ -18,7 +22,7 @@ export const AdminLayout = () => {
               </div>
             </div>
             <div className="flex-1 p-6">
-              <Outlet />
+              {children || <Outlet />}
             </div>
           </main>
         </div>
