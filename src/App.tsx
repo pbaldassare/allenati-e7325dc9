@@ -26,17 +26,6 @@ import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
 
 // Admin User Management Pages
 import AdminUsers from "./pages/admin/AdminUsers";
-import AdminRoles from "./pages/admin/AdminRoles";
-import AdminMemberships from "./pages/admin/AdminMemberships";
-
-// Admin Booking Management Pages
-import AdminBookings from "./pages/admin/AdminBookings";
-
-// Admin Financial Management Pages
-import AdminProducts from "./pages/admin/AdminProducts";
-
-// Admin Analytics Pages
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -67,19 +56,6 @@ const App = () => (
                 
                 {/* User Management */}
                 <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/roles" element={<AdminRoles />} />
-                <Route path="/admin/memberships" element={<AdminMemberships />} />
-                
-                {/* Booking Management */}
-                <Route path="/admin/bookings" element={<AdminBookings />} />
-                <Route path="/admin/checkins" element={<AdminBookings />} />
-                <Route path="/admin/booking-history" element={<AdminBookings />} />
-                
-                {/* Financial Management */}
-                <Route path="/admin/products" element={<AdminProducts />} />
-                <Route path="/admin/orders" element={<AdminProducts />} />
-                <Route path="/admin/credits" element={<AdminUsers />} />
-                <Route path="/admin/subscriptions" element={<AdminUsers />} />
                 
                 {/* Structure Management */}
                 <Route path="/admin/gyms" element={<AdminGyms />} />
@@ -87,17 +63,6 @@ const App = () => (
                 <Route path="/admin/instructors" element={<AdminInstructors />} />
                 <Route path="/admin/rooms" element={<AdminRooms />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />
-                
-                {/* Analytics */}
-                <Route path="/admin/analytics/courses" element={<AdminAnalytics />} />
-                <Route path="/admin/analytics/bookings" element={<AdminAnalytics />} />
-                <Route path="/admin/analytics/instructors" element={<AdminAnalytics />} />
-                
-                {/* System */}
-                <Route path="/admin/chat" element={<AdminAnalytics />} />
-                <Route path="/admin/notifications" element={<AdminAnalytics />} />
-                <Route path="/admin/settings" element={<AdminAnalytics />} />
-                <Route path="/admin/logs" element={<AdminAnalytics />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="*" element={<NotFound />} />
