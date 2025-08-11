@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useCourses } from "@/hooks/useCourses";
-import { useBookings } from "@/hooks/useBookings";
 import { 
   Dumbbell, 
   Zap, 
@@ -20,8 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  X,
-  Swords
+  X
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -32,33 +30,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Map database icon names to Lucide React components
-const iconMap = {
-  'shield': Shield,
-  'target': Target,
-  'swords': Swords,
-  'trophy': Trophy,
-  'flame': Flame,
-  'heart': Heart,
-  'activity': Activity,
-  'dumbbell': Dumbbell,
-  'zap': Zap
-};
-
-// Get icon component from database icon name
-const getIconComponent = (iconName: string | null) => {
-  if (!iconName) return Dumbbell;
-  return iconMap[iconName as keyof typeof iconMap] || Dumbbell;
-};
-
-// Keep category-based mapping for backward compatibility
 const courseIcons = {
-  'Brazilian Jiu-Jitsu': Shield,
   'BJJ': Shield,
-  'MMA': Swords,
+  'MMA': Zap,
   'Boxing': Target,
   'Wrestling': Trophy,
-  'Kickboxing': Flame,
   'Muay Thai': Flame,
   'Yoga': Heart,
   'Functional': Activity,
@@ -68,7 +44,7 @@ const courseIcons = {
 const weekDays = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
 
 // Filter options
-const categoryFilters = ['Tutti', 'Brazilian Jiu-Jitsu', 'MMA', 'Boxing', 'Wrestling', 'Kickboxing', 'Muay Thai', 'Yoga', 'Functional', 'Grappling'];
+const categoryFilters = ['Tutti', 'BJJ', 'MMA', 'Boxing', 'Wrestling', 'Muay Thai', 'Yoga', 'Functional', 'Grappling'];
 const levelFilters = ['Tutti', 'Beginner', 'Intermediate', 'Advanced'];
 const availabilityFilters = ['Tutti', 'Disponibili', 'Pieni', 'Prenotati'];
 
@@ -94,13 +70,12 @@ export const CourseCalendar = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
   
-  const { courses, loading: coursesLoading, bookCourse, cancelBooking } = useCourses();
-  const { bookings } = useBookings();
+  const { courses, bookings, bookCourse, cancelBooking } = useAppData();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Get user's confirmed bookings
-  const userBookings = bookings.filter(b => b.status === 'confirmed');
+  // Get user's bookings
+  const userBookings = bookings.filter(b => b.userId === user?.id && b.status === 'confirmed');
 
   const handleBooking = async (courseId: string, isBooked: boolean) => {
     if (!user) return;
@@ -108,21 +83,21 @@ export const CourseCalendar = () => {
     setLoadingBooking(courseId);
     try {
       if (isBooked) {
-        await cancelBooking(courseId);
-        toast({
-          title: "Prenotazione cancellata",
-          description: "Hai cancellato la prenotazione con successo",
-        });
-      } else {
-        const courseData = courses.find(c => c.id === courseId);
-        const schedule = courseData?.schedules[0];
-        if (schedule) {
-          await bookCourse(courseId, new Date().toISOString().split('T')[0], schedule.start_time);
+        const booking = userBookings.find(b => b.courseId === courseId);
+        if (booking) {
+          cancelBooking(booking.id);
           toast({
-            title: "Prenotazione confermata", 
-            description: "Corso prenotato con successo!",
+            title: "Prenotazione cancellata",
+            description: "Hai cancellato la prenotazione con successo",
           });
         }
+      } else {
+        const courseData = courses.find(c => c.id === courseId);
+        await bookCourse(courseId, new Date().toISOString().split('T')[0], courseData?.schedule[0]?.time || '19:00');
+        toast({
+          title: "Prenotazione confermata", 
+          description: "Corso prenotato con successo!",
+        });
       }
     } catch (error) {
       toast({
@@ -136,21 +111,19 @@ export const CourseCalendar = () => {
   };
 
   const isBooked = (courseId: string) => {
-    return userBookings.some(b => b.course_id === courseId);
+    return userBookings.some(b => b.courseId === courseId);
   };
 
   // Filter courses based on selected filters
   const filteredCourses = courses.filter(course => {
-    const categoryMatch = selectedCategory === 'Tutti' || course.category_name === selectedCategory;
-    const levelText = course.difficulty_level === 1 ? 'Beginner' : 
-                      course.difficulty_level === 2 ? 'Intermediate' : 'Advanced';
-    const levelMatch = selectedLevel === 'Tutti' || levelText === selectedLevel;
+    const categoryMatch = selectedCategory === 'Tutti' || course.category === selectedCategory;
+    const levelMatch = selectedLevel === 'Tutti' || course.level === selectedLevel;
     
     let availabilityMatch = true;
     if (selectedAvailability === 'Disponibili') {
-      availabilityMatch = (course.current_participants || 0) < course.max_participants && !isBooked(course.id);
+      availabilityMatch = course.currentParticipants < course.maxParticipants && !isBooked(course.id);
     } else if (selectedAvailability === 'Pieni') {
-      availabilityMatch = (course.current_participants || 0) >= course.max_participants;
+      availabilityMatch = course.currentParticipants >= course.maxParticipants;
     } else if (selectedAvailability === 'Prenotati') {
       availabilityMatch = isBooked(course.id);
     }
@@ -160,7 +133,7 @@ export const CourseCalendar = () => {
 
   // Group filtered courses by day
   const coursesByDay = filteredCourses.reduce((acc, course) => {
-    const dayNumber = course.schedules[0]?.day_of_week ?? 1;
+    const dayNumber = course.schedule[0]?.dayOfWeek ?? 1;
     const day = weekDays[dayNumber] || 'Lunedì';
     if (!acc[day]) acc[day] = [];
     acc[day].push(course);
@@ -170,7 +143,7 @@ export const CourseCalendar = () => {
   const getActionButton = (course: any) => {
     const courseIsBooked = isBooked(course.id);
     const isLoading = loadingBooking === course.id;
-    const isFull = (course.current_participants || 0) >= course.max_participants;
+    const isFull = course.currentParticipants >= course.maxParticipants;
     
     if (isLoading) {
       return <Button size="sm" disabled>...</Button>;
@@ -369,10 +342,8 @@ export const CourseCalendar = () => {
             
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
-                 {coursesByDay[day].map((course) => {
-                   const IconComponent = getIconComponent(course.category_icon) || courseIcons[course.category_name as keyof typeof courseIcons] || Dumbbell;
-                  const levelText = course.difficulty_level === 1 ? 'Beginner' : 
-                                    course.difficulty_level === 2 ? 'Intermediate' : 'Advanced';
+                {coursesByDay[day].map((course) => {
+                  const IconComponent = courseIcons[course.category as keyof typeof courseIcons] || Dumbbell;
                   return (
                     <Card key={course.id} className="shadow-card hover:shadow-lg transition-all duration-300">
                       <CardContent className="p-4">
@@ -386,23 +357,23 @@ export const CourseCalendar = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-semibold text-foreground">{course.name}</h4>
-                              <Badge variant="outline" className="text-xs">{levelText}</Badge>
-                              <Badge variant="outline" className="text-xs">{course.category_name}</Badge>
+                              <Badge variant="outline" className="text-xs">{course.level}</Badge>
+                              <Badge variant="outline" className="text-xs">{course.category}</Badge>
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
-                                <span>{course.schedules[0]?.start_time?.slice(0, 5)}</span>
+                                <span>{course.schedule[0]?.time}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
-                                <span>{course.current_participants || 0}/{course.max_participants}</span>
+                                <span>{course.currentParticipants}/{course.maxParticipants}</span>
                               </div>
                             </div>
                             
                             <p className="text-sm text-muted-foreground mt-1">
-                              Istruttore: {course.instructor_name}
+                              Istruttore: {course.instructor}
                             </p>
                           </div>
                           
@@ -410,7 +381,7 @@ export const CourseCalendar = () => {
                           <div className="flex flex-col items-end gap-2">
                             {isBooked(course.id) ? (
                               <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
-                            ) : (course.current_participants || 0) >= course.max_participants ? (
+                            ) : course.currentParticipants >= course.maxParticipants ? (
                               <Badge className="bg-destructive text-destructive-foreground">Completo</Badge>
                             ) : (
                               <Badge className="bg-success text-success-foreground">Disponibile</Badge>
@@ -424,11 +395,11 @@ export const CourseCalendar = () => {
                           <div className="w-full bg-muted rounded-full h-2">
                             <div 
                               className="bg-primary h-2 rounded-full transition-all duration-300" 
-                              style={{width: `${((course.current_participants || 0) / course.max_participants) * 100}%`}}
+                              style={{width: `${(course.currentParticipants / course.maxParticipants) * 100}%`}}
                             ></div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {course.max_participants - (course.current_participants || 0)} posti disponibili
+                            {course.maxParticipants - course.currentParticipants} posti disponibili
                           </p>
                         </div>
                       </CardContent>

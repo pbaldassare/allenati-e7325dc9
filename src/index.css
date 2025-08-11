@@ -176,19 +176,6 @@ All colors MUST be HSL.
     background-clip: text;
   }
 
-  /* Gradient background utilities */
-  .bg-gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .bg-gradient-secondary {
-    background: var(--gradient-secondary);
-  }
-
-  .bg-gradient-accent {
-    background: var(--gradient-accent);
-  }
-
   /* Enhanced animations */
   .animate-float {
     animation: float 3s ease-in-out infinite;

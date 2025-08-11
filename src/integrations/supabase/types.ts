@@ -261,127 +261,6 @@ export type Database = {
           },
         ]
       }
-      chat_messages: {
-        Row: {
-          content: string
-          created_at: string
-          edited_at: string | null
-          id: string
-          is_edited: boolean
-          message_type: string
-          metadata: Json | null
-          room_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          is_edited?: boolean
-          message_type?: string
-          metadata?: Json | null
-          room_id: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          is_edited?: boolean
-          message_type?: string
-          metadata?: Json | null
-          room_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_participants: {
-        Row: {
-          id: string
-          is_active: boolean
-          joined_at: string
-          last_read_at: string | null
-          role: string
-          room_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          is_active?: boolean
-          joined_at?: string
-          last_read_at?: string | null
-          role?: string
-          room_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          is_active?: boolean
-          joined_at?: string
-          last_read_at?: string | null
-          role?: string
-          room_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_participants_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_rooms: {
-        Row: {
-          course_id: string | null
-          created_at: string
-          created_by: string
-          description: string | null
-          gym_id: string | null
-          id: string
-          is_active: boolean
-          name: string
-          room_type: string
-          updated_at: string
-        }
-        Insert: {
-          course_id?: string | null
-          created_at?: string
-          created_by: string
-          description?: string | null
-          gym_id?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          room_type: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: string | null
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          gym_id?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          room_type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       course_categories: {
         Row: {
           color_hex: string | null
@@ -727,63 +606,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      medical_certificates: {
-        Row: {
-          created_at: string
-          expiry_date: string | null
-          file_name: string
-          file_path: string
-          file_size: number
-          file_type: string
-          gym_id: string
-          id: string
-          issue_date: string | null
-          notes: string | null
-          rejection_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["medical_certificate_status"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expiry_date?: string | null
-          file_name: string
-          file_path: string
-          file_size: number
-          file_type: string
-          gym_id: string
-          id?: string
-          issue_date?: string | null
-          notes?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["medical_certificate_status"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expiry_date?: string | null
-          file_name?: string
-          file_path?: string
-          file_size?: number
-          file_type?: string
-          gym_id?: string
-          id?: string
-          issue_date?: string | null
-          notes?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["medical_certificate_status"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       mobile_notifications: {
         Row: {
@@ -1327,42 +1149,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_gym_memberships: {
-        Row: {
-          created_at: string
-          expires_at: string | null
-          gym_id: string
-          id: string
-          joined_at: string
-          membership_type: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at?: string | null
-          gym_id: string
-          id?: string
-          joined_at?: string
-          membership_type?: string
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string | null
-          gym_id?: string
-          id?: string
-          joined_at?: string
-          membership_type?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_preferences: {
         Row: {
           auto_checkin: boolean | null
@@ -1484,14 +1270,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_course_chat: {
-        Args: { _course_id: string; _course_name: string; _created_by: string }
-        Returns: string
-      }
-      create_gym_general_chat: {
-        Args: { _gym_id: string; _created_by: string }
-        Returns: string
-      }
       get_user_gym_id: {
         Args: { _user_id: string }
         Returns: string
@@ -1525,11 +1303,6 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
-      medical_certificate_status:
-        | "pending"
-        | "approved"
-        | "rejected"
-        | "expired"
       notification_type:
         | "booking"
         | "payment"
@@ -1673,12 +1446,6 @@ export const Constants = {
         "cancelled",
         "completed",
         "no_show",
-      ],
-      medical_certificate_status: [
-        "pending",
-        "approved",
-        "rejected",
-        "expired",
       ],
       notification_type: [
         "booking",

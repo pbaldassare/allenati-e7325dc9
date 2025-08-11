@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { Plus, MapPin, Users, Calendar, Settings, Edit } from 'lucide-react';
-import { RoomForm } from '@/components/admin/RoomForm';
+import { Plus, MapPin, Users, Calendar, Settings } from 'lucide-react';
 
 const AdminRooms = () => {
-  const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  
   const rooms = [
     {
       id: '1',
@@ -71,25 +65,10 @@ const AdminRooms = () => {
             Gestisci le sale, equipaggiamenti e prenotazioni
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuova Sala
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Nuova Sala</DialogTitle>
-            </DialogHeader>
-            <RoomForm 
-              mode="create" 
-              onSuccess={() => {
-                setIsCreateDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button className="bg-gradient-primary">
+          <Plus className="mr-2 h-4 w-4" />
+          Nuova Sala
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -134,21 +113,13 @@ const AdminRooms = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {
-                    setSelectedRoom(room);
-                    setIsEditDialogOpen(true);
-                  }}
-                >
-                  <Edit className="mr-1 h-3 w-3" />
-                  Modifica
-                </Button>
                 <Button variant="outline" size="sm" className="flex-1">
                   <Calendar className="mr-1 h-3 w-3" />
                   Calendario
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Settings className="mr-1 h-3 w-3" />
+                  Gestisci
                 </Button>
               </div>
             </CardContent>
@@ -182,27 +153,6 @@ const AdminRooms = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Modifica Sala: {selectedRoom?.name}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedRoom && (
-            <RoomForm 
-              mode="edit" 
-              room={selectedRoom}
-              onSuccess={() => {
-                setIsEditDialogOpen(false);
-                setSelectedRoom(null);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

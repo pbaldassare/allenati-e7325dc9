@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +6,9 @@ import { Settings, FileText, Calendar, TrendingUp, Award, LogOut } from "lucide-
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { MedicalCertificate } from "./MedicalCertificate";
 
 export const Profile = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   
   const handleLogout = async () => {
     try {
@@ -122,20 +119,17 @@ export const Profile = () => {
         </CardContent>
       </Card>
 
-      {/* Medical Certificate Section */}
-      <MedicalCertificate />
-
       {/* Profile Actions */}
       <div className="space-y-2">
-        <Button 
-          variant="outline" 
-          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
-          onClick={() => navigate('/settings')}
-        >
+        <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
           <Settings className="w-4 h-4 mr-3" />
           Impostazioni
         </Button>
         
+        <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
+          <FileText className="w-4 h-4 mr-3" />
+          Certificato Medico
+        </Button>
         
         <Button 
           onClick={handleLogout}
