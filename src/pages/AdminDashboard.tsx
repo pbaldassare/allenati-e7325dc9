@@ -13,16 +13,26 @@ import {
   Trash2,
   MessageSquare,
   BarChart3,
-  Download
+  Download,
+  LogOut
 } from 'lucide-react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
   const [activeTab, setActiveTab] = useState('overview');
   const analytics = getAnalytics();
   const users = getAllUsers();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   const StatsCard = ({ title, value, icon: Icon, trend }: any) => (
     <Card>
@@ -378,9 +388,20 @@ const AdminDashboard = () => {
                 Gestisci la tua palestra e monitora le performance
               </p>
             </div>
-            <Badge variant="default" className="bg-gradient-primary text-white">
-              Admin
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="default" className="bg-gradient-primary text-white">
+                Admin
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Esci
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
