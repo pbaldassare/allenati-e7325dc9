@@ -74,3 +74,17 @@ export const getMainAppUrl = (path: string = '/'): string => {
   // Altrimenti usa l'host corrente
   return `${protocol}//${hostname}${path}`;
 };
+
+export const getAdminPath = (path: string): string => {
+  if (typeof window === 'undefined') return path;
+  
+  const hostname = window.location.hostname;
+  
+  // Su domini custom admin (admin.allenati.me), non aggiungere /admin/
+  if (hostname.startsWith('admin.') && !hostname.includes('lovableproject.com')) {
+    return path;
+  }
+  
+  // Su domini Lovable, aggiungere /admin/
+  return `/admin${path}`;
+};

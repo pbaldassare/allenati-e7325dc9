@@ -15,7 +15,7 @@ import BookingHistory from "./pages/BookingHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { isAdminSubdomain, isCustomAdminDomain, shouldShowAdminRoutes } from "./utils/subdomain";
+import { isAdminSubdomain, isCustomAdminDomain, shouldShowAdminRoutes, isLovableDomain } from "./utils/subdomain";
 import { updateDocumentMeta } from "./utils/domainConfig";
 
 // Admin Course Management Pages
