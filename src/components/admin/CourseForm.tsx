@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,13 +21,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Course } from '@/contexts/AppDataContext';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
+import { useInstructors } from '@/hooks/useInstructors';
+import { useCategories } from '@/hooks/useCategories';
+import { supabase } from '@/integrations/supabase/client';
 
 const courseSchema = z.object({
   name: z.string().min(3, 'Il nome deve essere almeno 3 caratteri'),
   description: z.string().min(10, 'La descrizione deve essere almeno 10 caratteri'),
-  instructor: z.string().min(2, 'Inserisci il nome dell\'istruttore'),
-  category: z.string().min(1, 'Seleziona una categoria'),
+  instructor_id: z.string().min(1, 'Seleziona un istruttore'),
+  category_id: z.string().min(1, 'Seleziona una categoria'),
   level: z.string().min(1, 'Seleziona un livello'),
   price: z.coerce.number().min(0, 'Il prezzo deve essere positivo'),
   maxParticipants: z.coerce.number().min(1, 'Massimo partecipanti deve essere almeno 1'),
@@ -47,14 +50,17 @@ interface CourseFormProps {
 export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { instructors, loading: instructorsLoading } = useInstructors();
+  const { categories, loading: categoriesLoading } = useCategories();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: course ? {
       name: course.name,
       description: course.description,
-      instructor: course.instructor,
-      category: course.category,
+      instructor_id: '', // Will need to map from instructor name to ID
+      category_id: '', // Will need to map from category name to ID
       level: course.level,
       price: course.price,
       maxParticipants: course.maxParticipants,
@@ -65,8 +71,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
     } : {
       name: '',
       description: '',
-      instructor: '',
-      category: '',
+      instructor_id: '',
+      category_id: '',
       level: '',
       price: 0,
       maxParticipants: 20,
@@ -77,17 +83,54 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
     },
   });
 
-  const onSubmit = (data: CourseFormData) => {
-    console.log('Course data:', data);
+  const onSubmit = async (data: CourseFormData) => {
+    setIsSubmitting(true);
     
-    toast({
-      title: mode === 'create' ? 'Corso creato' : 'Corso aggiornato',
-      description: mode === 'create' 
-        ? 'Il nuovo corso è stato creato con successo'
-        : 'Le modifiche sono state salvate',
-    });
+    try {
+      if (mode === 'create') {
+        // Create new course
+        const { error } = await supabase
+          .from('courses')
+          .insert({
+            name: data.name,
+            description: data.description,
+            instructor_id: data.instructor_id,
+            max_participants: data.maxParticipants,
+            duration_minutes: data.duration,
+            price_per_session: data.price,
+            image_url: data.image,
+            benefits: data.benefits.filter(b => b.trim() !== ''),
+            requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+            category_id: data.category_id,
+            difficulty_level: data.level === 'Principiante' ? 1 : data.level === 'Intermedio' ? 2 : data.level === 'Avanzato' ? 3 : 1
+          });
 
-    navigate('/admin/courses');
+        if (error) throw error;
+        
+        toast({
+          title: 'Corso creato',
+          description: 'Il nuovo corso è stato creato con successo',
+        });
+      } else {
+        // Update existing course
+        console.log('Updating course:', data);
+        toast({
+          title: 'Corso aggiornato',
+          description: 'Le modifiche sono state salvate',
+        });
+      }
+
+      navigate('/admin/courses');
+    } catch (error) {
+      console.error('Error saving course:', error);
+      toast({
+        title: 'Errore',
+        description: 'Si è verificato un errore durante il salvataggio del corso',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addBenefit = () => {
@@ -133,13 +176,35 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
 
           <FormField
             control={form.control}
-            name="instructor"
+            name="instructor_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Istruttore</FormLabel>
-                <FormControl>
-                  <Input placeholder="Nome dell'istruttore" {...field} />
-                </FormControl>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  disabled={instructorsLoading}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        instructorsLoading ? "Caricamento..." : "Seleziona istruttore"
+                      } />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {instructors.map((instructor) => (
+                      <SelectItem key={instructor.id} value={instructor.id}>
+                        {instructor.profiles.first_name} {instructor.profiles.last_name}
+                        {instructor.specializations && instructor.specializations.length > 0 && (
+                          <span className="text-muted-foreground ml-2">
+                            ({instructor.specializations.join(', ')})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -147,24 +212,28 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
 
           <FormField
             control={form.control}
-            name="category"
+            name="category_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  disabled={categoriesLoading}
+                >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona categoria" />
+                      <SelectValue placeholder={
+                        categoriesLoading ? "Caricamento..." : "Seleziona categoria"
+                      } />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="fitness">Fitness</SelectItem>
-                    <SelectItem value="yoga">Yoga</SelectItem>
-                    <SelectItem value="pilates">Pilates</SelectItem>
-                    <SelectItem value="cardio">Cardio</SelectItem>
-                    <SelectItem value="forza">Forza</SelectItem>
-                    <SelectItem value="danza">Danza</SelectItem>
-                    <SelectItem value="arti-marziali">Arti Marziali</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -378,13 +447,19 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
 
         {/* Submit Buttons */}
         <div className="flex gap-4">
-          <Button type="submit" className="bg-gradient-primary">
+          <Button 
+            type="submit" 
+            className="bg-gradient-primary"
+            disabled={isSubmitting || instructorsLoading || categoriesLoading}
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mode === 'create' ? 'Crea Corso' : 'Salva Modifiche'}
           </Button>
           <Button 
             type="button" 
             variant="outline" 
             onClick={() => navigate('/admin/courses')}
+            disabled={isSubmitting}
           >
             Annulla
           </Button>
