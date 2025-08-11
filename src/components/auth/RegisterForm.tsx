@@ -38,11 +38,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   const { register } = useAuth();
   const { toast } = useToast();
 
+  const [gymsLoading, setGymsLoading] = useState(true);
+
   useEffect(() => {
     loadGyms();
   }, []);
 
   const loadGyms = async () => {
+    setGymsLoading(true);
     try {
       const { data, error } = await supabase
         .from('gyms')
@@ -54,6 +57,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
       setGyms(data || []);
     } catch (error) {
       console.error('Error loading gyms:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare le palestre disponibili",
+        variant: "destructive",
+      });
+    } finally {
+      setGymsLoading(false);
     }
   };
 
@@ -239,18 +249,43 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               value={formData.gymId}
               onValueChange={(value) => setFormData({ ...formData, gymId: value })}
               required
+              disabled={gymsLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleziona la tua palestra" />
+                <SelectValue 
+                  placeholder={
+                    gymsLoading 
+                      ? "Caricamento palestre..." 
+                      : gyms.length === 0 
+                        ? "Nessuna palestra disponibile" 
+                        : "Seleziona la tua palestra"
+                  } 
+                />
               </SelectTrigger>
               <SelectContent>
-                {gyms.map((gym) => (
-                  <SelectItem key={gym.id} value={gym.id}>
-                    {gym.name} - {gym.city}
+                {gymsLoading ? (
+                  <SelectItem value="loading" disabled>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Caricamento...
                   </SelectItem>
-                ))}
+                ) : gyms.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Nessuna palestra disponibile
+                  </SelectItem>
+                ) : (
+                  gyms.map((gym) => (
+                    <SelectItem key={gym.id} value={gym.id}>
+                      {gym.name} - {gym.city}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
+            {gyms.length === 0 && !gymsLoading && (
+              <p className="text-sm text-muted-foreground">
+                Non ci sono palestre disponibili al momento. Puoi candidarti come proprietario di palestra qui sotto.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

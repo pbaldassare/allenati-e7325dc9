@@ -22,6 +22,7 @@ const applicationSchema = z.object({
   gym_email: z.string().email('Inserisci un email valida').optional().or(z.literal('')),
   gym_website: z.string().url('Inserisci un URL valido').optional().or(z.literal('')),
   applicant_message: z.string().optional(),
+  applicant_email: z.string().email('Inserisci un email valida'),
 });
 
 type ApplicationFormData = z.infer<typeof applicationSchema>;
@@ -47,26 +48,19 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
       gym_email: '',
       gym_website: '',
       applicant_message: '',
+      applicant_email: user?.email || '',
     },
   });
 
   const onSubmit = async (data: ApplicationFormData) => {
-    if (!user) {
-      toast({
-        title: "Errore",
-        description: "Devi essere autenticato per inviare una candidatura",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
       const { error } = await supabase
         .from('gym_applications')
         .insert({
-          applicant_user_id: user.id,
+          applicant_user_id: user?.id || null,
+          applicant_email: data.applicant_email,
           gym_name: data.gym_name,
           gym_description: data.gym_description || null,
           gym_address: data.gym_address,
@@ -108,11 +102,35 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
         </CardTitle>
         <CardDescription>
           Compila il modulo per candidarti come proprietario di una palestra. La tua richiesta sarà valutata dal nostro team.
+          {!user && " Non è necessario essere registrati per candidarsi."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="applicant_email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>La tua Email *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="tua.email@example.com" 
+                      {...field} 
+                      disabled={!!user}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  {user && (
+                    <p className="text-sm text-muted-foreground">
+                      Email dal tuo account registrato
+                    </p>
+                  )}
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}

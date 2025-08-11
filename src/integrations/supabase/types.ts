@@ -632,8 +632,9 @@ export type Database = {
       }
       gym_applications: {
         Row: {
+          applicant_email: string | null
           applicant_message: string | null
-          applicant_user_id: string
+          applicant_user_id: string | null
           created_at: string
           gym_address: string
           gym_city: string
@@ -651,8 +652,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          applicant_email?: string | null
           applicant_message?: string | null
-          applicant_user_id: string
+          applicant_user_id?: string | null
           created_at?: string
           gym_address: string
           gym_city: string
@@ -670,8 +672,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          applicant_email?: string | null
           applicant_message?: string | null
-          applicant_user_id?: string
+          applicant_user_id?: string | null
           created_at?: string
           gym_address?: string
           gym_city?: string
