@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Search, Plus, Edit, Shield } from 'lucide-react';
+import RoleAssignmentDialog from '@/components/admin/RoleAssignmentDialog';
 
 interface User {
   id: string;
@@ -159,12 +160,15 @@ const AdminUsers = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Button size="sm" variant="outline">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Shield className="h-3 w-3" />
-                        </Button>
+                         <Button size="sm" variant="outline">
+                           <Edit className="h-3 w-3" />
+                         </Button>
+                         <RoleAssignmentDialog
+                           userId={user.id}
+                           userName={`${user.first_name} ${user.last_name}`}
+                           currentRole={user.role}
+                           onRoleAssigned={loadUsers}
+                         />
                       </div>
                     </TableCell>
                   </TableRow>

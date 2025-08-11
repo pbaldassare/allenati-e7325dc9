@@ -16,8 +16,22 @@ interface Gym {
   phone: string;
   email: string;
   website: string;
+  owner_email?: string;
   is_active: boolean;
   created_at: string;
+  user_gym_memberships?: Array<{
+    user_id: string;
+    profiles: {
+      first_name: string;
+      last_name: string;
+      phone?: string;
+    };
+  }>;
+  owner?: {
+    first_name: string;
+    last_name: string;
+    phone?: string;
+  };
 }
 
 const AdminGyms = () => {
@@ -34,12 +48,28 @@ const AdminGyms = () => {
     try {
       const { data, error } = await supabase
         .from('gyms')
-        .select('*')
+        .select(`
+          *,
+          user_gym_memberships!inner(
+            user_id,
+            profiles!inner(
+              first_name,
+              last_name,
+              phone
+            )
+          )
+        `)
+        .eq('user_gym_memberships.membership_type', 'owner')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setGyms(data || []);
+      const gymsWithOwners = (data || []).map((gym: any) => ({
+        ...gym,
+        owner: gym.user_gym_memberships?.[0]?.profiles
+      }));
+
+      setGyms(gymsWithOwners);
     } catch (error) {
       console.error('Error loading gyms:', error);
       toast({
@@ -103,14 +133,20 @@ const AdminGyms = () => {
                 </p>
                 
                 <div className="space-y-1 text-xs text-muted-foreground">
-                  {gym.phone && <div>📞 {gym.phone}</div>}
-                  {gym.email && <div>✉️ {gym.email}</div>}
-                  {gym.website && (
-                    <div>🌐 <a href={gym.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      {gym.website}
-                    </a></div>
-                  )}
-                </div>
+                   {gym.owner && (
+                     <div className="text-sm font-medium text-foreground mb-2">
+                       👤 {gym.owner.first_name} {gym.owner.last_name}
+                       {gym.owner.phone && ` • ${gym.owner.phone}`}
+                     </div>
+                   )}
+                   {gym.phone && <div>📞 {gym.phone}</div>}
+                   {gym.email && <div>✉️ {gym.email}</div>}
+                   {gym.website && (
+                     <div>🌐 <a href={gym.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                       {gym.website}
+                     </a></div>
+                   )}
+                 </div>
 
                 <div className="flex gap-2 pt-2">
                   <Button
