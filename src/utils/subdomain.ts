@@ -1,6 +1,13 @@
 /**
  * Utility functions for handling subdomain detection and routing
  */
+export const isLovableDomain = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const hostname = window.location.hostname;
+  return hostname.includes('lovableproject.com');
+};
+
 export const isAdminSubdomain = (): boolean => {
   if (typeof window === 'undefined') return false;
   

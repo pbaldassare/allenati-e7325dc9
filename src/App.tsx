@@ -15,7 +15,7 @@ import BookingHistory from "./pages/BookingHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { isAdminSubdomain } from "./utils/subdomain";
+import { isAdminSubdomain, isLovableDomain } from "./utils/subdomain";
 import { updateDocumentMeta } from "./utils/domainConfig";
 
 // Admin Course Management Pages
@@ -34,6 +34,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const isAdmin = isAdminSubdomain();
+  const isLovable = isLovableDomain();
 
   useEffect(() => {
     updateDocumentMeta();
@@ -72,8 +73,9 @@ const App = () => {
                       <Route path="*" element={<NotFound />} />
                     </>
                   ) : (
-                    // Main app routes
+                    // Main app routes + Admin routes for Lovable domains
                     <>
+                      {/* Main app routes */}
                       <Route path="/" element={<Index />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/shop" element={<Shop />} />
@@ -88,6 +90,24 @@ const App = () => {
                           <Settings />
                         </ProtectedRoute>
                       } />
+                      
+                      {/* Admin routes for Lovable domains */}
+                      {isLovable && (
+                        <>
+                          <Route path="/admin" element={<AdminLayout />}>
+                            <Route index element={<AdminDashboard />} />
+                            <Route path="courses" element={<AdminCoursesList />} />
+                            <Route path="courses/new" element={<AdminCourseNew />} />
+                            <Route path="courses/:id" element={<AdminCourseDetail />} />
+                            <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
+                            <Route path="instructors" element={<AdminInstructors />} />
+                            <Route path="rooms" element={<AdminRooms />} />
+                            <Route path="schedule" element={<AdminSchedule />} />
+                            <Route path="medical-certificates" element={<AdminMedicalCertificates />} />
+                          </Route>
+                        </>
+                      )}
+                      
                       <Route path="*" element={<NotFound />} />
                     </>
                   )}
