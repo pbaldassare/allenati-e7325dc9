@@ -132,26 +132,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (session?.user) {
           console.log('🔐 AuthContext: User found, fetching user data...', session.user.email);
-          // Use setTimeout to avoid blocking the auth state change
+          // Use setTimeout to avoid blocking the auth state change and prevent duplicates
           setTimeout(() => {
             fetchUserData(session.user.id, session.user.email).then(userData => {
-              console.log('🔐 AuthContext: User data fetched', userData);
+              console.log('🔐 AuthContext: User data fetched from state change', userData);
               setUser(userData);
               setLoading(false);
             }).catch(error => {
-              console.error('🔐 AuthContext: Error fetching user data', error);
+              console.error('🔐 AuthContext: Error fetching user data from state change', error);
               setLoading(false);
             });
           }, 0);
         } else {
-          console.log('🔐 AuthContext: No user session');
+          console.log('🔐 AuthContext: No user session, clearing user data');
           setUser(null);
           setLoading(false);
         }
       }
     );
 
-    // Check for existing session
+    // Check for existing session - only if no auth state change is in progress
     console.log('🔐 AuthContext: Checking for existing session...');
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
@@ -160,21 +160,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
       
-      console.log('🔐 AuthContext: Existing session check', { hasSession: !!session, userId: session?.user?.id });
-      setSession(session);
+      console.log('🔐 AuthContext: Initial session check', { hasSession: !!session, userId: session?.user?.id });
       
+      // Only set session and user if they haven't been set by the auth state listener
       if (session?.user) {
-        console.log('🔐 AuthContext: Existing user found, fetching data...', session.user.email);
-        fetchUserData(session.user.id, session.user.email).then(userData => {
-          console.log('🔐 AuthContext: Existing user data fetched', userData);
-          setUser(userData);
-          setLoading(false);
-        }).catch(error => {
-          console.error('🔐 AuthContext: Error fetching existing user data', error);
-          setLoading(false);
-        });
+        console.log('🔐 AuthContext: Initial session found, setting session only');
+        setSession(session);
+        // Don't fetch user data here - let the auth state listener handle it
+        // This prevents duplicate calls to fetchUserData
       } else {
-        console.log('🔐 AuthContext: No existing session');
+        console.log('🔐 AuthContext: No initial session found');
+        setSession(null);
+        setUser(null);
         setLoading(false);
       }
     });
