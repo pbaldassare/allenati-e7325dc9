@@ -48,6 +48,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch user profile and role data
   const fetchUserData = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
+      console.log('🔐 fetchUserData: Starting for user', { userId, userEmail });
+      
       // Get profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -56,15 +58,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error('🔐 fetchUserData: Error fetching profile:', profileError);
         return null;
       }
+
+      console.log('🔐 fetchUserData: Profile data retrieved', profile);
 
       // Get role data using the new utility function
       const { data: roleData, error: roleError } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
+      if (roleError) {
+        console.error('🔐 fetchUserData: Error fetching role:', roleError);
+      }
+
       const role = roleData || 'basic_user';
+      console.log('🔐 fetchUserData: Role determined', { roleData, role });
 
       // Get gym data if user is instructor or gym_owner
       let gymId: string | undefined;
@@ -113,20 +122,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    console.log('🔐 AuthContext: Initializing auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔐 AuthContext: Auth state changed', { event, session: !!session, userId: session?.user?.id });
         setSession(session);
         
         if (session?.user) {
+          console.log('🔐 AuthContext: User found, fetching user data...', session.user.email);
           // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
             fetchUserData(session.user.id, session.user.email).then(userData => {
+              console.log('🔐 AuthContext: User data fetched', userData);
               setUser(userData);
+              setLoading(false);
+            }).catch(error => {
+              console.error('🔐 AuthContext: Error fetching user data', error);
               setLoading(false);
             });
           }, 0);
         } else {
+          console.log('🔐 AuthContext: No user session');
           setUser(null);
           setLoading(false);
         }
@@ -134,15 +152,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('🔐 AuthContext: Checking for existing session...');
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('🔐 AuthContext: Error getting session', error);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔐 AuthContext: Existing session check', { hasSession: !!session, userId: session?.user?.id });
       setSession(session);
       
       if (session?.user) {
+        console.log('🔐 AuthContext: Existing user found, fetching data...', session.user.email);
         fetchUserData(session.user.id, session.user.email).then(userData => {
+          console.log('🔐 AuthContext: Existing user data fetched', userData);
           setUser(userData);
+          setLoading(false);
+        }).catch(error => {
+          console.error('🔐 AuthContext: Error fetching existing user data', error);
           setLoading(false);
         });
       } else {
+        console.log('🔐 AuthContext: No existing session');
         setLoading(false);
       }
     });
