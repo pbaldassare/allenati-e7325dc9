@@ -22,7 +22,7 @@ import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminGyms from "./pages/admin/AdminGyms";
-import AdminGymNew from "./pages/admin/AdminGymNew";
+import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
 
 // Admin User Management Pages
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -83,7 +83,7 @@ const App = () => (
                 
                 {/* Structure Management */}
                 <Route path="/admin/gyms" element={<AdminGyms />} />
-                <Route path="/admin/gyms/new" element={<AdminGymNew />} />
+                <Route path="/admin/gym-applications" element={<AdminGymApplications />} />
                 <Route path="/admin/instructors" element={<AdminInstructors />} />
                 <Route path="/admin/rooms" element={<AdminRooms />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />

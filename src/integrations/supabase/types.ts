@@ -630,6 +630,66 @@ export type Database = {
         }
         Relationships: []
       }
+      gym_applications: {
+        Row: {
+          applicant_message: string | null
+          applicant_user_id: string
+          created_at: string
+          gym_address: string
+          gym_city: string
+          gym_description: string | null
+          gym_email: string | null
+          gym_name: string
+          gym_phone: string | null
+          gym_postal_code: string | null
+          gym_website: string | null
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_message?: string | null
+          applicant_user_id: string
+          created_at?: string
+          gym_address: string
+          gym_city: string
+          gym_description?: string | null
+          gym_email?: string | null
+          gym_name: string
+          gym_phone?: string | null
+          gym_postal_code?: string | null
+          gym_website?: string | null
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_message?: string | null
+          applicant_user_id?: string
+          created_at?: string
+          gym_address?: string
+          gym_city?: string
+          gym_description?: string | null
+          gym_email?: string | null
+          gym_name?: string
+          gym_phone?: string | null
+          gym_postal_code?: string | null
+          gym_website?: string | null
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gym_rooms: {
         Row: {
           capacity: number | null

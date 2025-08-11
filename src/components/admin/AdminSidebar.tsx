@@ -38,7 +38,8 @@ import {
   MessageSquare,
   Bell,
   Database,
-  LogOut
+  LogOut,
+  FileCheck
 } from 'lucide-react';
 
 const dashboardItems = [
@@ -71,6 +72,7 @@ const financialItems = [
 
 const structureItems = [
   { title: "Palestre", url: "/admin/gyms", icon: Building },
+  { title: "Candidature Palestre", url: "/admin/gym-applications", icon: FileCheck },
   { title: "Istruttori", url: "/admin/instructors", icon: Users },
   { title: "Sale", url: "/admin/rooms", icon: MapPin },
   { title: "Calendario", url: "/admin/schedule", icon: CalendarClock },

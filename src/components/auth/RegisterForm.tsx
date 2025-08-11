@@ -1,140 +1,210 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, UserPlus, Building2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { GymApplicationForm } from '@/components/GymApplicationForm';
+import { useToast } from '@/hooks/use-toast';
+
+interface Gym {
+  id: string;
+  name: string;
+  city: string;
+}
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
-  const { register } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    name: '',
-    surname: '',
-    dateOfBirth: '',
     phone: '',
-    taxCode: '',
-    address: ''
+    gymId: '',
   });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [gyms, setGyms] = useState<Gym[]>([]);
+  const [showGymApplication, setShowGymApplication] = useState(false);
+  const { register } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadGyms();
+  }, []);
+
+  const loadGyms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('gyms')
+        .select('id, name, city')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setGyms(data || []);
+    } catch (error) {
+      console.error('Error loading gyms:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!formData.email || !formData.password || !formData.name || !formData.surname) {
-      toast({
-        title: "Errore",
-        description: "Compila tutti i campi obbligatori",
-        variant: "destructive"
-      });
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Errore",
-        description: "Le password non coincidono",
-        variant: "destructive"
-      });
+      setError('Le password non coincidono');
       return;
     }
 
     if (formData.password.length < 6) {
-      toast({
-        title: "Errore",
-        description: "La password deve essere di almeno 6 caratteri",
-        variant: "destructive"
-      });
+      setError('La password deve essere di almeno 6 caratteri');
+      return;
+    }
+
+    if (!formData.gymId) {
+      setError('Devi selezionare una palestra');
       return;
     }
 
     setIsLoading(true);
-    
+    setError('');
+
     try {
-      const result = await register({
+      // Register the user
+      const { data: authData, error: registerError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        first_name: formData.name,
-        last_name: formData.surname,
-        phone: formData.phone,
-        city: formData.address
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+          }
+        }
+      });
+
+      if (registerError) throw registerError;
+
+      if (authData.user) {
+        // Create gym membership
+        const { error: membershipError } = await supabase
+          .from('user_gym_memberships')
+          .insert({
+            user_id: authData.user.id,
+            gym_id: formData.gymId,
+            membership_type: 'member',
+            status: 'active',
+          });
+
+        if (membershipError) {
+          console.error('Error creating gym membership:', membershipError);
+        }
+      }
+
+      toast({
+        title: "Registrazione completata!",
+        description: "Controlla la tua email per confermare l'account.",
+      });
+
+      // Reset form and switch to login
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phone: '',
+        gymId: '',
       });
       
-      if (!result.error) {
-        toast({
-          title: "Registrazione completata",
-          description: "Controlla la tua email per confermare l'account."
-        });
-        onSwitchToLogin(); // Switch to login after successful registration
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      if (err.message?.includes('User already registered')) {
+        setError('Un utente con questa email è già registrato');
+      } else if (err.message?.includes('Password should be at least 6 characters')) {
+        setError('La password deve essere di almeno 6 caratteri');
+      } else if (err.message?.includes('Invalid email')) {
+        setError('Formato email non valido');
       } else {
-        toast({
-          title: "Errore di registrazione",
-          description: result.error,
-          variant: "destructive"
-        });
+        setError(err.message || 'Errore durante la registrazione');
       }
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante la registrazione",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
+  if (showGymApplication) {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="mb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowGymApplication(false)}
+          >
+            ← Torna alla registrazione
+          </Button>
+        </div>
+        <GymApplicationForm 
+          onSuccess={() => {
+            setShowGymApplication(false);
+            toast({
+              title: "Candidatura inviata!",
+              description: "La tua candidatura è stata inviata con successo. Verrai contattato appena sarà valutata.",
+            });
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Registrati
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold text-center">
+          Registrazione
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-center">
           Crea il tuo account per iniziare
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="grid grid-cols-2 gap-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="firstName">Nome *</Label>
               <Input
-                id="name"
-                name="name"
+                id="firstName"
+                type="text"
                 placeholder="Mario"
-                value={formData.name}
-                onChange={handleChange}
-                disabled={isLoading}
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="surname">Cognome *</Label>
+              <Label htmlFor="lastName">Cognome *</Label>
               <Input
-                id="surname"
-                name="surname"
+                id="lastName"
+                type="text"
                 placeholder="Rossi"
-                value={formData.surname}
-                onChange={handleChange}
-                disabled={isLoading}
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 required
               />
             </div>
@@ -144,12 +214,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
-              name="email"
               type="email"
-              placeholder="mario@esempio.com"
+              placeholder="mario.rossi@email.com"
               value={formData.email}
-              onChange={handleChange}
-              disabled={isLoading}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
           </div>
@@ -158,126 +226,109 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             <Label htmlFor="phone">Telefono</Label>
             <Input
               id="phone"
-              name="phone"
               type="tel"
               placeholder="+39 123 456 7890"
               value={formData.phone}
-              onChange={handleChange}
-              disabled={isLoading}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Data di nascita</Label>
-            <Input
-              id="dateOfBirth"
-              name="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+            <Label htmlFor="gym">Palestra *</Label>
+            <Select
+              value={formData.gymId}
+              onValueChange={(value) => setFormData({ ...formData, gymId: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona la tua palestra" />
+              </SelectTrigger>
+              <SelectContent>
+                {gyms.map((gym) => (
+                  <SelectItem key={gym.id} value={gym.id}>
+                    {gym.name} - {gym.city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="taxCode">Codice fiscale</Label>
-            <Input
-              id="taxCode"
-              name="taxCode"
-              placeholder="RSSMRA90A01F205X"
-              value={formData.taxCode}
-              onChange={handleChange}
-              disabled={isLoading}
-              maxLength={16}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Indirizzo</Label>
-            <Input
-              id="address"
-              name="address"
-              placeholder="Via Roma 1, Milano"
-              value={formData.address}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="password">Password *</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isLoading}
-                required
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Minimo 6 caratteri"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Conferma password *</Label>
+            <Label htmlFor="confirmPassword">Conferma Password *</Label>
             <Input
               id="confirmPassword"
-              name="confirmPassword"
               type="password"
-              placeholder="••••••••"
+              placeholder="Ripeti la password"
               value={formData.confirmPassword}
-              onChange={handleChange}
-              disabled={isLoading}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
             />
           </div>
 
           <Button 
             type="submit" 
-            className="w-full bg-gradient-primary hover:opacity-90"
+            className="w-full bg-gradient-primary"
             disabled={isLoading}
           >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Registrazione in corso...
+                Registrazione...
               </>
             ) : (
-              'Registrati'
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Registrati
+              </>
             )}
           </Button>
-
-          <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground">
-              Hai già un account?{' '}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-medium text-primary"
-                onClick={onSwitchToLogin}
-                disabled={isLoading}
-              >
-                Accedi
-              </Button>
-            </p>
-          </div>
         </form>
+
+        <div className="mt-6 space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                oppure
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+            onClick={() => setShowGymApplication(true)}
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            Candidati come Proprietario di Palestra
+          </Button>
+        </div>
+
+        <div className="mt-4 text-center text-sm">
+          <span className="text-muted-foreground">Hai già un account?</span>{' '}
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="text-primary font-medium hover:underline"
+          >
+            Accedi
+          </button>
+        </div>
       </CardContent>
     </Card>
   );
