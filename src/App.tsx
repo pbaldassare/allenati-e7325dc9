@@ -21,6 +21,8 @@ import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
 import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
+import AdminGyms from "./pages/admin/AdminGyms";
+import AdminGymNew from "./pages/admin/AdminGymNew";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const App = () => (
                 <Route path="/admin/instructors" element={<AdminInstructors />} />
                 <Route path="/admin/rooms" element={<AdminRooms />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />
+                <Route path="/admin/gyms" element={<AdminGyms />} />
+                <Route path="/admin/gyms/new" element={<AdminGymNew />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="*" element={<NotFound />} />

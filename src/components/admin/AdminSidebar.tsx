@@ -21,7 +21,8 @@ import {
   CalendarClock,
   Settings,
   Plus,
-  List
+  List,
+  Building
 } from 'lucide-react';
 
 const mainItems = [
@@ -31,6 +32,7 @@ const mainItems = [
 ];
 
 const managementItems = [
+  { title: "Palestre", url: "/admin/gyms", icon: Building },
   { title: "Istruttori", url: "/admin/instructors", icon: Users },
   { title: "Sale", url: "/admin/rooms", icon: MapPin },
   { title: "Calendario", url: "/admin/schedule", icon: CalendarClock },
