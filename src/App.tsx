@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { isAdminSubdomain } from "./utils/subdomain";
+import { updateDocumentMeta } from "./utils/domainConfig";
 
 // Admin Course Management Pages
 import AdminCoursesList from "./pages/admin/AdminCoursesList";
@@ -27,11 +28,16 @@ import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminMedicalCertificates from "./pages/admin/AdminMedicalCertificates";
 import ChatPage from "./pages/ChatPage";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const isAdmin = isAdminSubdomain();
+
+  useEffect(() => {
+    updateDocumentMeta();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
