@@ -15,7 +15,7 @@ import BookingHistory from "./pages/BookingHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { isAdminSubdomain, isLovableDomain } from "./utils/subdomain";
+import { isAdminSubdomain, isCustomAdminDomain, shouldShowAdminRoutes } from "./utils/subdomain";
 import { updateDocumentMeta } from "./utils/domainConfig";
 
 // Admin Course Management Pages
@@ -33,8 +33,8 @@ import { useEffect } from "react";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const isAdmin = isAdminSubdomain();
-  const isLovable = isLovableDomain();
+  const isAdminOnly = isAdminSubdomain() || isCustomAdminDomain();
+  const showAdminRoutes = shouldShowAdminRoutes();
 
   useEffect(() => {
     updateDocumentMeta();
@@ -55,8 +55,8 @@ const App = () => {
               <Sonner />
               <BrowserRouter>
                 <Routes>
-                  {isAdmin ? (
-                    // Admin subdomain routes
+                  {isAdminOnly ? (
+                    // Admin-only domains (admin.* subdomains)
                     <>
                       <Route path="/" element={<AdminLayout />}>
                         <Route index element={<AdminDashboard />} />
@@ -73,13 +73,14 @@ const App = () => {
                       <Route path="*" element={<NotFound />} />
                     </>
                   ) : (
-                    // Main app routes + Admin routes for Lovable domains
+                    // Main app routes with optional admin routes
                     <>
                       {/* Main app routes */}
                       <Route path="/" element={<Index />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/shop" element={<Shop />} />
                       <Route path="/bookings" element={<BookingHistory />} />
+                      <Route path="/courses/:id" element={<Index />} />
                       <Route path="/chat" element={
                         <ProtectedRoute>
                           <ChatPage />
@@ -91,21 +92,19 @@ const App = () => {
                         </ProtectedRoute>
                       } />
                       
-                      {/* Admin routes for Lovable domains */}
-                      {isLovable && (
-                        <>
-                          <Route path="/admin" element={<AdminLayout />}>
-                            <Route index element={<AdminDashboard />} />
-                            <Route path="courses" element={<AdminCoursesList />} />
-                            <Route path="courses/new" element={<AdminCourseNew />} />
-                            <Route path="courses/:id" element={<AdminCourseDetail />} />
-                            <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
-                            <Route path="instructors" element={<AdminInstructors />} />
-                            <Route path="rooms" element={<AdminRooms />} />
-                            <Route path="schedule" element={<AdminSchedule />} />
-                            <Route path="medical-certificates" element={<AdminMedicalCertificates />} />
-                          </Route>
-                        </>
+                      {/* Admin routes when available */}
+                      {showAdminRoutes && (
+                        <Route path="/admin" element={<AdminLayout />}>
+                          <Route index element={<AdminDashboard />} />
+                          <Route path="courses" element={<AdminCoursesList />} />
+                          <Route path="courses/new" element={<AdminCourseNew />} />
+                          <Route path="courses/:id" element={<AdminCourseDetail />} />
+                          <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
+                          <Route path="instructors" element={<AdminInstructors />} />
+                          <Route path="rooms" element={<AdminRooms />} />
+                          <Route path="schedule" element={<AdminSchedule />} />
+                          <Route path="medical-certificates" element={<AdminMedicalCertificates />} />
+                        </Route>
                       )}
                       
                       <Route path="*" element={<NotFound />} />

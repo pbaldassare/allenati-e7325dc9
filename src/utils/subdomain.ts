@@ -15,6 +15,31 @@ export const isAdminSubdomain = (): boolean => {
   return hostname.startsWith('admin.');
 };
 
+export const isCustomAdminDomain = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const hostname = window.location.hostname;
+  // Check for custom admin domains like admin.allenati.me
+  return hostname === 'admin.allenati.me' || hostname.startsWith('admin.') && !hostname.includes('lovableproject.com');
+};
+
+export const shouldShowAdminRoutes = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const hostname = window.location.hostname;
+  console.log('🔧 Domain detection:', { 
+    hostname,
+    isLovable: isLovableDomain(),
+    isAdminSubdomain: isAdminSubdomain(),
+    isCustomAdmin: isCustomAdminDomain()
+  });
+  
+  // Show admin routes if:
+  // 1. On Lovable domain (for /admin/* routes)
+  // 2. On admin subdomain (custom or lovable)
+  return isLovableDomain() || isAdminSubdomain() || isCustomAdminDomain();
+};
+
 export const getAdminUrl = (path: string = '/'): string => {
   if (typeof window === 'undefined') return path;
   

@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { isAdminSubdomain, getAdminUrl, getMainAppUrl } from '@/utils/subdomain';
+import { isAdminSubdomain, isCustomAdminDomain, getAdminUrl, getMainAppUrl } from '@/utils/subdomain';
 
 export type AppRole = 'admin' | 'gym_owner' | 'instructor' | 'basic_user';
 
 export const useSubdomainAccess = () => {
   const { user, isAuthenticated, loading } = useAuth();
-  const isOnAdminSubdomain = isAdminSubdomain();
+  const isOnAdminSubdomain = isAdminSubdomain() || isCustomAdminDomain();
 
   const userRole = user?.role as AppRole;
   
