@@ -4,18 +4,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Plus, Trash2, Clock, MapPin } from 'lucide-react';
 
 interface ScheduleItem {
   dayOfWeek: number;
   time: string;
+  roomId: string;
   date?: string;
   day?: string;
+}
+
+interface GymRoom {
+  id: string;
+  name: string;
 }
 
 interface CourseScheduleManagerProps {
   schedule: ScheduleItem[];
   onChange: (schedule: ScheduleItem[]) => void;
+  gymRooms: GymRoom[];
 }
 
 const daysOfWeek = [
@@ -31,15 +38,17 @@ const daysOfWeek = [
 export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   schedule,
   onChange,
+  gymRooms,
 }) => {
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(
-    schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', day: 'Lunedì' }]
+    schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]
   );
 
   const addScheduleItem = () => {
     const newItem: ScheduleItem = {
       dayOfWeek: 1,
       time: '09:00',
+      roomId: '',
       day: 'Lunedì'
     };
     const newSchedule = [...scheduleItems, newItem];
@@ -71,13 +80,17 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
     onChange(newSchedule);
   };
 
+  const getRoomName = (roomId: string) => {
+    return gymRooms.find(room => room.id === roomId)?.name || 'Sala non selezionata';
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h4 className="font-medium">Orari Settimanali</h4>
           <p className="text-sm text-muted-foreground">
-            Configura gli orari ricorrenti del corso
+            Configura gli orari ricorrenti del corso e assegna le sale
           </p>
         </div>
         <Button
@@ -95,8 +108,8 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
         {scheduleItems.map((item, index) => (
           <Card key={index}>
             <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
                   <label className="text-sm font-medium">Giorno</label>
                   <Select
                     value={item.dayOfWeek.toString()}
@@ -117,7 +130,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                   </Select>
                 </div>
 
-                <div className="flex-1">
+                <div>
                   <label className="text-sm font-medium">Orario</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -130,7 +143,38 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-end">
+                <div>
+                  <label className="text-sm font-medium">Sala</label>
+                  <Select
+                    value={item.roomId}
+                    onValueChange={(value) => 
+                      updateScheduleItem(index, 'roomId', value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona sala">
+                        {item.roomId && (
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4" />
+                            {getRoomName(item.roomId)}
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gymRooms.map(room => (
+                        <SelectItem key={room.id} value={room.id}>
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4" />
+                            {room.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Button
                     type="button"
                     variant="outline"
@@ -154,12 +198,23 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {scheduleItems.map((item, index) => (
-              <Badge key={index} variant="secondary">
-                {item.day} alle {item.time}
-              </Badge>
-            ))}
+            {scheduleItems.map((item, index) => {
+              const roomName = getRoomName(item.roomId);
+              return (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {item.day} alle {item.time}
+                  <MapPin className="h-3 w-3" />
+                  {roomName}
+                </Badge>
+              );
+            })}
           </div>
+          {scheduleItems.some(item => !item.roomId) && (
+            <p className="text-sm text-amber-600 mt-2">
+              ⚠️ Alcune sale non sono state selezionate
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

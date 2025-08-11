@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Course } from '@/contexts/AppDataContext';
 import { X, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const courseSchema = z.object({
   name: z.string().min(3, 'Il nome deve essere almeno 3 caratteri'),
@@ -32,9 +33,17 @@ const courseSchema = z.object({
   price: z.coerce.number().min(0, 'Il prezzo deve essere positivo'),
   maxParticipants: z.coerce.number().min(1, 'Massimo partecipanti deve essere almeno 1'),
   duration: z.coerce.number().min(15, 'La durata minima è 15 minuti'),
+  deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
   image: z.string().url('Inserisci un URL valido per l\'immagine'),
   benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
   requirements: z.array(z.string()).optional(),
+  schedule: z.array(z.object({
+    dayOfWeek: z.number(),
+    time: z.string(),
+    roomId: z.string().min(1, 'La sala è obbligatoria'),
+    date: z.string().optional(),
+    day: z.string().optional()
+  })).min(1, 'È necessario inserire almeno un orario'),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -44,10 +53,33 @@ interface CourseFormProps {
   course?: Course;
 }
 
+interface GymRoom {
+  id: string;
+  name: string;
+}
+
 export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [gymRooms, setGymRooms] = useState<GymRoom[]>([]);
   
+  // Load gym rooms
+  useEffect(() => {
+    const loadGymRooms = async () => {
+      const { data, error } = await supabase
+        .from('gym_rooms')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (!error && data) {
+        setGymRooms(data);
+      }
+    };
+    
+    loadGymRooms();
+  }, []);
+
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: course ? {
@@ -59,9 +91,17 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       price: course.price,
       maxParticipants: course.maxParticipants,
       duration: course.duration,
+      deadlineHours: course.deadlineHours || 24,
       image: course.image,
       benefits: course.benefits,
       requirements: course.requirements || [],
+      schedule: course.schedule?.map(s => ({
+        dayOfWeek: s.dayOfWeek,
+        time: s.time,
+        roomId: s.roomId || '',
+        day: s.day,
+        date: s.date
+      })) || [],
     } : {
       name: '',
       description: '',
@@ -71,9 +111,11 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       price: 0,
       maxParticipants: 20,
       duration: 60,
+      deadlineHours: 24,
       image: '',
       benefits: [''],
       requirements: [''],
+      schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },
   });
 
@@ -240,6 +282,29 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
 
           <FormField
             control={form.control}
+            name="deadlineHours"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Deadline Prenotazione/Cancellazione (ore)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    placeholder="24"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Ore prima dell'inizio del corso entro cui gli utenti possono prenotare/cancellare. Admin, proprietari palestra e istruttori non hanno limiti.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="image"
             render={({ field }) => (
               <FormItem>
@@ -369,9 +434,27 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             <CardTitle className="text-lg">Programmazione Orari</CardTitle>
           </CardHeader>
           <CardContent>
-            <CourseScheduleManager 
-              schedule={course?.schedule || []}
-              onChange={(schedule) => console.log('Schedule changed:', schedule)}
+            <FormField
+              control={form.control}
+              name="schedule"
+              render={({ field }) => (
+                <FormItem>
+              <FormControl>
+                <CourseScheduleManager 
+                  schedule={(field.value || []).map(item => ({
+                    dayOfWeek: item.dayOfWeek || 1,
+                    time: item.time || '09:00',
+                    roomId: item.roomId || '',
+                    day: item.day,
+                    date: item.date
+                  }))}
+                  onChange={field.onChange}
+                  gymRooms={gymRooms}
+                />
+              </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </CardContent>
         </Card>
