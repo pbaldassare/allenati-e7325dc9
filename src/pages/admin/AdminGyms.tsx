@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Edit, Eye } from 'lucide-react';
+import { Edit, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -98,16 +98,9 @@ const AdminGyms = () => {
             Gestione Palestre
           </h1>
           <p className="text-muted-foreground">
-            Gestisci tutte le palestre del sistema
+            Visualizza e modifica le palestre esistenti
           </p>
         </div>
-        <Button 
-          onClick={() => navigate('/admin/gyms/new')}
-          className="bg-gradient-primary"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Nuova Palestra
-        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -178,15 +171,8 @@ const AdminGyms = () => {
             <div className="text-muted-foreground text-center">
               <div className="text-4xl mb-4">🏋️</div>
               <h3 className="text-lg font-medium">Nessuna palestra trovata</h3>
-              <p className="text-sm mt-1">Inizia creando la prima palestra</p>
+              <p className="text-sm mt-1">Per creare una nuova palestra, vai nella sezione "Utenti" e assegna il ruolo "gym_owner" a un utente</p>
             </div>
-            <Button 
-              onClick={() => navigate('/admin/gyms/new')}
-              className="mt-4 bg-gradient-primary"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Crea Prima Palestra
-            </Button>
           </CardContent>
         </Card>
       )}
