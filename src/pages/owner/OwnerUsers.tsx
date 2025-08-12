@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 interface MemberProfile {
@@ -16,6 +17,7 @@ const OwnerUsers = () => {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -91,6 +93,10 @@ const OwnerUsers = () => {
     }
   };
 
+  const listToShow = (query.trim()
+    ? members.filter((m) => `${m.first_name} ${m.last_name}`.toLowerCase().includes(query.toLowerCase()))
+    : members);
+
   return (
     <div className="space-y-6">
       <div>
@@ -105,6 +111,13 @@ const OwnerUsers = () => {
           <CardTitle>Elenco Membri</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex items-center gap-3">
+            <Input
+              placeholder="Cerca per nome o cognome..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -118,12 +131,16 @@ const OwnerUsers = () => {
                   <TableRow>
                     <TableCell colSpan={2}>Caricamento...</TableCell>
                   </TableRow>
-                ) : members.length === 0 ? (
+                ) : listToShow.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2}>Nessun membro trovato.</TableCell>
+                    <TableCell colSpan={2}>
+                      {members.length === 0
+                        ? 'Nessun membro nella palestra.'
+                        : 'Nessun risultato per la ricerca.'}
+                    </TableCell>
                   </TableRow>
                 ) : (
-                  members.map((m) => (
+                  listToShow.map((m) => (
                     <TableRow key={m.user_id}>
                       <TableCell>{m.first_name} {m.last_name}</TableCell>
                       <TableCell>
