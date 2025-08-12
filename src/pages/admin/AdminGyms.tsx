@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Edit, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,29 +46,75 @@ const AdminGyms = () => {
   }, []);
 
   const loadGyms = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      console.log('[AdminGyms] Loading gyms...');
+      // 1) Carica tutte le palestre (visibili per admin o attive per utenti)
+      const { data: gymsData, error: gymsError } = await supabase
         .from('gyms')
-        .select(`
-          *,
-          user_gym_memberships!inner(
-            user_id,
-            profiles!inner(
-              first_name,
-              last_name,
-              phone
-            )
-          )
-        `)
-        .eq('user_gym_memberships.membership_type', 'owner')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (gymsError) throw gymsError;
 
-      const gymsWithOwners = (data || []).map((gym: any) => ({
-        ...gym,
-        owner: gym.user_gym_memberships?.[0]?.profiles
-      }));
+      const gymIds = (gymsData || []).map(g => g.id);
+      console.log('[AdminGyms] Fetched gyms:', gymsData);
+
+      if (gymIds.length === 0) {
+        setGyms([]);
+        return;
+      }
+
+      // 2) Carica membership tipo "owner" per queste palestre
+      const { data: ownerMemberships, error: membershipsError } = await supabase
+        .from('user_gym_memberships')
+        .select('user_id, gym_id, membership_type, status')
+        .in('gym_id', gymIds)
+        .eq('membership_type', 'owner')
+        .eq('status', 'active');
+
+      if (membershipsError) throw membershipsError;
+      console.log('[AdminGyms] Owner memberships:', ownerMemberships);
+
+      const ownerUserIds = Array.from(new Set((ownerMemberships || []).map(m => m.user_id)));
+      let profilesMap: Record<string, { first_name: string; last_name: string; phone?: string }> = {};
+
+      // 3) Carica i profili degli owner
+      if (ownerUserIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, phone')
+          .in('user_id', ownerUserIds);
+
+        if (profilesError) throw profilesError;
+
+        profilesMap = (profiles || []).reduce((acc, p) => {
+          acc[p.user_id] = {
+            first_name: p.first_name,
+            last_name: p.last_name,
+            phone: p.phone || undefined,
+          };
+          return acc;
+        }, {} as Record<string, { first_name: string; last_name: string; phone?: string }>);
+        console.log('[AdminGyms] Owner profiles map:', profilesMap);
+      }
+
+      // 4) Combina: per ogni palestra cerca la membership owner e poi il relativo profilo
+      const gymsWithOwners: Gym[] = (gymsData || []).map((gym: any) => {
+        const membership = (ownerMemberships || []).find(m => m.gym_id === gym.id);
+        const profile = membership ? profilesMap[membership.user_id] : undefined;
+
+        return {
+          ...gym,
+          owner: profile
+            ? {
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                phone: profile.phone,
+              }
+            : undefined,
+        } as Gym;
+      });
 
       setGyms(gymsWithOwners);
     } catch (error) {
