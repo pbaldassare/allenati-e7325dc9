@@ -39,7 +39,7 @@ const OwnerUsers = () => {
   const promoteToInstructor = async (userId: string) => {
     try {
       setPromoting(userId);
-      const { error } = await supabase.rpc('promote_user_to_instructor', {
+      const { error } = await (supabase as any).rpc('promote_user_to_instructor', {
         target_user_id: userId,
         bio: null,
       });
