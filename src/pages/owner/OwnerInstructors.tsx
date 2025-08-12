@@ -33,32 +33,64 @@ const OwnerInstructors: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await (supabase as any)
-        .from("instructors")
-        .select(`
-          id,
-          user_id,
-          bio,
-          is_active,
-          created_at,
-          specializations,
-          certifications,
-          experience_years,
-          hourly_rate,
-          profile:profiles!user_id(
-            first_name,
-            last_name,
-            phone,
-            profile_picture_url
+      try {
+        setLoading(true);
+        // 1) Carica gli istruttori
+        const { data: instData, error: instError } = await (supabase as any)
+          .from("instructors")
+          .select(
+            `id, user_id, bio, is_active, created_at, specializations, certifications, experience_years, hourly_rate`
           )
-        `)
-        .order("created_at", { ascending: false });
-      if (!error && data) setInstructors(data as Instructor[]);
-      setLoading(false);
+          .order("created_at", { ascending: false });
+
+        if (instError) {
+          console.error("Errore nel caricamento degli istruttori:", instError);
+          setInstructors([]);
+          setLoading(false);
+          return;
+        }
+
+        const instructorsList = (instData || []) as any[];
+        const userIds = instructorsList.map((i) => i.user_id).filter(Boolean);
+
+        // 2) Carica i profili collegati (nome, cognome, telefono, avatar)
+        let profilesById = new Map<string, any>();
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await (supabase as any)
+            .from("profiles")
+            .select("user_id, first_name, last_name, phone, profile_picture_url")
+            .in("user_id", userIds);
+
+          if (!profilesError && profilesData) {
+            profilesById = new Map(
+              profilesData.map((p: any) => [p.user_id as string, p])
+            );
+          } else if (profilesError) {
+            console.warn("Impossibile caricare i profili collegati:", profilesError);
+          }
+        }
+
+        // 3) Merge dei dati
+        const merged: Instructor[] = instructorsList.map((ins: any) => ({
+          ...ins,
+          profile: profilesById.get(ins.user_id) || {
+            first_name: "",
+            last_name: "",
+            phone: null,
+            profile_picture_url: null,
+          },
+        }));
+
+        setInstructors(merged);
+      } catch (e) {
+        console.error("Errore imprevisto nel caricamento istruttori:", e);
+        setInstructors([]);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
-
   return (
     <section>
       <h1 className="sr-only">Istruttori palestra</h1>
