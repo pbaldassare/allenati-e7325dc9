@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +11,7 @@ import { Loader2, UserPlus, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GymApplicationForm } from '@/components/GymApplicationForm';
 import { useToast } from '@/hooks/use-toast';
+import { MinorGuardianModal } from '@/components/auth/MinorGuardianModal';
 
 interface Gym {
   id: string;
@@ -31,11 +33,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     confirmPassword: '',
     phone: '',
     gymId: '',
+    guardianFirstName: '',
+    guardianLastName: '',
+    guardianPhone: '',
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [showGymApplication, setShowGymApplication] = useState(false);
+  const [isMinor, setIsMinor] = useState(false);
+  const [isGuardianModalOpen, setIsGuardianModalOpen] = useState(false);
   const { register } = useAuth();
   const { toast } = useToast();
 
@@ -96,6 +103,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
       return;
     }
 
+    if (isMinor && (!formData.guardianFirstName || !formData.guardianLastName || !formData.guardianPhone)) {
+      setError('Per i minorenni è necessario indicare nome, cognome e cellulare del genitore/tutore');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
@@ -110,7 +122,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
-            selected_gym_id: formData.gymId
+            selected_gym_id: formData.gymId,
+            ...(isMinor
+              ? {
+                  is_minor: true,
+                  guardian_first_name: formData.guardianFirstName,
+                  guardian_last_name: formData.guardianLastName,
+                  guardian_phone: formData.guardianPhone,
+                }
+              : { is_minor: false }),
           }
         }
       });
@@ -133,7 +153,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         confirmPassword: '',
         phone: '',
         gymId: '',
+        guardianFirstName: '',
+        guardianLastName: '',
+        guardianPhone: '',
       });
+      setIsMinor(false);
+      setIsGuardianModalOpen(false);
       
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -315,9 +340,54 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                     </p>
                   </div>
                 )}
-              </div>
+                </div>
 
-              <div className="space-y-2">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id="isMinor"
+                      checked={isMinor}
+                      onCheckedChange={(checked) => {
+                        const value = Boolean(checked);
+                        setIsMinor(value);
+                        if (value && (!formData.guardianFirstName || !formData.guardianLastName || !formData.guardianPhone)) {
+                          setIsGuardianModalOpen(true);
+                        }
+                      }}
+                    />
+                    <div className="grid gap-1">
+                      <Label htmlFor="isMinor">Hai meno di 16 anni?</Label>
+                      {isMinor && (
+                        <div className="text-sm text-muted-foreground">
+                          {formData.guardianFirstName && formData.guardianLastName && formData.guardianPhone ? (
+                            <div className="flex items-center gap-2">
+                              <span>
+                                Dati genitore/tutore: {formData.guardianFirstName} {formData.guardianLastName} - {formData.guardianPhone}
+                              </span>
+                              <button
+                                type="button"
+                                className="text-primary font-medium hover:underline"
+                                onClick={() => setIsGuardianModalOpen(true)}
+                              >
+                                Modifica
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="text-primary font-medium hover:underline"
+                              onClick={() => setIsGuardianModalOpen(true)}
+                            >
+                              Inserisci i dati del genitore/tutore richiesti
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                 <Label htmlFor="password">Password *</Label>
                 <Input
                   id="password"
@@ -359,6 +429,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                 )}
               </Button>
             </form>
+
+            <MinorGuardianModal
+              open={isGuardianModalOpen}
+              onClose={() => setIsGuardianModalOpen(false)}
+              values={{
+                firstName: formData.guardianFirstName,
+                lastName: formData.guardianLastName,
+                phone: formData.guardianPhone,
+              }}
+              onSave={(vals) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  guardianFirstName: vals.firstName,
+                  guardianLastName: vals.lastName,
+                  guardianPhone: vals.phone,
+                }));
+                setIsGuardianModalOpen(false);
+              }}
+            />
 
             <div className="mt-6 space-y-4">
               <div className="relative">
