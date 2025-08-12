@@ -4,6 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 
 interface MemberProfile {
@@ -11,13 +15,16 @@ interface MemberProfile {
   first_name: string;
   last_name: string;
   profile_picture_url: string | null;
+  membership_status: string;
+  membership_type: string;
 }
 
 const OwnerUsers = () => {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
+const [query, setQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,11 +50,10 @@ const OwnerUsers = () => {
           return;
         }
 
-        const { data: memberships, error: memErr } = await supabase
+const { data: memberships, error: memErr } = await supabase
           .from('user_gym_memberships')
-          .select('user_id')
-          .eq('gym_id', gymId)
-          .eq('status', 'active');
+          .select('user_id, status, membership_type')
+          .eq('gym_id', gymId);
         
         if (memErr) throw memErr;
 
@@ -57,6 +63,10 @@ const OwnerUsers = () => {
           return;
         }
 
+        const membershipByUser = new Map(
+          (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
+        );
+
         const { data: profiles, error: profErr } = await supabase
           .from('profiles')
           .select('user_id, first_name, last_name, profile_picture_url')
@@ -64,7 +74,16 @@ const OwnerUsers = () => {
         
         if (profErr) throw profErr;
 
-        setMembers((profiles || []) as MemberProfile[]);
+        const combined = (profiles || []).map((p: any) => ({
+          user_id: p.user_id,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          profile_picture_url: p.profile_picture_url,
+          membership_status: membershipByUser.get(p.user_id)?.status ?? 'unknown',
+          membership_type: membershipByUser.get(p.user_id)?.membership_type ?? 'member',
+        }));
+
+        setMembers(combined as MemberProfile[]);
       } catch (e: any) {
         console.error('loadMembers error', e);
         toast({ title: 'Errore caricamento utenti', description: e?.message ?? 'Qualcosa è andato storto', variant: 'destructive' });
@@ -93,9 +112,11 @@ const OwnerUsers = () => {
     }
   };
 
-  const listToShow = (query.trim()
-    ? members.filter((m) => `${m.first_name} ${m.last_name}`.toLowerCase().includes(query.toLowerCase()))
-    : members);
+const normalizedQuery = query.trim().toLowerCase();
+  const filteredByStatus = showInactive ? members : members.filter((m) => m.membership_status === 'active');
+  const listToShow = normalizedQuery
+    ? filteredByStatus.filter((m) => `${m.first_name} ${m.last_name}`.toLowerCase().includes(normalizedQuery))
+    : filteredByStatus;
 
   return (
     <div className="space-y-6">
@@ -111,29 +132,35 @@ const OwnerUsers = () => {
           <CardTitle>Elenco Membri</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center gap-3">
+<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Input
               placeholder="Cerca per nome o cognome..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+            <div className="flex items-center gap-2">
+              <Switch id="show-inactive" checked={showInactive} onCheckedChange={(v) => setShowInactive(!!v)} />
+              <Label htmlFor="show-inactive">Mostra inattivi</Label>
+            </div>
           </div>
-          <div className="overflow-x-auto">
+          <TooltipProvider><div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+<TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Azione</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={2}>Caricamento...</TableCell>
+                    <TableCell colSpan={4}>Caricamento...</TableCell>
                   </TableRow>
                 ) : listToShow.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2}>
+                    <TableCell colSpan={4}>
                       {members.length === 0
                         ? 'Nessun membro nella palestra.'
                         : 'Nessun risultato per la ricerca.'}
@@ -144,6 +171,21 @@ const OwnerUsers = () => {
                     <TableRow key={m.user_id}>
                       <TableCell>{m.first_name} {m.last_name}</TableCell>
                       <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant={m.membership_status === 'active' ? 'default' : 'secondary'}>
+                              {m.membership_status}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Stato della membership dell'utente</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{m.membership_type || 'member'}</Badge>
+                      </TableCell>
+                      <TableCell>
                         <Button size="sm" onClick={() => promoteToInstructor(m.user_id)} disabled={promoting === m.user_id}>
                           {promoting === m.user_id ? 'Promozione…' : 'Promuovi a Istruttore'}
                         </Button>
@@ -153,7 +195,7 @@ const OwnerUsers = () => {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </div></TooltipProvider>
         </CardContent>
       </Card>
     </div>
