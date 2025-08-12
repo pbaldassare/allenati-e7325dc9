@@ -115,9 +115,9 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
           {!user && " Non è necessario essere registrati per candidarsi."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-8">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             <FormField
               control={form.control}
               name="applicant_email"
@@ -284,7 +284,7 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full bg-gradient-primary"
+              className="w-full bg-gradient-primary mt-6 mb-4"
             >
               <Send className="mr-2 h-4 w-4" />
               {isSubmitting ? 'Invio in corso...' : 'Invia Candidatura'}
