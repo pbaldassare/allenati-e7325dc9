@@ -110,27 +110,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
+            selected_gym_id: formData.gymId
           }
         }
       });
 
       if (registerError) throw registerError;
 
-      if (authData.user) {
-        // Create gym membership
-        const { error: membershipError } = await supabase
-          .from('user_gym_memberships')
-          .insert({
-            user_id: authData.user.id,
-            gym_id: formData.gymId,
-            membership_type: 'member',
-            status: 'active',
-          });
-
-        if (membershipError) {
-          console.error('Error creating gym membership:', membershipError);
-        }
-      }
+      // Gym membership will be created automatically by the database trigger
 
       toast({
         title: "Registrazione completata!",
