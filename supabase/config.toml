@@ -1,1 +1,4 @@
 project_id = "qyryykmpadguzxyiotur"
+
+[functions.create-gym-user]
+verify_jwt = true

@@ -105,124 +105,60 @@ export const AdminGymApplications = () => {
     if (!user) return;
 
     try {
-      let linkedUserId = application.applicant_user_id;
-      let isNewAccountCreated = false;
-
-      // If no linked user and we have an email, create a user account automatically
-      if (!linkedUserId && application.applicant_email) {
-        try {
-          // Create user account with admin API
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-            email: application.applicant_email,
-            password: 'Allenati123!',
-            email_confirm: true,
-            user_metadata: {
-              first_name: 'Proprietario',
-              last_name: 'Palestra'
-            }
-          });
-
-          if (authError) {
-            console.error('Error creating user:', authError);
-            // If user already exists, try to find them
-            if (authError.message?.includes('User already registered')) {
-              // User exists, we'll proceed without linking for now
-              console.log('User already exists, proceeding without auto-linking');
-            } else {
-              throw authError;
-            }
-          } else if (authData.user) {
-            linkedUserId = authData.user.id;
-            isNewAccountCreated = true;
-            console.log('Created new user:', linkedUserId);
-
-            // Update the application with the new user ID
-            await supabase
-              .from('gym_applications')
-              .update({ applicant_user_id: linkedUserId })
-              .eq('id', application.id);
+      console.log('Starting approval for application:', application.id);
+      
+      // Call the Edge Function to create user and setup gym
+      const { data: result, error: functionError } = await supabase.functions.invoke('create-gym-user', {
+        body: {
+          applicationId: application.id,
+          userEmail: application.applicant_email,
+          password: 'Allenati123!', // Default password - user should change on first login
+          gymData: {
+            gym_name: application.gym_name,
+            gym_description: application.gym_description,
+            gym_address: application.gym_address,
+            gym_city: application.gym_city,
+            gym_postal_code: application.gym_postal_code,
+            gym_phone: application.gym_phone,
+            gym_email: application.gym_email,
+            gym_website: application.gym_website,
           }
-        } catch (userCreationError) {
-          console.error('Failed to create user account:', userCreationError);
-          // Continue with gym creation even if user creation fails
         }
+      });
+
+      if (functionError) {
+        console.error('Error calling create-gym-user function:', functionError);
+        throw new Error(`Errore durante la creazione dell'utente: ${functionError.message}`);
       }
 
-      // Create the gym
-      const { data: gymData, error: gymError } = await supabase
-        .from('gyms')
-        .insert({
-          name: application.gym_name,
-          description: application.gym_description,
-          address: application.gym_address,
-          city: application.gym_city,
-          postal_code: application.gym_postal_code,
-          phone: application.gym_phone,
-          email: application.gym_email,
-          website: application.gym_website,
-          owner_email: application.applicant_email,
-        })
-        .select()
-        .single();
-
-      if (gymError) throw gymError;
-
-      // Assign role and membership if we have a linked user
-      if (linkedUserId) {
-        // Assign gym_owner role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: linkedUserId,
-            role: 'gym_owner',
-            granted_by: user.id,
-          });
-
-        if (roleError && !roleError.message?.includes('duplicate key')) {
-          throw roleError;
-        }
-
-        // Create gym membership for the owner
-        const { error: membershipError } = await supabase
-          .from('user_gym_memberships')
-          .insert({
-            user_id: linkedUserId,
-            gym_id: gymData.id,
-            membership_type: 'owner',
-            status: 'active',
-          });
-
-        if (membershipError && !membershipError.message?.includes('duplicate key')) {
-          throw membershipError;
-        }
+      if (!result.success) {
+        console.error('Function returned error:', result.error);
+        throw new Error(result.error);
       }
 
-      // Update application status
+      console.log('Successfully created gym user:', result);
+
+      // Update application status to approved
       const { error: updateError } = await supabase
         .from('gym_applications')
-        .update({
+        .update({ 
           status: 'approved',
           reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
+          reviewed_at: new Date().toISOString()
         })
         .eq('id', application.id);
 
-      if (updateError) throw updateError;
-
-      // Generate success message based on what happened
-      let successMessage = '';
-      if (isNewAccountCreated) {
-        successMessage = `La palestra "${application.gym_name}" è stata creata e l'account utente è stato creato automaticamente.\n\nCredenziali di accesso:\nEmail: ${application.applicant_email}\nPassword: Allenati123!\n\nIl proprietario può accedere e cambiare la password quando vuole.`;
-      } else if (linkedUserId) {
-        successMessage = `La palestra "${application.gym_name}" è stata creata e collegata all'utente esistente.`;
-      } else {
-        successMessage = `La palestra "${application.gym_name}" è stata creata. Quando l'utente si registrerà con l'email ${application.applicant_email}, diventerà automaticamente proprietario.`;
+      if (updateError) {
+        console.error('Error updating application status:', updateError);
+        throw updateError;
       }
 
       toast({
         title: "Candidatura approvata!",
-        description: successMessage,
-        duration: 8000, // Longer duration for credential info
+        description: result.userExists 
+          ? `Utente esistente collegato alla palestra ${application.gym_name} con successo.`
+          : `Palestra ${application.gym_name} approvata. Account creato per ${application.applicant_email} con password: Allenati123!`,
+        duration: 8000,
       });
 
       loadApplications();
@@ -230,7 +166,7 @@ export const AdminGymApplications = () => {
       console.error('Error approving application:', error);
       toast({
         title: "Errore",
-        description: "Errore nell'approvazione della candidatura",
+        description: error instanceof Error ? error.message : "Errore nell'approvazione della candidatura",
         variant: "destructive",
       });
     }
