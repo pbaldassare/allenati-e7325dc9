@@ -1621,6 +1621,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      promote_user_to_instructor: {
+        Args: { target_user_id: string; bio?: string }
+        Returns: string
+      }
       user_has_permission: {
         Args: { _user_id: string; _permission_name: string }
         Returns: boolean

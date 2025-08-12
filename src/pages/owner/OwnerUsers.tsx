@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface MemberProfile {
@@ -23,8 +25,11 @@ const OwnerUsers = () => {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
-const [query, setQuery] = useState('');
+  const [query, setQuery] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,6 +117,42 @@ const { data: memberships, error: memErr } = await supabase
     }
   };
 
+  const addMemberByEmail = async () => {
+    if (!newMemberEmail.trim()) {
+      toast({ title: 'Errore', description: 'Inserisci un indirizzo email valido', variant: 'destructive' });
+      return;
+    }
+
+    setAddingMember(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('owner-link-member', {
+        body: { email: newMemberEmail.trim() }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      // Add new member to current list
+      setMembers(prev => [...prev, data.member]);
+      
+      toast({ 
+        title: 'Membro aggiunto', 
+        description: `${data.member.first_name} ${data.member.last_name} è stato aggiunto alla palestra.` 
+      });
+      
+      setNewMemberEmail('');
+      setAddMemberDialogOpen(false);
+    } catch (e: any) {
+      toast({ 
+        title: 'Errore', 
+        description: e.message || 'Impossibile aggiungere il membro', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
 const normalizedQuery = query.trim().toLowerCase();
   const filteredByStatus = showInactive ? members : members.filter((m) => m.membership_status === 'active');
   const listToShow = normalizedQuery
@@ -129,7 +170,47 @@ const normalizedQuery = query.trim().toLowerCase();
 
       <Card>
         <CardHeader>
-          <CardTitle>Elenco Membri</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Elenco Membri</CardTitle>
+            <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi Membro
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Aggiungi Nuovo Membro</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email del nuovo membro</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="esempio@email.com"
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !addingMember) {
+                          addMemberByEmail();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setAddMemberDialogOpen(false)}>
+                      Annulla
+                    </Button>
+                    <Button onClick={addMemberByEmail} disabled={addingMember}>
+                      {addingMember ? 'Aggiunta...' : 'Aggiungi'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

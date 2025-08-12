@@ -2,3 +2,6 @@ project_id = "qyryykmpadguzxyiotur"
 
 [functions.create-gym-user]
 verify_jwt = true
+
+[functions.owner-link-member]
+verify_jwt = true
