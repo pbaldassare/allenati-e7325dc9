@@ -32,6 +32,12 @@ import AdminUsers from "./pages/admin/AdminUsers";
 // Owner Pages
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import OwnerUsers from "./pages/owner/OwnerUsers";
+import OwnerInstructors from "./pages/owner/OwnerInstructors";
+import OwnerCoursesList from "./pages/owner/OwnerCoursesList";
+import OwnerCourseNew from "./pages/owner/OwnerCourseNew";
+import OwnerSchedule from "./pages/owner/OwnerSchedule";
+import OwnerBookings from "./pages/owner/OwnerBookings";
+import OwnerReports from "./pages/owner/OwnerReports";
 
 const queryClient = new QueryClient();
 
@@ -78,8 +84,14 @@ const App = () => (
                 <Route path="/owner" element={<OwnerLayout />}>
                   <Route index element={<OwnerDashboard />} />
                   <Route path="users" element={<OwnerUsers />} />
+                  <Route path="instructors" element={<OwnerInstructors />} />
+                  <Route path="courses" element={<OwnerCoursesList />} />
+                  <Route path="courses/new" element={<OwnerCourseNew />} />
+                  <Route path="schedule" element={<OwnerSchedule />} />
+                  <Route path="bookings" element={<OwnerBookings />} />
+                  <Route path="reports" element={<OwnerReports />} />
                 </Route>
-                
+
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="*" element={<NotFound />} />
