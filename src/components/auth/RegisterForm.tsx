@@ -257,7 +257,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               required
               disabled={gymsLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <SelectValue 
                   placeholder={
                     gymsLoading 
@@ -268,29 +268,49 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
                   } 
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60">
                 {gymsLoading ? (
-                  <SelectItem value="loading" disabled>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Caricamento...
+                  <SelectItem value="loading" disabled className="justify-center">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Caricamento palestre...</span>
+                    </div>
                   </SelectItem>
                 ) : gyms.length === 0 ? (
-                  <SelectItem value="empty" disabled>
-                    Nessuna palestra disponibile
+                  <SelectItem value="empty" disabled className="justify-center">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>Nessuna palestra disponibile</span>
+                    </div>
                   </SelectItem>
                 ) : (
                   gyms.map((gym) => (
-                    <SelectItem key={gym.id} value={gym.id}>
-                      {gym.name} - {gym.city}
+                    <SelectItem 
+                      key={gym.id} 
+                      value={gym.id}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{gym.name}</span>
+                          <span className="text-xs text-muted-foreground">{gym.city}</span>
+                        </div>
+                      </div>
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
             {gyms.length === 0 && !gymsLoading && (
-              <p className="text-sm text-muted-foreground">
-                Non ci sono palestre disponibili al momento. Puoi candidarti come proprietario di palestra qui sotto.
-              </p>
+              <div className="p-3 border border-dashed border-muted-foreground/20 rounded-lg bg-muted/30">
+                <p className="text-sm text-muted-foreground text-center">
+                  <Building2 className="h-4 w-4 inline mr-1" />
+                  Non ci sono palestre disponibili al momento. 
+                  <br />
+                  Puoi candidarti come proprietario di palestra qui sotto.
+                </p>
+              </div>
             )}
           </div>
 
