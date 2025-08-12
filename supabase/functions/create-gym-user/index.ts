@@ -57,10 +57,10 @@ serve(async (req) => {
       console.log('Created new user:', userId);
     }
 
-    // Update gym application with user ID
+    // Update gym application with user ID and clear email to satisfy check constraint
     const { error: updateAppError } = await supabaseAdmin
       .from('gym_applications')
-      .update({ applicant_user_id: userId })
+      .update({ applicant_user_id: userId, applicant_email: null })
       .eq('id', applicationId);
 
     if (updateAppError) {
