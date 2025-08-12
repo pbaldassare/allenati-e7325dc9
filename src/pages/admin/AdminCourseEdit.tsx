@@ -1,6 +1,5 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { AdminLayout } from '@/layouts/AdminLayout';
 import { CourseForm } from '@/components/admin/CourseForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppData } from '@/contexts/AppDataContext';
