@@ -37,27 +37,61 @@ export const AdminGymApplications = () => {
 
   const loadApplications = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      // First, get all applications
+      const { data: applications, error: appsError } = await supabase
         .from('gym_applications')
-        .select(`
-          *,
-          profiles:applicant_user_id!left (
-            first_name,
-            last_name,
-            phone
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setApplications(data || []);
+      if (appsError) {
+        console.error('Error loading applications:', appsError);
+        toast({
+          title: "Errore",
+          description: "Errore nel caricamento delle candidature",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Raw applications from database:', applications);
+
+      // Then get profile data for applications that have a user_id
+      const applicationsWithUserIds = applications?.filter(app => app.applicant_user_id) || [];
+      const userIds = applicationsWithUserIds.map(app => app.applicant_user_id);
+      
+      let profilesData = [];
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, phone')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Error loading profiles:', profilesError);
+        } else {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Combine applications with profile data
+      const applicationsWithProfiles = applications?.map(app => {
+        const profile = profilesData.find(p => p.user_id === app.applicant_user_id);
+        return {
+          ...app,
+          profiles: profile ? {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            phone: profile.phone
+          } : null
+        };
+      }) || [];
+
+      console.log('Applications with profiles:', applicationsWithProfiles);
+      setApplications(applicationsWithProfiles);
     } catch (error) {
-      console.error('Error loading applications:', error);
-      toast({
-        title: "Errore",
-        description: "Errore nel caricamento delle candidature",
-        variant: "destructive",
-      });
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
