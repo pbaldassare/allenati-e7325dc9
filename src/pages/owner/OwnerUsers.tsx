@@ -25,12 +25,50 @@ const OwnerUsers = () => {
   useEffect(() => {
     const loadMembers = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name, profile_picture_url');
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const userId = userRes?.user?.id;
+        if (!userId) {
+          setMembers([]);
+          return;
+        }
 
-      if (!error && data) setMembers(data as MemberProfile[]);
-      setLoading(false);
+        const { data: gymId, error: gymErr } = await (supabase as any).rpc('get_user_gym_id', { _user_id: userId });
+        if (gymErr) throw gymErr;
+        if (!gymId) {
+          setMembers([]);
+          toast({ title: 'Nessuna palestra trovata', description: 'Associa prima una palestra al tuo account.', variant: 'destructive' });
+          return;
+        }
+
+        const { data: memberships, error: memErr } = await supabase
+          .from('user_gym_memberships')
+          .select('user_id')
+          .eq('gym_id', gymId)
+          .eq('status', 'active');
+        
+        if (memErr) throw memErr;
+
+        const userIds = (memberships || []).map((m: { user_id: string }) => m.user_id);
+        if (userIds.length === 0) {
+          setMembers([]);
+          return;
+        }
+
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, profile_picture_url')
+          .in('user_id', userIds);
+        
+        if (profErr) throw profErr;
+
+        setMembers((profiles || []) as MemberProfile[]);
+      } catch (e: any) {
+        console.error('loadMembers error', e);
+        toast({ title: 'Errore caricamento utenti', description: e?.message ?? 'Qualcosa è andato storto', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadMembers();
