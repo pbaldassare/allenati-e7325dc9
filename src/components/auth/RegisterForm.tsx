@@ -19,9 +19,10 @@ interface Gym {
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
+  onShowGymApplication?: (show: boolean) => void;
 }
 
-export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
+export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onShowGymApplication }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -43,6 +44,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   useEffect(() => {
     loadGyms();
   }, []);
+
+  useEffect(() => {
+    onShowGymApplication?.(showGymApplication);
+  }, [showGymApplication, onShowGymApplication]);
 
   const loadGyms = async () => {
     setGymsLoading(true);
@@ -161,11 +166,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
 
   if (showGymApplication) {
     return (
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="mb-4">
           <Button 
             variant="outline" 
             onClick={() => setShowGymApplication(false)}
+            className="mb-2"
           >
             ← Torna alla registrazione
           </Button>
