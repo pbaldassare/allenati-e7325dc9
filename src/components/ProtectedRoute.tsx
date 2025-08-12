@@ -8,13 +8,15 @@ import { LogIn, UserPlus, Loader2 } from 'lucide-react';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requiredRoles?: Array<'admin' | 'gym_owner' | 'instructor' | 'basic_user'>;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false 
+  requireAdmin = false,
+  requiredRoles
 }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, isGymOwner, isInstructor, loading, user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
@@ -75,7 +77,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (requireAdmin && !isAdmin) {
+  // Role-based protection
+  const hasRequiredRole = () => {
+    if (requireAdmin) return isAdmin;
+    if (requiredRoles && requiredRoles.length > 0) {
+      const roleMatches = (
+        (isAdmin && requiredRoles.includes('admin')) ||
+        (isGymOwner && requiredRoles.includes('gym_owner')) ||
+        (isInstructor && requiredRoles.includes('instructor')) ||
+        (isAuthenticated && requiredRoles.includes('basic_user'))
+      );
+      return roleMatches;
+    }
+    return true;
+  };
+
+  if (!hasRequiredRole()) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">

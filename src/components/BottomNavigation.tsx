@@ -9,14 +9,18 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isGymOwner } = useAuth();
   
   const tabs = [
     { id: "home", icon: Home, label: "Home" },
     { id: "leaderboard", icon: TrendingUp, label: "Classifica" },
     { id: "calendar", icon: Calendar, label: "Corsi" },
     { id: "shop", icon: ShoppingBag, label: "Shop" },
-    ...(isAdmin ? [{ id: "admin", icon: Settings, label: "Admin" }] : [{ id: "profile", icon: User, label: "Profilo" }]),
+    ...(isAdmin
+      ? [{ id: "admin", icon: Settings, label: "Admin" }]
+      : isGymOwner
+      ? [{ id: "owner", icon: Settings, label: "Owner" }]
+      : [{ id: "profile", icon: User, label: "Profilo" }]),
   ];
 
   return (

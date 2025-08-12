@@ -33,6 +33,12 @@ export const useAuthRedirect = () => {
       navigate('/', { replace: true });
       return;
     }
+
+    // Se l'utente è gym owner, può accedere alle pagine owner (anche admin)
+    if (currentPath.startsWith('/owner') && !(user?.role === 'gym_owner' || user?.role === 'admin')) {
+      navigate('/', { replace: true });
+      return;
+    }
   }, [isAuthenticated, loading, user, navigate, location.pathname]);
 
   return {

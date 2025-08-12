@@ -13,6 +13,7 @@ import Shop from "./pages/Shop";
 import BookingHistory from "./pages/BookingHistory";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./layouts/AdminLayout";
+import OwnerLayout from "./layouts/OwnerLayout";
 
 // Admin Course Management Pages
 import AdminCoursesList from "./pages/admin/AdminCoursesList";
@@ -27,6 +28,10 @@ import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
 
 // Admin User Management Pages
 import AdminUsers from "./pages/admin/AdminUsers";
+
+// Owner Pages
+import OwnerDashboard from "./pages/owner/OwnerDashboard";
+import OwnerUsers from "./pages/owner/OwnerUsers";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +72,12 @@ const App = () => (
                   <Route path="instructors" element={<AdminInstructors />} />
                   <Route path="rooms" element={<AdminRooms />} />
                   <Route path="schedule" element={<AdminSchedule />} />
+                </Route>
+
+                {/* Owner Routes */}
+                <Route path="/owner" element={<OwnerLayout />}>
+                  <Route index element={<OwnerDashboard />} />
+                  <Route path="users" element={<OwnerUsers />} />
                 </Route>
                 
                 <Route path="/shop" element={<Shop />} />

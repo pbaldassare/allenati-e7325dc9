@@ -23,6 +23,10 @@ const Index = () => {
       navigate("/admin");
       return;
     }
+    if (tab === "owner") {
+      navigate("/owner");
+      return;
+    }
     
     // Handle internal tabs
     setActiveTab(tab);
