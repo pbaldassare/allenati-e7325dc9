@@ -54,23 +54,33 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
 
   const onSubmit = async (data: ApplicationFormData) => {
     setIsSubmitting(true);
+    console.log('Form data being submitted:', data);
+    console.log('Current user:', user);
 
     try {
-      const { error } = await supabase
+      const insertData = {
+        applicant_user_id: user?.id || null,
+        applicant_email: data.applicant_email,
+        gym_name: data.gym_name,
+        gym_description: data.gym_description || null,
+        gym_address: data.gym_address,
+        gym_city: data.gym_city,
+        gym_postal_code: data.gym_postal_code || null,
+        gym_phone: data.gym_phone || null,
+        gym_email: data.gym_email || null,
+        gym_website: data.gym_website || null,
+        applicant_message: data.applicant_message || null,
+      };
+
+      console.log('Data being inserted:', insertData);
+
+      const { data: result, error } = await supabase
         .from('gym_applications')
-        .insert({
-          applicant_user_id: user?.id || null,
-          applicant_email: data.applicant_email,
-          gym_name: data.gym_name,
-          gym_description: data.gym_description || null,
-          gym_address: data.gym_address,
-          gym_city: data.gym_city,
-          gym_postal_code: data.gym_postal_code || null,
-          gym_phone: data.gym_phone || null,
-          gym_email: data.gym_email || null,
-          gym_website: data.gym_website || null,
-          applicant_message: data.applicant_message || null,
-        });
+        .insert(insertData)
+        .select();
+
+      console.log('Insert result:', result);
+      console.log('Insert error:', error);
 
       if (error) throw error;
 
@@ -85,7 +95,7 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
       console.error('Error submitting application:', error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'invio della candidatura",
+        description: `Si è verificato un errore durante l'invio della candidatura: ${error?.message || 'Errore sconosciuto'}`,
         variant: "destructive",
       });
     } finally {
