@@ -1602,6 +1602,10 @@ export type Database = {
         Args: { _gym_id: string; _created_by: string }
         Returns: string
       }
+      demote_instructor_to_user: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       get_user_gym_id: {
         Args: { _user_id: string }
         Returns: string
