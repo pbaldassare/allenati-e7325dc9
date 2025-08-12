@@ -106,6 +106,47 @@ export const AdminGymApplications = () => {
 
     try {
       let linkedUserId = application.applicant_user_id;
+      let isNewAccountCreated = false;
+
+      // If no linked user and we have an email, create a user account automatically
+      if (!linkedUserId && application.applicant_email) {
+        try {
+          // Create user account with admin API
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: application.applicant_email,
+            password: 'Allenati123!',
+            email_confirm: true,
+            user_metadata: {
+              first_name: 'Proprietario',
+              last_name: 'Palestra'
+            }
+          });
+
+          if (authError) {
+            console.error('Error creating user:', authError);
+            // If user already exists, try to find them
+            if (authError.message?.includes('User already registered')) {
+              // User exists, we'll proceed without linking for now
+              console.log('User already exists, proceeding without auto-linking');
+            } else {
+              throw authError;
+            }
+          } else if (authData.user) {
+            linkedUserId = authData.user.id;
+            isNewAccountCreated = true;
+            console.log('Created new user:', linkedUserId);
+
+            // Update the application with the new user ID
+            await supabase
+              .from('gym_applications')
+              .update({ applicant_user_id: linkedUserId })
+              .eq('id', application.id);
+          }
+        } catch (userCreationError) {
+          console.error('Failed to create user account:', userCreationError);
+          // Continue with gym creation even if user creation fails
+        }
+      }
 
       // Create the gym
       const { data: gymData, error: gymError } = await supabase
@@ -126,7 +167,7 @@ export const AdminGymApplications = () => {
 
       if (gymError) throw gymError;
 
-      // Only assign role and membership if we have a linked user
+      // Assign role and membership if we have a linked user
       if (linkedUserId) {
         // Assign gym_owner role
         const { error: roleError } = await supabase
@@ -137,7 +178,9 @@ export const AdminGymApplications = () => {
             granted_by: user.id,
           });
 
-        if (roleError) throw roleError;
+        if (roleError && !roleError.message?.includes('duplicate key')) {
+          throw roleError;
+        }
 
         // Create gym membership for the owner
         const { error: membershipError } = await supabase
@@ -149,7 +192,9 @@ export const AdminGymApplications = () => {
             status: 'active',
           });
 
-        if (membershipError) throw membershipError;
+        if (membershipError && !membershipError.message?.includes('duplicate key')) {
+          throw membershipError;
+        }
       }
 
       // Update application status
@@ -164,13 +209,20 @@ export const AdminGymApplications = () => {
 
       if (updateError) throw updateError;
 
-      const successMessage = linkedUserId 
-        ? `La palestra "${application.gym_name}" è stata creata e il ruolo gym_owner è stato assegnato.`
-        : `La palestra "${application.gym_name}" è stata creata. Quando l'utente si registrerà con l'email ${application.applicant_email}, diventerà automaticamente proprietario.`;
+      // Generate success message based on what happened
+      let successMessage = '';
+      if (isNewAccountCreated) {
+        successMessage = `La palestra "${application.gym_name}" è stata creata e l'account utente è stato creato automaticamente.\n\nCredenziali di accesso:\nEmail: ${application.applicant_email}\nPassword: Allenati123!\n\nIl proprietario può accedere e cambiare la password quando vuole.`;
+      } else if (linkedUserId) {
+        successMessage = `La palestra "${application.gym_name}" è stata creata e collegata all'utente esistente.`;
+      } else {
+        successMessage = `La palestra "${application.gym_name}" è stata creata. Quando l'utente si registrerà con l'email ${application.applicant_email}, diventerà automaticamente proprietario.`;
+      }
 
       toast({
         title: "Candidatura approvata!",
         description: successMessage,
+        duration: 8000, // Longer duration for credential info
       });
 
       loadApplications();
