@@ -104,17 +104,9 @@ export const AdminGymApplications = () => {
   const handleApprove = async (application: GymApplication) => {
     if (!user) return;
 
-    // Check if this is an anonymous application
-    if (!application.applicant_user_id) {
-      toast({
-        title: "Errore",
-        description: "Non è possibile approvare candidature anonime. L'utente deve essere registrato.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
+      let linkedUserId = application.applicant_user_id;
+
       // Create the gym
       const { data: gymData, error: gymError } = await supabase
         .from('gyms')
@@ -127,34 +119,38 @@ export const AdminGymApplications = () => {
           phone: application.gym_phone,
           email: application.gym_email,
           website: application.gym_website,
+          owner_email: application.applicant_email,
         })
         .select()
         .single();
 
       if (gymError) throw gymError;
 
-      // Assign gym_owner role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: application.applicant_user_id,
-          role: 'gym_owner',
-          granted_by: user.id,
-        });
+      // Only assign role and membership if we have a linked user
+      if (linkedUserId) {
+        // Assign gym_owner role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: linkedUserId,
+            role: 'gym_owner',
+            granted_by: user.id,
+          });
 
-      if (roleError) throw roleError;
+        if (roleError) throw roleError;
 
-      // Create gym membership for the owner
-      const { error: membershipError } = await supabase
-        .from('user_gym_memberships')
-        .insert({
-          user_id: application.applicant_user_id,
-          gym_id: gymData.id,
-          membership_type: 'owner',
-          status: 'active',
-        });
+        // Create gym membership for the owner
+        const { error: membershipError } = await supabase
+          .from('user_gym_memberships')
+          .insert({
+            user_id: linkedUserId,
+            gym_id: gymData.id,
+            membership_type: 'owner',
+            status: 'active',
+          });
 
-      if (membershipError) throw membershipError;
+        if (membershipError) throw membershipError;
+      }
 
       // Update application status
       const { error: updateError } = await supabase
@@ -168,9 +164,13 @@ export const AdminGymApplications = () => {
 
       if (updateError) throw updateError;
 
+      const successMessage = linkedUserId 
+        ? `La palestra "${application.gym_name}" è stata creata e il ruolo gym_owner è stato assegnato.`
+        : `La palestra "${application.gym_name}" è stata creata. Quando l'utente si registrerà con l'email ${application.applicant_email}, diventerà automaticamente proprietario.`;
+
       toast({
         title: "Candidatura approvata!",
-        description: `La palestra "${application.gym_name}" è stata creata e il ruolo gym_owner è stato assegnato.`,
+        description: successMessage,
       });
 
       loadApplications();
@@ -344,10 +344,9 @@ export const AdminGymApplications = () => {
                     <Button
                       onClick={() => handleApprove(application)}
                       className="bg-green-600 hover:bg-green-700"
-                      disabled={!application.applicant_user_id}
                     >
                       <Check className="mr-2 h-4 w-4" />
-                      {application.applicant_user_id ? 'Approva' : 'Candidatura anonima - Non approvabile'}
+                      Approva
                     </Button>
                     <Dialog>
                       <DialogTrigger asChild>
