@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface GymApplication {
   id: string;
-  applicant_user_id: string;
+  applicant_user_id: string | null;
+  applicant_email: string | null;
   gym_name: string;
   gym_description: string | null;
   gym_address: string;
@@ -40,7 +41,7 @@ export const AdminGymApplications = () => {
         .from('gym_applications')
         .select(`
           *,
-          profiles!applicant_user_id (
+          profiles:applicant_user_id!left (
             first_name,
             last_name,
             phone
@@ -68,6 +69,16 @@ export const AdminGymApplications = () => {
 
   const handleApprove = async (application: GymApplication) => {
     if (!user) return;
+
+    // Check if this is an anonymous application
+    if (!application.applicant_user_id) {
+      toast({
+        title: "Errore",
+        description: "Non è possibile approvare candidature anonime. L'utente deve essere registrato.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Create the gym
@@ -233,8 +244,17 @@ export const AdminGymApplications = () => {
                       {getStatusBadge(application.status)}
                     </CardTitle>
                     <CardDescription>
-                      Candidatura di {application.profiles?.first_name} {application.profiles?.last_name}
-                      {application.profiles?.phone && ` • ${application.profiles.phone}`}
+                      {application.profiles ? (
+                        <>
+                          Candidatura di {application.profiles.first_name} {application.profiles.last_name}
+                          {application.profiles.phone && ` • ${application.profiles.phone}`}
+                        </>
+                      ) : (
+                        <>
+                          Candidatura anonima
+                          {application.applicant_email && ` • ${application.applicant_email}`}
+                        </>
+                      )}
                     </CardDescription>
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -290,9 +310,10 @@ export const AdminGymApplications = () => {
                     <Button
                       onClick={() => handleApprove(application)}
                       className="bg-green-600 hover:bg-green-700"
+                      disabled={!application.applicant_user_id}
                     >
                       <Check className="mr-2 h-4 w-4" />
-                      Approva
+                      {application.applicant_user_id ? 'Approva' : 'Candidatura anonima - Non approvabile'}
                     </Button>
                     <Dialog>
                       <DialogTrigger asChild>
