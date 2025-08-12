@@ -24,13 +24,20 @@ serve(async (req) => {
     );
 
     // Check if user already exists
-    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.getUserByEmail(userEmail);
+    const { data: existingUsers, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (getUserError) {
+      console.error('Error listing users:', getUserError);
+      throw new Error(`Failed to check existing users: ${getUserError.message}`);
+    }
+    
+    const existingUser = existingUsers.users.find(user => user.email === userEmail);
     
     let userId: string;
     let userExists = false;
 
-    if (existingAuthUser.user) {
-      userId = existingAuthUser.user.id;
+    if (existingUser) {
+      userId = existingUser.id;
       userExists = true;
       console.log('User already exists:', userId);
     } else {
