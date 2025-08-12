@@ -41,6 +41,7 @@ const OwnerInstructors: React.FC = () => {
           .select(
             `id, user_id, bio, is_active, created_at, specializations, certifications, experience_years, hourly_rate`
           )
+          .eq("is_active", true)
           .order("created_at", { ascending: false });
 
         if (instError) {
@@ -91,6 +92,70 @@ const OwnerInstructors: React.FC = () => {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('owner-instructors')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'instructors' },
+        async (payload: any) => {
+          const newRow = payload.new as any;
+          const oldRow = payload.old as any;
+
+          if (payload.eventType === 'UPDATE') {
+            if (newRow?.is_active === false) {
+              setInstructors((prev) => prev.filter((i) => i.id !== newRow.id));
+            } else if (newRow?.is_active === true) {
+              const { data: p } = await (supabase as any)
+                .from('profiles')
+                .select('user_id, first_name, last_name, phone, profile_picture_url')
+                .eq('user_id', newRow.user_id)
+                .maybeSingle();
+
+              setInstructors((prev) => {
+                const merged: Instructor = {
+                  ...(newRow as any),
+                  profile:
+                    p || { first_name: '', last_name: '', phone: null, profile_picture_url: null },
+                };
+                const exists = prev.some((i) => i.id === newRow.id);
+                return exists
+                  ? prev.map((i) => (i.id === newRow.id ? merged : i))
+                  : [merged, ...prev];
+              });
+            }
+          } else if (payload.eventType === 'INSERT') {
+            if (newRow?.is_active) {
+              const { data: p } = await (supabase as any)
+                .from('profiles')
+                .select('user_id, first_name, last_name, phone, profile_picture_url')
+                .eq('user_id', newRow.user_id)
+                .maybeSingle();
+
+              setInstructors((prev) => [
+                {
+                  ...(newRow as any),
+                  profile:
+                    p || { first_name: '', last_name: '', phone: null, profile_picture_url: null },
+                } as Instructor,
+                ...prev,
+              ]);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            if (oldRow?.id) {
+              setInstructors((prev) => prev.filter((i) => i.id !== oldRow.id));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <section>
       <h1 className="sr-only">Istruttori palestra</h1>
