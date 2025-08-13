@@ -74,13 +74,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
             <img 
               src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
               alt="Allenati Sport Logo" 
-              className="h-20 sm:h-16 w-auto"
+              className="h-24 sm:h-20 w-auto"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
             />
          </div>
-        <CardTitle className="text-3xl sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <CardTitle className="text-4xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Accedi
         </CardTitle>
         <CardDescription className="text-base sm:text-sm">
@@ -88,9 +88,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-base sm:text-sm">Email</Label>
+            <Label htmlFor="email" className="text-lg sm:text-base">Email</Label>
             <Input
               id="email"
               name="email"
@@ -100,12 +100,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               onChange={handleChange}
               disabled={isLoading}
               required
-              className="h-12 sm:h-10"
+              className="h-14 sm:h-12 text-base"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-base sm:text-sm">Password</Label>
+            <Label htmlFor="password" className="text-lg sm:text-base">Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -116,7 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
                 onChange={handleChange}
                 disabled={isLoading}
                 required
-                className="pr-10 h-12 sm:h-10"
+                className="pr-10 h-14 sm:h-12 text-base"
               />
               <Button
                 type="button"
@@ -151,11 +151,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
           </Button>
 
           <div className="text-center pt-4">
-            <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground">
+            <p className="text-lg sm:text-base text-foreground sm:text-muted-foreground">
               Non hai un account?{' '}
               <Button
                 variant="link"
-                className="p-0 h-auto font-medium text-primary text-base sm:text-sm"
+                className="p-0 h-auto font-medium text-primary text-lg sm:text-base"
                 onClick={onSwitchToRegister}
                 disabled={isLoading}
               >
@@ -166,7 +166,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         </form>
 
         <div className="mt-6 pt-4 border-t border-border">
-          <div className="text-sm sm:text-xs text-foreground sm:text-muted-foreground space-y-1">
+          <div className="text-base sm:text-sm text-foreground sm:text-muted-foreground space-y-1">
             <p><strong>Primo accesso?</strong></p>
             <p>Crea un account per iniziare ad utilizzare l'app</p>
           </div>

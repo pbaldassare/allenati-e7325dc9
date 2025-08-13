@@ -185,11 +185,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             <img 
               src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
               alt="Allenati Sport Logo" 
-              className="h-20 sm:h-16 w-auto"
+              className="h-24 sm:h-20 w-auto"
             />
           </div>
         )}
-        <CardTitle className="text-3xl sm:text-2xl font-bold text-center">
+        <CardTitle className="text-4xl sm:text-3xl font-bold text-center">
           {showGymApplication ? 'Candidatura Palestra' : 'Registrazione'}
         </CardTitle>
         <CardDescription className="text-center text-base sm:text-sm">
@@ -230,16 +230,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3 sm:gap-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-base sm:text-sm">Nome *</Label>
+                  <Label htmlFor="firstName" className="text-lg sm:text-base">Nome *</Label>
                   <Input
                     id="firstName"
                     type="text"
@@ -247,11 +247,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     required
-                    className="h-12 sm:h-10"
+                    className="h-14 sm:h-12 text-base"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-base sm:text-sm">Cognome *</Label>
+                  <Label htmlFor="lastName" className="text-lg sm:text-base">Cognome *</Label>
                   <Input
                     id="lastName"
                     type="text"
@@ -259,13 +259,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     required
-                    className="h-12 sm:h-10"
+                    className="h-14 sm:h-12 text-base"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-base sm:text-sm">Email *</Label>
+                <Label htmlFor="email" className="text-lg sm:text-base">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -273,31 +273,31 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="h-12 sm:h-10"
+                  className="h-14 sm:h-12 text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-base sm:text-sm">Telefono</Label>
+                <Label htmlFor="phone" className="text-lg sm:text-base">Telefono</Label>
                 <Input
                   id="phone"
                   type="tel"
                   placeholder="+39 123 456 7890"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="h-12 sm:h-10"
+                  className="h-14 sm:h-12 text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="gym" className="text-base sm:text-sm">Palestra *</Label>
+                <Label htmlFor="gym" className="text-lg sm:text-base">Palestra *</Label>
                 <Select
                   value={formData.gymId}
                   onValueChange={(value) => setFormData({ ...formData, gymId: value })}
                   required
                   disabled={gymsLoading}
                 >
-                  <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-12 sm:h-10">
+                  <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
                     <SelectValue 
                       placeholder={
                         gymsLoading 
@@ -368,7 +368,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                       }}
                     />
                     <div className="grid gap-1">
-                      <Label htmlFor="isMinor" className="text-base sm:text-sm">Hai meno di 16 anni?</Label>
+                      <Label htmlFor="isMinor" className="text-lg sm:text-base">Hai meno di 16 anni?</Label>
                       {isMinor && (
                         <div className="text-sm text-muted-foreground">
                           {formData.guardianFirstName && formData.guardianLastName && formData.guardianPhone ? (
@@ -400,7 +400,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                 </div>
 
                 <div className="space-y-2">
-                <Label htmlFor="password" className="text-base sm:text-sm">Password *</Label>
+                <Label htmlFor="password" className="text-lg sm:text-base">Password *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -408,12 +408,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
-                  className="h-12 sm:h-10"
+                  className="h-14 sm:h-12 text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-base sm:text-sm">Conferma Password *</Label>
+                <Label htmlFor="confirmPassword" className="text-lg sm:text-base">Conferma Password *</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -421,7 +421,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   required
-                  className="h-12 sm:h-10"
+                  className="h-14 sm:h-12 text-base"
                 />
               </div>
 
