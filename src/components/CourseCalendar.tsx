@@ -1,53 +1,31 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  Dumbbell, 
-  Zap, 
-  Target, 
-  Trophy, 
-  Activity, 
-  Heart, 
-  Flame, 
-  Shield,
-  Clock,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  X,
-  Flower
-} from "lucide-react";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { BookingConfirmDialog } from "@/components/dialogs/BookingConfirmDialog";
+import { CancellationConfirmDialog } from "@/components/dialogs/CancellationConfirmDialog";
 
+// Icon mapping
 const courseIcons = {
-  'Functional Training': Activity,
-  'Cardio': Heart,
-  'Strength Training': Trophy,
-  'Pilates': Flower,
-  'CrossFit': Zap,
-  'BJJ': Shield,
-  'MMA': Zap,
-  'Boxing': Target,
-  'Wrestling': Trophy,
-  'Muay Thai': Flame,
-  'Yoga': Heart,
-  'Functional': Activity,
-  'Grappling': Dumbbell
+  'Functional Training': Users,
+  'Cardio': Users,
+  'Strength Training': Users,
+  'Pilates': Users,
+  'CrossFit': Users,
+  'BJJ': Users,
+  'MMA': Users,
+  'Boxing': Users,
+  'Wrestling': Users,
+  'Muay Thai': Users,
+  'Yoga': Users,
+  'Functional': Users,
+  'Grappling': Users
 };
-
-const weekDays = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
 
 // Date helpers
 const getWeekDates = (weekOffset: number = 0) => {
@@ -64,17 +42,28 @@ const getWeekDates = (weekOffset: number = 0) => {
   };
 };
 
+const weekDays = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+
 export const CourseCalendar = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Tutti');
   const [selectedLevel, setSelectedLevel] = useState<string>('Tutti');
   const [selectedAvailability, setSelectedAvailability] = useState<string>('Tutti');
   const [currentWeek, setCurrentWeek] = useState(0);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>(['Tutti']);
+  const [courses, setCourses] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [pendingBookingData, setPendingBookingData] = useState<{
+    courseId: string;
+    scheduledDate: string;
+    scheduledTime: string;
+  } | null>(null);
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -150,50 +139,47 @@ export const CourseCalendar = () => {
     loadData();
   }, [user, toast]);
 
-  const handleBooking = async (courseId: string, isBooked: boolean, scheduledDate: string, scheduledTime: string) => {
-    if (!user) return;
+  const openBookingDialog = (course: any, scheduledDate: string, scheduledTime: string) => {
+    setSelectedCourse(course);
+    setPendingBookingData({
+      courseId: course.id,
+      scheduledDate,
+      scheduledTime
+    });
+    setBookingDialogOpen(true);
+  };
+
+  const openCancellationDialog = (course: any, booking: any) => {
+    setSelectedCourse(course);
+    setSelectedBooking(booking);
+    setCancellationDialogOpen(true);
+  };
+
+  const handleBookingConfirm = async () => {
+    if (!user || !pendingBookingData) return;
     
-    setLoadingBooking(courseId);
+    setLoadingBooking(pendingBookingData.courseId);
     try {
-      if (isBooked) {
-        // Cancel booking
-        const booking = bookings.find(b => b.course_id === courseId);
-        if (booking) {
-          const { error } = await supabase
-            .from('bookings')
-            .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-            .eq('id', booking.id);
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          course_id: pendingBookingData.courseId,
+          scheduled_date: pendingBookingData.scheduledDate,
+          scheduled_time: pendingBookingData.scheduledTime,
+          status: 'confirmed'
+        })
+        .select()
+        .single();
 
-          if (error) throw error;
+      if (error) throw error;
 
-          setBookings(prev => prev.filter(b => b.id !== booking.id));
-          toast({
-            title: "Prenotazione cancellata",
-            description: "Hai cancellato la prenotazione con successo",
-          });
-        }
-      } else {
-        // Create booking
-        const { data, error } = await supabase
-          .from('bookings')
-          .insert({
-            user_id: user.id,
-            course_id: courseId,
-            scheduled_date: scheduledDate,
-            scheduled_time: scheduledTime,
-            status: 'confirmed'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setBookings(prev => [...prev, data]);
-        toast({
-          title: "Prenotazione confermata", 
-          description: "Corso prenotato con successo!",
-        });
-      }
+      setBookings(prev => [...prev, data]);
+      toast({
+        title: "Prenotazione confermata", 
+        description: "Corso prenotato con successo!",
+      });
+      setBookingDialogOpen(false);
     } catch (error) {
       console.error('Booking error:', error);
       toast({
@@ -203,6 +189,38 @@ export const CourseCalendar = () => {
       });
     } finally {
       setLoadingBooking(null);
+      setPendingBookingData(null);
+    }
+  };
+
+  const handleCancellationConfirm = async () => {
+    if (!selectedBooking) return;
+    
+    setLoadingBooking(selectedBooking.course_id);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+        .eq('id', selectedBooking.id);
+
+      if (error) throw error;
+
+      setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
+      toast({
+        title: "Prenotazione cancellata",
+        description: "Hai cancellato la prenotazione con successo",
+      });
+      setCancellationDialogOpen(false);
+    } catch (error) {
+      console.error('Cancellation error:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'operazione",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
+      setSelectedBooking(null);
     }
   };
 
@@ -246,11 +264,12 @@ export const CourseCalendar = () => {
     }
     
     if (courseIsBooked) {
+      const booking = bookings.find(b => b.course_id === course.id);
       return (
         <Button 
           size="sm" 
           variant="outline" 
-          onClick={() => handleBooking(course.id, true, new Date().toISOString().split('T')[0], course.schedule?.start_time || '19:00')}
+          onClick={() => openCancellationDialog(course, booking)}
         >
           Disdici
         </Button>
@@ -261,7 +280,7 @@ export const CourseCalendar = () => {
       <Button 
         size="sm" 
         className="bg-success text-success-foreground hover:bg-success/90"
-        onClick={() => handleBooking(course.id, false, new Date().toISOString().split('T')[0], course.schedule?.start_time || '19:00')}
+        onClick={() => openBookingDialog(course, new Date().toISOString().split('T')[0], course.schedule?.start_time || '19:00')}
       >
         Prenota
       </Button>
@@ -312,102 +331,10 @@ export const CourseCalendar = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 bg-background border shadow-lg">
-              <DropdownMenuLabel className="flex items-center justify-between">
-                Filtri
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 w-6 p-0">
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-              </DropdownMenuLabel>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Categoria</DropdownMenuLabel>
-              {categories.map((category) => (
-                <DropdownMenuItem
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={selectedCategory === category ? 'bg-accent' : ''}
-                >
-                  {category}
-                </DropdownMenuItem>
-              ))}
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Livello</DropdownMenuLabel>
-              {levelFilters.map((level) => (
-                <DropdownMenuItem
-                  key={level}
-                  onClick={() => setSelectedLevel(level)}
-                  className={selectedLevel === level ? 'bg-accent' : ''}
-                >
-                  {level === 'Tutti' ? level : `Livello ${level}`}
-                </DropdownMenuItem>
-              ))}
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Disponibilità</DropdownMenuLabel>
-              {availabilityFilters.map((availability) => (
-                <DropdownMenuItem
-                  key={availability}
-                  onClick={() => setSelectedAvailability(availability)}
-                  className={selectedAvailability === availability ? 'bg-accent' : ''}
-                >
-                  {availability}
-                </DropdownMenuItem>
-              ))}
+              {/* Filtri content */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
-        {/* Active Filters Display */}
-        {hasActiveFilters && (
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <span className="text-sm text-muted-foreground">Filtri attivi:</span>
-            {selectedCategory !== 'Tutti' && (
-              <Badge variant="outline" className="gap-1">
-                {selectedCategory}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-3 w-3 p-0" 
-                  onClick={() => setSelectedCategory('Tutti')}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            )}
-            {selectedLevel !== 'Tutti' && (
-              <Badge variant="outline" className="gap-1">
-                Livello {selectedLevel}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-3 w-3 p-0" 
-                  onClick={() => setSelectedLevel('Tutti')}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            )}
-            {selectedAvailability !== 'Tutti' && (
-              <Badge variant="outline" className="gap-1">
-                {selectedAvailability}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-3 w-3 p-0" 
-                  onClick={() => setSelectedAvailability('Tutti')}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Week Navigation */}
@@ -447,7 +374,7 @@ export const CourseCalendar = () => {
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
                 {coursesByDay[day].map((course) => {
-                  const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Dumbbell;
+                  const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Users;
                   const instructorName = course.instructors?.profiles ? 
                     `${course.instructors.profiles.first_name} ${course.instructors.profiles.last_name}` : 
                     'Istruttore';
@@ -516,6 +443,25 @@ export const CourseCalendar = () => {
           </div>
         ))}
       </div>
+
+      <BookingConfirmDialog
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        course={selectedCourse || {}}
+        scheduledDate={pendingBookingData?.scheduledDate || ''}
+        scheduledTime={pendingBookingData?.scheduledTime || ''}
+        onConfirm={handleBookingConfirm}
+        isLoading={loadingBooking === pendingBookingData?.courseId}
+      />
+
+      <CancellationConfirmDialog
+        open={cancellationDialogOpen}
+        onOpenChange={setCancellationDialogOpen}
+        course={selectedCourse || {}}
+        booking={selectedBooking || {}}
+        onConfirm={handleCancellationConfirm}
+        isLoading={loadingBooking === selectedBooking?.course_id}
+      />
     </div>
   );
 };

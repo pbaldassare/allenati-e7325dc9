@@ -1,19 +1,25 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, Trophy, Dumbbell } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Clock, User, Users, Trophy, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
+import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [courses, setCourses] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
   // Load data from Supabase
   useEffect(() => {
@@ -73,50 +79,42 @@ export const Dashboard = () => {
     loadData();
   }, [user, toast]);
 
-  const handleBooking = async (courseId: string, isBooked: boolean) => {
-    if (!user) return;
+  const openBookingDialog = (course: any) => {
+    setSelectedCourse(course);
+    setBookingDialogOpen(true);
+  };
+
+  const openCancellationDialog = (course: any, booking: any) => {
+    setSelectedCourse(course);
+    setSelectedBooking(booking);
+    setCancellationDialogOpen(true);
+  };
+
+  const handleBookingConfirm = async () => {
+    if (!user || !selectedCourse) return;
     
-    setLoadingBooking(courseId);
+    setLoadingBooking(selectedCourse.id);
     try {
-      if (isBooked) {
-        // Cancel booking
-        const booking = bookings.find(b => b.course_id === courseId);
-        if (booking) {
-          const { error } = await supabase
-            .from('bookings')
-            .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-            .eq('id', booking.id);
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          course_id: selectedCourse.id,
+          scheduled_date: new Date().toISOString().split('T')[0],
+          scheduled_time: '19:00',
+          status: 'confirmed'
+        })
+        .select()
+        .single();
 
-          if (error) throw error;
+      if (error) throw error;
 
-          setBookings(prev => prev.filter(b => b.id !== booking.id));
-          toast({
-            title: "Prenotazione cancellata",
-            description: "Hai cancellato la prenotazione con successo",
-          });
-        }
-      } else {
-        // Create booking - use today's date and a default time
-        const { data, error } = await supabase
-          .from('bookings')
-          .insert({
-            user_id: user.id,
-            course_id: courseId,
-            scheduled_date: new Date().toISOString().split('T')[0],
-            scheduled_time: '19:00',
-            status: 'confirmed'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setBookings(prev => [...prev, data]);
-        toast({
-          title: "Prenotazione confermata",
-          description: "Corso prenotato con successo!",
-        });
-      }
+      setBookings(prev => [...prev, data]);
+      toast({
+        title: "Prenotazione confermata",
+        description: "Corso prenotato con successo!",
+      });
+      setBookingDialogOpen(false);
     } catch (error) {
       console.error('Booking error:', error);
       toast({
@@ -126,6 +124,38 @@ export const Dashboard = () => {
       });
     } finally {
       setLoadingBooking(null);
+      setSelectedCourse(null);
+    }
+  };
+
+  const handleCancellationConfirm = async () => {
+    if (!selectedBooking) return;
+    
+    setLoadingBooking(selectedBooking.course_id);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+        .eq('id', selectedBooking.id);
+
+      if (error) throw error;
+
+      setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
+      toast({
+        title: "Prenotazione cancellata",
+        description: "Hai cancellato la prenotazione con successo",
+      });
+      setCancellationDialogOpen(false);
+    } catch (error) {
+      console.error('Cancellation error:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'operazione",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
+      setSelectedBooking(null);
     }
   };
 
@@ -137,7 +167,7 @@ export const Dashboard = () => {
     return (
       <div className="pb-20 px-4 space-y-8">
         <div className="pt-8 pb-6">
-          <h1 className="text-4xl font-bold gradient-text mb-2">Caricamento... ⏳</h1>
+          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Caricamento... ⏳</h1>
           <p className="text-muted-foreground text-lg font-medium">Caricamento dei tuoi dati</p>
         </div>
       </div>
@@ -148,16 +178,16 @@ export const Dashboard = () => {
     <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
       <div className="pt-8 pb-6">
-        <h1 className="text-4xl font-bold gradient-text mb-2">Ciao! 👋</h1>
+        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao! 👋</h1>
         <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
       </div>
 
       {/* Modern Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-gradient-primary text-primary-foreground shadow-glow border-0 animate-float">
+        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <Trophy className="h-10 w-10 animate-glow" />
+              <Trophy className="h-10 w-10" />
               <div>
                 <p className="text-3xl font-bold">{bookings.length}</p>
                 <p className="text-sm opacity-90 font-medium">Prenotazioni attive</p>
@@ -166,10 +196,10 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-secondary text-secondary-foreground shadow-glow border-0 animate-float" style={{animationDelay: '0.5s'}}>
+        <Card className="bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-lg border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <Dumbbell className="h-10 w-10 animate-glow" />
+              <Users className="h-10 w-10" />
               <div>
                 <p className="text-3xl font-bold">{courses.length}</p>
                 <p className="text-sm opacity-90 font-medium">Corsi disponibili</p>
@@ -180,11 +210,11 @@ export const Dashboard = () => {
       </div>
 
       {/* Modern Status Abbonamento */}
-      <Card className="shadow-glow bg-gradient-accent/5 border-accent/20 glass">
+      <Card className="shadow-lg bg-gradient-to-br from-muted/50 to-background border">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center justify-between text-xl">
-            <span className="gradient-text font-bold">Abbonamento</span>
-            <Badge className="bg-gradient-success text-success-foreground font-semibold px-3 py-1">Attivo</Badge>
+            <span className="bg-gradient-primary bg-clip-text text-transparent font-bold">Abbonamento</span>
+            <Badge className="bg-success text-success-foreground font-semibold px-3 py-1">Attivo</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -192,7 +222,7 @@ export const Dashboard = () => {
             <p className="text-xl font-bold">Piano Base</p>
             <p className="text-base text-muted-foreground font-medium">Accesso ai corsi della tua palestra</p>
             <div className="w-full bg-muted rounded-full h-3 mt-4 overflow-hidden">
-              <div className="bg-gradient-primary h-3 rounded-full shadow-glow transition-smooth animate-glow" style={{width: '100%'}}></div>
+              <div className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full shadow-lg transition-all duration-500" style={{width: '100%'}}></div>
             </div>
             <p className="text-sm text-muted-foreground font-medium">Abbonamento attivo</p>
           </div>
@@ -200,7 +230,7 @@ export const Dashboard = () => {
       </Card>
 
       {/* Modern Prossimi Corsi */}
-      <Card className="shadow-glow glass">
+      <Card className="shadow-lg">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-3 text-xl font-bold">
             <Calendar className="h-6 w-6 text-primary" />
@@ -218,16 +248,16 @@ export const Dashboard = () => {
               const schedule = course.course_schedules?.[0];
               
               return (
-                <div key={course.id} className={`flex items-center justify-between p-4 rounded-2xl border hover:scale-[1.02] transition-bounce ${
+                <div key={course.id} className={`flex items-center justify-between p-4 rounded-2xl border hover:scale-[1.02] transition-all duration-300 ${
                   index === 0 
-                    ? 'bg-gradient-primary/10 border-primary/20' 
-                    : 'bg-gradient-secondary/10 border-secondary/20'
+                    ? 'bg-primary/10 border-primary/20' 
+                    : 'bg-success/10 border-success/20'
                 }`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-glow ${
-                      index === 0 ? 'bg-gradient-primary' : 'bg-gradient-secondary'
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
+                      index === 0 ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-gradient-to-br from-success to-success/80'
                     }`}>
-                      <Dumbbell className="h-7 w-7 text-white" />
+                      <Users className="h-7 w-7 text-white" />
                     </div>
                     <div>
                       <p className="font-bold text-lg">{course.name}</p>
@@ -240,15 +270,29 @@ export const Dashboard = () => {
                       <p className="text-xs text-muted-foreground">Istruttore: {instructorName}</p>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant={courseIsBooked ? "success" : "outline"} 
-                    className="font-semibold" 
-                    onClick={() => handleBooking(course.id, courseIsBooked)}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "..." : (courseIsBooked ? "Prenotato" : "Prenota")}
-                  </Button>
+                  
+                  {courseIsBooked ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const booking = bookings.find(b => b.course_id === course.id);
+                        openCancellationDialog(course, booking);
+                      }}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "..." : "Prenotato"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="bg-success text-success-foreground hover:bg-success/90"
+                      onClick={() => openBookingDialog(course)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "..." : "Prenota"}
+                    </Button>
+                  )}
                 </div>
               );
             })
@@ -259,6 +303,25 @@ export const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      <BookingConfirmDialog
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        course={selectedCourse || {}}
+        scheduledDate={new Date().toISOString().split('T')[0]}
+        scheduledTime="19:00"
+        onConfirm={handleBookingConfirm}
+        isLoading={loadingBooking === selectedCourse?.id}
+      />
+
+      <CancellationConfirmDialog
+        open={cancellationDialogOpen}
+        onOpenChange={setCancellationDialogOpen}
+        course={selectedCourse || {}}
+        booking={selectedBooking || {}}
+        onConfirm={handleCancellationConfirm}
+        isLoading={loadingBooking === selectedBooking?.course_id}
+      />
     </div>
   );
 };

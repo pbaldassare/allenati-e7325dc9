@@ -3,24 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { 
   Calendar, 
   Clock, 
   User, 
-  MapPin, 
   Star,
   X,
-  Filter,
   Search
 } from 'lucide-react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 
 const BookingHistory = () => {
   const { getUserBookings, cancelBooking, getCourseById } = useAppData();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -68,13 +68,27 @@ const BookingHistory = () => {
     }
   };
 
-  const handleCancelBooking = (bookingId: string) => {
-    const success = cancelBooking(bookingId);
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+
+  const openCancellationDialog = (booking: any) => {
+    const course = getCourseById(booking.courseId);
+    setSelectedBooking(booking);
+    setSelectedCourse(course);
+    setCancellationDialogOpen(true);
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+    
+    const success = cancelBooking(selectedBooking.id);
     if (success) {
       toast({
         title: "Prenotazione cancellata",
         description: "La prenotazione è stata cancellata con successo"
       });
+      setCancellationDialogOpen(false);
     } else {
       toast({
         title: "Errore",
@@ -82,6 +96,8 @@ const BookingHistory = () => {
         variant: "destructive"
       });
     }
+    setSelectedBooking(null);
+    setSelectedCourse(null);
   };
 
   const BookingCard = ({ booking }: { booking: any }) => {
@@ -148,7 +164,7 @@ const BookingHistory = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCancelBooking(booking.id)}
+                  onClick={() => openCancellationDialog(booking)}
                   className="text-destructive hover:text-destructive"
                 >
                   <X className="mr-1 h-3 w-3" />
@@ -263,6 +279,18 @@ const BookingHistory = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        <CancellationConfirmDialog
+          open={cancellationDialogOpen}
+          onOpenChange={setCancellationDialogOpen}
+          course={selectedCourse || {}}
+          booking={{
+            scheduled_date: selectedBooking?.date,
+            scheduled_time: selectedBooking?.time,
+            credits_used: selectedBooking?.creditsUsed
+          }}
+          onConfirm={handleCancelBooking}
+        />
       </div>
     </div>
   );
