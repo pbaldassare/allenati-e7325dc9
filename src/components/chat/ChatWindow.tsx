@@ -48,15 +48,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
           table: 'chat_messages',
           filter: `room_id=eq.${roomId}`
         },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new as any;
+          
+          // Get user info for the new message
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('user_id', newMessage.user_id)
+            .single();
+            
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', newMessage.user_id)
+            .in('role', ['admin', 'gym_owner', 'instructor'])
+            .single();
+          
           setMessages(prev => [...prev, {
             id: newMessage.id,
             content: newMessage.content,
             user_id: newMessage.user_id,
-            sender_name: newMessage.metadata?.sender_name || 'Utente',
+            sender_name: profile ? `${profile.first_name} ${profile.last_name}` : 'Utente',
             created_at: newMessage.created_at,
-            is_from_staff: newMessage.metadata?.is_from_staff || false
+            is_from_staff: !!userRole
           }]);
           scrollToBottom();
         }
@@ -78,14 +93,36 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
 
       if (error) throw error;
 
-      setMessages(data.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        user_id: msg.user_id,
-        sender_name: (msg.metadata as any)?.sender_name || 'Utente',
-        created_at: msg.created_at,
-        is_from_staff: (msg.metadata as any)?.is_from_staff || false
-      })));
+      // Get unique user IDs to fetch profiles and roles
+      const userIds = [...new Set(data.map(msg => msg.user_id))];
+      
+      // Fetch profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds);
+      
+      // Fetch staff roles
+      const { data: staffRoles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds)
+        .in('role', ['admin', 'gym_owner', 'instructor'])
+        .eq('is_active', true);
+
+      setMessages(data.map(msg => {
+        const profile = profiles?.find(p => p.user_id === msg.user_id);
+        const hasStaffRole = staffRoles?.some(r => r.user_id === msg.user_id);
+        
+        return {
+          id: msg.id,
+          content: msg.content,
+          user_id: msg.user_id,
+          sender_name: profile ? `${profile.first_name} ${profile.last_name}` : 'Utente',
+          created_at: msg.created_at,
+          is_from_staff: hasStaffRole || false
+        };
+      }));
       
       setTimeout(scrollToBottom, 100);
     } catch (error) {
@@ -120,10 +157,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
           room_id: roomId,
           user_id: user.id,
           content: content.trim(),
-          metadata: {
-            sender_name: user.email?.split('@')[0] || 'Utente',
-            is_from_staff: user.role !== 'basic_user'
-          }
+          message_type: 'text'
         });
 
       if (error) throw error;
