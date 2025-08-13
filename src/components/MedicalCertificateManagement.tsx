@@ -75,22 +75,6 @@ export const MedicalCertificateManagement = () => {
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "approved": return "default";
-      case "rejected": return "destructive";
-      default: return "secondary";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "approved": return "Approvato";
-      case "rejected": return "Rifiutato";
-      default: return "In attesa";
-    }
-  };
-
   const isExpiringSoon = (expiryDate: string | null) => {
     if (!expiryDate) return false;
     const expiry = new Date(expiryDate);
@@ -148,9 +132,7 @@ export const MedicalCertificateManagement = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{cert.file_name}</CardTitle>
-                  <Badge variant={getStatusBadgeVariant(cert.status)}>
-                    {getStatusText(cert.status)}
-                  </Badge>
+                  <Badge variant="secondary">Caricato</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -182,13 +164,6 @@ export const MedicalCertificateManagement = () => {
                     )}
                   </div>
 
-                  {cert.status === "rejected" && cert.rejection_reason && (
-                    <div className="p-3 bg-destructive/10 rounded-md">
-                      <p className="text-sm text-destructive">
-                        <strong>Motivo rifiuto:</strong> {cert.rejection_reason}
-                      </p>
-                    </div>
-                  )}
 
                   {(isExpired(cert.expiry_date) || isExpiringSoon(cert.expiry_date)) && (
                     <div className={`p-3 rounded-md ${

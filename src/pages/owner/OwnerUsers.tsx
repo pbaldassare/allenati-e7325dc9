@@ -29,7 +29,7 @@ interface MemberProfile {
   // Added medical certificate info
   medical_expiry_date?: string | null;
   medical_file_path?: string | null;
-  medical_status?: string | null;
+  
 }
 
 const OwnerUsers = () => {
@@ -122,19 +122,18 @@ const OwnerUsers = () => {
         // New: Get latest medical certificate per user for this gym
         const { data: certs, error: certsErr } = await supabase
           .from('medical_certificates')
-          .select('user_id, expiry_date, file_path, status, created_at')
+          .select('user_id, expiry_date, file_path, created_at')
           .eq('gym_id', gymId)
           .in('user_id', userIds)
           .order('created_at', { ascending: false });
         if (certsErr) throw certsErr;
 
-        const latestCertByUser = new Map<string, { expiry_date: string | null; file_path: string | null; status: string | null }>();
+        const latestCertByUser = new Map<string, { expiry_date: string | null; file_path: string | null }>();
         (certs || []).forEach((c: any) => {
           if (!latestCertByUser.has(c.user_id)) {
             latestCertByUser.set(c.user_id, {
               expiry_date: c.expiry_date ?? null,
               file_path: c.file_path ?? null,
-              status: c.status ?? null,
             });
           }
         });
@@ -165,7 +164,7 @@ const OwnerUsers = () => {
             is_instructor: instructorUserIds.has(p.user_id),
             medical_expiry_date: cert?.expiry_date ?? null,
             medical_file_path: cert?.file_path ?? null,
-            medical_status: cert?.status ?? null,
+            
           } as MemberProfile;
         });
 
