@@ -6,6 +6,7 @@ import { MessageBubble } from './MessageBubble';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   id: string;
@@ -23,6 +24,7 @@ interface ChatWindowProps {
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -234,12 +236,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
 
   if (loading) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <div className={`h-full flex items-center justify-center ${isMobile ? 'bg-background' : ''}`}>
         <div className="text-muted-foreground">Caricamento chat...</div>
-      </Card>
+      </div>
     );
   }
 
+  // Mobile layout - no Card wrapper, full height with safe areas
+  if (isMobile) {
+    return (
+      <div className="h-full flex flex-col bg-background">
+        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-2">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isOwnMessage={message.user_id === user?.id}
+              />
+            ))}
+            {messages.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">
+                Nessun messaggio ancora. Inizia la conversazione!
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <div className="border-t bg-background/80 backdrop-blur-sm p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <MessageInput onSend={sendMessage} disabled={sending} />
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop layout - with Card wrapper
   return (
     <Card className="h-full flex flex-col">
       <div className="border-b p-4">
