@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +12,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, UserCheck, UserMinus, Crown, Shield, Users } from 'lucide-react';
+import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import MedicalCertificateUploadDialog from '@/components/owner/MedicalCertificateUploadDialog';
 
 interface MemberProfile {
   user_id: string;
@@ -23,6 +25,10 @@ interface MemberProfile {
   membership_type: string;
   user_roles: string[];
   is_instructor: boolean;
+  // Added medical certificate info
+  medical_expiry_date?: string | null;
+  medical_file_path?: string | null;
+  medical_status?: string | null;
 }
 
 const OwnerUsers = () => {
@@ -40,6 +46,10 @@ const OwnerUsers = () => {
   const [addingMember, setAddingMember] = useState(false);
   const { toast } = useToast();
 
+  // New: auth user id and upload dialog state
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+
   useEffect(() => {
     document.title = 'Utenti Palestra | Gym Manager';
   }, []);
@@ -50,6 +60,7 @@ const OwnerUsers = () => {
       try {
         const { data: userRes } = await supabase.auth.getUser();
         const userId = userRes?.user?.id;
+        setAuthUserId(userId ?? null);
         if (!userId) {
           setMembers([]);
           return;
@@ -107,6 +118,26 @@ const OwnerUsers = () => {
         
         if (instructorErr) throw instructorErr;
 
+        // New: Get latest medical certificate per user for this gym
+        const { data: certs, error: certsErr } = await supabase
+          .from('medical_certificates')
+          .select('user_id, expiry_date, file_path, status, created_at')
+          .eq('gym_id', gymId)
+          .in('user_id', userIds)
+          .order('created_at', { ascending: false });
+        if (certsErr) throw certsErr;
+
+        const latestCertByUser = new Map<string, { expiry_date: string | null; file_path: string | null; status: string | null }>();
+        (certs || []).forEach((c: any) => {
+          if (!latestCertByUser.has(c.user_id)) {
+            latestCertByUser.set(c.user_id, {
+              expiry_date: c.expiry_date ?? null,
+              file_path: c.file_path ?? null,
+              status: c.status ?? null,
+            });
+          }
+        });
+
         // Group roles by user
         const rolesByUser = new Map<string, string[]>();
         (userRoles || []).forEach((ur: any) => {
@@ -119,16 +150,22 @@ const OwnerUsers = () => {
         // Set of instructor user IDs
         const instructorUserIds = new Set((instructors || []).map((i: any) => i.user_id));
 
-        const combined = (profiles || []).map((p: any) => ({
-          user_id: p.user_id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          profile_picture_url: p.profile_picture_url,
-          membership_status: membershipByUser.get(p.user_id)?.status ?? 'unknown',
-          membership_type: membershipByUser.get(p.user_id)?.membership_type ?? 'member',
-          user_roles: rolesByUser.get(p.user_id) || ['basic_user'],
-          is_instructor: instructorUserIds.has(p.user_id),
-        }));
+        const combined = (profiles || []).map((p: any) => {
+          const cert = latestCertByUser.get(p.user_id);
+          return {
+            user_id: p.user_id,
+            first_name: p.first_name,
+            last_name: p.last_name,
+            profile_picture_url: p.profile_picture_url,
+            membership_status: membershipByUser.get(p.user_id)?.status ?? 'unknown',
+            membership_type: membershipByUser.get(p.user_id)?.membership_type ?? 'member',
+            user_roles: rolesByUser.get(p.user_id) || ['basic_user'],
+            is_instructor: instructorUserIds.has(p.user_id),
+            medical_expiry_date: cert?.expiry_date ?? null,
+            medical_file_path: cert?.file_path ?? null,
+            medical_status: cert?.status ?? null,
+          } as MemberProfile;
+        });
 
         setMembers(combined as MemberProfile[]);
       } catch (e: any) {
@@ -243,6 +280,21 @@ const OwnerUsers = () => {
     }
   };
 
+  // New: open certificate file via signed URL
+  const viewCertificate = async (filePath: string | null | undefined) => {
+    if (!filePath) {
+      toast({ title: 'Nessun certificato', description: 'Nessun file disponibile per questo utente.' });
+      return;
+    }
+    const { data, error } = await supabase.storage.from('medical-certificates').createSignedUrl(filePath, 60);
+    if (error || !data?.signedUrl) {
+      console.error('Signed URL error', error);
+      toast({ title: 'Errore', description: 'Impossibile aprire il certificato', variant: 'destructive' });
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const normalizedQuery = query.trim().toLowerCase();
   const filteredByStatus = showInactive ? members : members.filter((m) => m.membership_status === 'active');
   const listToShow = normalizedQuery
@@ -323,17 +375,18 @@ const OwnerUsers = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Ruolo</TableHead>
                     <TableHead>Stato</TableHead>
+                    <TableHead>Certificato</TableHead>
                     <TableHead>Azione</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4}>Caricamento...</TableCell>
+                      <TableCell colSpan={5}>Caricamento...</TableCell>
                     </TableRow>
                   ) : listToShow.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4}>
+                      <TableCell colSpan={5}>
                         {members.length === 0
                           ? 'Nessun membro nella palestra.'
                           : 'Nessun risultato per la ricerca.'}
@@ -344,6 +397,10 @@ const OwnerUsers = () => {
                       const roleInfo = getHighestRole(m.user_roles);
                       const RoleIcon = roleInfo.icon;
                       const isAdminOrOwner = m.user_roles.includes('admin') || m.user_roles.includes('gym_owner');
+
+                      const expiryLabel = m.medical_expiry_date
+                        ? new Date(m.medical_expiry_date).toLocaleDateString('it-IT')
+                        : 'N/D';
                       
                       return (
                         <TableRow key={m.user_id}>
@@ -358,6 +415,31 @@ const OwnerUsers = () => {
                             <Badge variant={m.membership_status === 'active' ? 'default' : 'secondary'}>
                               {m.membership_status}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                Scadenza: {expiryLabel}
+                              </Badge>
+                              {m.medical_file_path && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => viewCertificate(m.medical_file_path!)}
+                                >
+                                  Vedi
+                                </Button>
+                              )}
+                              {m.user_id === authUserId && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setUploadDialogOpen(true)}
+                                >
+                                  Carica certificato
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {isAdminOrOwner ? (
@@ -450,6 +532,13 @@ const OwnerUsers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Upload medical certificate dialog for current user */}
+      <MedicalCertificateUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUploaded={reloadMembers}
+      />
     </div>
   );
 };
