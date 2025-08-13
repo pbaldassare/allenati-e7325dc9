@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import MedicalCertificateUploadDialog from '@/components/owner/MedicalCertificateUploadDialog';
+import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 
 interface MemberProfile {
   user_id: string;

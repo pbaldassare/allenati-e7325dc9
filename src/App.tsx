@@ -38,6 +38,7 @@ import OwnerCourseNew from "./pages/owner/OwnerCourseNew";
 import OwnerSchedule from "./pages/owner/OwnerSchedule";
 import OwnerBookings from "./pages/owner/OwnerBookings";
 import OwnerReports from "./pages/owner/OwnerReports";
+import MedicalCertificate from "./pages/MedicalCertificate";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const App = () => (
 
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
+                <Route path="/certificato-medico" element={<MedicalCertificate />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

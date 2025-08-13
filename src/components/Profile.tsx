@@ -126,7 +126,11 @@ export const Profile = () => {
           Impostazioni
         </Button>
         
-        <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
+          onClick={() => window.location.href = '/certificato-medico'}
+        >
           <FileText className="w-4 h-4 mr-3" />
           Certificato Medico
         </Button>
