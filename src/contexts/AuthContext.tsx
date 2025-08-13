@@ -164,7 +164,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Email o password non corretti' };
         }
-        return { error: error.message };
+        if (error.message.includes('Email not confirmed')) {
+          return { error: 'Problema con l\'account. Contatta l\'assistenza.' };
+        }
+        return { error: 'Errore di accesso. Verifica le credenziali e riprova.' };
       }
 
       return {};
