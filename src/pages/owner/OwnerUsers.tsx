@@ -20,6 +20,7 @@ interface MemberProfile {
   user_id: string;
   first_name: string;
   last_name: string;
+  email?: string;
   profile_picture_url: string | null;
   membership_status: string;
   membership_type: string;
@@ -94,7 +95,7 @@ const OwnerUsers = () => {
         // Get profiles
         const { data: profiles, error: profErr } = await supabase
           .from('profiles')
-          .select('user_id, first_name, last_name, profile_picture_url')
+          .select('user_id, first_name, last_name, email, profile_picture_url')
           .in('user_id', userIds);
         
         if (profErr) throw profErr;
@@ -156,6 +157,7 @@ const OwnerUsers = () => {
             user_id: p.user_id,
             first_name: p.first_name,
             last_name: p.last_name,
+            email: p.email,
             profile_picture_url: p.profile_picture_url,
             membership_status: membershipByUser.get(p.user_id)?.status ?? 'unknown',
             membership_type: membershipByUser.get(p.user_id)?.membership_type ?? 'member',
@@ -373,6 +375,7 @@ const OwnerUsers = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Ruolo</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Certificato</TableHead>
@@ -382,11 +385,11 @@ const OwnerUsers = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={5}>Caricamento...</TableCell>
+                      <TableCell colSpan={6}>Caricamento...</TableCell>
                     </TableRow>
                   ) : listToShow.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={6}>
                         {members.length === 0
                           ? 'Nessun membro nella palestra.'
                           : 'Nessun risultato per la ricerca.'}
@@ -405,6 +408,7 @@ const OwnerUsers = () => {
                       return (
                         <TableRow key={m.user_id}>
                           <TableCell className="font-medium">{m.first_name} {m.last_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{m.email || 'N/D'}</TableCell>
                           <TableCell>
                             <Badge variant={roleInfo.variant} className="flex items-center gap-1 w-fit">
                               <RoleIcon className="h-3 w-3" />

@@ -1172,6 +1172,7 @@ export type Database = {
           city: string | null
           created_at: string
           date_of_birth: string | null
+          email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string
@@ -1192,6 +1193,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -1212,6 +1214,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string
