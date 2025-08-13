@@ -33,6 +33,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import OwnerUsers from "./pages/owner/OwnerUsers";
 import OwnerInstructors from "./pages/owner/OwnerInstructors";
+import OwnerRooms from "./pages/owner/OwnerRooms";
 import OwnerCoursesList from "./pages/owner/OwnerCoursesList";
 import OwnerCourseNew from "./pages/owner/OwnerCourseNew";
 import OwnerSchedule from "./pages/owner/OwnerSchedule";
@@ -86,6 +87,7 @@ const App = () => (
                   <Route index element={<OwnerDashboard />} />
                   <Route path="users" element={<OwnerUsers />} />
                   <Route path="instructors" element={<OwnerInstructors />} />
+                  <Route path="rooms" element={<OwnerRooms />} />
                   <Route path="courses" element={<OwnerCoursesList />} />
                   <Route path="courses/new" element={<OwnerCourseNew />} />
                   <Route path="schedule" element={<OwnerSchedule />} />

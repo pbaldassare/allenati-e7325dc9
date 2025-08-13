@@ -21,6 +21,7 @@ import {
   ClipboardList,
   BarChart3,
   LogOut,
+  Building,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -38,6 +39,7 @@ export const OwnerSidebar: React.FC = () => {
     { title: "Dashboard", url: "/owner", icon: Gauge },
     { title: "Utenti", url: "/owner/users", icon: Users },
     { title: "Istruttori", url: "/owner/instructors", icon: GraduationCap },
+    { title: "Sale", url: "/owner/rooms", icon: Building },
     { title: "Corsi", url: "/owner/courses", icon: BookOpen },
     { title: "Nuovo Corso", url: "/owner/courses/new", icon: PlusCircle },
     { title: "Calendario", url: "/owner/schedule", icon: CalendarClock },
