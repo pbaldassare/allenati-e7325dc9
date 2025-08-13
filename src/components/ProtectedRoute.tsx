@@ -38,7 +38,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                 <img 
                   src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
                   alt="Allenati Sport Logo" 
-                  className="h-16 w-auto"
+                  className="h-16 w-auto border-2 border-red-500 bg-blue-100"
+                  onError={(e) => {
+                    console.error('Logo failed to load:', e);
+                    e.currentTarget.style.border = '2px solid red';
+                    e.currentTarget.style.backgroundColor = 'yellow';
+                  }}
+                  onLoad={() => console.log('Logo loaded successfully')}
                 />
               </div>
               <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
