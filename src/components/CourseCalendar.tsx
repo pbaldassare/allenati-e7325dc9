@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppData } from "@/contexts/AppDataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Dumbbell, 
   Zap, 
@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  X
+  X,
+  Flower
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -31,6 +32,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const courseIcons = {
+  'Functional Training': Activity,
+  'Cardio': Heart,
+  'Strength Training': Trophy,
+  'Pilates': Flower,
+  'CrossFit': Zap,
   'BJJ': Shield,
   'MMA': Zap,
   'Boxing': Target,
@@ -42,11 +48,6 @@ const courseIcons = {
 };
 
 const weekDays = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-
-// Filter options
-const categoryFilters = ['Tutti', 'BJJ', 'MMA', 'Boxing', 'Wrestling', 'Muay Thai', 'Yoga', 'Functional', 'Grappling'];
-const levelFilters = ['Tutti', 'Beginner', 'Intermediate', 'Advanced'];
-const availabilityFilters = ['Tutti', 'Disponibili', 'Pieni', 'Prenotati'];
 
 // Date helpers
 const getWeekDates = (weekOffset: number = 0) => {
@@ -69,37 +70,132 @@ export const CourseCalendar = () => {
   const [selectedAvailability, setSelectedAvailability] = useState<string>('Tutti');
   const [currentWeek, setCurrentWeek] = useState(0);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(['Tutti']);
+  const [loading, setLoading] = useState(true);
   
-  const { courses, bookings, bookCourse, cancelBooking } = useAppData();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Get user's bookings
-  const userBookings = bookings.filter(b => b.userId === user?.id && b.status === 'confirmed');
+  // Load data from Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Get user's gym ID
+        const { data: userGym } = await supabase
+          .rpc('get_user_gym_id', { _user_id: user.id });
 
-  const handleBooking = async (courseId: string, isBooked: boolean) => {
+        if (!userGym) {
+          toast({
+            title: "Errore",
+            description: "Non sei associato a nessuna palestra",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Load courses for user's gym
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select(`
+            *,
+            course_categories(name, color_hex, icon_name),
+            instructors(profiles(first_name, last_name)),
+            course_schedules(*)
+          `)
+          .eq('gym_id', userGym)
+          .eq('is_active', true);
+
+        if (coursesError) throw coursesError;
+
+        // Load user's bookings
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed');
+
+        if (bookingsError) throw bookingsError;
+
+        // Load categories for filters
+        const { data: categoriesData } = await supabase
+          .from('course_categories')
+          .select('name')
+          .eq('gym_id', userGym)
+          .eq('is_active', true);
+
+        const categoryNames = ['Tutti', ...(categoriesData?.map(c => c.name) || [])];
+
+        setCourses(coursesData || []);
+        setBookings(bookingsData || []);
+        setCategories(categoryNames);
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Errore",
+          description: "Errore nel caricamento dei dati",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user, toast]);
+
+  const handleBooking = async (courseId: string, isBooked: boolean, scheduledDate: string, scheduledTime: string) => {
     if (!user) return;
     
     setLoadingBooking(courseId);
     try {
       if (isBooked) {
-        const booking = userBookings.find(b => b.courseId === courseId);
+        // Cancel booking
+        const booking = bookings.find(b => b.course_id === courseId);
         if (booking) {
-          cancelBooking(booking.id);
+          const { error } = await supabase
+            .from('bookings')
+            .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+            .eq('id', booking.id);
+
+          if (error) throw error;
+
+          setBookings(prev => prev.filter(b => b.id !== booking.id));
           toast({
             title: "Prenotazione cancellata",
             description: "Hai cancellato la prenotazione con successo",
           });
         }
       } else {
-        const courseData = courses.find(c => c.id === courseId);
-        await bookCourse(courseId, new Date().toISOString().split('T')[0], courseData?.schedule[0]?.time || '19:00');
+        // Create booking
+        const { data, error } = await supabase
+          .from('bookings')
+          .insert({
+            user_id: user.id,
+            course_id: courseId,
+            scheduled_date: scheduledDate,
+            scheduled_time: scheduledTime,
+            status: 'confirmed'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setBookings(prev => [...prev, data]);
         toast({
           title: "Prenotazione confermata", 
           description: "Corso prenotato con successo!",
         });
       }
     } catch (error) {
+      console.error('Booking error:', error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'operazione",
@@ -111,19 +207,17 @@ export const CourseCalendar = () => {
   };
 
   const isBooked = (courseId: string) => {
-    return userBookings.some(b => b.courseId === courseId);
+    return bookings.some(b => b.course_id === courseId);
   };
 
   // Filter courses based on selected filters
   const filteredCourses = courses.filter(course => {
-    const categoryMatch = selectedCategory === 'Tutti' || course.category === selectedCategory;
-    const levelMatch = selectedLevel === 'Tutti' || course.level === selectedLevel;
+    const categoryMatch = selectedCategory === 'Tutti' || course.course_categories?.name === selectedCategory;
+    const levelMatch = selectedLevel === 'Tutti' || course.difficulty_level?.toString() === selectedLevel;
     
     let availabilityMatch = true;
     if (selectedAvailability === 'Disponibili') {
-      availabilityMatch = course.currentParticipants < course.maxParticipants && !isBooked(course.id);
-    } else if (selectedAvailability === 'Pieni') {
-      availabilityMatch = course.currentParticipants >= course.maxParticipants;
+      availabilityMatch = !isBooked(course.id);
     } else if (selectedAvailability === 'Prenotati') {
       availabilityMatch = isBooked(course.id);
     }
@@ -133,17 +227,19 @@ export const CourseCalendar = () => {
 
   // Group filtered courses by day
   const coursesByDay = filteredCourses.reduce((acc, course) => {
-    const dayNumber = course.schedule[0]?.dayOfWeek ?? 1;
-    const day = weekDays[dayNumber] || 'Lunedì';
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(course);
+    if (course.course_schedules && course.course_schedules.length > 0) {
+      course.course_schedules.forEach((schedule: any) => {
+        const day = weekDays[schedule.day_of_week] || 'Lunedì';
+        if (!acc[day]) acc[day] = [];
+        acc[day].push({ ...course, schedule });
+      });
+    }
     return acc;
   }, {} as { [key: string]: any[] });
 
   const getActionButton = (course: any) => {
     const courseIsBooked = isBooked(course.id);
     const isLoading = loadingBooking === course.id;
-    const isFull = course.currentParticipants >= course.maxParticipants;
     
     if (isLoading) {
       return <Button size="sm" disabled>...</Button>;
@@ -154,22 +250,18 @@ export const CourseCalendar = () => {
         <Button 
           size="sm" 
           variant="outline" 
-          onClick={() => handleBooking(course.id, true)}
+          onClick={() => handleBooking(course.id, true, new Date().toISOString().split('T')[0], course.schedule?.start_time || '19:00')}
         >
           Disdici
         </Button>
       );
     }
     
-    if (isFull) {
-      return <Button size="sm" variant="outline" disabled>Completo</Button>;
-    }
-    
     return (
       <Button 
         size="sm" 
         className="bg-success text-success-foreground hover:bg-success/90"
-        onClick={() => handleBooking(course.id, false)}
+        onClick={() => handleBooking(course.id, false, new Date().toISOString().split('T')[0], course.schedule?.start_time || '19:00')}
       >
         Prenota
       </Button>
@@ -183,8 +275,20 @@ export const CourseCalendar = () => {
   };
 
   const hasActiveFilters = selectedCategory !== 'Tutti' || selectedLevel !== 'Tutti' || selectedAvailability !== 'Tutti';
-
   const weekInfo = getWeekDates(currentWeek);
+  const levelFilters = ['Tutti', '1', '2', '3'];
+  const availabilityFilters = ['Tutti', 'Disponibili', 'Prenotati'];
+
+  if (loading) {
+    return (
+      <div className="pb-20 px-4 space-y-6">
+        <div className="pt-8 pb-4">
+          <h1 className="text-3xl font-bold text-foreground">Calendario Corsi</h1>
+          <p className="text-muted-foreground mt-1">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20 px-4 space-y-6">
@@ -220,7 +324,7 @@ export const CourseCalendar = () => {
               <DropdownMenuSeparator />
               
               <DropdownMenuLabel className="text-xs text-muted-foreground">Categoria</DropdownMenuLabel>
-              {categoryFilters.map((category) => (
+              {categories.map((category) => (
                 <DropdownMenuItem
                   key={category}
                   onClick={() => setSelectedCategory(category)}
@@ -239,7 +343,7 @@ export const CourseCalendar = () => {
                   onClick={() => setSelectedLevel(level)}
                   className={selectedLevel === level ? 'bg-accent' : ''}
                 >
-                  {level}
+                  {level === 'Tutti' ? level : `Livello ${level}`}
                 </DropdownMenuItem>
               ))}
               
@@ -278,7 +382,7 @@ export const CourseCalendar = () => {
             )}
             {selectedLevel !== 'Tutti' && (
               <Badge variant="outline" className="gap-1">
-                {selectedLevel}
+                Livello {selectedLevel}
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -343,9 +447,13 @@ export const CourseCalendar = () => {
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
                 {coursesByDay[day].map((course) => {
-                  const IconComponent = courseIcons[course.category as keyof typeof courseIcons] || Dumbbell;
+                  const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Dumbbell;
+                  const instructorName = course.instructors?.profiles ? 
+                    `${course.instructors.profiles.first_name} ${course.instructors.profiles.last_name}` : 
+                    'Istruttore';
+                  
                   return (
-                    <Card key={course.id} className="shadow-card hover:shadow-lg transition-all duration-300">
+                    <Card key={`${course.id}-${course.schedule.id}`} className="shadow-card hover:shadow-lg transition-all duration-300">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-4">
                           {/* Icon */}
@@ -357,23 +465,27 @@ export const CourseCalendar = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-semibold text-foreground">{course.name}</h4>
-                              <Badge variant="outline" className="text-xs">{course.level}</Badge>
-                              <Badge variant="outline" className="text-xs">{course.category}</Badge>
+                              {course.difficulty_level && (
+                                <Badge variant="outline" className="text-xs">Livello {course.difficulty_level}</Badge>
+                              )}
+                              {course.course_categories?.name && (
+                                <Badge variant="outline" className="text-xs">{course.course_categories.name}</Badge>
+                              )}
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
-                                <span>{course.schedule[0]?.time}</span>
+                                <span>{course.schedule?.start_time}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
-                                <span>{course.currentParticipants}/{course.maxParticipants}</span>
+                                <span>{course.max_participants} posti</span>
                               </div>
                             </div>
                             
                             <p className="text-sm text-muted-foreground mt-1">
-                              Istruttore: {course.instructor}
+                              Istruttore: {instructorName}
                             </p>
                           </div>
                           
@@ -381,26 +493,11 @@ export const CourseCalendar = () => {
                           <div className="flex flex-col items-end gap-2">
                             {isBooked(course.id) ? (
                               <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
-                            ) : course.currentParticipants >= course.maxParticipants ? (
-                              <Badge className="bg-destructive text-destructive-foreground">Completo</Badge>
                             ) : (
                               <Badge className="bg-success text-success-foreground">Disponibile</Badge>
                             )}
                             {getActionButton(course)}
                           </div>
-                        </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="mt-3">
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full transition-all duration-300" 
-                              style={{width: `${(course.currentParticipants / course.maxParticipants) * 100}%`}}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {course.maxParticipants - course.currentParticipants} posti disponibili
-                          </p>
                         </div>
                       </CardContent>
                     </Card>
