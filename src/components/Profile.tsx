@@ -50,112 +50,112 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         <div className="absolute top-4 right-4">
           <ThemeToggle />
         </div>
-        <Avatar className="w-20 h-20 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20">
-          <AvatarFallback className="text-lg font-space font-bold">{userInitials}</AvatarFallback>
+        <Avatar className="w-24 sm:w-20 h-24 sm:h-20 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20">
+          <AvatarFallback className="text-xl sm:text-lg font-space font-bold">{userInitials}</AvatarFallback>
         </Avatar>
-        <h1 className="text-xl font-space font-bold">{userName}</h1>
-        <Badge className="mt-2 bg-gradient-accent text-white font-medium">
-          <Award className="w-3 h-3 mr-1" />
+        <h1 className="text-2xl sm:text-xl font-space font-bold">{userName}</h1>
+        <Badge className="mt-2 bg-gradient-accent text-white font-medium text-sm">
+          <Award className="w-4 h-4 sm:w-3 sm:h-3 mr-1" />
           {user?.role === 'admin' ? 'Admin' : 
            user?.role === 'gym_owner' ? 'Proprietario' :
            user?.role === 'instructor' ? 'Istruttore' : 'Utente'}
         </Badge>
         {user?.gym_name && (
-          <p className="text-sm text-muted-foreground mt-1">{user.gym_name}</p>
+          <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground mt-1">{user.gym_name}</p>
         )}
       </div>
 
       {/* Activity Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="shadow-glow text-center hover:scale-105 transition-all duration-300">
-          <CardContent className="p-3">
-            <p className="text-2xl font-mono font-bold text-primary">1</p>
-            <p className="text-2xs text-muted-foreground">Week</p>
+        <Card className="shadow-card text-center transition-all duration-300">
+          <CardContent className="p-4 sm:p-3">
+            <p className="text-3xl sm:text-2xl font-mono font-bold text-primary">1</p>
+            <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">Week</p>
           </CardContent>
         </Card>
-        <Card className="shadow-glow text-center hover:scale-105 transition-all duration-300">
-          <CardContent className="p-3">
-            <p className="text-2xl font-mono font-bold text-secondary">3</p>
-            <p className="text-2xs text-muted-foreground">Month</p>
+        <Card className="shadow-card text-center transition-all duration-300">
+          <CardContent className="p-4 sm:p-3">
+            <p className="text-3xl sm:text-2xl font-mono font-bold text-secondary">3</p>
+            <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">Month</p>
           </CardContent>
         </Card>
-        <Card className="shadow-glow text-center hover:scale-105 transition-all duration-300">
-          <CardContent className="p-3">
-            <p className="text-2xl font-mono font-bold text-accent">22</p>
-            <p className="text-2xs text-muted-foreground">Year</p>
+        <Card className="shadow-card text-center transition-all duration-300">
+          <CardContent className="p-4 sm:p-3">
+            <p className="text-3xl sm:text-2xl font-mono font-bold text-accent">22</p>
+            <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">Year</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Overall Stats */}
-      <Card className="shadow-glow glass">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3 w-3" />
+      <Card className="shadow-card">
+        <CardContent className="p-4 sm:p-3">
+          <div className="flex items-center gap-2 text-sm sm:text-xs text-foreground sm:text-muted-foreground">
+            <TrendingUp className="h-4 w-4 sm:h-3 sm:w-3" />
             <span>Questo studente ha partecipato a <span className="font-mono font-semibold text-primary">903</span> classi in totale</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Recent Classes */}
-      <Card className="shadow-glow">
+      <Card className="shadow-card">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg font-space">
-            <Calendar className="h-4 w-4" />
+          <CardTitle className="flex items-center gap-2 text-xl sm:text-lg font-space">
+            <Calendar className="h-5 w-5 sm:h-4 sm:w-4" />
             Ultime Classi Frequentate
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {recentClasses.map((classItem, index) => (
-            <div key={index} className="flex items-center justify-between p-2 border border-border rounded-xl hover:bg-accent/10 transition-all duration-300">
+            <div key={index} className="flex items-center justify-between p-3 sm:p-2 border border-border rounded-xl hover:bg-accent/10 transition-all duration-300">
               <div className="flex items-center gap-3">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="text-xs font-space font-semibold">
+                <Avatar className="w-10 h-10 sm:w-8 sm:h-8">
+                  <AvatarFallback className="text-sm sm:text-xs font-space font-semibold">
                     {classItem.instructor[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold text-sm">{classItem.name}</p>
-                  <p className="text-2xs text-muted-foreground font-mono">{classItem.time}</p>
+                  <p className="font-semibold text-base sm:text-sm">{classItem.name}</p>
+                  <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground font-mono">{classItem.time}</p>
                 </div>
               </div>
-              <p className="text-2xs text-muted-foreground font-mono">{classItem.date}</p>
+              <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground font-mono">{classItem.date}</p>
             </div>
           ))}
         </CardContent>
       </Card>
 
       {/* Profile Actions */}
-      <div className="space-y-2">
-        <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
-          <Settings className="w-4 h-4 mr-3" />
+      <div className="space-y-3 sm:space-y-2">
+        <Button variant="outline" className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300">
+          <Settings className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Impostazioni
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
           onClick={() => onTabChange?.("leaderboard")}
         >
-          <TrendingUp className="w-4 h-4 mr-3" />
+          <TrendingUp className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Classifica
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
           onClick={() => navigate('/certificato-medico')}
         >
-          <FileText className="w-4 h-4 mr-3" />
+          <FileText className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Certificato Medico
         </Button>
         
         <Button 
           onClick={handleLogout}
           variant="outline" 
-          className="w-full justify-start text-sm h-10 text-destructive hover:text-destructive hover:scale-105 transition-all duration-300"
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 text-destructive hover:text-destructive transition-all duration-300"
         >
-          <LogOut className="w-4 h-4 mr-3" />
+          <LogOut className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Esci
         </Button>
       </div>

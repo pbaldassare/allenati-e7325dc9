@@ -22,8 +22,8 @@ export const Leaderboard = () => {
     <div className="pb-20 px-4 space-y-6">
       {/* Header */}
       <div className="pt-8 pb-4 text-center">
-        <h1 className="text-3xl font-bold text-foreground">Classifica</h1>
-        <p className="text-muted-foreground mt-1">Compete with Friends</p>
+        <h1 className="text-4xl sm:text-3xl font-bold text-foreground">Classifica</h1>
+        <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground mt-1">Compete with Friends</p>
       </div>
 
       {/* Time Filter */}
@@ -33,7 +33,7 @@ export const Leaderboard = () => {
             key={filter}
             variant={index === 1 ? "default" : "outline"}
             size="sm"
-            className={index === 1 ? "bg-primary text-primary-foreground" : ""}
+            className={`h-11 sm:h-9 text-base sm:text-sm ${index === 1 ? "bg-primary text-primary-foreground" : ""}`}
           >
             {filter}
           </Button>
@@ -43,40 +43,40 @@ export const Leaderboard = () => {
       {/* Top 3 Podium */}
       <Card className="shadow-card">
         <CardContent className="p-6">
-          <div className="flex items-end justify-center gap-4">
+          <div className="flex items-end justify-center gap-6 sm:gap-4">
             {/* 2nd Place */}
             <div className="flex flex-col items-center">
-              <Avatar className="w-16 h-16 border-4 border-muted">
-                <AvatarFallback className="text-lg font-bold">HT</AvatarFallback>
+              <Avatar className="w-18 sm:w-16 h-18 sm:h-16 border-4 border-muted">
+                <AvatarFallback className="text-xl sm:text-lg font-bold">HT</AvatarFallback>
               </Avatar>
               <div className="mt-2 text-center">
-                <Badge variant="secondary" className="mb-1">2nd</Badge>
-                <p className="font-semibold text-sm">Hina Takahashi</p>
+                <Badge variant="secondary" className="mb-1 text-sm">2nd</Badge>
+                <p className="font-semibold text-base sm:text-sm">Hina Takahashi</p>
               </div>
             </div>
 
             {/* 1st Place */}
             <div className="flex flex-col items-center -mt-4">
-              <Avatar className="w-20 h-20 border-4 border-accent ring-4 ring-accent/20">
-                <AvatarFallback className="text-xl font-bold">IG</AvatarFallback>
+              <Avatar className="w-24 sm:w-20 h-24 sm:h-20 border-4 border-accent ring-4 ring-accent/20">
+                <AvatarFallback className="text-2xl sm:text-xl font-bold">IG</AvatarFallback>
               </Avatar>
               <div className="mt-2 text-center">
-                <Badge className="bg-accent text-accent-foreground mb-1">
-                  <Trophy className="w-4 h-4 mr-1" />
+                <Badge className="bg-accent text-accent-foreground mb-1 text-sm">
+                  <Trophy className="w-5 h-5 sm:w-4 sm:h-4 mr-1" />
                   1st
                 </Badge>
-                <p className="font-semibold">Isabella Gomes</p>
+                <p className="font-semibold text-lg sm:text-base">Isabella Gomes</p>
               </div>
             </div>
 
             {/* 3rd Place */}
             <div className="flex flex-col items-center">
-              <Avatar className="w-16 h-16 border-4 border-warning/50">
-                <AvatarFallback className="text-lg font-bold">SS</AvatarFallback>
+              <Avatar className="w-18 sm:w-16 h-18 sm:h-16 border-4 border-warning/50">
+                <AvatarFallback className="text-xl sm:text-lg font-bold">SS</AvatarFallback>
               </Avatar>
               <div className="mt-2 text-center">
-                <Badge variant="outline" className="mb-1 border-warning text-warning">3rd</Badge>
-                <p className="font-semibold text-sm">Stefano Saitta</p>
+                <Badge variant="outline" className="mb-1 border-warning text-warning text-sm">3rd</Badge>
+                <p className="font-semibold text-base sm:text-sm">Stefano Saitta</p>
               </div>
             </div>
           </div>
@@ -86,37 +86,37 @@ export const Leaderboard = () => {
       {/* Full Leaderboard */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-xl sm:text-lg">
+            <Trophy className="h-6 w-6 sm:h-5 sm:w-5" />
             Classifica Completa
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {leaderboardData.map((user) => (
-            <div key={user.rank} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-smooth">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold ${user.color}`}>
+            <div key={user.rank} className="flex items-center justify-between p-4 sm:p-3 border border-border rounded-lg hover:bg-muted/50 transition-smooth">
+              <div className="flex items-center gap-4 sm:gap-3">
+                <div className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center text-base sm:text-sm font-bold ${user.color}`}>
                   {user.rank <= 3 ? (
-                    user.rank === 1 ? <Trophy className="h-4 w-4" /> :
-                    user.rank === 2 ? <Medal className="h-4 w-4" /> :
-                    <Award className="h-4 w-4" />
+                    user.rank === 1 ? <Trophy className="h-5 w-5 sm:h-4 sm:w-4" /> :
+                    user.rank === 2 ? <Medal className="h-5 w-5 sm:h-4 sm:w-4" /> :
+                    <Award className="h-5 w-5 sm:h-4 sm:w-4" />
                   ) : (
                     user.rank
                   )}
                 </div>
-                <Avatar className="w-10 h-10">
-                  <AvatarFallback className="text-sm font-semibold">
+                <Avatar className="w-12 h-12 sm:w-10 sm:h-10">
+                  <AvatarFallback className="text-base sm:text-sm font-semibold">
                     {user.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.badge}</p>
+                  <p className="font-semibold text-base sm:text-sm">{user.name}</p>
+                  <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">{user.badge}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-lg">{user.classes}</p>
-                <p className="text-xs text-muted-foreground">classi</p>
+                <p className="font-bold text-xl sm:text-lg">{user.classes}</p>
+                <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">classi</p>
               </div>
             </div>
           ))}

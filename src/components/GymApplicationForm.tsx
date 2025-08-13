@@ -106,11 +106,11 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-xl sm:text-lg">
+          <Building2 className="h-6 w-6 sm:h-5 sm:w-5" />
           Candidati come Proprietario di Palestra
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base sm:text-sm">
           Compila il modulo per candidarti come proprietario di una palestra. La tua richiesta sarà valutata dal nostro team.
           {!user && " Non è necessario essere registrati per candidarsi."}
         </CardDescription>
@@ -123,17 +123,18 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
               name="applicant_email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>La tua Email *</FormLabel>
+                  <FormLabel className="text-base sm:text-sm">La tua Email *</FormLabel>
                   <FormControl>
                     <Input 
                       placeholder="tua.email@example.com" 
                       {...field} 
                       disabled={!!user}
+                      className="h-12 sm:h-10"
                     />
                   </FormControl>
                   <FormMessage />
                   {user && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-base sm:text-sm text-muted-foreground">
                       Email dal tuo account registrato
                     </p>
                   )}
@@ -146,13 +147,13 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
                 control={form.control}
                 name="gym_name"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Palestra *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Es. FitnessPro" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                <FormItem>
+                  <FormLabel className="text-base sm:text-sm">Nome Palestra *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Es. FitnessPro" {...field} className="h-12 sm:h-10" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
                 )}
               />
 
@@ -160,13 +161,13 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
                 control={form.control}
                 name="gym_city"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Città *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Es. Milano" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                <FormItem>
+                  <FormLabel className="text-base sm:text-sm">Città *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Es. Milano" {...field} className="h-12 sm:h-10" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
                 )}
               />
             </div>
@@ -175,17 +176,18 @@ export const GymApplicationForm: React.FC<GymApplicationFormProps> = ({ onSucces
               control={form.control}
               name="gym_description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrizione</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descrivi la tua palestra, i servizi offerti, la filosofia..."
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              <FormItem>
+                <FormLabel className="text-base sm:text-sm">Descrizione</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Descrivi la tua palestra, i servizi offerti, la filosofia..."
+                    rows={4}
+                    {...field} 
+                    className="text-base sm:text-sm"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
               )}
             />
 

@@ -113,21 +113,21 @@ const Shop = () => {
               </div>
             </div>
             
-            <h3 className="font-medium text-sm">{product.name}</h3>
-            <p className="text-xs text-muted-foreground line-clamp-2">
+            <h3 className="font-medium text-base sm:text-sm">{product.name}</h3>
+            <p className="text-sm sm:text-xs text-foreground sm:text-muted-foreground line-clamp-2">
               {product.description}
             </p>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span className="font-bold text-primary">€{product.price}</span>
+                <span className="font-bold text-primary text-lg sm:text-base">€{product.price}</span>
                 {product.originalPrice && (
-                  <span className="text-xs text-muted-foreground line-through">
+                  <span className="text-sm sm:text-xs text-muted-foreground line-through">
                     €{product.originalPrice}
                   </span>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm sm:text-xs text-foreground sm:text-muted-foreground">
                 {product.inStock} disponibili
               </span>
             </div>
@@ -143,7 +143,7 @@ const Shop = () => {
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
-                  <span className="text-sm font-medium w-8 text-center">{quantity}</span>
+                  <span className="text-base sm:text-sm font-medium w-8 text-center">{quantity}</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -154,18 +154,18 @@ const Shop = () => {
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
-                <span className="text-xs font-medium text-primary">
+                <span className="text-sm sm:text-xs font-medium text-primary">
                   €{(product.price * quantity).toFixed(2)}
                 </span>
               </div>
             ) : (
-              <Button
+                <Button
                 onClick={() => handleAddToCart(product.id)}
-                className="w-full bg-gradient-primary hover:opacity-90"
+                className="w-full bg-gradient-primary hover:opacity-90 h-11 sm:h-9"
                 size="sm"
                 disabled={product.inStock === 0}
               >
-                <ShoppingCart className="mr-2 h-3 w-3" />
+                <ShoppingCart className="mr-2 h-4 w-4 sm:h-3 sm:w-3" />
                 {product.inStock === 0 ? 'Esaurito' : 'Aggiungi'}
               </Button>
             )}

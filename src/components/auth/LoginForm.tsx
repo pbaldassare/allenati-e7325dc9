@@ -71,29 +71,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
          <div className="flex flex-col items-center space-y-4 mb-2">
-           <img 
-             src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
-             alt="Allenati Sport Logo" 
-             className="h-16 w-auto border-2 border-red-500 bg-blue-100"
-             onError={(e) => {
-               console.error('Logo failed to load in login form:', e);
-               e.currentTarget.style.border = '2px solid red';
-               e.currentTarget.style.backgroundColor = 'yellow';
-             }}
-             onLoad={() => console.log('Logo loaded successfully in login form')}
-           />
+            <img 
+              src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
+              alt="Allenati Sport Logo" 
+              className="h-20 sm:h-16 w-auto"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
          </div>
-        <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <CardTitle className="text-3xl sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Accedi
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base sm:text-sm">
           Inserisci le tue credenziali per accedere
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-base sm:text-sm">Email</Label>
             <Input
               id="email"
               name="email"
@@ -103,11 +100,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               onChange={handleChange}
               disabled={isLoading}
               required
+              className="h-12 sm:h-10"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-base sm:text-sm">Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -118,7 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
                 onChange={handleChange}
                 disabled={isLoading}
                 required
-                className="pr-10"
+                className="pr-10 h-12 sm:h-10"
               />
               <Button
                 type="button"
@@ -153,11 +151,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
           </Button>
 
           <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground">
               Non hai un account?{' '}
               <Button
                 variant="link"
-                className="p-0 h-auto font-medium text-primary"
+                className="p-0 h-auto font-medium text-primary text-base sm:text-sm"
                 onClick={onSwitchToRegister}
                 disabled={isLoading}
               >
@@ -168,7 +166,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         </form>
 
         <div className="mt-6 pt-4 border-t border-border">
-          <div className="text-xs text-muted-foreground space-y-1">
+          <div className="text-sm sm:text-xs text-foreground sm:text-muted-foreground space-y-1">
             <p><strong>Primo accesso?</strong></p>
             <p>Crea un account per iniziare ad utilizzare l'app</p>
           </div>

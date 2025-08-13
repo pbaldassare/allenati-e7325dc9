@@ -98,13 +98,13 @@ export const MedicalCertificateManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Certificati Medici</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl sm:text-2xl font-bold">Certificati Medici</h2>
+          <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground">
             Gestisci i tuoi certificati medici sportivi
           </p>
         </div>
-        <Button onClick={() => setUploadDialogOpen(true)}>
-          <UploadIcon className="w-4 h-4 mr-2" />
+        <Button onClick={() => setUploadDialogOpen(true)} className="h-12 sm:h-10">
+          <UploadIcon className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
           Carica Certificato
         </Button>
       </div>
@@ -114,8 +114,8 @@ export const MedicalCertificateManagement = () => {
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <FileIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nessun certificato caricato</h3>
-              <p className="text-muted-foreground mb-4">
+              <h3 className="text-xl sm:text-lg font-medium mb-2">Nessun certificato caricato</h3>
+              <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground mb-4">
                 Carica il tuo certificato medico sportivo per accedere ai corsi
               </p>
               <Button onClick={() => setUploadDialogOpen(true)}>
@@ -131,24 +131,24 @@ export const MedicalCertificateManagement = () => {
             <Card key={cert.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{cert.file_name}</CardTitle>
-                  <Badge variant="secondary">Caricato</Badge>
+                  <CardTitle className="text-xl sm:text-lg">{cert.file_name}</CardTitle>
+                  <Badge variant="secondary" className="text-sm">Caricato</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">
+                      <CalendarIcon className="w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
+                      <span className="text-base sm:text-sm">
                         Caricato il{" "}
                         {format(new Date(cert.created_at), "dd MMMM yyyy", { locale: it })}
                       </span>
                     </div>
                     {cert.expiry_date && (
                       <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
+                        <CalendarIcon className="w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        <span className="text-base sm:text-sm">
                           Scadenza:{" "}
                           <span className={
                             isExpired(cert.expiry_date) 
@@ -171,7 +171,7 @@ export const MedicalCertificateManagement = () => {
                         ? "bg-destructive/10 text-destructive" 
                         : "bg-orange-50 text-orange-800"
                     }`}>
-                      <p className="text-sm font-medium">
+                      <p className="text-base sm:text-sm font-medium">
                         {isExpired(cert.expiry_date) 
                           ? "⚠️ Certificato scaduto" 
                           : "⚠️ Certificato in scadenza entro 30 giorni"}
@@ -184,8 +184,9 @@ export const MedicalCertificateManagement = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => viewCertificate(cert.file_path)}
+                      className="h-11 sm:h-9"
                     >
-                      <FileIcon className="w-4 h-4 mr-2" />
+                      <FileIcon className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
                       Visualizza
                     </Button>
                   </div>
