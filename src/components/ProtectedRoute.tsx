@@ -34,6 +34,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
+              <div className="flex flex-col items-center space-y-4 mb-2">
+                <img 
+                  src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
+                  alt="Allenati Sport Logo" 
+                  className="h-16 w-auto"
+                />
+              </div>
               <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Accesso Richiesto
               </CardTitle>
