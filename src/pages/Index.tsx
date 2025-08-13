@@ -46,7 +46,7 @@ const Index = () => {
       case "subscription":
         return <SubscriptionPlans />;
       case "profile":
-        return <Profile />;
+        return <Profile onTabChange={handleTabChange} />;
       default:
         return <Dashboard />;
     }

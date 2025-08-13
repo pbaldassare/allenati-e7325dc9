@@ -8,7 +8,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-export const Profile = () => {
+interface ProfileProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export const Profile = ({ onTabChange }: ProfileProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -126,6 +130,15 @@ export const Profile = () => {
         <Button variant="outline" className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300">
           <Settings className="w-4 h-4 mr-3" />
           Impostazioni
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
+          onClick={() => onTabChange?.("leaderboard")}
+        >
+          <TrendingUp className="w-4 h-4 mr-3" />
+          Classifica
         </Button>
         
         <Button 

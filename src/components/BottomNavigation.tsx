@@ -13,9 +13,8 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
   
   const tabs = [
     { id: "home", icon: Home, label: "Home" },
-    { id: "leaderboard", icon: TrendingUp, label: "Classifica" },
-    { id: "calendar", icon: Calendar, label: "Corsi" },
     { id: "chat", icon: MessageSquare, label: "Chat" },
+    { id: "calendar", icon: Calendar, label: "Corsi" },
     { id: "shop", icon: ShoppingBag, label: "Shop" },
     ...(isAdmin
       ? [{ id: "admin", icon: Settings, label: "Admin" }]
