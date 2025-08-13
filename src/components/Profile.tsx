@@ -6,9 +6,11 @@ import { Settings, FileText, Calendar, TrendingUp, Award, LogOut } from "lucide-
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const Profile = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   const handleLogout = async () => {
     try {
@@ -129,7 +131,7 @@ export const Profile = () => {
         <Button 
           variant="outline" 
           className="w-full justify-start text-sm h-10 hover:scale-105 transition-all duration-300"
-          onClick={() => window.location.href = '/certificato-medico'}
+          onClick={() => navigate('/certificato-medico')}
         >
           <FileText className="w-4 h-4 mr-3" />
           Certificato Medico
