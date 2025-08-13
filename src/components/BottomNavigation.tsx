@@ -9,7 +9,7 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
-  const { isAdmin, isGymOwner } = useAuth();
+  const { isAdmin, isGymOwner, isInstructor } = useAuth();
   
   const tabs = [
     { id: "home", icon: Home, label: "Home" },
