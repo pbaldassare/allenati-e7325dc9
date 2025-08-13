@@ -180,6 +180,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   return (
     <Card className={`w-full ${showGymApplication ? 'max-w-2xl' : 'max-w-md'} mx-auto`}>
       <CardHeader className="space-y-1">
+        {!showGymApplication && (
+          <div className="flex flex-col items-center space-y-4 mb-2">
+            <img 
+              src="/lovable-uploads/f1aff50e-632e-46e0-b09f-145c702dc0be.png" 
+              alt="Allenati Sport Logo" 
+              className="h-16 w-auto"
+            />
+          </div>
+        )}
         <CardTitle className="text-2xl font-bold text-center">
           {showGymApplication ? 'Candidatura Palestra' : 'Registrazione'}
         </CardTitle>
