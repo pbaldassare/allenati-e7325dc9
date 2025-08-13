@@ -24,11 +24,27 @@ const OwnerCoursesList: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await (supabase as any)
-        .from("courses")
-        .select("id,name,is_active,max_participants,created_at")
-        .order("created_at", { ascending: false });
-      if (!error && data) setCourses(data as CourseItem[]);
+      try {
+        // Get user's gym_id
+        const { data: gymId } = await (supabase as any)
+          .rpc('get_user_gym_id', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+        
+        if (!gymId) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch courses for this gym only
+        const { data, error } = await (supabase as any)
+          .from("courses")
+          .select("id,name,is_active,max_participants,created_at")
+          .eq('gym_id', gymId)
+          .order("created_at", { ascending: false });
+        
+        if (!error && data) setCourses(data as CourseItem[]);
+      } catch (error) {
+        console.error('Error loading courses:', error);
+      }
       setLoading(false);
     };
     load();

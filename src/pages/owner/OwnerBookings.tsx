@@ -24,27 +24,57 @@ const OwnerBookings: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data, error } = await (supabase as any)
-        .from("bookings")
-        .select("id,user_id,scheduled_date,scheduled_time,status,created_at")
-        .order("scheduled_date", { ascending: true });
+      try {
+        // Get user's gym_id
+        const { data: gymId } = await (supabase as any)
+          .rpc('get_user_gym_id', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+        
+        if (!gymId) {
+          setLoading(false);
+          return;
+        }
 
-      const bookingsData = (!error && data ? (data as BookingItem[]) : []);
-      setBookings(bookingsData);
+        // Get courses for this gym to filter bookings
+        const { data: courses } = await (supabase as any)
+          .from("courses")
+          .select("id")
+          .eq('gym_id', gymId);
 
-      const userIds = Array.from(new Set(bookingsData.map(b => b.user_id))).filter(Boolean);
-      if (userIds.length > 0) {
-        const { data: profiles } = await (supabase as any)
-          .from("profiles")
-          .select("user_id,first_name,last_name")
-          .in("user_id", userIds);
-        const map: Record<string, string> = {};
-        (profiles || []).forEach((p: any) => {
-          map[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ");
-        });
-        setUserNames(map);
-      } else {
-        setUserNames({});
+        const courseIds = courses?.map((c: any) => c.id) || [];
+        
+        if (courseIds.length === 0) {
+          setBookings([]);
+          setUserNames({});
+          setLoading(false);
+          return;
+        }
+
+        // Fetch bookings for courses in this gym only
+        const { data, error } = await (supabase as any)
+          .from("bookings")
+          .select("id,user_id,scheduled_date,scheduled_time,status,created_at")
+          .in('course_id', courseIds)
+          .order("scheduled_date", { ascending: true });
+
+        const bookingsData = (!error && data ? (data as BookingItem[]) : []);
+        setBookings(bookingsData);
+
+        const userIds = Array.from(new Set(bookingsData.map(b => b.user_id))).filter(Boolean);
+        if (userIds.length > 0) {
+          const { data: profiles } = await (supabase as any)
+            .from("profiles")
+            .select("user_id,first_name,last_name")
+            .in("user_id", userIds);
+          const map: Record<string, string> = {};
+          (profiles || []).forEach((p: any) => {
+            map[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ");
+          });
+          setUserNames(map);
+        } else {
+          setUserNames({});
+        }
+      } catch (error) {
+        console.error('Error loading bookings:', error);
       }
 
       setLoading(false);

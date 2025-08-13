@@ -13,26 +13,56 @@ const OwnerReports: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      // Active members
-      const { count: membersCount } = await (supabase as any)
-        .from("user_gym_memberships")
-        .select("id", { count: "exact", head: true });
+      try {
+        // Get user's gym_id
+        const { data: gymId } = await (supabase as any)
+          .rpc('get_user_gym_id', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+        
+        if (!gymId) {
+          setActiveMembers(0);
+          setCoursesCount(0);
+          setUpcomingBookings(0);
+          return;
+        }
 
-      // Courses count
-      const { count: cCount } = await (supabase as any)
-        .from("courses")
-        .select("id", { count: "exact", head: true });
+        // Active members for this gym
+        const { count: membersCount } = await (supabase as any)
+          .from("user_gym_memberships")
+          .select("id", { count: "exact", head: true })
+          .eq('gym_id', gymId)
+          .eq('status', 'active');
 
-      // Upcoming bookings (from today)
-      const today = new Date().toISOString().split("T")[0];
-      const { count: bCount } = await (supabase as any)
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .gte("scheduled_date", today);
+        // Courses count for this gym
+        const { count: cCount } = await (supabase as any)
+          .from("courses")
+          .select("id", { count: "exact", head: true })
+          .eq('gym_id', gymId);
 
-      setActiveMembers(membersCount ?? 0);
-      setCoursesCount(cCount ?? 0);
-      setUpcomingBookings(bCount ?? 0);
+        // Get courses for this gym to filter bookings
+        const { data: courses } = await (supabase as any)
+          .from("courses")
+          .select("id")
+          .eq('gym_id', gymId);
+
+        const courseIds = courses?.map((c: any) => c.id) || [];
+        
+        // Upcoming bookings for this gym's courses (from today)
+        const today = new Date().toISOString().split("T")[0];
+        const { count: bCount } = courseIds.length > 0 ? await (supabase as any)
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .in('course_id', courseIds)
+          .gte("scheduled_date", today) : { count: 0 };
+
+        setActiveMembers(membersCount ?? 0);
+        setCoursesCount(cCount ?? 0);
+        setUpcomingBookings(bCount ?? 0);
+      } catch (error) {
+        console.error('Error loading reports:', error);
+        setActiveMembers(0);
+        setCoursesCount(0);
+        setUpcomingBookings(0);
+      }
     };
     load();
   }, []);

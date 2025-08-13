@@ -24,11 +24,41 @@ const OwnerSchedule: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await (supabase as any)
-        .from("course_schedules")
-        .select("id,course_id,day_of_week,start_time,end_time,room_name")
-        .order("day_of_week", { ascending: true });
-      if (!error && data) setSchedules(data as ScheduleItem[]);
+      try {
+        // Get user's gym_id
+        const { data: gymId } = await (supabase as any)
+          .rpc('get_user_gym_id', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+        
+        if (!gymId) {
+          setLoading(false);
+          return;
+        }
+
+        // Get courses for this gym to filter schedules
+        const { data: courses } = await (supabase as any)
+          .from("courses")
+          .select("id")
+          .eq('gym_id', gymId);
+
+        const courseIds = courses?.map((c: any) => c.id) || [];
+        
+        if (courseIds.length === 0) {
+          setSchedules([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch schedules for courses in this gym only
+        const { data, error } = await (supabase as any)
+          .from("course_schedules")
+          .select("id,course_id,day_of_week,start_time,end_time,room_name")
+          .in('course_id', courseIds)
+          .order("day_of_week", { ascending: true });
+        
+        if (!error && data) setSchedules(data as ScheduleItem[]);
+      } catch (error) {
+        console.error('Error loading schedules:', error);
+      }
       setLoading(false);
     };
     load();
