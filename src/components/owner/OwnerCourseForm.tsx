@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const courseSchema = z.object({
   name: z.string().min(3, 'Il nome deve essere almeno 3 caratteri'),
-  description: z.string().min(10, 'La descrizione deve essere almeno 10 caratteri'),
+  description: z.string().optional(),
   instructor_id: z.string().min(1, 'Seleziona un istruttore'),
   category: z.string().min(1, 'Seleziona una categoria'),
   level: z.string().min(1, 'Seleziona un livello'),
@@ -33,7 +33,7 @@ const courseSchema = z.object({
   maxParticipants: z.coerce.number().min(1, 'Massimo partecipanti deve essere almeno 1'),
   duration: z.coerce.number().min(15, 'La durata minima è 15 minuti'),
   deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
-  image: z.string().url('Inserisci un URL valido per l\'immagine'),
+  image: z.string().url('Inserisci un URL valido per l\'immagine').optional().or(z.literal("")),
   benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
   requirements: z.array(z.string()).optional(),
   schedule: z.array(z.object({
@@ -490,13 +490,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             control={form.control}
             name="image"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL Immagine</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+               <FormItem>
+                 <FormLabel>URL Immagine (opzionale)</FormLabel>
+                 <FormControl>
+                   <Input placeholder="https://..." {...field} />
+                 </FormControl>
+                 <FormMessage />
+               </FormItem>
             )}
           />
         </div>
@@ -506,17 +506,17 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           control={form.control}
           name="description"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descrizione</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Descrivi il corso, gli obiettivi e cosa aspettarsi..."
-                  className="min-h-[100px]"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+             <FormItem>
+               <FormLabel>Descrizione (opzionale)</FormLabel>
+               <FormControl>
+                 <Textarea 
+                   placeholder="Descrivi il corso, gli obiettivi e cosa aspettarsi..."
+                   className="min-h-[100px]"
+                   {...field} 
+                 />
+               </FormControl>
+               <FormMessage />
+             </FormItem>
           )}
         />
 
