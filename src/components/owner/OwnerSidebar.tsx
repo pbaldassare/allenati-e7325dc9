@@ -1,5 +1,7 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 import {
   SidebarContent,
   SidebarGroup,
@@ -18,12 +20,20 @@ import {
   CalendarClock,
   ClipboardList,
   BarChart3,
+  LogOut,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+    toast({ title: 'Logout effettuato' });
+  };
   const items = [
     { title: "Dashboard", url: "/owner", icon: Gauge },
     { title: "Utenti", url: "/owner/users", icon: Users },
@@ -54,6 +64,20 @@ export const OwnerSidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>Account</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Esci</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
