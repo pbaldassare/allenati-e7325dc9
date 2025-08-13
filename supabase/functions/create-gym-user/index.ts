@@ -147,9 +147,9 @@ serve(async (req) => {
     // Create default rooms for new gyms only
     if (!gymExists) {
       const defaultRooms = [
-        { name: 'Sala 1', color: '#10B981', capacity: 20 }, // Green
-        { name: 'Sala 2', color: '#3B82F6', capacity: 25 }, // Blue
-        { name: 'Sala 3', color: '#EF4444', capacity: 30 }, // Red
+        { name: 'Sala 1', description: 'Sala principale per corsi di gruppo', color: '#10B981' }, // Green
+        { name: 'Sala 2', description: 'Sala secondaria per attività specifiche', color: '#3B82F6' }, // Blue
+        { name: 'Sala 3', description: 'Sala per allenamenti personalizzati', color: '#EF4444' }, // Red
       ];
 
       for (const room of defaultRooms) {
@@ -158,7 +158,7 @@ serve(async (req) => {
           .insert({
             gym_id: gymId,
             name: room.name,
-            capacity: room.capacity,
+            description: room.description,
             color: room.color,
             is_active: true,
           });

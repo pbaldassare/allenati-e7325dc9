@@ -32,7 +32,6 @@ interface GymRoom {
   id: string;
   name: string;
   description?: string;
-  capacity?: number;
   color?: string;
   is_active: boolean;
 }
@@ -48,7 +47,6 @@ export const GymRoomsManager: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    capacity: 20,
     color: '#6B7280'
   });
 
@@ -91,7 +89,11 @@ export const GymRoomsManager: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', capacity: 20, color: '#6B7280' });
+    setFormData({
+      name: '',
+      description: '',
+      color: '#6B7280'
+    });
     setEditingRoom(null);
   };
 
@@ -101,13 +103,12 @@ export const GymRoomsManager: React.FC = () => {
   };
 
   const openEditDialog = (room: GymRoom) => {
-    setEditingRoom(room);
     setFormData({
       name: room.name,
       description: room.description || '',
-      capacity: room.capacity || 20,
       color: room.color || '#6B7280'
     });
+    setEditingRoom(room);
     setIsDialogOpen(true);
   };
 
@@ -140,8 +141,7 @@ export const GymRoomsManager: React.FC = () => {
           .update({
             name: formData.name,
             description: formData.description,
-            capacity: formData.capacity,
-            color: formData.color,
+            color: formData.color
           })
           .eq('id', editingRoom.id);
 
@@ -159,8 +159,8 @@ export const GymRoomsManager: React.FC = () => {
             gym_id: userGymId,
             name: formData.name,
             description: formData.description,
-            capacity: formData.capacity,
             color: formData.color,
+            is_active: true
           });
 
         if (error) throw error;
@@ -283,17 +283,6 @@ export const GymRoomsManager: React.FC = () => {
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="capacity">Capacità Massima</Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 20 })}
-                  />
-                </div>
               </div>
               
               <div>
@@ -364,10 +353,6 @@ export const GymRoomsManager: React.FC = () => {
             </CardHeader>
             
             <CardContent>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-                <Users className="h-4 w-4" />
-                <span>Capacità: {room.capacity || 20} persone</span>
-              </div>
               
               <div className="flex gap-2">
                 <Button

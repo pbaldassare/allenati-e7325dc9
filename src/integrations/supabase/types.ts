@@ -695,7 +695,6 @@ export type Database = {
       }
       gym_rooms: {
         Row: {
-          capacity: number | null
           color: string | null
           created_at: string
           description: string | null
@@ -706,7 +705,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          capacity?: number | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -717,7 +715,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          capacity?: number | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -1592,6 +1589,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_default_rooms_to_gym: {
+        Args: { _gym_id: string }
+        Returns: undefined
+      }
       can_book_within_deadline: {
         Args: { _course_id: string; _scheduled_datetime: string }
         Returns: boolean
