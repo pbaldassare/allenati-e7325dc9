@@ -117,7 +117,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -141,7 +140,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
       toast({
         title: "Registrazione completata!",
-        description: "Controlla la tua email per confermare l'account.",
+        description: "Account creato con successo. Ora puoi accedere.",
       });
 
       // Reset form and switch to login

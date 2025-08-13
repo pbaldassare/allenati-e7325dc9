@@ -164,9 +164,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Email o password non corretti' };
         }
-        if (error.message.includes('Email not confirmed')) {
-          return { error: 'Conferma la tua email prima di accedere' };
-        }
         return { error: error.message };
       }
 
@@ -184,7 +181,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: userData.email,
         password: userData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: userData.first_name,
             last_name: userData.last_name,
