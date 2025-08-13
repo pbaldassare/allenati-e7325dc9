@@ -150,23 +150,45 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
     if (!user || !content.trim()) return;
 
     setSending(true);
-    console.log('Sending message...', { roomId, userId: user.id, content: content.trim() });
+    console.log('🚀 Tentativo invio messaggio:', { 
+      roomId, 
+      userId: user.id, 
+      userRole: user.role,
+      content: content.trim() 
+    });
     
     try {
-      // Create optimistic message for immediate display
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        content: content.trim(),
-        user_id: user.id,
-        sender_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Utente',
-        created_at: new Date().toISOString(),
-        is_from_staff: user.role !== 'basic_user'
-      };
+      // Verifica che l'utente sia partecipante della chat
+      console.log('🔍 Verifico partecipazione alla chat...');
+      const { data: participation, error: participationError } = await supabase
+        .from('chat_participants')
+        .select('*')
+        .eq('room_id', roomId)
+        .eq('user_id', user.id)
+        .single();
       
-      // Add message immediately to UI
-      setMessages(prev => [...prev, optimisticMessage]);
-      scrollToBottom();
+      if (participationError) {
+        console.error('❌ Errore verifica partecipazione:', participationError);
+      } else {
+        console.log('✅ Partecipazione confermata:', participation);
+      }
 
+      // Verifica membership alla palestra
+      console.log('🏋️ Verifico membership alla palestra...');
+      const { data: membership, error: membershipError } = await supabase
+        .from('user_gym_memberships')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+      
+      if (membershipError) {
+        console.error('❌ Errore verifica membership:', membershipError);
+      } else {
+        console.log('✅ Membership attiva:', membership);
+      }
+
+      console.log('📤 Invio messaggio al database...');
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -177,20 +199,32 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
         })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Errore INSERT database:', error);
+        console.error('❌ Dettagli errore:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
       
-      console.log('Message sent successfully:', data);
+      console.log('✅ Messaggio inviato con successo:', data);
       
-      // Remove optimistic message and let real-time handle the real one
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+    } catch (error: any) {
+      console.error('💥 Errore completo invio messaggio:', error);
       
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // Remove failed optimistic message
-      setMessages(prev => prev.filter(msg => msg.id.startsWith('temp-')));
+      let errorMessage = 'Impossibile inviare il messaggio';
+      if (error.message?.includes('policy')) {
+        errorMessage = 'Non hai i permessi per scrivere in questa chat';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Problema di connessione. Riprova.';
+      }
+      
       toast({
-        title: 'Errore',
-        description: 'Impossibile inviare il messaggio',
+        title: 'Errore invio messaggio',
+        description: `${errorMessage}: ${error.message}`,
         variant: 'destructive'
       });
     } finally {
