@@ -78,61 +78,61 @@ export const BookingConfirmDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-foreground">
+          <AlertDialogTitle className="text-foreground text-lg">
             Conferma Prenotazione
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-muted-foreground">
+          <AlertDialogDescription className="text-foreground/70 text-base">
             Stai per prenotare il seguente corso. Confermi?
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-accent/50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-foreground">{course.name}</h3>
+          <div className="bg-accent border border-border rounded-lg p-5 sm:p-4 space-y-4">
+            <h3 className="font-semibold text-foreground text-lg">{course.name}</h3>
             
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center text-muted-foreground">
-                <Calendar className="w-4 h-4 mr-2" />
-                <span>{formatDate(scheduledDate)}</span>
+            <div className="space-y-3 text-base sm:text-sm">
+              <div className="flex items-center text-foreground">
+                <Calendar className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <span className="font-medium">{formatDate(scheduledDate)}</span>
               </div>
               
-              <div className="flex items-center text-muted-foreground">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>{formatTime(scheduledTime)}</span>
+              <div className="flex items-center text-foreground">
+                <Clock className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <span className="font-medium">{formatTime(scheduledTime)}</span>
               </div>
               
-              <div className="flex items-center text-muted-foreground">
-                <User className="w-4 h-4 mr-2" />
+              <div className="flex items-center text-foreground">
+                <User className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                 <span>{getInstructorName()}</span>
               </div>
 
               {course.max_participants && (
                 <div className="flex items-center text-muted-foreground">
-                  <Users className="w-4 h-4 mr-2" />
+                  <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                   <span>Max {course.max_participants} partecipanti</span>
                 </div>
               )}
 
               {course.credits_required && (
-                <div className="flex items-center text-muted-foreground">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  <span>{course.credits_required} crediti richiesti</span>
+                <div className="flex items-center text-foreground">
+                  <CreditCard className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                  <span className="font-medium">{course.credits_required} crediti richiesti</span>
                 </div>
               )}
             </div>
 
             <div className="flex gap-2">
               {course.difficulty_level && (
-                <Badge variant="outline">
+                <Badge variant="outline" className="border-2 text-sm">
                   {getDifficultyLabel(course.difficulty_level)}
                 </Badge>
               )}
             </div>
 
             {course.description && (
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-sm text-foreground/80 mt-3 leading-relaxed">
                 {course.description}
               </p>
             )}

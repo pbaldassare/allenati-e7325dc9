@@ -92,41 +92,41 @@ export const CancellationConfirmDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-destructive flex items-center">
-            <AlertTriangle className="w-5 h-5 mr-2" />
+          <AlertDialogTitle className="text-destructive flex items-center text-lg">
+            <AlertTriangle className="w-6 h-6 mr-3" />
             Conferma Cancellazione
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-muted-foreground">
+          <AlertDialogDescription className="text-foreground/70 text-base">
             Stai per cancellare la seguente prenotazione. Questa azione non può essere annullata.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-foreground">{course.name}</h3>
+          <div className="bg-destructive/10 border-2 border-destructive/30 rounded-lg p-5 sm:p-4 space-y-4">
+            <h3 className="font-semibold text-foreground text-lg">{course.name}</h3>
             
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center text-muted-foreground">
-                <Calendar className="w-4 h-4 mr-2" />
-                <span>{formatDate(booking.scheduled_date)}</span>
+            <div className="space-y-3 text-base sm:text-sm">
+              <div className="flex items-center text-foreground">
+                <Calendar className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
               </div>
               
-              <div className="flex items-center text-muted-foreground">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>{formatTime(booking.scheduled_time)}</span>
+              <div className="flex items-center text-foreground">
+                <Clock className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <span className="font-medium">{formatTime(booking.scheduled_time)}</span>
               </div>
               
-              <div className="flex items-center text-muted-foreground">
-                <User className="w-4 h-4 mr-2" />
+              <div className="flex items-center text-foreground">
+                <User className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                 <span>{getInstructorName()}</span>
               </div>
             </div>
 
             {booking.credits_used && (
-              <div className="pt-2 border-t border-destructive/20">
-                <Badge variant="outline" className="text-destructive border-destructive/50">
+              <div className="pt-3 border-t-2 border-destructive/30">
+                <Badge variant="outline" className="text-destructive border-2 border-destructive/50 text-sm">
                   {booking.credits_used} crediti utilizzati
                 </Badge>
               </div>
@@ -135,26 +135,26 @@ export const CancellationConfirmDialog = ({
 
           {/* Informazioni sulla politica di cancellazione */}
           {deadlineInfo && (
-            <div className={`flex items-start space-x-2 p-3 rounded-lg ${
+            <div className={`flex items-start space-x-3 p-4 rounded-lg border-2 ${
               deadlineInfo.isWithinDeadline 
-                ? 'bg-muted/50 border border-border' 
-                : 'bg-warning/10 border border-warning/20'
+                ? 'bg-muted/50 border-border' 
+                : 'bg-warning/10 border-warning/30'
             }`}>
-              <Info className={`w-4 h-4 mt-0.5 ${
+              <Info className={`w-5 h-5 mt-0.5 ${
                 deadlineInfo.isWithinDeadline ? 'text-muted-foreground' : 'text-warning'
               }`} />
-              <div className="text-sm">
+              <div className="text-base sm:text-sm">
                 {deadlineInfo.isWithinDeadline ? (
                   <div>
-                    <p className="font-medium text-foreground">Cancellazione gratuita</p>
-                    <p className="text-muted-foreground">
+                    <p className="font-semibold text-foreground">Cancellazione gratuita</p>
+                    <p className="text-foreground/80 mt-1 leading-relaxed">
                       Puoi cancellare gratuitamente fino a {deadlineInfo.hoursUntil} ore prima del corso.
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <p className="font-medium text-warning">Cancellazione tardiva</p>
-                    <p className="text-muted-foreground">
+                    <p className="font-semibold text-warning">Cancellazione tardiva</p>
+                    <p className="text-foreground/80 mt-1 leading-relaxed">
                       Il periodo di cancellazione gratuita è scaduto. I crediti potrebbero non essere rimborsati.
                     </p>
                   </div>

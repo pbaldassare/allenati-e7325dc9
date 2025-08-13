@@ -5,27 +5,27 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-95 hover:scale-[1.02]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-h-[44px]",
   {
     variants: {
       variant: {
-        default: "bg-gradient-primary text-primary-foreground shadow-glow hover:shadow-primary font-space font-semibold",
+        default: "bg-gradient-primary text-primary-foreground border border-primary/20 font-space font-semibold",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-glow",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20",
         outline:
-          "border border-border bg-background/60 hover:bg-accent/20 hover:text-accent-foreground backdrop-blur-sm hover:border-accent/40",
+          "border-2 border-border bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-gradient-secondary text-secondary-foreground shadow-glow hover:shadow-secondary font-space font-semibold",
-        ghost: "hover:bg-accent/20 hover:text-accent-foreground",
+          "bg-gradient-secondary text-secondary-foreground border border-secondary/20 font-space font-semibold",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-gradient-success text-success-foreground shadow-sm hover:shadow-glow",
-        premium: "bg-gradient-accent text-white shadow-glow hover:scale-105 font-space font-bold",
+        success: "bg-gradient-success text-success-foreground border border-success/20",
+        premium: "bg-gradient-accent text-white border border-accent/20 font-space font-bold",
       },
       size: {
-        default: "h-10 px-5 py-2 text-sm",
-        sm: "h-8 rounded-lg px-3 text-xs",
-        lg: "h-12 rounded-xl px-7 text-base",
-        icon: "h-10 w-10 rounded-xl",
+        default: "h-11 px-6 py-2 text-base sm:text-sm",
+        sm: "h-9 rounded-lg px-4 text-sm",
+        lg: "h-12 rounded-xl px-8 text-lg",
+        icon: "h-11 w-11 rounded-xl",
       },
     },
     defaultVariants: {
