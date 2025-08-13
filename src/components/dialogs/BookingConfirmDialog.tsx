@@ -43,6 +43,7 @@ export const BookingConfirmDialog = ({
   isLoading = false
 }: BookingConfirmDialogProps) => {
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'Data non disponibile';
     return new Date(dateString).toLocaleDateString('it-IT', {
       weekday: 'long',
       year: 'numeric', 
@@ -52,6 +53,7 @@ export const BookingConfirmDialog = ({
   };
 
   const formatTime = (timeString: string) => {
+    if (!timeString) return 'Orario non disponibile';
     return timeString.slice(0, 5);
   };
 

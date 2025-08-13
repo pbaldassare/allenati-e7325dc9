@@ -23,8 +23,8 @@ interface CancellationConfirmDialogProps {
     deadline_hours?: number;
   };
   booking: {
-    scheduled_date: string;
-    scheduled_time: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
     credits_used?: number;
   };
   onConfirm: () => void;
@@ -39,7 +39,8 @@ export const CancellationConfirmDialog = ({
   onConfirm,
   isLoading = false
 }: CancellationConfirmDialogProps) => {
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Data non disponibile';
     return new Date(dateString).toLocaleDateString('it-IT', {
       weekday: 'long',
       year: 'numeric',
@@ -48,7 +49,8 @@ export const CancellationConfirmDialog = ({
     });
   };
 
-  const formatTime = (timeString: string) => {
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return 'Orario non disponibile';
     return timeString.slice(0, 5);
   };
 
@@ -64,7 +66,7 @@ export const CancellationConfirmDialog = ({
 
   // Calcola se siamo ancora nel periodo di cancellazione gratuita
   const getDeadlineInfo = () => {
-    if (!course.deadline_hours) return null;
+    if (!course.deadline_hours || !booking.scheduled_date || !booking.scheduled_time) return null;
     
     const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
     const deadlineTime = new Date(bookingDateTime.getTime() - (course.deadline_hours * 60 * 60 * 1000));
@@ -82,6 +84,11 @@ export const CancellationConfirmDialog = ({
   };
 
   const deadlineInfo = getDeadlineInfo();
+
+  // Controllo di sicurezza - non renderizzare se non abbiamo dati essenziali
+  if (!course || !booking) {
+    return null;
+  }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
