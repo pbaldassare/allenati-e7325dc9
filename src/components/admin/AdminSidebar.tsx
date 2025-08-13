@@ -65,6 +65,10 @@ const structureItems = [
   { title: "Calendario", url: "/admin/schedule", icon: CalendarClock },
 ];
 
+const communicationItems = [
+  { title: "Chat", url: "/admin/chat", icon: MessageSquare },
+];
+
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -161,6 +165,24 @@ export function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {structureItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className={getNavClassName(item.url)}>
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Comunicazione</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {communicationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClassName(item.url)}>

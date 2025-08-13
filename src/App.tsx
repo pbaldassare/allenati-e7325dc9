@@ -28,6 +28,7 @@ import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
 
 // Admin User Management Pages
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminChat from "./pages/admin/AdminChat";
 
 // Owner Pages
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
@@ -39,6 +40,7 @@ import OwnerCourseNew from "./pages/owner/OwnerCourseNew";
 import OwnerSchedule from "./pages/owner/OwnerSchedule";
 import OwnerBookings from "./pages/owner/OwnerBookings";
 import OwnerReports from "./pages/owner/OwnerReports";
+import OwnerChat from "./pages/owner/OwnerChat";
 import MedicalCertificate from "./pages/MedicalCertificate";
 
 const queryClient = new QueryClient();
@@ -80,6 +82,9 @@ const App = () => (
                   <Route path="instructors" element={<AdminInstructors />} />
                   <Route path="rooms" element={<AdminRooms />} />
                   <Route path="schedule" element={<AdminSchedule />} />
+                  
+                  {/* Communication */}
+                  <Route path="chat" element={<AdminChat />} />
                 </Route>
 
                 {/* Owner Routes */}
@@ -92,6 +97,7 @@ const App = () => (
                   <Route path="courses/new" element={<OwnerCourseNew />} />
                   <Route path="schedule" element={<OwnerSchedule />} />
                   <Route path="bookings" element={<OwnerBookings />} />
+                  <Route path="chat" element={<OwnerChat />} />
                   <Route path="reports" element={<OwnerReports />} />
                 </Route>
 

@@ -8,6 +8,7 @@ import { Leaderboard } from "@/components/Leaderboard";
 import { SubscriptionPlans } from "@/components/SubscriptionPlans";
 import { Profile } from "@/components/Profile";
 import { CourseCalendar } from "@/components/CourseCalendar";
+import { Chat } from "@/pages/Chat";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -40,6 +41,8 @@ const Index = () => {
         return <Leaderboard />;
       case "calendar":
         return <CourseCalendar />;
+      case "chat":
+        return <Chat />;
       case "subscription":
         return <SubscriptionPlans />;
       case "profile":
