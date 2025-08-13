@@ -31,9 +31,32 @@ export const Chat: React.FC = () => {
   const loadChatRooms = async () => {
     try {
       setLoading(true);
+      console.log('Loading chat rooms for user:', user?.id);
       
-      // Get user's gym chat rooms through their membership
-      const { data, error } = await supabase
+      // First check user's gym membership
+      const { data: membership, error: membershipError } = await supabase
+        .from('user_gym_memberships')
+        .select('gym_id, membership_type, status')
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      console.log('User membership:', membership, 'Error:', membershipError);
+
+      if (membershipError && membershipError.code !== 'PGRST116') {
+        throw membershipError;
+      }
+
+      if (!membership?.gym_id) {
+        console.log('User has no active gym membership');
+        setChatRooms([]);
+        return;
+      }
+
+      console.log('User belongs to gym:', membership.gym_id);
+
+      // Get chat rooms for the user's gym
+      const { data: rooms, error: roomsError } = await supabase
         .from('chat_rooms')
         .select(`
           id,
@@ -44,30 +67,15 @@ export const Chat: React.FC = () => {
           course_id,
           is_active
         `)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('gym_id', membership.gym_id);
 
-      if (error) throw error;
+      console.log('Found chat rooms:', rooms, 'Error:', roomsError);
 
-      // Filter rooms based on user's gym membership
-      const { data: membership, error: membershipError } = await supabase
-        .from('user_gym_memberships')
-        .select('gym_id')
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .single();
+      if (roomsError) throw roomsError;
 
-      if (membershipError && membershipError.code !== 'PGRST116') {
-        throw membershipError;
-      }
-
-      let filteredRooms = data || [];
+      const filteredRooms = rooms || [];
       
-      if (membership?.gym_id) {
-        filteredRooms = data?.filter(room => 
-          room.gym_id === membership.gym_id || room.gym_id === null
-        ) || [];
-      }
-
       setChatRooms(filteredRooms.map(room => ({
         id: room.id,
         name: room.name,
@@ -75,9 +83,12 @@ export const Chat: React.FC = () => {
         room_type: room.room_type as 'gym_general' | 'course' | 'direct'
       })));
 
+      console.log('Chat rooms loaded:', filteredRooms.length);
+
       // Auto-select first room
       if (filteredRooms.length > 0 && !selectedRoomId) {
         setSelectedRoomId(filteredRooms[0].id);
+        console.log('Auto-selected room:', filteredRooms[0].id);
       }
     } catch (error) {
       console.error('Error loading chat rooms:', error);
@@ -115,7 +126,20 @@ export const Chat: React.FC = () => {
           </div>
 
           <div className="lg:col-span-2">
-            {selectedRoom ? (
+            {loading ? (
+              <div className="h-full flex items-center justify-center bg-muted/20 rounded-lg border-2 border-dashed border-muted">
+                <div className="text-center text-muted-foreground">
+                  <p>Caricamento chat...</p>
+                </div>
+              </div>
+            ) : chatRooms.length === 0 ? (
+              <div className="h-full flex items-center justify-center bg-muted/20 rounded-lg border-2 border-dashed border-muted">
+                <div className="text-center text-muted-foreground">
+                  <p className="mb-2">Nessuna chat disponibile</p>
+                  <p className="text-sm">Assicurati di essere registrato in una palestra per accedere alle chat</p>
+                </div>
+              </div>
+            ) : selectedRoom ? (
               <ChatWindow
                 roomId={selectedRoom.id}
                 roomName={selectedRoom.name}
