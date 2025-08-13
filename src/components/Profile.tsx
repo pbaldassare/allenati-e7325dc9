@@ -2,11 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Settings, FileText, Calendar, TrendingUp, Award, LogOut } from "lucide-react";
+import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { CreditsBalance } from "@/components/credits/CreditsBalance";
+import { useState } from "react";
+import { CreditsPurchase } from "@/components/credits/CreditsPurchase";
+import { CreditsHistory } from "@/components/credits/CreditsHistory";
 
 interface ProfileProps {
   onTabChange?: (tab: string) => void;
@@ -15,6 +19,8 @@ interface ProfileProps {
 export const Profile = ({ onTabChange }: ProfileProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [showCreditsPurchase, setShowCreditsPurchase] = useState(false);
+  const [creditsKey, setCreditsKey] = useState(0);
   
   const handleLogout = async () => {
     try {
@@ -64,6 +70,38 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
           <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground mt-1">{user.gym_name}</p>
         )}
       </div>
+
+      {/* Credits Section */}
+      <CreditsBalance 
+        key={creditsKey}
+        onPurchaseClick={() => setShowCreditsPurchase(true)} 
+      />
+
+      {/* Credits Purchase Modal */}
+      {showCreditsPurchase && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Gestione Crediti</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowCreditsPurchase(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <CreditsPurchase 
+                onPurchaseComplete={() => {
+                  setCreditsKey(prev => prev + 1);
+                  setShowCreditsPurchase(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Activity Stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -139,6 +177,15 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         >
           <TrendingUp className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Classifica
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
+          onClick={() => setShowCreditsPurchase(true)}
+        >
+          <Coins className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
+          Gestisci Crediti
         </Button>
         
         <Button 

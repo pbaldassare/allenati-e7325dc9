@@ -1171,6 +1171,7 @@ export type Database = {
           bio: string | null
           city: string | null
           created_at: string
+          current_credits: number | null
           date_of_birth: string | null
           email: string | null
           emergency_contact_name: string | null
@@ -1192,6 +1193,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          current_credits?: number | null
           date_of_birth?: string | null
           email?: string | null
           emergency_contact_name?: string | null
@@ -1213,6 +1215,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          current_credits?: number | null
           date_of_birth?: string | null
           email?: string | null
           emergency_contact_name?: string | null

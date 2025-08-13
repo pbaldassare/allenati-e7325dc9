@@ -160,6 +160,41 @@ export const CourseCalendar = () => {
     
     setLoadingBooking(pendingBookingData.courseId);
     try {
+      // Check if user has sufficient credits or active unlimited subscription
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('current_credits')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Check for active unlimited subscription
+      const { data: subscription } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          subscription_plans!inner(unlimited_access)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      const hasUnlimitedAccess = subscription?.subscription_plans?.unlimited_access;
+      const creditsRequired = selectedCourse?.credits_required || 1;
+      const currentCredits = profile?.current_credits || 0;
+
+      if (!hasUnlimitedAccess && currentCredits < creditsRequired) {
+        toast({
+          title: "Crediti insufficienti",
+          description: `Ti servono ${creditsRequired} crediti per questa prenotazione. Ne hai ${currentCredits}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create booking
       const { data, error } = await supabase
         .from('bookings')
         .insert({
@@ -167,17 +202,38 @@ export const CourseCalendar = () => {
           course_id: pendingBookingData.courseId,
           scheduled_date: pendingBookingData.scheduledDate,
           scheduled_time: pendingBookingData.scheduledTime,
-          status: 'confirmed'
+          status: 'confirmed',
+          credits_used: hasUnlimitedAccess ? 0 : creditsRequired
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Consume credits if not unlimited subscription
+      if (!hasUnlimitedAccess) {
+        const newBalance = currentCredits - creditsRequired;
+        
+        const { error: transactionError } = await supabase
+          .from('credits_transactions')
+          .insert({
+            user_id: user.id,
+            amount: -creditsRequired,
+            balance_after: newBalance,
+            transaction_type: 'booking',
+            description: `Prenotazione ${selectedCourse?.name}`,
+            reference_id: data.id
+          });
+
+        if (transactionError) throw transactionError;
+      }
+
       setBookings(prev => [...prev, data]);
       toast({
         title: "Prenotazione confermata", 
-        description: "Corso prenotato con successo!",
+        description: hasUnlimitedAccess 
+          ? "Corso prenotato con successo! (Abbonamento illimitato)"
+          : `Corso prenotato con successo! Utilizzati ${creditsRequired} crediti.`,
       });
       setBookingDialogOpen(false);
     } catch (error) {

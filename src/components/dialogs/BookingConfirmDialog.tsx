@@ -1,31 +1,27 @@
-import React from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Users, CreditCard } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Calendar, Clock, User, Users, CreditCard, Award, Coins } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 interface BookingConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: {
-    id: string;
-    name: string;
-    instructor?: { 
-      profiles?: { first_name: string; last_name: string } 
-    } | string;
-    difficulty_level?: number;
-    credits_required?: number;
+    id?: string;
+    name?: string;
+    instructor_id?: string;
     max_participants?: number;
-    description?: string;
+    credits_required?: number;
+    difficulty_level?: number;
+    instructors?: {
+      id?: string;
+      profiles?: {
+        first_name?: string;
+        last_name?: string;
+      };
+    };
   };
   scheduledDate: string;
   scheduledTime: string;
@@ -33,48 +29,83 @@ interface BookingConfirmDialogProps {
   isLoading?: boolean;
 }
 
-export const BookingConfirmDialog = ({
-  open,
-  onOpenChange,
-  course,
-  scheduledDate,
-  scheduledTime,
-  onConfirm,
-  isLoading = false
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('it-IT', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+const formatTime = (timeString: string) => {
+  return timeString?.split('T')[1]?.split('.')[0]?.slice(0, 5) || timeString;
+};
+
+const getInstructorName = (course: any) => {
+  if (course?.instructors?.profiles) {
+    return `${course.instructors.profiles.first_name || ''} ${course.instructors.profiles.last_name || ''}`.trim();
+  }
+  return 'Istruttore non specificato';
+};
+
+const getDifficultyLabel = (level?: number) => {
+  switch (level) {
+    case 1: return 'Principiante';
+    case 2: return 'Intermedio';
+    case 3: return 'Avanzato';
+    default: return 'Non specificato';
+  }
+};
+
+export const BookingConfirmDialog = ({ 
+  open, 
+  onOpenChange, 
+  course, 
+  scheduledDate, 
+  scheduledTime, 
+  onConfirm, 
+  isLoading 
 }: BookingConfirmDialogProps) => {
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Data non disponibile';
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const { user } = useAuth();
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [hasUnlimitedAccess, setHasUnlimitedAccess] = useState(false);
+  const [loadingCredits, setLoadingCredits] = useState(true);
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'Orario non disponibile';
-    return timeString.slice(0, 5);
-  };
+  useEffect(() => {
+    if (!user || !open) return;
 
-  const getInstructorName = () => {
-    if (typeof course.instructor === 'string') {
-      return course.instructor;
-    }
-    if (course.instructor?.profiles) {
-      return `${course.instructor.profiles.first_name} ${course.instructor.profiles.last_name}`;
-    }
-    return 'Istruttore non disponibile';
-  };
+    const fetchUserCredits = async () => {
+      try {
+        // Get current credits
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('current_credits')
+          .eq('user_id', user.id)
+          .single();
 
-  const getDifficultyLabel = (level?: number) => {
-    switch (level) {
-      case 1: return 'Principiante';
-      case 2: return 'Intermedio';
-      case 3: return 'Avanzato';
-      default: return 'Non specificato';
-    }
-  };
+        // Check for active unlimited subscription
+        const { data: subscription } = await supabase
+          .from('user_subscriptions')
+          .select(`
+            subscription_plans!inner(unlimited_access)
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        setUserCredits(profile?.current_credits || 0);
+        setHasUnlimitedAccess(subscription?.subscription_plans?.unlimited_access || false);
+      } catch (error) {
+        console.error('Error fetching credits:', error);
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    fetchUserCredits();
+  }, [user, open]);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -105,7 +136,7 @@ export const BookingConfirmDialog = ({
               
               <div className="flex items-center text-foreground">
                 <User className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                <span>{getInstructorName()}</span>
+                <span>{getInstructorName(course)}</span>
               </div>
 
               {course.max_participants && (
@@ -116,39 +147,55 @@ export const BookingConfirmDialog = ({
               )}
 
               {course.credits_required && (
-                <div className="flex items-center text-foreground">
-                  <CreditCard className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                  <span className="font-medium">{course.credits_required} crediti richiesti</span>
+                <div className="flex items-center justify-between text-foreground">
+                  <div className="flex items-center">
+                    <Coins className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                    <span>{course.credits_required} crediti richiesti</span>
+                  </div>
+                  {!loadingCredits && (
+                    <div className="text-right">
+                      {hasUnlimitedAccess ? (
+                        <Badge variant="default" className="text-xs">
+                          Accesso Illimitato
+                        </Badge>
+                      ) : (
+                        <Badge 
+                          variant={userCredits >= course.credits_required ? "default" : "destructive"}
+                          className="text-xs"
+                        >
+                          Hai {userCredits} crediti
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {course.difficulty_level && (
+                <div className="flex items-center text-muted-foreground">
+                  <Award className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                  <span>Livello: {getDifficultyLabel(course.difficulty_level)}</span>
                 </div>
               )}
             </div>
-
-            <div className="flex gap-2">
-              {course.difficulty_level && (
-                <Badge variant="outline" className="border-2 text-sm">
-                  {getDifficultyLabel(course.difficulty_level)}
-                </Badge>
-              )}
-            </div>
-
-            {course.description && (
-              <p className="text-sm text-foreground/80 mt-3 leading-relaxed">
-                {course.description}
-              </p>
-            )}
           </div>
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">
+          <AlertDialogCancel className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10">
             Annulla
           </AlertDialogCancel>
-          <AlertDialogAction
+          <AlertDialogAction 
             onClick={onConfirm}
-            disabled={isLoading}
-            className="bg-success text-success-foreground hover:bg-success/90"
+            disabled={isLoading || (!hasUnlimitedAccess && userCredits < (course.credits_required || 1))}
+            className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10"
           >
-            {isLoading ? "Prenotando..." : "Conferma Prenotazione"}
+            {isLoading 
+              ? "Confermando..." 
+              : (!hasUnlimitedAccess && userCredits < (course.credits_required || 1))
+                ? "Crediti insufficienti"
+                : "Conferma Prenotazione"
+            }
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
