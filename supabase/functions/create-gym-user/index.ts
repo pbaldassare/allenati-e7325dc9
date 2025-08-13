@@ -144,6 +144,34 @@ serve(async (req) => {
       throw new Error(`Failed to create gym membership: ${membershipError.message}`);
     }
 
+    // Create default rooms for new gyms only
+    if (!gymExists) {
+      const defaultRooms = [
+        { name: 'Sala 1', color: '#10B981', capacity: 20 }, // Green
+        { name: 'Sala 2', color: '#3B82F6', capacity: 25 }, // Blue
+        { name: 'Sala 3', color: '#EF4444', capacity: 30 }, // Red
+      ];
+
+      for (const room of defaultRooms) {
+        const { error: roomError } = await supabaseAdmin
+          .from('gym_rooms')
+          .insert({
+            gym_id: gymId,
+            name: room.name,
+            capacity: room.capacity,
+            color: room.color,
+            is_active: true,
+          });
+
+        if (roomError) {
+          console.error(`Error creating room ${room.name}:`, roomError);
+          // Don't throw error for room creation failures, just log
+        } else {
+          console.log(`Created default room: ${room.name} for gym ${gymId}`);
+        }
+      }
+    }
+
     console.log('Successfully set up gym user:', userId, 'for gym:', gymId);
 
     return new Response(

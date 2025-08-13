@@ -33,6 +33,7 @@ interface GymRoom {
   name: string;
   description?: string;
   capacity?: number;
+  color?: string;
   is_active: boolean;
 }
 
@@ -47,7 +48,8 @@ export const GymRoomsManager: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    capacity: 20
+    capacity: 20,
+    color: '#6B7280'
   });
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export const GymRoomsManager: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', capacity: 20 });
+    setFormData({ name: '', description: '', capacity: 20, color: '#6B7280' });
     setEditingRoom(null);
   };
 
@@ -103,7 +105,8 @@ export const GymRoomsManager: React.FC = () => {
     setFormData({
       name: room.name,
       description: room.description || '',
-      capacity: room.capacity || 20
+      capacity: room.capacity || 20,
+      color: room.color || '#6B7280'
     });
     setIsDialogOpen(true);
   };
@@ -138,6 +141,7 @@ export const GymRoomsManager: React.FC = () => {
             name: formData.name,
             description: formData.description,
             capacity: formData.capacity,
+            color: formData.color,
           })
           .eq('id', editingRoom.id);
 
@@ -156,6 +160,7 @@ export const GymRoomsManager: React.FC = () => {
             name: formData.name,
             description: formData.description,
             capacity: formData.capacity,
+            color: formData.color,
           });
 
         if (error) throw error;
@@ -266,15 +271,29 @@ export const GymRoomsManager: React.FC = () => {
             </DialogHeader>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome Sala</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="es. Sala 1"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Nome Sala</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="es. Sala 1"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="capacity">Capacità Massima</Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 20 })}
+                  />
+                </div>
               </div>
               
               <div>
@@ -288,15 +307,22 @@ export const GymRoomsManager: React.FC = () => {
               </div>
               
               <div>
-                <Label htmlFor="capacity">Capacità Massima</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 20 })}
-                />
+                <Label htmlFor="color">Colore</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="color"
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-12 h-10 p-1 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    placeholder="#6B7280"
+                    className="flex-1"
+                  />
+                </div>
               </div>
               
               <DialogFooter>
@@ -322,7 +348,10 @@ export const GymRoomsManager: React.FC = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-primary" />
+                  <div 
+                    className="w-4 h-4 rounded-full border-2 border-background shadow-sm"
+                    style={{ backgroundColor: room.color || '#6B7280' }}
+                  />
                   <CardTitle className="text-lg">{room.name}</CardTitle>
                 </div>
                 <Badge variant={room.is_active ? 'default' : 'secondary'}>

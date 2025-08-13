@@ -696,6 +696,7 @@ export type Database = {
       gym_rooms: {
         Row: {
           capacity: number | null
+          color: string | null
           created_at: string
           description: string | null
           gym_id: string
@@ -706,6 +707,7 @@ export type Database = {
         }
         Insert: {
           capacity?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
           gym_id: string
@@ -716,6 +718,7 @@ export type Database = {
         }
         Update: {
           capacity?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
           gym_id?: string
