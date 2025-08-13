@@ -150,19 +150,44 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
     if (!user || !content.trim()) return;
 
     setSending(true);
+    console.log('Sending message...', { roomId, userId: user.id, content: content.trim() });
+    
     try {
-      const { error } = await supabase
+      // Create optimistic message for immediate display
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: content.trim(),
+        user_id: user.id,
+        sender_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Utente',
+        created_at: new Date().toISOString(),
+        is_from_staff: user.role !== 'basic_user'
+      };
+      
+      // Add message immediately to UI
+      setMessages(prev => [...prev, optimisticMessage]);
+      scrollToBottom();
+
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           room_id: roomId,
           user_id: user.id,
           content: content.trim(),
           message_type: 'text'
-        });
+        })
+        .select();
 
       if (error) throw error;
+      
+      console.log('Message sent successfully:', data);
+      
+      // Remove optimistic message and let real-time handle the real one
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      
     } catch (error) {
       console.error('Error sending message:', error);
+      // Remove failed optimistic message
+      setMessages(prev => prev.filter(msg => msg.id.startsWith('temp-')));
       toast({
         title: 'Errore',
         description: 'Impossibile inviare il messaggio',
