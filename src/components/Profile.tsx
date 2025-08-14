@@ -165,7 +165,11 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
 
       {/* Profile Actions */}
       <div className="space-y-3 sm:space-y-2">
-        <Button variant="outline" className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
+          onClick={() => navigate('/impostazioni')}
+        >
           <Settings className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Impostazioni
         </Button>

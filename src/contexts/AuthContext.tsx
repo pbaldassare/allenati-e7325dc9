@@ -5,14 +5,24 @@ import type { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/s
 interface User {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  city?: string;
-  profile_picture_url?: string;
+  first_name: string | null;
+  last_name: string | null;
+  nickname: string | null;
+  phone: string | null;
+  gender: string | null;
+  date_of_birth: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  fiscal_code: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  bio: string | null;
+  profile_picture_url: string | null;
   role: 'admin' | 'gym_owner' | 'instructor' | 'basic_user';
   gym_id?: string;
   gym_name?: string;
+  current_credits: number;
 }
 
 interface AuthContextType {
@@ -22,6 +32,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
+  fetchUserData: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isGymOwner: boolean;
@@ -49,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Fetch user profile and role data
-  const fetchUserData = async (userId: string, userEmail?: string): Promise<User | null> => {
+  const fetchUserDataInternal = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
       // Get profile data
       const { data: profile, error: profileError } = await supabase
@@ -100,19 +111,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return {
         id: userId,
         email: userEmail || '',
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        nickname: profile.nickname,
         phone: profile.phone,
+        gender: profile.gender,
+        date_of_birth: profile.date_of_birth,
+        address: profile.address,
         city: profile.city,
+        postal_code: profile.postal_code,
+        fiscal_code: profile.fiscal_code,
+        emergency_contact_name: profile.emergency_contact_name,
+        emergency_contact_phone: profile.emergency_contact_phone,
+        bio: profile.bio,
         profile_picture_url: profile.profile_picture_url,
         role: role as 'admin' | 'gym_owner' | 'instructor' | 'basic_user',
         gym_id: gymId,
         gym_name: gymName,
+        current_credits: profile.current_credits || 0,
       };
     } catch (error) {
       console.error('Error fetching user data:', error);
       return null;
     }
+  };
+
+  // Public fetchUserData function for external use
+  const fetchUserData = async () => {
+    if (!session?.user) return;
+    const userData = await fetchUserDataInternal(session.user.id, session.user.email);
+    setUser(userData);
   };
 
   useEffect(() => {
@@ -124,7 +152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session?.user) {
           // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
-            fetchUserData(session.user.id, session.user.email).then(userData => {
+            fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
               setUser(userData);
               setLoading(false);
               
@@ -150,7 +178,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       
       if (session?.user) {
-        fetchUserData(session.user.id, session.user.email).then(userData => {
+        fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
           setUser(userData);
           setLoading(false);
         });
@@ -262,6 +290,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     updateUser,
+    fetchUserData,
     isAuthenticated: !!session,
     isAdmin: user?.role === 'admin',
     isGymOwner: user?.role === 'gym_owner',

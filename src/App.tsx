@@ -44,6 +44,7 @@ import OwnerReports from "./pages/owner/OwnerReports";
 import OwnerChat from "./pages/owner/OwnerChat";
 import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
+import UserSettings from "./pages/UserSettings";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,7 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="/abbonamenti" element={<Subscriptions />} />
+                <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

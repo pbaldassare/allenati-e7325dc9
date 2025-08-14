@@ -1176,12 +1176,13 @@ export type Database = {
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
-          first_name: string
+          first_name: string | null
           fiscal_code: string | null
           gender: string | null
           id: string
           is_active: boolean
-          last_name: string
+          last_name: string | null
+          nickname: string | null
           phone: string | null
           postal_code: string | null
           profile_picture_url: string | null
@@ -1198,12 +1199,13 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
-          first_name: string
+          first_name?: string | null
           fiscal_code?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean
-          last_name: string
+          last_name?: string | null
+          nickname?: string | null
           phone?: string | null
           postal_code?: string | null
           profile_picture_url?: string | null
@@ -1220,12 +1222,13 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
-          first_name?: string
+          first_name?: string | null
           fiscal_code?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean
-          last_name?: string
+          last_name?: string | null
+          nickname?: string | null
           phone?: string | null
           postal_code?: string | null
           profile_picture_url?: string | null
