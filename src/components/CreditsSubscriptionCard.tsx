@@ -1,0 +1,153 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Coins, Calendar, Infinity } from 'lucide-react';
+
+interface UserSubscription {
+  id: string;
+  plan: {
+    name: string;
+    unlimited_access: boolean;
+    expires_at?: string;
+  };
+  expires_at: string;
+  status: string;
+}
+
+export default function CreditsSubscriptionCard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [credits, setCredits] = useState<number>(0);
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    try {
+      // Carica crediti
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('current_credits')
+        .eq('user_id', user.id)
+        .single();
+
+      // Carica abbonamento attivo
+      const { data: subscriptionData } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          expires_at,
+          status,
+          plan:subscription_plans(
+            name,
+            unlimited_access
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      setCredits(profileData?.current_credits || 0);
+      setSubscription(subscriptionData);
+    } catch (error) {
+      console.error('Errore nel caricamento dati crediti/abbonamento:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManageSubscriptions = () => {
+    navigate('/abbonamenti');
+  };
+
+  const getSubscriptionStatus = () => {
+    if (!subscription) return 'Nessun abbonamento';
+    
+    if (subscription.plan.unlimited_access) {
+      return (
+        <div className="flex items-center space-x-1">
+          <Infinity className="w-4 h-4 text-primary" />
+          <span>Illimitato</span>
+        </div>
+      );
+    }
+    
+    return subscription.plan.name;
+  };
+
+  const getExpirationInfo = () => {
+    if (!subscription) return null;
+    
+    const expiresAt = new Date(subscription.expires_at);
+    const now = new Date();
+    const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft <= 7) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          Scade in {daysLeft} giorni
+        </Badge>
+      );
+    }
+    
+    return (
+      <span className="text-xs text-muted-foreground">
+        Fino al {expiresAt.toLocaleDateString('it-IT')}
+      </span>
+    );
+  };
+
+  return (
+    <Card className="hover:shadow-card transition-all duration-300">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Crediti & Abbonamento</CardTitle>
+        <Coins className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Crediti */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-primary">{credits}</div>
+            <p className="text-xs text-muted-foreground">crediti disponibili</p>
+          </div>
+        </div>
+
+        {/* Abbonamento */}
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <Calendar className="w-3 h-3 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {getSubscriptionStatus()}
+            </span>
+          </div>
+          {getExpirationInfo() && (
+            <div className="ml-5">
+              {getExpirationInfo()}
+            </div>
+          )}
+        </div>
+
+        <Button
+          onClick={handleManageSubscriptions}
+          variant="outline"
+          size="sm"
+          className="w-full"
+        >
+          Gestisci Abbonamento
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}

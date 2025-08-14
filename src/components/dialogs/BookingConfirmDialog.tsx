@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CreditPurchaseDialog } from './CreditPurchaseDialog';
 
 interface BookingConfirmDialogProps {
   open: boolean;
@@ -15,6 +17,7 @@ interface BookingConfirmDialogProps {
     max_participants?: number;
     credits_required?: number;
     difficulty_level?: number;
+    price_per_session?: number;
     instructors?: {
       id?: string;
       profiles?: {
@@ -71,6 +74,7 @@ export const BookingConfirmDialog = ({
   const [userCredits, setUserCredits] = useState<number>(0);
   const [hasUnlimitedAccess, setHasUnlimitedAccess] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(true);
+  const [showCreditPurchaseDialog, setShowCreditPurchaseDialog] = useState(false);
 
   useEffect(() => {
     if (!user || !open) return;
@@ -107,8 +111,24 @@ export const BookingConfirmDialog = ({
     fetchUserCredits();
   }, [user, open]);
 
+  const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course.credits_required || 1);
+
+  const handleCreditPurchaseComplete = async () => {
+    // Ricarica i crediti dopo l'acquisto
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('current_credits')
+        .eq('user_id', user.id)
+        .single();
+      
+      setUserCredits(profileData?.current_credits || 0);
+    }
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground text-lg">
@@ -185,20 +205,36 @@ export const BookingConfirmDialog = ({
           <AlertDialogCancel className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10">
             Annulla
           </AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onConfirm}
-            disabled={isLoading || (!hasUnlimitedAccess && userCredits < (course.credits_required || 1))}
-            className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10"
-          >
-            {isLoading 
-              ? "Confermando..." 
-              : (!hasUnlimitedAccess && userCredits < (course.credits_required || 1))
-                ? "Crediti insufficienti"
-                : "Conferma Prenotazione"
-            }
-          </AlertDialogAction>
+          
+          {hasInsufficientCredits ? (
+            <Button
+              onClick={() => setShowCreditPurchaseDialog(true)}
+              className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10"
+            >
+              <Coins className="w-4 h-4 mr-2" />
+              Acquista Crediti
+            </Button>
+          ) : (
+            <AlertDialogAction 
+              onClick={onConfirm}
+              disabled={isLoading || loadingCredits}
+              className="w-full sm:w-auto text-base sm:text-sm h-12 sm:h-10"
+            >
+              {isLoading ? "Confermando..." : "Conferma Prenotazione"}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <CreditPurchaseDialog
+      open={showCreditPurchaseDialog}
+      onOpenChange={setShowCreditPurchaseDialog}
+      courseName={course.name || ''}
+      coursePrice={course.price_per_session}
+      creditsNeeded={course.credits_required || 1}
+      onPurchaseComplete={handleCreditPurchaseComplete}
+    />
+    </>
   );
 };

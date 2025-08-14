@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins } from "lucide-react";
+import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -184,8 +184,17 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
           className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
           onClick={() => setShowCreditsPurchase(true)}
         >
-          <Coins className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
+          <CreditCard className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
           Gestisci Crediti
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-base sm:text-sm h-12 sm:h-10 transition-all duration-300"
+          onClick={() => window.location.href = '/abbonamenti'}
+        >
+          <Star className="w-5 h-5 sm:w-4 sm:h-4 mr-3" />
+          Gestisci Abbonamento
         </Button>
         
         <Button 

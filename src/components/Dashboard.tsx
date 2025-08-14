@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
+import CreditsSubscriptionCard from './CreditsSubscriptionCard';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -183,7 +184,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Modern Stats Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
@@ -207,27 +208,10 @@ export const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        <CreditsSubscriptionCard />
       </div>
 
-      {/* Modern Status Abbonamento */}
-      <Card className="shadow-lg bg-gradient-to-br from-muted/50 to-background border">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between text-xl">
-            <span className="bg-gradient-primary bg-clip-text text-transparent font-bold">Abbonamento</span>
-            <Badge className="bg-success text-success-foreground font-semibold px-3 py-1">Attivo</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-xl font-bold">Piano Base</p>
-            <p className="text-base text-muted-foreground font-medium">Accesso ai corsi della tua palestra</p>
-            <div className="w-full bg-muted rounded-full h-3 mt-4 overflow-hidden">
-              <div className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full shadow-lg transition-all duration-500" style={{width: '100%'}}></div>
-            </div>
-            <p className="text-sm text-muted-foreground font-medium">Abbonamento attivo</p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Modern Prossimi Corsi */}
       <Card className="shadow-lg">
