@@ -58,6 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   // Fetch user profile and role data
   const fetchUserDataInternal = async (userId: string, userEmail?: string): Promise<User | null> => {
@@ -155,6 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
               setUser(userData);
               setLoading(false);
+              setInitialized(true);
               
               // Check if it's a new user and show welcome modal  
               if (event === 'SIGNED_UP' as AuthChangeEvent) {
@@ -169,6 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           setUser(null);
           setLoading(false);
+          setInitialized(true);
         }
       }
     );
@@ -181,9 +184,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
           setUser(userData);
           setLoading(false);
+          setInitialized(true);
         });
       } else {
         setLoading(false);
+        setInitialized(true);
       }
     });
 
@@ -299,6 +304,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     showWelcomeModal,
     setShowWelcomeModal,
   };
+
+  // Don't render children until the provider is initialized
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>
