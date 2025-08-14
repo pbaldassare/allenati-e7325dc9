@@ -51,7 +51,7 @@ const OwnerCoursesList: React.FC = () => {
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (course.instructor && 
+        (course.instructor?.user && 
           `${course.instructor.user.first_name} ${course.instructor.user.last_name}`
             .toLowerCase().includes(searchTerm.toLowerCase())
         )
@@ -340,7 +340,7 @@ const OwnerCoursesList: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {course.instructor ? (
+                      {course.instructor?.user ? (
                         `${course.instructor.user.first_name} ${course.instructor.user.last_name}`
                       ) : (
                         <span className="text-muted-foreground">Non assegnato</span>
