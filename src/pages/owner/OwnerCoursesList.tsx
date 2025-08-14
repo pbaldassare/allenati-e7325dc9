@@ -63,16 +63,43 @@ const OwnerCoursesList: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        // Get user's gym_id
-        const { data: gymId } = await supabase
-          .rpc('get_user_gym_id', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+        setLoading(true);
         
-        if (!gymId) {
+        // Get user's gym_id
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: 'Errore',
+            description: 'Utente non autenticato',
+            variant: 'destructive',
+          });
           setLoading(false);
           return;
         }
 
-        // Fetch courses for this gym only with related data
+        const { data: gymId, error: gymError } = await supabase
+          .rpc('get_user_gym_id', { _user_id: user.id });
+        
+        if (gymError) {
+          console.error('Error getting gym ID:', gymError);
+          toast({
+            title: 'Errore',
+            description: 'Impossibile ottenere l\'ID della palestra',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (!gymId) {
+          console.log('No gym ID found for user');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Loading courses for gym:', gymId);
+
+        // Fetch courses with separate queries for better compatibility
         const { data, error } = await supabase
           .from("courses")
           .select(`
@@ -84,24 +111,85 @@ const OwnerCoursesList: React.FC = () => {
             credits_required,
             difficulty_level,
             created_at,
-            category:course_categories(name),
-            instructor:instructors(
-              user:profiles(first_name, last_name)
-            )
+            category_id,
+            instructor_id
           `)
           .eq('gym_id', gymId)
           .order("created_at", { ascending: false });
         
-        if (!error && data) {
-          setCourses(data as any);
+        if (error) {
+          console.error('Error loading courses:', error);
+          toast({
+            title: 'Errore',
+            description: 'Impossibile caricare i corsi',
+            variant: 'destructive',
+          });
+        } else if (data) {
+          console.log('Loaded courses:', data);
+          
+          // Get categories and instructors separately
+          const categoryIds = [...new Set(data.map(c => c.category_id).filter(Boolean))];
+          const instructorIds = [...new Set(data.map(c => c.instructor_id).filter(Boolean))];
+          
+          // Fetch categories
+          const categoriesPromise = categoryIds.length > 0 
+            ? supabase.from('course_categories').select('id, name').in('id', categoryIds)
+            : Promise.resolve({ data: [] });
+            
+          // Fetch instructors with profiles
+          const instructorsPromise = instructorIds.length > 0
+            ? supabase.from('instructors').select(`
+                id,
+                profiles!inner(first_name, last_name)
+              `).in('id', instructorIds)
+            : Promise.resolve({ data: [] });
+
+          const [categoriesResult, instructorsResult] = await Promise.all([
+            categoriesPromise,
+            instructorsPromise
+          ]);
+
+          const categoriesMap = new Map(
+            (categoriesResult.data || []).map(cat => [cat.id, cat])
+          );
+          
+          const instructorsMap = new Map(
+            (instructorsResult.data || []).map(inst => [inst.id, inst])
+          );
+
+          // Transform the data to match our interface
+          const transformedCourses = data.map(course => ({
+            id: course.id,
+            name: course.name,
+            description: course.description,
+            is_active: course.is_active,
+            max_participants: course.max_participants,
+            credits_required: course.credits_required,
+            difficulty_level: course.difficulty_level,
+            created_at: course.created_at,
+            category: course.category_id ? categoriesMap.get(course.category_id) || null : null,
+            instructor: course.instructor_id ? {
+              user: instructorsMap.get(course.instructor_id)?.profiles || null
+            } : null
+          }));
+          
+          setCourses(transformedCourses);
+        } else {
+          console.log('No courses found');
+          setCourses([]);
         }
       } catch (error) {
-        console.error('Error loading courses:', error);
+        console.error('Unexpected error loading courses:', error);
+        toast({
+          title: 'Errore',
+          description: 'Errore imprevisto durante il caricamento dei corsi',
+          variant: 'destructive',
+        });
       }
       setLoading(false);
     };
     load();
-  }, []);
+  }, [toast]);
 
   const duplicateCourse = async (courseId: string) => {
     try {
