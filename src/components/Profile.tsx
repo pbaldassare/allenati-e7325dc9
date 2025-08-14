@@ -128,8 +128,8 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
       {/* Overall Stats */}
       <Card className="shadow-card">
         <CardContent className="p-4 sm:p-3">
-          <div className="flex items-center gap-2 text-sm sm:text-xs text-foreground sm:text-muted-foreground">
-            <TrendingUp className="h-4 w-4 sm:h-3 sm:w-3" />
+          <div className="flex items-center gap-2 text-base sm:text-lg text-foreground">
+            <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4" />
             <span>Questo studente ha partecipato a <span className="font-mono font-semibold text-primary">903</span> classi in totale</span>
           </div>
         </CardContent>

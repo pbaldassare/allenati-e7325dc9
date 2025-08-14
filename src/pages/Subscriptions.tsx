@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Star, Clock, Infinity, CheckCircle } from 'lucide-react';
+import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft } from 'lucide-react';
 
 interface SubscriptionPlan {
   id: string;
@@ -33,6 +34,7 @@ interface UserSubscription {
 export default function Subscriptions() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,14 +202,25 @@ export default function Subscriptions() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold">Gestisci i tuoi Abbonamenti</h1>
-          <p className="text-muted-foreground">
-            Scegli il piano perfetto per le tue esigenze di fitness
-          </p>
+        {/* Header con tasto indietro */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Torna indietro
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">Gestisci Abbonamenti</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Scegli il piano perfetto per le tue esigenze di fitness
+            </p>
+          </div>
         </div>
 
         {/* Crediti attuali */}
@@ -241,14 +254,14 @@ export default function Subscriptions() {
             </Card>
 
             {/* Griglia piani */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {plans.map((plan) => {
                 const isActive = currentSubscription?.plan.id === plan.id;
                 
                 return (
                   <Card 
                     key={plan.id}
-                    className={`relative ${
+                    className={`relative flex flex-col ${
                       isActive 
                         ? 'border-primary shadow-primary' 
                         : 'hover:border-primary/50 transition-all duration-300'
@@ -260,23 +273,23 @@ export default function Subscriptions() {
                       </Badge>
                     )}
                     
-                    <CardHeader className="text-center">
+                    <CardHeader className="text-center pb-4">
                       <div className="flex justify-center mb-2">
                         {getPlanIcon(plan)}
                       </div>
-                      <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      <CardDescription>{plan.description}</CardDescription>
-                      <div className="text-2xl font-bold text-primary">
+                      <CardTitle className="text-base sm:text-lg">{plan.name}</CardTitle>
+                      <CardDescription className="text-sm">{plan.description}</CardDescription>
+                      <div className="text-xl sm:text-2xl font-bold text-primary">
                         {formatPrice(plan.price)}
                       </div>
                       {plan.duration_days && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           per {plan.duration_days} giorni
                         </div>
                       )}
                     </CardHeader>
 
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-1 flex flex-col">
                       <div className="space-y-2">
                         {plan.unlimited_access ? (
                           <div className="flex items-center space-x-2">
@@ -300,18 +313,19 @@ export default function Subscriptions() {
                       <Button
                         onClick={() => selectPlan(plan)}
                         disabled={isActive || changing === plan.id}
-                        className="w-full"
+                        className="w-full mt-auto"
+                        size="sm"
                         variant={isActive ? "secondary" : "default"}
                       >
                         {changing === plan.id ? (
                           <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Attivazione...
+                            <Loader2 className="w-3 w-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                            <span className="text-xs sm:text-sm">Attivazione...</span>
                           </>
                         ) : isActive ? (
-                          'Piano Attivo'
+                          <span className="text-xs sm:text-sm">Piano Attivo</span>
                         ) : (
-                          'Seleziona Piano'
+                          <span className="text-xs sm:text-sm">Seleziona Piano</span>
                         )}
                       </Button>
                     </CardContent>

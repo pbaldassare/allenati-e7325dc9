@@ -216,27 +216,28 @@ export default function UserSettings() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Torna alla Dashboard
-        </Button>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Impostazioni Profilo</h1>
-          <p className="text-muted-foreground">
-            Gestisci le tue informazioni personali e le preferenze dell'account.
-          </p>
+    <div className="min-h-screen bg-background p-4 pb-20">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Torna indietro
+          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold">Impostazioni Profilo</h1>
         </div>
+
+        <div className="space-y-6">
+          <div>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Gestisci le tue informazioni personali e le preferenze dell'account.
+            </p>
+          </div>
 
         {/* Avatar Section */}
         <Card>
@@ -293,16 +294,16 @@ export default function UserSettings() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Nome e Cognome */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {/* Nome e Cognome */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="first_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome *</FormLabel>
+                        <FormLabel className="text-sm font-medium">Nome *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Il tuo nome" {...field} />
+                          <Input placeholder="Il tuo nome" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -313,9 +314,9 @@ export default function UserSettings() {
                     name="last_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cognome *</FormLabel>
+                        <FormLabel className="text-sm font-medium">Cognome *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Il tuo cognome" {...field} />
+                          <Input placeholder="Il tuo cognome" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -505,16 +506,17 @@ export default function UserSettings() {
                   )}
                 />
 
-                {/* Submit Button */}
-                <div className="flex justify-end gap-4">
+                 {/* Submit Button */}
+                <div className="flex flex-col sm:flex-row justify-end gap-4">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate('/')}
+                    className="w-full sm:w-auto"
                   >
                     Annulla
                   </Button>
-                  <Button type="submit" disabled={loading}>
+                  <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salva Modifiche
                   </Button>
@@ -523,6 +525,7 @@ export default function UserSettings() {
             </Form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

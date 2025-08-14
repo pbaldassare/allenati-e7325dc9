@@ -2,9 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Trophy, Medal, Award } from "lucide-react";
+import { Trophy, Medal, Award, ArrowLeft } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 
 export const Leaderboard = () => {
+  const navigate = useNavigate();
   const leaderboardData = [
     { rank: 1, name: "Isabella Gomes", classes: 32, badge: "1st", color: "text-accent" },
     { rank: 2, name: "Hina Takahashi", classes: 31, badge: "2nd", color: "text-muted-foreground" },
@@ -20,11 +22,23 @@ export const Leaderboard = () => {
 
   return (
     <div className="pb-20 px-4 space-y-6">
-      {/* Header */}
-      <div className="pt-8 pb-4 text-center">
-        <h1 className="text-4xl sm:text-3xl font-bold text-foreground">Classifica</h1>
-        <p className="text-base sm:text-sm text-foreground sm:text-muted-foreground mt-1">Compete with Friends</p>
-      </div>
+      <div className="container mx-auto max-w-6xl">
+        {/* Header con tasto indietro */}
+        <div className="flex items-center gap-4 mb-6 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Torna indietro
+          </Button>
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Classifica</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">Compete with Friends</p>
+          </div>
+        </div>
 
       {/* Time Filter */}
       <div className="flex justify-center gap-2">
@@ -122,6 +136,7 @@ export const Leaderboard = () => {
           ))}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
