@@ -41,7 +41,7 @@ const Index = () => {
       case "home":
         return <Dashboard />;
       case "leaderboard":
-        return <Leaderboard />;
+        return <Leaderboard onBack={() => setActiveTab("home")} />;
       case "calendar":
         return <CourseCalendar />;
       case "chat":

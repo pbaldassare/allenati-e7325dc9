@@ -5,7 +5,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Trophy, Medal, Award, ArrowLeft } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
-export const Leaderboard = () => {
+interface LeaderboardProps {
+  onBack?: () => void;
+}
+
+export const Leaderboard = ({ onBack }: LeaderboardProps) => {
   const navigate = useNavigate();
   const leaderboardData = [
     { rank: 1, name: "Isabella Gomes", classes: 32, badge: "1st", color: "text-accent" },
@@ -28,7 +32,7 @@ export const Leaderboard = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={() => onBack ? onBack() : navigate(-1)}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
