@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { Dashboard } from "@/components/Dashboard";
 import { Leaderboard } from "@/components/Leaderboard";
-import { SubscriptionPlans } from "@/components/SubscriptionPlans";
+import { UserSubscriptionSelector } from "@/components/UserSubscriptionSelector";
 import { Profile } from "@/components/Profile";
 import { CourseCalendar } from "@/components/CourseCalendar";
 import { Chat } from "@/pages/Chat";
@@ -44,7 +44,7 @@ const Index = () => {
       case "chat":
         return <Chat />;
       case "subscription":
-        return <SubscriptionPlans />;
+        return <UserSubscriptionSelector />;
       case "profile":
         return <Profile onTabChange={handleTabChange} />;
       default:
