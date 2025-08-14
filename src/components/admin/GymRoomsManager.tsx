@@ -57,21 +57,25 @@ export const GymRoomsManager: React.FC = () => {
       if (user) {
         const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
         setUserGymId(gymId);
+        // Load rooms only after getting gym ID
+        if (gymId) {
+          await loadRooms(gymId);
+        }
       }
-      await loadRooms();
     };
     
     initializeData();
   }, []);
 
-  const loadRooms = async () => {
-    if (!userGymId) return;
+  const loadRooms = async (gymId?: string) => {
+    const targetGymId = gymId || userGymId;
+    if (!targetGymId) return;
     
     try {
       const { data, error } = await supabase
         .from('gym_rooms')
         .select('*')
-        .eq('gym_id', userGymId)
+        .eq('gym_id', targetGymId)
         .order('name');
 
       if (error) throw error;

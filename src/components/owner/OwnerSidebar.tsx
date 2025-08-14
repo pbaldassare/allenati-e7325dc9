@@ -23,6 +23,7 @@ import {
   LogOut,
   Building,
   MessageSquare,
+  CreditCard,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -45,6 +46,7 @@ export const OwnerSidebar: React.FC = () => {
     { title: "Nuovo Corso", url: "/owner/courses/new", icon: PlusCircle },
     { title: "Calendario", url: "/owner/schedule", icon: CalendarClock },
     { title: "Prenotazioni", url: "/owner/bookings", icon: ClipboardList },
+    { title: "Abbonamenti", url: "/owner/subscriptions", icon: CreditCard },
     { title: "Chat", url: "/owner/chat", icon: MessageSquare },
     { title: "Report", url: "/owner/reports", icon: BarChart3 },
   ];
