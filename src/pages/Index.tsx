@@ -9,10 +9,13 @@ import { UserSubscriptionSelector } from "@/components/UserSubscriptionSelector"
 import { Profile } from "@/components/Profile";
 import { CourseCalendar } from "@/components/CourseCalendar";
 import { Chat } from "@/pages/Chat";
+import { WelcomeModal } from "@/components/modals/WelcomeModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const navigate = useNavigate();
+  const { showWelcomeModal, setShowWelcomeModal, user } = useAuth();
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
@@ -57,6 +60,12 @@ const Index = () => {
       <div className="min-h-screen bg-background">
         {renderActiveTab()}
         <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+        
+        <WelcomeModal 
+          isOpen={showWelcomeModal}
+          onClose={() => setShowWelcomeModal(false)}
+          userName={user?.first_name}
+        />
       </div>
     </ProtectedRoute>
   );

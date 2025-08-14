@@ -39,11 +39,12 @@ export const UserSubscriptionSelector: React.FC = () => {
 
   const loadPlansAndSubscription = async () => {
     try {
-      // Load available plans
+      // Load available plans (exclude trial plans since free credit is automatic)
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('is_active', true)
+        .eq('is_trial', false)
         .order('price');
 
       if (plansError) throw plansError;

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import type { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -27,6 +27,8 @@ interface AuthContextType {
   isGymOwner: boolean;
   isInstructor: boolean;
   loading: boolean;
+  showWelcomeModal: boolean;
+  setShowWelcomeModal: (show: boolean) => void;
 }
 
 interface RegisterData {
@@ -44,6 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Fetch user profile and role data
   const fetchUserData = async (userId: string, userEmail?: string): Promise<User | null> => {
@@ -124,6 +127,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             fetchUserData(session.user.id, session.user.email).then(userData => {
               setUser(userData);
               setLoading(false);
+              
+              // Check if it's a new user and show welcome modal  
+              if (event === 'SIGNED_UP' as AuthChangeEvent) {
+                const hasSeenWelcome = localStorage.getItem(`hasSeenWelcome_${session.user.id}`);
+                if (!hasSeenWelcome) {
+                  setShowWelcomeModal(true);
+                  localStorage.setItem(`hasSeenWelcome_${session.user.id}`, 'true');
+                }
+              }
             });
           }, 0);
         } else {
@@ -255,6 +267,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isGymOwner: user?.role === 'gym_owner',
     isInstructor: user?.role === 'instructor',
     loading,
+    showWelcomeModal,
+    setShowWelcomeModal,
   };
 
   return (
