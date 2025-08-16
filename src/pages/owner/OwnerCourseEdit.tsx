@@ -22,12 +22,52 @@ const OwnerCourseEdit = () => {
         setLoading(true);
         const { data, error } = await supabase
           .from('courses')
-          .select('*')
+          .select(`
+            *,
+            course_schedules (
+              day_of_week,
+              start_time,
+              end_time,
+              room_id,
+              room_name
+            ),
+            course_categories (
+              name
+            ),
+            instructors (
+              id,
+              user_id,
+              profiles (
+                first_name,
+                last_name
+              )
+            )
+          `)
           .eq('id', id)
           .single();
 
         if (error) throw error;
-        setCourse(data);
+        
+        // Map database fields to form-expected format
+        const mappedCourse = {
+          ...data,
+          maxParticipants: data.max_participants,
+          durationMinutes: data.duration_minutes,
+          difficultyLevel: data.difficulty_level,
+          pricePerSession: data.price_per_session,
+          creditsRequired: data.credits_required,
+          equipmentNeeded: data.equipment_needed,
+          imageUrl: data.image_url,
+          deadlineHours: data.deadline_hours,
+          reservedSpots: data.reserved_spots,
+          isActive: data.is_active,
+          categoryId: data.category_id,
+          instructorId: data.instructor_id,
+          gymId: data.gym_id,
+          schedules: data.course_schedules || []
+        };
+        
+        setCourse(mappedCourse);
       } catch (err) {
         console.error('Error loading course:', err);
         setError('Errore nel caricamento del corso');

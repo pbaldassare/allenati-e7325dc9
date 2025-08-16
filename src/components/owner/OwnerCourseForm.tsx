@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { Course } from '@/contexts/AppDataContext';
+import { SupabaseCourse } from '@/types/course';
 import { X, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -50,7 +50,7 @@ type CourseFormData = z.infer<typeof courseSchema>;
 
 interface CourseFormProps {
   mode: 'create' | 'edit';
-  course?: Course;
+  course?: SupabaseCourse & { schedules?: any[] };
 }
 
 interface GymRoom {
@@ -160,25 +160,25 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
-    defaultValues: course ? {
-      name: course.name,
-      description: course.description,
-      instructor_id: '', // Will be populated by owner selection
-      category: course.category,
-      level: course.level,
-      price: course.price,
-      maxParticipants: course.maxParticipants,
-      reservedSpots: (course as any).reservedSpots || 0,
-      duration: course.duration,
-      deadlineHours: course.deadlineHours || 24,
-      image: course.image,
-      benefits: course.benefits,
+    defaultValues: mode === 'edit' && course ? {
+      name: course.name || '',
+      description: course.description || '',
+      instructor_id: course.instructor_id || '',
+      category: categories.find(c => c.id === course.category_id)?.name || '',
+      level: course.difficulty_level === 1 ? 'Principiante' : course.difficulty_level === 2 ? 'Intermedio' : course.difficulty_level === 3 ? 'Avanzato' : 'Principiante',
+      price: course.price_per_session || 0,
+      maxParticipants: course.max_participants || 20,
+      reservedSpots: course.reserved_spots || 0,
+      duration: course.duration_minutes || 60,
+      deadlineHours: course.deadline_hours || 24,
+      image: course.image_url || '',
+      benefits: course.benefits || [],
       requirements: course.requirements || [],
-      schedule: course.schedule?.map(s => ({
-        dayOfWeek: s.dayOfWeek || 1,
-        time: s.time || '09:00',
-        roomId: s.roomId || '',
-        day: s.day,
+      schedule: course.schedules?.map((s: any) => ({
+        dayOfWeek: s.day_of_week || 1,
+        time: s.start_time || '09:00',
+        roomId: s.room_id || '',
+        day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
         date: s.date
       })) || [],
     } : {
@@ -272,12 +272,22 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         if (scheduleError) throw scheduleError;
       } else if (mode === 'edit' && course) {
         // Update existing course
-        const { error: updateError } = await supabase
+        console.log('Updating course with data:', data);
+        console.log('Course ID:', course.id);
+        
+        const { data: updatedCourse, error: updateError } = await supabase
           .from('courses')
           .update(courseData)
-          .eq('id', course.id);
+          .eq('id', course.id)
+          .select()
+          .single();
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Course update error:', updateError);
+          throw updateError;
+        }
+
+        console.log('Course updated successfully:', updatedCourse);
 
         // Delete existing schedules
         const { error: deleteScheduleError } = await supabase
@@ -285,7 +295,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           .delete()
           .eq('course_id', course.id);
 
-        if (deleteScheduleError) throw deleteScheduleError;
+        if (deleteScheduleError) {
+          console.error('Schedule delete error:', deleteScheduleError);
+          throw deleteScheduleError;
+        }
 
         // Insert new schedules
         const scheduleData = data.schedule.map(s => ({
@@ -297,11 +310,16 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           is_active: true
         }));
 
-        const { error: newScheduleError } = await supabase
-          .from('course_schedules')
-          .insert(scheduleData);
+        if (scheduleData.length > 0) {
+          const { error: newScheduleError } = await supabase
+            .from('course_schedules')
+            .insert(scheduleData);
 
-        if (newScheduleError) throw newScheduleError;
+          if (newScheduleError) {
+            console.error('Schedule insert error:', newScheduleError);
+            throw newScheduleError;
+          }
+        }
       }
 
       toast({
@@ -373,7 +391,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Istruttore</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona istruttore" />
@@ -398,7 +416,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona categoria" />
@@ -423,7 +441,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Livello</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona livello" />
