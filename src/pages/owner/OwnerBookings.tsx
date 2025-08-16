@@ -1,60 +1,30 @@
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Calendar, Users, CheckCircle, XCircle, Clock, Filter } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-
-interface BookingItem {
-  id: string;
-  user_id: string;
-  course_id: string;
-  scheduled_date: string;
-  scheduled_time: string;
-  status: string;
-  created_at: string;
-  credits_used: number;
-  checked_in_at?: string;
-  cancelled_at?: string;
-  course: {
-    name: string;
-  };
-  user: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    profile_picture_url?: string;
-  };
-  room_name?: string;
-}
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
+import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 
 const OwnerBookings: React.FC = () => {
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [filteredBookings, setFilteredBookings] = useState<BookingItem[]>([]);
+  const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [cancellationReason, setCancellationReason] = useState('');
 
-  useEffect(() => {
-    document.title = "Prenotazioni | Area Proprietario";
-    loadBookings();
-  }, []);
-
-  useEffect(() => {
+  const filteredBookings = useMemo(() => {
     let filtered = bookings;
 
     if (searchTerm) {
       filtered = filtered.filter(booking => 
-        booking.course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        `${booking.user.first_name} ${booking.user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        booking.course?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        `${booking.user?.first_name || ''} ${booking.user?.last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -62,53 +32,12 @@ const OwnerBookings: React.FC = () => {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
-    setFilteredBookings(filtered);
+    return filtered;
   }, [bookings, searchTerm, statusFilter]);
 
-  const loadBookings = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) return;
-
-      const { data: gymCourses } = await supabase
-        .from('courses')
-        .select('id')
-        .eq('gym_id', gymId);
-
-      if (!gymCourses || gymCourses.length === 0) {
-        setBookings([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: bookingsData, error } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          courses!inner(name),
-          profiles!inner(first_name, last_name, email, profile_picture_url)
-        `)
-        .in('course_id', gymCourses.map(c => c.id))
-        .order("scheduled_date", { ascending: false });
-
-      if (error) throw error;
-
-      const formattedBookings = (bookingsData || []).map((booking: any) => ({
-        ...booking,
-        course: booking.courses,
-        user: booking.profiles,
-        room_name: 'Sala 1'
-      }));
-
-      setBookings(formattedBookings);
-    } catch (error) {
-      console.error('Error loading bookings:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleCancelBooking = async (bookingId: string) => {
+    await cancelOwnerBooking(bookingId, cancellationReason || undefined);
+    setCancellationReason('');
   };
 
   const getStatusBadge = (status: string) => {
@@ -116,7 +45,8 @@ const OwnerBookings: React.FC = () => {
       confirmed: { variant: 'default', icon: CheckCircle, label: 'Confermata' },
       cancelled: { variant: 'destructive', icon: XCircle, label: 'Cancellata' },
       completed: { variant: 'secondary', icon: CheckCircle, label: 'Completata' },
-      pending: { variant: 'outline', icon: Clock, label: 'In attesa' }
+      waitlist: { variant: 'outline', icon: Clock, label: 'Lista d\'attesa' },
+      no_show: { variant: 'outline', icon: XCircle, label: 'Non presentato' }
     };
     
     const config = variants[status] || { variant: 'outline', icon: Clock, label: status };
@@ -206,6 +136,7 @@ const OwnerBookings: React.FC = () => {
             <SelectItem value="confirmed">Confermate</SelectItem>
             <SelectItem value="completed">Completate</SelectItem>
             <SelectItem value="cancelled">Cancellate</SelectItem>
+            <SelectItem value="waitlist">Lista d'attesa</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -225,11 +156,12 @@ const OwnerBookings: React.FC = () => {
                 <TableRow>
                   <TableHead>Utente</TableHead>
                   <TableHead>Corso</TableHead>
-                  <TableHead>Sala</TableHead>
+                  <TableHead>Palestra</TableHead>
                   <TableHead>Data/Ora</TableHead>
                   <TableHead>Crediti</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead>Prenotato</TableHead>
+                  <TableHead>Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -238,24 +170,24 @@ const OwnerBookings: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={booking.user.profile_picture_url} />
+                          <AvatarImage src={booking.user?.profile_picture_url} />
                           <AvatarFallback>
-                            {booking.user.first_name?.[0]}{booking.user.last_name?.[0]}
+                            {booking.user?.first_name?.[0]}{booking.user?.last_name?.[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {booking.user.first_name} {booking.user.last_name}
+                            {booking.user?.first_name} {booking.user?.last_name}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {booking.user.email}
+                            {booking.user?.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{booking.course.name}</TableCell>
+                    <TableCell className="font-medium">{booking.course?.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{booking.room_name || 'Sala 1'}</Badge>
+                      <Badge variant="outline">{booking.course?.gym?.name || 'N/A'}</Badge>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -271,6 +203,53 @@ const OwnerBookings: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(booking.created_at).toLocaleDateString('it-IT')}
+                    </TableCell>
+                    <TableCell>
+                      {(booking.status === 'confirmed' || booking.status === 'waitlist') && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancella Prenotazione</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Sei sicuro di voler cancellare la prenotazione di {booking.user?.first_name} {booking.user?.last_name} per il corso "{booking.course?.name}"?
+                                <br />
+                                I crediti verranno automaticamente rimborsati.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="py-4">
+                              <label className="text-sm font-medium mb-2 block">
+                                Motivo della cancellazione (opzionale)
+                              </label>
+                              <Textarea
+                                placeholder="Inserisci il motivo della cancellazione..."
+                                value={cancellationReason}
+                                onChange={(e) => setCancellationReason(e.target.value)}
+                                className="min-h-[80px]"
+                              />
+                            </div>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel onClick={() => setCancellationReason('')}>
+                                Annulla
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleCancelBooking(booking.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Cancella Prenotazione
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
