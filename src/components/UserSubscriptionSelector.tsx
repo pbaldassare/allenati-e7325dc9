@@ -84,12 +84,16 @@ export const UserSubscriptionSelector: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utente non autenticato');
 
-      // Deactivate current subscription if exists
-      if (currentSubscription) {
-        await supabase
-          .from('user_subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('id', currentSubscription.id);
+      // Disattiva TUTTI gli abbonamenti attivi esistenti per questo utente
+      const { error: cancelError } = await supabase
+        .from('user_subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (cancelError) {
+        console.error('Error cancelling existing subscriptions:', cancelError);
+        throw cancelError;
       }
 
       // Create new subscription

@@ -111,12 +111,16 @@ export default function Subscriptions() {
     setChanging(plan.id);
 
     try {
-      // Disattiva abbonamento corrente se esiste
-      if (currentSubscription) {
-        await supabase
-          .from('user_subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('id', currentSubscription.id);
+      // Disattiva TUTTI gli abbonamenti attivi per questo utente
+      const { error: cancelError } = await supabase
+        .from('user_subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (cancelError) {
+        console.error('Error cancelling existing subscriptions:', cancelError);
+        throw cancelError;
       }
 
       // Calcola date
