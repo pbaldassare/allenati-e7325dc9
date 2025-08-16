@@ -211,11 +211,50 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
   const onSubmit = async (data: CourseFormData) => {
     try {
+      console.log('Form submission started with data:', data);
+      
+      // Validate required data before proceeding
+      if (!data.instructor_id || data.instructor_id.trim() === '') {
+        toast({
+          title: "Errore",
+          description: "Seleziona un istruttore per continuare",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!data.category || categories.length === 0) {
+        toast({
+          title: "Errore",
+          description: "Categorie non caricate o categoria non selezionata",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (instructors.length === 0) {
+        toast({
+          title: "Errore",
+          description: "Istruttori non caricati",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      if (!user.user) {
+        toast({
+          title: "Errore",
+          description: "Utente non autenticato",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { data: gymId } = await supabase
         .rpc('get_user_gym_id', { _user_id: user.user.id });
+
+      console.log('Gym ID retrieved:', gymId);
 
       if (!gymId) {
         toast({
@@ -228,10 +267,25 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
       // Get selected category ID
       const selectedCategory = categories.find(c => c.name === data.category);
+      console.log('Selected category:', selectedCategory);
+      
       if (!selectedCategory) {
         toast({
           title: "Errore", 
           description: "Categoria non valida",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate instructor exists
+      const selectedInstructor = instructors.find(i => i.id === data.instructor_id);
+      console.log('Selected instructor:', selectedInstructor);
+      
+      if (!selectedInstructor) {
+        toast({
+          title: "Errore",
+          description: "Istruttore non valido",
           variant: "destructive"
         });
         return;
