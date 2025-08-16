@@ -10,12 +10,16 @@ import { Profile } from "@/components/Profile";
 import { CourseCalendar } from "@/components/CourseCalendar";
 import { Chat } from "@/pages/Chat";
 import { WelcomeModal } from "@/components/modals/WelcomeModal";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { AuthButtons } from "@/components/auth/AuthButtons";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/hooks/useAuthModal";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const navigate = useNavigate();
-  const { showWelcomeModal, setShowWelcomeModal, user } = useAuth();
+  const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading } = useAuth();
+  const { isOpen, defaultMode, openLogin, openRegister, close } = useAuthModal();
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
@@ -54,6 +58,41 @@ const Index = () => {
         return <Dashboard />;
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show auth landing page for non-authenticated users
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Benvenuto
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Accedi al tuo account o registrati per iniziare
+            </p>
+          </div>
+          
+          <AuthButtons onLogin={openLogin} onRegister={openRegister} />
+        </div>
+        
+        <AuthModal 
+          isOpen={isOpen}
+          onClose={close}
+          defaultMode={defaultMode}
+        />
+      </div>
+    );
+  }
 
   return (
     <ProtectedRoute>
