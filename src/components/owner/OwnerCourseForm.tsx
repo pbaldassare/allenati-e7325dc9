@@ -270,6 +270,38 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           .insert(scheduleData);
 
         if (scheduleError) throw scheduleError;
+      } else if (mode === 'edit' && course) {
+        // Update existing course
+        const { error: updateError } = await supabase
+          .from('courses')
+          .update(courseData)
+          .eq('id', course.id);
+
+        if (updateError) throw updateError;
+
+        // Delete existing schedules
+        const { error: deleteScheduleError } = await supabase
+          .from('course_schedules')
+          .delete()
+          .eq('course_id', course.id);
+
+        if (deleteScheduleError) throw deleteScheduleError;
+
+        // Insert new schedules
+        const scheduleData = data.schedule.map(s => ({
+          course_id: course.id,
+          day_of_week: s.dayOfWeek,
+          start_time: s.time,
+          end_time: `${String(Math.floor((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) / 60)).padStart(2, '0')}:${String((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) % 60).padStart(2, '0')}`,
+          room_id: s.roomId,
+          is_active: true
+        }));
+
+        const { error: newScheduleError } = await supabase
+          .from('course_schedules')
+          .insert(scheduleData);
+
+        if (newScheduleError) throw newScheduleError;
       }
 
       toast({
