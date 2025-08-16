@@ -187,8 +187,13 @@ const OwnerSubscriptions: React.FC = () => {
     setExtendDialogOpen(true);
   };
 
-  const handleExtensionCompleted = () => {
-    loadSubscriptionData();
+  const handleExtensionCompleted = async () => {
+    console.log('Extension completed, refreshing data...');
+    setSelectedSubscription(null);
+    // Small delay to ensure database is synchronized
+    setTimeout(() => {
+      loadSubscriptionData();
+    }, 500);
   };
 
   if (loading) {

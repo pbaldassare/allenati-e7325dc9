@@ -47,6 +47,8 @@ export default function ExtendSubscriptionDialog({
       const newExpiry = new Date(currentExpiry);
       newExpiry.setMonth(newExpiry.getMonth() + months);
 
+      console.log('Extending subscription:', subscription.id, 'to:', newExpiry.toISOString());
+
       const { error } = await supabase
         .from('user_subscriptions')
         .update({ expires_at: newExpiry.toISOString() })
@@ -54,8 +56,13 @@ export default function ExtendSubscriptionDialog({
 
       if (error) throw error;
 
+      console.log('Extension successful, calling onExtended...');
       toast.success(`Abbonamento esteso di ${months} ${months === 1 ? 'mese' : 'mesi'}`);
+      
+      // Call the parent callback first
       onExtended();
+      
+      // Then close and reset
       onClose();
       setSelectedMonths('');
     } catch (error) {
