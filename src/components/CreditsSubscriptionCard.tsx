@@ -94,19 +94,31 @@ export default function CreditsSubscriptionCard() {
     const now = new Date();
     const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (daysLeft <= 7) {
+    if (daysLeft <= 0) {
       return (
         <Badge variant="destructive" className="text-xs">
-          Scade in {daysLeft} giorni
+          Scaduto
+        </Badge>
+      );
+    } else if (daysLeft <= 7) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          Scade tra {daysLeft} {daysLeft === 1 ? 'giorno' : 'giorni'}
+        </Badge>
+      );
+    } else if (daysLeft <= 30) {
+      return (
+        <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">
+          Scade tra {daysLeft} giorni
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="secondary" className="text-xs">
+          Attivo ({daysLeft} giorni)
         </Badge>
       );
     }
-    
-    return (
-      <span className="text-xs text-muted-foreground">
-        Fino al {expiresAt.toLocaleDateString('it-IT')}
-      </span>
-    );
   };
 
   return (

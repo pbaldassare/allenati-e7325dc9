@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 
 interface SubscriptionStats {
   total: number;
@@ -24,6 +26,7 @@ interface UserSubscription {
     name: string;
     credits_included: number;
     unlimited_access: boolean;
+    duration_days: number;
   };
   user: {
     first_name: string;
@@ -42,6 +45,8 @@ const OwnerSubscriptions: React.FC = () => {
   });
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [extendDialogOpen, setExtendDialogOpen] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
 
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
@@ -87,7 +92,7 @@ const OwnerSubscriptions: React.FC = () => {
       const [plansData, profilesData] = await Promise.all([
         supabase
           .from('subscription_plans')
-          .select('id, name, credits_included, unlimited_access')
+          .select('id, name, credits_included, unlimited_access, duration_days')
           .in('id', subscriptionIds),
         supabase
           .from('profiles')
@@ -167,6 +172,23 @@ const OwnerSubscriptions: React.FC = () => {
     } else {
       return <Badge variant="default">Attivo</Badge>;
     }
+  };
+
+  const canExtendSubscription = (subscription: UserSubscription) => {
+    return (
+      subscription.status === 'active' &&
+      subscription.plan.unlimited_access &&
+      subscription.plan.duration_days === 365
+    );
+  };
+
+  const handleExtendClick = (subscription: UserSubscription) => {
+    setSelectedSubscription(subscription);
+    setExtendDialogOpen(true);
+  };
+
+  const handleExtensionCompleted = () => {
+    loadSubscriptionData();
   };
 
   if (loading) {
@@ -251,6 +273,7 @@ const OwnerSubscriptions: React.FC = () => {
                     <TableHead>Stato</TableHead>
                     <TableHead>Inizio</TableHead>
                     <TableHead>Scadenza</TableHead>
+                    <TableHead>Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -301,6 +324,23 @@ const OwnerSubscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {new Date(sub.expires_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {canExtendSubscription(sub) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExtendClick(sub)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>Estendi</span>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Non estendibile
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -459,6 +499,16 @@ const OwnerSubscriptions: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Extend Subscription Dialog */}
+      {selectedSubscription && (
+        <ExtendSubscriptionDialog
+          isOpen={extendDialogOpen}
+          onClose={() => setExtendDialogOpen(false)}
+          subscription={selectedSubscription}
+          onExtended={handleExtensionCompleted}
+        />
+      )}
     </div>
   );
 };
