@@ -139,13 +139,34 @@ const OwnerCoursesList: React.FC = () => {
             ? supabase.from('course_categories').select('id, name').in('id', categoryIds)
             : Promise.resolve({ data: [] });
             
-          // Fetch instructors with profiles
-          const instructorsPromise = instructorIds.length > 0
-            ? supabase.from('instructors').select(`
-                id,
-                profiles!inner(first_name, last_name)
-              `).in('id', instructorIds)
-            : Promise.resolve({ data: [] });
+          // Fetch instructors with profiles using separate query approach  
+          let instructorsWithProfiles: any[] = [];
+          if (instructorIds.length > 0) {
+            const { data: instructorsData } = await supabase
+              .from('instructors')
+              .select('id, user_id')
+              .in('id', instructorIds);
+              
+            if (instructorsData && instructorsData.length > 0) {
+              const userIds = instructorsData.map(i => i.user_id);
+              const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('user_id, first_name, last_name')
+                .in('user_id', userIds);
+                
+              instructorsWithProfiles = instructorsData.map(instructor => {
+                const profile = profilesData?.find(p => p.user_id === instructor.user_id);
+                return {
+                  id: instructor.id,
+                  user_id: instructor.user_id,
+                  first_name: profile?.first_name || 'Nome',
+                  last_name: profile?.last_name || 'Cognome'
+                };
+              });
+            }
+          }
+          
+          const instructorsPromise = Promise.resolve({ data: instructorsWithProfiles });
 
           const [categoriesResult, instructorsResult] = await Promise.all([
             categoriesPromise,
@@ -172,7 +193,7 @@ const OwnerCoursesList: React.FC = () => {
             created_at: course.created_at,
             category: course.category_id ? categoriesMap.get(course.category_id) || null : null,
             instructor: course.instructor_id ? {
-              user: instructorsMap.get(course.instructor_id)?.profiles || null
+              user: instructorsMap.get(course.instructor_id) || null
             } : null
           }));
           

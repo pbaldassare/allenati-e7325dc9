@@ -160,28 +160,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
-    defaultValues: mode === 'edit' && course ? {
-      name: course.name || '',
-      description: course.description || '',
-      instructor_id: course.instructor_id || '',
-      category: categories.find(c => c.id === course.category_id)?.name || '',
-      level: course.difficulty_level === 1 ? 'Principiante' : course.difficulty_level === 2 ? 'Intermedio' : course.difficulty_level === 3 ? 'Avanzato' : 'Principiante',
-      price: course.price_per_session || 0,
-      maxParticipants: course.max_participants || 20,
-      reservedSpots: course.reserved_spots || 0,
-      duration: course.duration_minutes || 60,
-      deadlineHours: course.deadline_hours || 24,
-      image: course.image_url || '',
-      benefits: course.benefits || [],
-      requirements: course.requirements || [],
-      schedule: course.schedules?.map((s: any) => ({
-        dayOfWeek: s.day_of_week || 1,
-        time: s.start_time || '09:00',
-        roomId: s.room_id || '',
-        day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
-        date: s.date
-      })) || [],
-    } : {
+    defaultValues: {
       name: '',
       description: '',
       instructor_id: '',
@@ -198,6 +177,37 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },
   });
+
+  // Reset form values when in edit mode and data is loaded
+  useEffect(() => {
+    if (mode === 'edit' && course && categories.length > 0 && instructors.length > 0 && !loading) {
+      console.log('Resetting form with course data:', course);
+      const categoryName = categories.find(c => c.id === course.category_id)?.name || '';
+      
+      form.reset({
+        name: course.name || '',
+        description: course.description || '',
+        instructor_id: course.instructor_id || '',
+        category: categoryName,
+        level: course.difficulty_level === 1 ? 'Principiante' : course.difficulty_level === 2 ? 'Intermedio' : course.difficulty_level === 3 ? 'Avanzato' : 'Principiante',
+        price: course.price_per_session || 0,
+        maxParticipants: course.max_participants || 20,
+        reservedSpots: course.reserved_spots || 0,
+        duration: course.duration_minutes || 60,
+        deadlineHours: course.deadline_hours || 24,
+        image: course.image_url || '',
+        benefits: course.benefits || [''],
+        requirements: course.requirements || [''],
+        schedule: course.schedules?.map((s: any) => ({
+          dayOfWeek: s.day_of_week || 1,
+          time: s.start_time || '09:00',
+          roomId: s.room_id || '',
+          day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
+          date: s.date
+        })) || [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
+      });
+    }
+  }, [mode, course, categories, instructors, loading, form]);
 
   const onSubmit = async (data: CourseFormData) => {
     try {
