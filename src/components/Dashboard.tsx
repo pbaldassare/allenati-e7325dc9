@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Users, Trophy, Star } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 import CreditsSubscriptionCard from './CreditsSubscriptionCard';
+import { HowItWorksModal } from './modals/HowItWorksModal';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export const Dashboard = () => {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
   // Load data from Supabase
   useEffect(() => {
@@ -181,6 +183,15 @@ export const Dashboard = () => {
       <div className="pt-8 pb-6">
         <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋</h1>
         <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
+        <Button
+          onClick={() => setShowHowItWorksModal(true)}
+          variant="outline"
+          size="sm"
+          className="mt-3 text-primary border-primary/20 hover:bg-primary/5"
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          Come funziona l'app Allenati
+        </Button>
       </div>
 
       {/* Modern Stats Cards */}
@@ -305,6 +316,11 @@ export const Dashboard = () => {
         booking={selectedBooking || {}}
         onConfirm={handleCancellationConfirm}
         isLoading={loadingBooking === selectedBooking?.course_id}
+      />
+
+      <HowItWorksModal
+        isOpen={showHowItWorksModal}
+        onClose={() => setShowHowItWorksModal(false)}
       />
     </div>
   );

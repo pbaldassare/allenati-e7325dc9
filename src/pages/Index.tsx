@@ -14,9 +14,13 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthModal } from "@/hooks/useAuthModal";
+import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const navigate = useNavigate();
   const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading } = useAuth();
   const { isOpen, defaultMode, openLogin, openRegister, close } = useAuthModal();
@@ -82,13 +86,29 @@ const Index = () => {
             </p>
           </div>
           
-          <AuthButtons onLogin={openLogin} onRegister={openRegister} />
+          <div className="space-y-4">
+            <Button
+              onClick={() => setShowHowItWorksModal(true)}
+              variant="outline"
+              className="w-full text-primary border-primary/20 hover:bg-primary/5"
+            >
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Come funziona l'app Allenati
+            </Button>
+            
+            <AuthButtons onLogin={openLogin} onRegister={openRegister} />
+          </div>
         </div>
         
         <AuthModal 
           isOpen={isOpen}
           onClose={close}
           defaultMode={defaultMode}
+        />
+        
+        <HowItWorksModal
+          isOpen={showHowItWorksModal}
+          onClose={() => setShowHowItWorksModal(false)}
         />
       </div>
     );
