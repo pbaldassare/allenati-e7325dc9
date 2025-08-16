@@ -96,7 +96,10 @@ export const CourseCalendar = () => {
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
-            instructors(user_id),
+            instructors(
+              user_id,
+              profiles(first_name, last_name, email)
+            ),
             course_schedules(*)
           `)
           .eq('gym_id', userGym)

@@ -115,7 +115,7 @@ const OwnerSubscriptions: React.FC = () => {
           plan,
           user
         };
-      }).filter(sub => sub.plan); // Filtra solo le subscription con piano valido
+      }); // Rimosso filtro per vedere tutte le subscription
       
       console.log('Processed subscriptions:', subs);
       setSubscriptions(subs);
