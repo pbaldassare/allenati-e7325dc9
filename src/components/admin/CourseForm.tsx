@@ -122,17 +122,122 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
     },
   });
 
-  const onSubmit = (data: CourseFormData) => {
-    console.log('Course data:', data);
-    
-    toast({
-      title: mode === 'create' ? 'Corso creato' : 'Corso aggiornato',
-      description: mode === 'create' 
-        ? 'Il nuovo corso è stato creato con successo'
-        : 'Le modifiche sono state salvate',
-    });
+  const onSubmit = async (data: CourseFormData) => {
+    try {
+      console.log('Saving course data:', data);
+      
+      if (mode === 'create') {
+        // Create new course
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .insert({
+            name: data.name,
+            description: data.description,
+            instructor_id: data.instructor, // Note: This should be instructor ID, not name
+            category_id: data.category, // Note: This should be category ID
+            difficulty_level: parseInt(data.level) || 1,
+            price_per_session: data.price,
+            max_participants: data.maxParticipants,
+            reserved_spots: data.reservedSpots || 0,
+            duration_minutes: data.duration,
+            deadline_hours: data.deadlineHours,
+            image_url: data.image,
+            benefits: data.benefits.filter(b => b.trim() !== ''),
+            requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+            credits_required: 1 // Default value
+          })
+          .select()
+          .single();
 
-    navigate('/admin/courses');
+        if (courseError) throw courseError;
+
+        // Create course schedules
+        if (data.schedule && data.schedule.length > 0) {
+          const schedules = data.schedule.map(schedule => ({
+            course_id: courseData.id,
+            day_of_week: schedule.dayOfWeek,
+            start_time: schedule.time,
+            end_time: schedule.time, // You might want to calculate end time based on duration
+            room_id: schedule.roomId
+          }));
+
+          const { error: scheduleError } = await supabase
+            .from('course_schedules')
+            .insert(schedules);
+
+          if (scheduleError) throw scheduleError;
+        }
+
+        toast({
+          title: 'Corso creato',
+          description: 'Il nuovo corso è stato creato con successo',
+        });
+      } else {
+        // Update existing course
+        const { error: courseError } = await supabase
+          .from('courses')
+          .update({
+            name: data.name,
+            description: data.description,
+            instructor_id: data.instructor,
+            category_id: data.category,
+            difficulty_level: parseInt(data.level) || 1,
+            price_per_session: data.price,
+            max_participants: data.maxParticipants,
+            reserved_spots: data.reservedSpots || 0,
+            duration_minutes: data.duration,
+            deadline_hours: data.deadlineHours,
+            image_url: data.image,
+            benefits: data.benefits.filter(b => b.trim() !== ''),
+            requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+          })
+          .eq('id', course?.id);
+
+        if (courseError) throw courseError;
+
+        // Update schedules - delete existing and create new ones
+        if (course?.id) {
+          const { error: deleteError } = await supabase
+            .from('course_schedules')
+            .delete()
+            .eq('course_id', course.id);
+
+          if (deleteError) throw deleteError;
+
+          if (data.schedule && data.schedule.length > 0) {
+            const schedules = data.schedule.map(schedule => ({
+              course_id: course.id,
+              day_of_week: schedule.dayOfWeek,
+              start_time: schedule.time,
+              end_time: schedule.time, // Calculate based on duration if needed
+              room_id: schedule.roomId
+            }));
+
+            const { error: scheduleError } = await supabase
+              .from('course_schedules')
+              .insert(schedules);
+
+            if (scheduleError) throw scheduleError;
+          }
+        }
+
+        toast({
+          title: 'Corso aggiornato',
+          description: 'Le modifiche sono state salvate con successo',
+        });
+      }
+
+      navigate('/admin/courses');
+    } catch (error) {
+      console.error('Error saving course:', error);
+      toast({
+        title: 'Errore',
+        description: mode === 'create' 
+          ? 'Errore durante la creazione del corso. Riprova più tardi.'
+          : 'Errore durante il salvataggio delle modifiche. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const addBenefit = () => {

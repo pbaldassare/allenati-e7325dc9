@@ -9,6 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { CourseWithRelations, getInstructorName, getDifficultyText, getDayName } from '@/types/course';
+import { CourseDeleteConfirmDialog } from '@/components/dialogs/CourseDeleteConfirmDialog';
+import { useToast } from '@/hooks/use-toast';
 import {
   Plus,
   Search,
@@ -32,12 +34,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const AdminCoursesList = () => {
+  const { toast } = useToast();
   const [courses, setCourses] = useState<CourseWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [coursesToDelete, setCoursesToDelete] = useState<string[]>([]);
 
   useEffect(() => {
     loadCourses();
@@ -137,6 +143,74 @@ const AdminCoursesList = () => {
     );
   };
 
+  const handleDeleteCourse = (courseId: string) => {
+    setCoursesToDelete([courseId]);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleBulkDelete = () => {
+    setCoursesToDelete(selectedCourses);
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteCourses = async () => {
+    try {
+      setDeleting(true);
+      
+      for (const courseId of coursesToDelete) {
+        // Delete course schedules first
+        const { error: scheduleError } = await supabase
+          .from('course_schedules')
+          .delete()
+          .eq('course_id', courseId);
+        
+        if (scheduleError) throw scheduleError;
+
+        // Update bookings to cancelled status instead of deleting
+        const { error: bookingError } = await supabase
+          .from('bookings')
+          .update({ 
+            status: 'cancelled',
+            cancellation_reason: 'Corso eliminato dall\'amministratore',
+            cancelled_at: new Date().toISOString()
+          })
+          .eq('course_id', courseId)
+          .in('status', ['confirmed']);
+        
+        if (bookingError) throw bookingError;
+
+        // Finally delete the course
+        const { error: courseError } = await supabase
+          .from('courses')
+          .delete()
+          .eq('id', courseId);
+        
+        if (courseError) throw courseError;
+      }
+
+      toast({
+        title: 'Successo',
+        description: `${coursesToDelete.length === 1 ? 'Corso eliminato' : `${coursesToDelete.length} corsi eliminati`} con successo.`,
+      });
+
+      // Refresh courses list and clear selection
+      await loadCourses();
+      setSelectedCourses([]);
+      setDeleteDialogOpen(false);
+      setCoursesToDelete([]);
+      
+    } catch (error) {
+      console.error('Error deleting courses:', error);
+      toast({
+        title: 'Errore',
+        description: 'Errore durante l\'eliminazione dei corsi. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -204,7 +278,7 @@ const AdminCoursesList = () => {
                     <Download className="mr-2 h-4 w-4" />
                     Esporta
                   </Button>
-                  <Button variant="destructive" size="sm">
+                  <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Elimina
                   </Button>
@@ -314,7 +388,10 @@ const AdminCoursesList = () => {
                         Duplica
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => handleDeleteCourse(course.id)}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Elimina
                       </DropdownMenuItem>
@@ -334,6 +411,17 @@ const AdminCoursesList = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <CourseDeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={deleteCourses}
+        courseNames={coursesToDelete.map(id => 
+          courses.find(course => course.id === id)?.name || 'Corso sconosciuto'
+        )}
+        isLoading={deleting}
+      />
     </div>
   );
 };
