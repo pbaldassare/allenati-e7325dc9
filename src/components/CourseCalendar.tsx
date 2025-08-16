@@ -112,6 +112,8 @@ export const CourseCalendar = () => {
           .eq('status', 'confirmed');
 
         if (bookingsError) throw bookingsError;
+        
+        console.log('User bookings loaded:', bookingsData);
 
         // Load categories for filters
         const { data: categoriesData } = await supabase

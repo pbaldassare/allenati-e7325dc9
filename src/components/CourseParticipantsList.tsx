@@ -59,6 +59,8 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
   const loadParticipants = async () => {
     try {
+      console.log('Loading participants for course:', courseId);
+      
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -74,6 +76,8 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
         .eq('course_id', courseId)
         .eq('status', 'confirmed')
         .order('scheduled_date', { ascending: true });
+
+      console.log('Participants query result:', { data, error });
 
       if (error) throw error;
 

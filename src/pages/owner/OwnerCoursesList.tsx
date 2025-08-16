@@ -380,13 +380,7 @@ const OwnerCoursesList: React.FC = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => navigate(`/admin/courses/${course.id}`)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Visualizza
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
+                              onClick={() => navigate(`/owner/courses/${course.id}/edit`)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Modifica
