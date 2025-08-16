@@ -218,47 +218,47 @@ export default function UserSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-20">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="min-h-screen bg-background p-3 sm:p-4 pb-20">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-4xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-fit min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />
             Torna indietro
           </Button>
-          <h1 className="text-xl sm:text-2xl font-bold">Impostazioni Profilo</h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Impostazioni Profilo</h1>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <p className="text-muted-foreground text-sm sm:text-base">
+            <p className="text-muted-foreground text-sm">
               Gestisci le tue informazioni personali e le preferenze dell'account.
             </p>
           </div>
 
         {/* Avatar Section */}
         <Card>
-          <CardHeader>
-            <CardTitle>Foto Profilo</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Foto Profilo</CardTitle>
+            <CardDescription className="text-sm">
               Carica la tua foto profilo. Formati supportati: JPG, PNG. Massimo 5MB.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
+          <CardContent className="pt-0">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <div className="relative">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                   <AvatarImage src={avatarUrl || undefined} alt="Foto profilo" />
-                  <AvatarFallback className="text-2xl">
-                    <User className="h-8 w-8" />
+                  <AvatarFallback className="text-xl sm:text-2xl">
+                    <User className="h-6 w-6 sm:h-8 sm:w-8" />
                   </AvatarFallback>
                 </Avatar>
-                <label className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors">
+                <label className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                   <Camera className="h-4 w-4" />
                   <input
                     type="file"
@@ -269,13 +269,13 @@ export default function UserSettings() {
                   />
                 </label>
               </div>
-              <div>
-                <p className="font-medium">Cambia foto profilo</p>
-                <p className="text-sm text-muted-foreground">
+              <div className="text-center sm:text-left">
+                <p className="font-medium text-sm sm:text-base">Cambia foto profilo</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Clicca sull'icona della camera per caricare una nuova foto
                 </p>
                 {uploading && (
-                  <p className="text-sm text-blue-600 flex items-center gap-2">
+                  <p className="text-xs sm:text-sm text-blue-600 flex items-center gap-2 justify-center sm:justify-start mt-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Caricamento in corso...
                   </p>
@@ -287,17 +287,17 @@ export default function UserSettings() {
 
         {/* Profile Form */}
         <Card>
-          <CardHeader>
-            <CardTitle>Informazioni Personali</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Informazioni Personali</CardTitle>
+            <CardDescription className="text-sm">
               Aggiorna le tue informazioni personali e di contatto.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
                  {/* Nome e Cognome */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="first_name"
@@ -305,7 +305,7 @@ export default function UserSettings() {
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Nome *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Il tuo nome" className="h-11" {...field} />
+                          <Input placeholder="Il tuo nome" className="h-12 sm:h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -318,7 +318,7 @@ export default function UserSettings() {
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Cognome *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Il tuo cognome" className="h-11" {...field} />
+                          <Input placeholder="Il tuo cognome" className="h-12 sm:h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -332,9 +332,9 @@ export default function UserSettings() {
                   name="nickname"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nickname</FormLabel>
+                      <FormLabel className="text-sm font-medium">Nickname</FormLabel>
                       <FormControl>
-                        <Input placeholder="Come vuoi essere chiamato" {...field} />
+                        <Input placeholder="Come vuoi essere chiamato" className="h-12 sm:h-11" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -342,15 +342,15 @@ export default function UserSettings() {
                 />
 
                 {/* Telefono e Genere */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Telefono</FormLabel>
+                        <FormLabel className="text-sm font-medium">Telefono</FormLabel>
                         <FormControl>
-                          <Input placeholder="+39 123 456 7890" {...field} />
+                          <Input placeholder="+39 123 456 7890" className="h-12 sm:h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -361,10 +361,10 @@ export default function UserSettings() {
                     name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Genere</FormLabel>
+                        <FormLabel className="text-sm font-medium">Genere</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-12 sm:h-11">
                               <SelectValue placeholder="Seleziona genere" />
                             </SelectTrigger>
                           </FormControl>
@@ -387,9 +387,9 @@ export default function UserSettings() {
                   name="date_of_birth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data di nascita</FormLabel>
+                      <FormLabel className="text-sm font-medium">Data di nascita</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" className="h-12 sm:h-11" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -402,9 +402,9 @@ export default function UserSettings() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Indirizzo</FormLabel>
+                      <FormLabel className="text-sm font-medium">Indirizzo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Via, numero civico" {...field} />
+                        <Input placeholder="Via, numero civico" className="h-12 sm:h-11" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -412,15 +412,15 @@ export default function UserSettings() {
                 />
 
                 {/* Città e CAP */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Città</FormLabel>
+                        <FormLabel className="text-sm font-medium">Città</FormLabel>
                         <FormControl>
-                          <Input placeholder="La tua città" {...field} />
+                          <Input placeholder="La tua città" className="h-12 sm:h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -431,9 +431,9 @@ export default function UserSettings() {
                     name="postal_code"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CAP</FormLabel>
+                        <FormLabel className="text-sm font-medium">CAP</FormLabel>
                         <FormControl>
-                          <Input placeholder="12345" {...field} />
+                          <Input placeholder="12345" className="h-12 sm:h-11" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -447,9 +447,9 @@ export default function UserSettings() {
                   name="fiscal_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormLabel className="text-sm font-medium">Codice Fiscale</FormLabel>
                       <FormControl>
-                        <Input placeholder="RSSMRA80A01H501X" {...field} />
+                        <Input placeholder="RSSMRA80A01H501X" className="h-12 sm:h-11" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -457,17 +457,17 @@ export default function UserSettings() {
                 />
 
                 {/* Contatto di emergenza */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Contatto di Emergenza</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-base sm:text-lg font-medium">Contatto di Emergenza</h3>
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
                       name="emergency_contact_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome contatto emergenza</FormLabel>
+                          <FormLabel className="text-sm font-medium">Nome contatto emergenza</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nome del contatto" {...field} />
+                            <Input placeholder="Nome del contatto" className="h-12 sm:h-11" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -478,9 +478,9 @@ export default function UserSettings() {
                       name="emergency_contact_phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefono contatto emergenza</FormLabel>
+                          <FormLabel className="text-sm font-medium">Telefono contatto emergenza</FormLabel>
                           <FormControl>
-                            <Input placeholder="+39 123 456 7890" {...field} />
+                            <Input placeholder="+39 123 456 7890" className="h-12 sm:h-11" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -495,11 +495,11 @@ export default function UserSettings() {
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bio</FormLabel>
+                      <FormLabel className="text-sm font-medium">Bio</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="Racconta qualcosa di te..." 
-                          className="min-h-[100px]"
+                          className="min-h-[100px] text-sm"
                           {...field} 
                         />
                       </FormControl>
@@ -509,16 +509,16 @@ export default function UserSettings() {
                 />
 
                  {/* Submit Button */}
-                <div className="flex flex-col sm:flex-row justify-end gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 pt-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate('/')}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-12 sm:h-11 min-h-[44px]"
                   >
                     Annulla
                   </Button>
-                  <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+                  <Button type="submit" disabled={loading} className="w-full sm:w-auto h-12 sm:h-11 min-h-[44px]">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salva Modifiche
                   </Button>
@@ -530,21 +530,21 @@ export default function UserSettings() {
 
         {/* Danger Zone */}
         <Card className="border-destructive/20">
-          <CardHeader>
+          <CardHeader className="pb-3 sm:pb-6">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-destructive">Zona Pericolo</CardTitle>
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive flex-shrink-0" />
+              <CardTitle className="text-destructive text-base sm:text-lg">Zona Pericolo</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Azioni irreversibili che comportano la perdita permanente dei dati.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+          <CardContent className="pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="p-3 sm:p-4 border border-destructive/20 rounded-lg bg-destructive/5">
                 <div className="space-y-2">
-                  <h4 className="font-medium text-destructive">Elimina Account</h4>
-                  <p className="text-sm text-muted-foreground">
+                  <h4 className="font-medium text-destructive text-sm sm:text-base">Elimina Account</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Elimina definitivamente il tuo account e tutti i dati associati. 
                     Questa azione non può essere annullata.
                   </p>
@@ -560,6 +560,7 @@ export default function UserSettings() {
                     variant="destructive" 
                     size="sm"
                     onClick={() => setShowDeleteDialog(true)}
+                    className="min-h-[44px] text-sm"
                   >
                     <AlertTriangle className="mr-2 h-4 w-4" />
                     Elimina Account
