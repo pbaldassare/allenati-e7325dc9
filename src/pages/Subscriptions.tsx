@@ -72,7 +72,7 @@ export default function Subscriptions() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
 
       if (subscriptionError) {
         console.error('Subscription query error:', subscriptionError);
@@ -174,6 +174,8 @@ export default function Subscriptions() {
         description: `Il tuo abbonamento "${plan.name}" è ora attivo.`,
       });
 
+      // Forza refresh completo dei dati
+      console.log('Forcing data refresh after subscription change');
       await loadData();
     } catch (error) {
       console.error('Errore nella selezione del piano:', error);

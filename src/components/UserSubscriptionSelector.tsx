@@ -61,7 +61,9 @@ export const UserSubscriptionSelector: React.FC = () => {
           `)
           .eq('user_id', user.id)
           .eq('status', 'active')
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
         if (subError) throw subError;
         setCurrentSubscription(subData);
@@ -145,6 +147,8 @@ export const UserSubscriptionSelector: React.FC = () => {
         description: `Abbonamento ${selectedPlan.name} attivato con successo!`,
       });
 
+      // Forza refresh completo dei dati
+      console.log('Forcing data refresh after subscription change');
       await loadPlansAndSubscription();
     } catch (error) {
       console.error('Error selecting plan:', error);
