@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { useAppData } from '@/contexts/AppDataContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Plus,
   Search,
@@ -30,16 +30,96 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+interface Course {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  max_participants: number;
+  credits_required: number;
+  price_per_session: number;
+  difficulty_level: number;
+  instructor: {
+    id: string;
+    user_id: string;
+    profiles: {
+      first_name: string;
+      last_name: string;
+    };
+  };
+  course_categories: {
+    name: string;
+  };
+  course_schedules: Array<{
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+  }>;
+  _count?: {
+    bookings: number;
+  };
+}
+
 const AdminCoursesList = () => {
-  const { courses } = useAppData();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          instructor:instructors!courses_instructor_id_fkey (
+            id,
+            user_id,
+            profiles:user_id (
+              first_name,
+              last_name
+            )
+          ),
+          course_categories (
+            name
+          ),
+          course_schedules (
+            day_of_week,
+            start_time,
+            end_time
+          )
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setCourses(data || []);
+      
+      // Extract unique categories
+      const uniqueCategories = Array.from(
+        new Set(data?.map(course => course.course_categories?.name).filter(Boolean) || [])
+      );
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredCourses = courses.filter(course => {
+    const instructorName = `${course.instructor?.profiles?.first_name || ''} ${course.instructor?.profiles?.last_name || ''}`.trim();
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.instructor.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || course.category === categoryFilter;
+                         instructorName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || course.course_categories?.name === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -59,7 +139,10 @@ const AdminCoursesList = () => {
     );
   };
 
-  const categories = [...new Set(courses.map(course => course.category))];
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    return days[dayOfWeek] || 'Non programmato';
+  };
 
   return (
     <div className="space-y-6">
@@ -157,49 +240,63 @@ const AdminCoursesList = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredCourses.map((course) => (
-              <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center space-x-4">
-                  <Checkbox
-                    checked={selectedCourses.includes(course.id)}
-                    onCheckedChange={() => toggleCourseSelection(course.id)}
-                  />
-                  <img 
-                    src={course.image} 
-                    alt={course.name}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                  <div>
-                    <h4 className="font-medium">{course.name}</h4>
-                    <p className="text-sm text-muted-foreground">{course.instructor}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="outline">{course.category}</Badge>
-                      <Badge variant="secondary">{course.level}</Badge>
-                    </div>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Caricamento corsi...</p>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-6">
-                  <div className="text-center">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Users className="mr-1 h-4 w-4" />
-                      {course.currentParticipants}/{course.maxParticipants}
-                    </div>
-                  </div>
-                  
-                  <div className="text-center">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="mr-1 h-4 w-4" />
-                    {course.schedule[0]?.day || 'Non programmato'}
-                  </div>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="flex items-center text-sm font-medium">
-                      <Euro className="mr-1 h-4 w-4" />
-                      {course.price}
-                    </div>
-                  </div>
+                ) : (
+                  filteredCourses.map((course) => {
+                    const instructorName = `${course.instructor?.profiles?.first_name || ''} ${course.instructor?.profiles?.last_name || ''}`.trim();
+                    const currentParticipants = course._count?.bookings || 0;
+                    const firstSchedule = course.course_schedules?.[0];
+                    const scheduleText = firstSchedule ? getDayName(firstSchedule.day_of_week) : 'Non programmato';
+                    const difficultyText = course.difficulty_level === 1 ? 'Principiante' : 
+                                         course.difficulty_level === 2 ? 'Intermedio' : 
+                                         course.difficulty_level === 3 ? 'Avanzato' : 'Non specificato';
+
+                    return (
+                      <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <Checkbox
+                            checked={selectedCourses.includes(course.id)}
+                            onCheckedChange={() => toggleCourseSelection(course.id)}
+                          />
+                          <img 
+                            src={course.image_url || '/placeholder.svg'} 
+                            alt={course.name}
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                          <div>
+                            <h4 className="font-medium">{course.name}</h4>
+                            <p className="text-sm text-muted-foreground">{instructorName || 'Istruttore non assegnato'}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant="outline">{course.course_categories?.name || 'Senza categoria'}</Badge>
+                              <Badge variant="secondary">{difficultyText}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-6">
+                          <div className="text-center">
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Users className="mr-1 h-4 w-4" />
+                              {currentParticipants}/{course.max_participants}
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Calendar className="mr-1 h-4 w-4" />
+                              {scheduleText}
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <div className="flex items-center text-sm font-medium">
+                              <Euro className="mr-1 h-4 w-4" />
+                              {course.price_per_session}
+                            </div>
+                          </div>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -232,10 +329,12 @@ const AdminCoursesList = () => {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            ))}
-          </div>
 
           {filteredCourses.length === 0 && (
             <div className="text-center py-8">

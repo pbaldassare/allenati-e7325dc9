@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +16,93 @@ import {
   Download,
   LogOut
 } from 'lucide-react';
-import { useAppData } from '@/contexts/AppDataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-  const { getAnalytics, getAllUsers, courses, bookings } = useAppData();
   const [activeTab, setActiveTab] = useState('overview');
-  const analytics = getAnalytics();
-  const users = getAllUsers();
+  const [analytics, setAnalytics] = useState({
+    totalUsers: 0,
+    activeSubscriptions: 0,
+    totalBookings: 0,
+    revenue: 0,
+    popularCourses: [],
+    recentActivity: []
+  });
+  const [courses, setCourses] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load courses with participant counts
+      const { data: coursesData } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          instructor:instructors!courses_instructor_id_fkey (
+            profiles:user_id (
+              first_name,
+              last_name
+            )
+          ),
+          course_categories (
+            name
+          ),
+          bookings!inner (
+            status
+          )
+        `)
+        .eq('is_active', true)
+        .eq('bookings.status', 'confirmed');
+
+      // Load users
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_active', true)
+        .limit(10);
+
+      // Load recent bookings
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Calculate analytics
+      const totalUsers = usersData?.length || 0;
+      const activeSubscriptions = 0; // Simplified for now
+      const totalBookings = bookingsData?.length || 0;
+      const revenue = coursesData?.reduce((sum, course) => 
+        sum + (course.price_per_session * (course.bookings?.length || 0)), 0
+      ) || 0;
+
+      setAnalytics({
+        totalUsers,
+        activeSubscriptions,
+        totalBookings,
+        revenue,
+        popularCourses: coursesData?.slice(0, 5) || [],
+        recentActivity: bookingsData || []
+      });
+
+      setCourses(coursesData || []);
+      setUsers(usersData || []);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -156,39 +233,55 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {courses.map((course) => (
-              <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <img 
-                    src={course.image} 
-                    alt={course.name}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                  <div>
-                    <h4 className="font-medium">{course.name}</h4>
-                    <p className="text-sm text-muted-foreground">{course.instructor}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="outline">{course.category}</Badge>
-                      <Badge variant="secondary">{course.level}</Badge>
+            {loading ? (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">Caricamento...</p>
+              </div>
+            ) : (
+              courses.map((course) => {
+                const instructorName = course.instructor?.profiles ? 
+                  `${course.instructor.profiles.first_name} ${course.instructor.profiles.last_name}` : 
+                  'Istruttore non assegnato';
+                const currentParticipants = course.bookings?.length || 0;
+                const difficultyText = course.difficulty_level === 1 ? 'Principiante' : 
+                                     course.difficulty_level === 2 ? 'Intermedio' : 
+                                     course.difficulty_level === 3 ? 'Avanzato' : 'Non specificato';
+
+                return (
+                  <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <img 
+                        src={course.image_url || '/placeholder.svg'} 
+                        alt={course.name}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                      <div>
+                        <h4 className="font-medium">{course.name}</h4>
+                        <p className="text-sm text-muted-foreground">{instructorName}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge variant="outline">{course.course_categories?.name || 'Senza categoria'}</Badge>
+                          <Badge variant="secondary">{difficultyText}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {currentParticipants}/{course.max_participants}
+                        </p>
+                        <p className="text-xs text-muted-foreground">€{course.price_per_session}</p>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {course.currentParticipants}/{course.maxParticipants}
-                    </p>
-                    <p className="text-xs text-muted-foreground">€{course.price}</p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -216,30 +309,41 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-medium">
-                    {user.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="font-medium">{user.name}</h4>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <Badge variant="default">{user.subscription}</Badge>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Iscritto: {new Date(user.joinDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
+            {loading ? (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">Caricamento...</p>
               </div>
-            ))}
+            ) : (
+              users.map((user) => {
+                const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nome non disponibile';
+                const subscriptionName = 'Basic'; // Simplified for now
+
+                return (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-medium">
+                        {fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{fullName}</h4>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <Badge variant="default">{subscriptionName}</Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Iscritto: {new Date(user.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
