@@ -22,7 +22,7 @@ interface ExtendSubscriptionDialogProps {
       name: string;
     };
   };
-  onExtended: () => void;
+  onExtended: (subscriptionId: string, newExpiryDate: string) => void;
 }
 
 export default function ExtendSubscriptionDialog({
@@ -59,8 +59,8 @@ export default function ExtendSubscriptionDialog({
       console.log('Extension successful, calling onExtended...');
       toast.success(`Abbonamento esteso di ${months} ${months === 1 ? 'mese' : 'mesi'}`);
       
-      // Call the parent callback first
-      onExtended();
+      // Call the parent callback with new expiry data for optimistic update
+      onExtended(subscription.id, newExpiry.toISOString());
       
       // Then close and reset
       onClose();

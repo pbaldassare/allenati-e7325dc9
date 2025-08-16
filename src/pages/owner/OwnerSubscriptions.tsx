@@ -187,13 +187,28 @@ const OwnerSubscriptions: React.FC = () => {
     setExtendDialogOpen(true);
   };
 
-  const handleExtensionCompleted = async () => {
-    console.log('Extension completed, refreshing data...');
+  const handleExtensionCompleted = async (subscriptionId: string, newExpiryDate: string) => {
+    console.log('Extension completed, updating optimistically...', subscriptionId, newExpiryDate);
+    
+    // Optimistic update: immediately update the subscription in the state
+    setSubscriptions(prevSubscriptions => 
+      prevSubscriptions.map(sub => 
+        sub.id === subscriptionId 
+          ? { ...sub, expires_at: newExpiryDate }
+          : sub
+      )
+    );
+    
+    // Update stats optimistically as well
+    setStats(prevStats => ({ ...prevStats })); // Force re-calculation
+    
     setSelectedSubscription(null);
-    // Small delay to ensure database is synchronized
+    
+    // Backup reload with longer delay for database sync
     setTimeout(() => {
+      console.log('Backup reload after optimistic update...');
       loadSubscriptionData();
-    }, 500);
+    }, 1000);
   };
 
   if (loading) {
