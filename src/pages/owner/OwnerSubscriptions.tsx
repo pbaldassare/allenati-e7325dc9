@@ -99,11 +99,23 @@ const OwnerSubscriptions: React.FC = () => {
       const plansMap = new Map(plansData.data?.map(p => [p.id, p]) || []);
       const profilesMap = new Map(profilesData.data?.map(p => [p.user_id, p]) || []);
       
-      const subs = (subscriptionsData || []).map((sub: any) => ({
-        ...sub,
-        plan: plansMap.get(sub.plan_id),
-        user: profilesMap.get(sub.user_id)
-      })).filter(sub => sub.plan && sub.user); // Filtra solo le subscription con dati validi
+      const subs = (subscriptionsData || []).map((sub: any) => {
+        const plan = plansMap.get(sub.plan_id);
+        const user = profilesMap.get(sub.user_id);
+        
+        console.log(`Processing subscription ${sub.id}:`, {
+          plan_id: sub.plan_id,
+          user_id: sub.user_id,
+          plan,
+          user
+        });
+        
+        return {
+          ...sub,
+          plan,
+          user
+        };
+      }).filter(sub => sub.plan); // Filtra solo le subscription con piano valido
       
       console.log('Processed subscriptions:', subs);
       setSubscriptions(subs);
@@ -249,18 +261,26 @@ const OwnerSubscriptions: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={sub.user.profile_picture_url} />
-                            <AvatarFallback>
-                              {sub.user.first_name?.[0]}{sub.user.last_name?.[0]}
-                            </AvatarFallback>
+                             <AvatarFallback>
+                               {sub.user ? 
+                                 `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
+                                 sub.user.email?.[0]?.toUpperCase() || 'U'
+                                 : 'U'
+                               }
+                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-medium">
-                              {sub.user.first_name} {sub.user.last_name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {sub.user.email}
-                            </div>
-                          </div>
+                           <div>
+                             <div className="font-medium">
+                               {sub.user ? 
+                                 `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || 
+                                 sub.user.email || 'Utente senza nome'
+                                 : 'Utente non trovato'
+                               }
+                             </div>
+                             <div className="text-sm text-muted-foreground">
+                               {sub.user?.email || 'Email non disponibile'}
+                             </div>
+                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -314,15 +334,23 @@ const OwnerSubscriptions: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={sub.user.profile_picture_url} />
-                            <AvatarFallback>
-                              {sub.user.first_name?.[0]}{sub.user.last_name?.[0]}
-                            </AvatarFallback>
+                             <AvatarFallback>
+                               {sub.user ? 
+                                 `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
+                                 sub.user.email?.[0]?.toUpperCase() || 'U'
+                                 : 'U'
+                               }
+                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-medium">
-                              {sub.user.first_name} {sub.user.last_name}
-                            </div>
-                          </div>
+                           <div>
+                             <div className="font-medium">
+                               {sub.user ? 
+                                 `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || 
+                                 sub.user.email || 'Utente senza nome'
+                                 : 'Utente non trovato'
+                               }
+                             </div>
+                           </div>
                         </div>
                       </TableCell>
                       <TableCell>{sub.plan.name}</TableCell>
@@ -375,15 +403,23 @@ const OwnerSubscriptions: React.FC = () => {
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={sub.user.profile_picture_url} />
-                                <AvatarFallback>
-                                  {sub.user.first_name?.[0]}{sub.user.last_name?.[0]}
-                                </AvatarFallback>
+                                 <AvatarFallback>
+                                   {sub.user ? 
+                                     `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
+                                     sub.user.email?.[0]?.toUpperCase() || 'U'
+                                     : 'U'
+                                   }
+                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-medium">
-                                  {sub.user.first_name} {sub.user.last_name}
-                                </div>
-                              </div>
+                               <div>
+                                 <div className="font-medium">
+                                   {sub.user ? 
+                                     `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || 
+                                     sub.user.email || 'Utente senza nome'
+                                     : 'Utente non trovato'
+                                   }
+                                 </div>
+                               </div>
                             </div>
                           </TableCell>
                           <TableCell>{sub.plan.name}</TableCell>

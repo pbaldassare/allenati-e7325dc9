@@ -134,6 +134,8 @@ const OwnerCoursesList: React.FC = () => {
           const categoryIds = [...new Set(data.map(c => c.category_id).filter(Boolean))];
           const instructorIds = [...new Set(data.map(c => c.instructor_id).filter(Boolean))];
           
+          console.log('Instructor IDs from courses:', instructorIds);
+          
           // Fetch categories
           const categoriesPromise = categoryIds.length > 0 
             ? supabase.from('course_categories').select('id, name').in('id', categoryIds)
@@ -142,29 +144,38 @@ const OwnerCoursesList: React.FC = () => {
           // Fetch instructors with profiles using separate query approach  
           let instructorsWithProfiles: any[] = [];
           if (instructorIds.length > 0) {
-            const { data: instructorsData } = await supabase
+            const { data: instructorsData, error: instructorsError } = await supabase
               .from('instructors')
               .select('id, user_id')
               .in('id', instructorIds);
               
+            console.log('Instructors data:', instructorsData, 'Error:', instructorsError);
+              
             if (instructorsData && instructorsData.length > 0) {
               const userIds = instructorsData.map(i => i.user_id);
-              const { data: profilesData } = await supabase
+              const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('user_id, first_name, last_name')
+                .select('user_id, first_name, last_name, email')
                 .in('user_id', userIds);
+                
+              console.log('Profiles data:', profilesData, 'Error:', profilesError);
                 
               instructorsWithProfiles = instructorsData.map(instructor => {
                 const profile = profilesData?.find(p => p.user_id === instructor.user_id);
-                return {
+                const result = {
                   id: instructor.id,
                   user_id: instructor.user_id,
                   first_name: profile?.first_name || 'Nome',
-                  last_name: profile?.last_name || 'Cognome'
+                  last_name: profile?.last_name || 'Cognome',
+                  email: profile?.email || 'Email non disponibile'
                 };
+                console.log(`Instructor ${instructor.id} mapped to:`, result);
+                return result;
               });
             }
           }
+          
+          console.log('Final instructorsWithProfiles:', instructorsWithProfiles);
           
           const instructorsPromise = Promise.resolve({ data: instructorsWithProfiles });
 
@@ -180,22 +191,32 @@ const OwnerCoursesList: React.FC = () => {
           const instructorsMap = new Map(
             (instructorsResult.data || []).map(inst => [inst.id, inst])
           );
+          
+          console.log('Categories Map:', categoriesMap);
+          console.log('Instructors Map:', instructorsMap);
 
           // Transform the data to match our interface
-          const transformedCourses = data.map(course => ({
-            id: course.id,
-            name: course.name,
-            description: course.description,
-            is_active: course.is_active,
-            max_participants: course.max_participants,
-            credits_required: course.credits_required,
-            difficulty_level: course.difficulty_level,
-            created_at: course.created_at,
-            category: course.category_id ? categoriesMap.get(course.category_id) || null : null,
-            instructor: course.instructor_id ? {
-              user: instructorsMap.get(course.instructor_id) || null
-            } : null
-          }));
+          const transformedCourses = data.map(course => {
+            const category = course.category_id ? categoriesMap.get(course.category_id) || null : null;
+            const instructorData = course.instructor_id ? instructorsMap.get(course.instructor_id) : null;
+            
+            console.log(`Course ${course.name} - instructor_id: ${course.instructor_id}, found instructor:`, instructorData);
+            
+            return {
+              id: course.id,
+              name: course.name,
+              description: course.description,
+              is_active: course.is_active,
+              max_participants: course.max_participants,
+              credits_required: course.credits_required,
+              difficulty_level: course.difficulty_level,
+              created_at: course.created_at,
+              category,
+              instructor: instructorData ? {
+                user: instructorData
+              } : null
+            };
+          });
           
           setCourses(transformedCourses);
         } else {
