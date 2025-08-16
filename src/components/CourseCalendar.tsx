@@ -116,12 +116,12 @@ export const CourseCalendar = () => {
           instructorProfiles?.map(profile => [profile.user_id, profile]) || []
         );
 
-        // Merge instructor profiles with course data
+        // Merge instructor profiles with course data - format compatibile con gli altri componenti
         const coursesWithInstructors = coursesData?.map(course => ({
           ...course,
           instructors: course.instructors ? {
             ...course.instructors,
-            profile: instructorProfilesMap.get(course.instructors.user_id)
+            profiles: instructorProfilesMap.get(course.instructors.user_id)
           } : null
         })) || [];
 
@@ -146,6 +146,7 @@ export const CourseCalendar = () => {
         const categoryNames = ['Tutti', ...(categoriesData?.map(c => c.name) || [])];
 
         setCourses(coursesWithInstructors);
+        console.log('Courses with instructors loaded:', coursesWithInstructors);
         setBookings(bookingsData || []);
         setCategories(categoryNames);
         

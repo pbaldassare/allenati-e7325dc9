@@ -11,7 +11,8 @@ import {
   Star,
   X,
   Search,
-  Loader2
+  Loader2,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -37,10 +38,22 @@ const BookingHistory = () => {
     return booking.status === activeTab && matchesSearch;
   });
 
-  const getInstructorName = (course: any) => {
-    if (!course?.instructors?.profiles) return 'Istruttore non disponibile';
-    const { first_name, last_name } = course.instructors.profiles;
-    return `${first_name} ${last_name}`;
+  const getInstructorName = (course: any): string => {
+    // Gestisce entrambi i formati: course.instructors.profiles o course.instructor.profiles
+    const profiles = course?.instructors?.profiles || course?.instructor?.profiles;
+    if (!profiles) {
+      return 'Istruttore non assegnato';
+    }
+    const { first_name, last_name } = profiles;
+    return `${first_name || ''} ${last_name || ''}`.trim() || 'Istruttore non assegnato';
+  };
+
+  const getGymInfo = (course: any): string => {
+    if (!course?.gyms) {
+      return 'Palestra non specificata';
+    }
+    const { name, city } = course.gyms;
+    return `${name}${city ? ` - ${city}` : ''}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -112,14 +125,20 @@ const BookingHistory = () => {
                 alt={course.name}
                 className="w-16 h-16 rounded-lg object-cover"
               />
-              <div className="space-y-2">
-                <div>
-                  <h3 className="font-medium">{course.name}</h3>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <User className="mr-1 h-3 w-3" />
-                    {getInstructorName(course)}
-                  </p>
-                </div>
+               <div className="space-y-2">
+                 <div>
+                   <h3 className="font-medium">{course.name}</h3>
+                   <div className="space-y-1">
+                     <p className="text-sm text-muted-foreground flex items-center">
+                       <User className="mr-1 h-3 w-3" />
+                       {getInstructorName(course)}
+                     </p>
+                     <p className="text-sm text-muted-foreground flex items-center">
+                       <MapPin className="mr-1 h-3 w-3" />
+                       {getGymInfo(course)}
+                     </p>
+                   </div>
+                 </div>
                 
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                   <div className="flex items-center">

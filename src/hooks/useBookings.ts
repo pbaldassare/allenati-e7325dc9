@@ -24,11 +24,19 @@ export const useBookings = () => {
             name,
             image_url,
             deadline_hours,
+            gym_id,
+            gyms (
+              id,
+              name,
+              address,
+              city
+            ),
             course_categories (
               name
             ),
             instructors (
               id,
+              user_id,
               profiles (
                 first_name,
                 last_name

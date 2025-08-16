@@ -60,7 +60,7 @@ export default function Subscriptions() {
 
       if (plansError) throw plansError;
 
-      // Carica abbonamento corrente - rimuoviamo il filtro expires_at problematico
+      // Carica abbonamento corrente - gestisce correttamente il caso senza abbonamento
       console.log('Loading subscription for user:', user.id);
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_subscriptions')
@@ -70,13 +70,17 @@ export default function Subscriptions() {
         `)
         .eq('user_id', user.id)
         .eq('status', 'active')
+        .gte('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (subscriptionError) {
         console.error('Subscription query error:', subscriptionError);
-        throw subscriptionError;
+        // Non lanciare errore se semplicemente non c'è abbonamento
+        if (subscriptionError.code !== 'PGRST116') {
+          throw subscriptionError;
+        }
       }
       
       console.log('Subscription data loaded:', subscriptionData);
