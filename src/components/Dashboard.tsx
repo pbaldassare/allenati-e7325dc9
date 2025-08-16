@@ -179,7 +179,7 @@ export const Dashboard = () => {
     <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
       <div className="pt-8 pb-6">
-        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao! 👋</h1>
+        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋</h1>
         <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
       </div>
 
