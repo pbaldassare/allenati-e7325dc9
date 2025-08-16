@@ -60,7 +60,8 @@ export default function Subscriptions() {
 
       if (plansError) throw plansError;
 
-      // Carica abbonamento corrente
+      // Carica abbonamento corrente - rimuoviamo il filtro expires_at problematico
+      console.log('Loading subscription for user:', user.id);
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -69,12 +70,16 @@ export default function Subscriptions() {
         `)
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .gte('expires_at', new Date().toISOString())
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (subscriptionError && subscriptionError.code !== 'PGRST116') {
+      if (subscriptionError) {
+        console.error('Subscription query error:', subscriptionError);
         throw subscriptionError;
       }
+      
+      console.log('Subscription data loaded:', subscriptionData);
 
       // Carica crediti utente
       const { data: profileData, error: profileError } = await supabase

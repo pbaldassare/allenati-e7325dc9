@@ -69,24 +69,42 @@ const OwnerSubscriptions: React.FC = () => {
         return;
       }
 
-      // Load subscriptions for gym members
+      console.log('Loading subscriptions for gym members:', memberIds.map(m => m.user_id));
+      
+      // Load subscriptions for gym members - usando query separate per evitare problemi di JOIN
       const { data: subscriptionsData, error } = await supabase
         .from('user_subscriptions')
-        .select(`
-          *,
-          subscription_plans!inner(name, credits_included, unlimited_access),
-          profiles!inner(first_name, last_name, email, profile_picture_url)
-        `)
+        .select('*')
         .in('user_id', memberIds.map(m => m.user_id))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      // Load related data separately
+      const subscriptionIds = subscriptionsData?.map(s => s.plan_id) || [];
+      const userIds = subscriptionsData?.map(s => s.user_id) || [];
+      
+      const [plansData, profilesData] = await Promise.all([
+        supabase
+          .from('subscription_plans')
+          .select('id, name, credits_included, unlimited_access')
+          .in('id', subscriptionIds),
+        supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, email, profile_picture_url')
+          .in('user_id', userIds)
+      ]);
 
+      const plansMap = new Map(plansData.data?.map(p => [p.id, p]) || []);
+      const profilesMap = new Map(profilesData.data?.map(p => [p.user_id, p]) || []);
+      
       const subs = (subscriptionsData || []).map((sub: any) => ({
         ...sub,
-        plan: sub.subscription_plans,
-        user: sub.profiles
-      }));
+        plan: plansMap.get(sub.plan_id),
+        user: profilesMap.get(sub.user_id)
+      })).filter(sub => sub.plan && sub.user); // Filtra solo le subscription con dati validi
+      
+      console.log('Processed subscriptions:', subs);
       setSubscriptions(subs);
 
       // Calculate stats
