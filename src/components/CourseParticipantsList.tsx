@@ -61,29 +61,41 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     try {
       console.log('Loading participants for course:', courseId);
       
-      const { data, error } = await supabase
+      // First, get all confirmed bookings for this course
+      const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          profiles!inner(
-            first_name,
-            last_name,
-            email,
-            profile_picture_url,
-            current_credits
-          )
-        `)
+        .select('*')
         .eq('course_id', courseId)
         .eq('status', 'confirmed')
         .order('scheduled_date', { ascending: true });
 
-      console.log('Participants query result:', { data, error });
+      if (bookingsError) throw bookingsError;
 
-      if (error) throw error;
+      console.log('Bookings found:', bookings?.length || 0);
+
+      if (!bookings || bookings.length === 0) {
+        setParticipants([]);
+        return;
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(bookings.map(b => b.user_id))];
+      
+      // Fetch profiles for all users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      console.log('Profiles found:', profiles?.length || 0);
 
       // Enhance with subscription data
       const participantsWithSubs = await Promise.all(
-        (data || []).map(async (booking: any) => {
+        bookings.map(async (booking: any) => {
+          const userProfile = profiles?.find(p => p.user_id === booking.user_id);
+          
           const { data: subData } = await supabase
             .from('user_subscriptions')
             .select(`
@@ -95,7 +107,12 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
           return {
             ...booking,
-            user: booking.profiles,
+            user: userProfile || {
+              first_name: 'Nome non trovato',
+              last_name: '',
+              email: 'Email non trovata',
+              current_credits: 0
+            },
             subscription: subData?.subscription_plans ? {
               plan_name: subData.subscription_plans.name,
               unlimited_access: subData.subscription_plans.unlimited_access
@@ -104,6 +121,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
         })
       );
 
+      console.log('Final participants:', participantsWithSubs);
       setParticipants(participantsWithSubs);
     } catch (error) {
       console.error('Error loading participants:', error);
