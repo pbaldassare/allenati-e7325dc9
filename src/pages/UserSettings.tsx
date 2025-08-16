@@ -14,7 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Camera, User } from 'lucide-react';
+import { Loader2, ArrowLeft, Camera, User, AlertTriangle } from 'lucide-react';
+import DeleteAccountDialog from '@/components/dialogs/DeleteAccountDialog';
 
 const profileSchema = z.object({
   first_name: z.string().min(1, 'Nome è obbligatorio').max(50, 'Nome troppo lungo'),
@@ -43,6 +44,7 @@ export default function UserSettings() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -525,7 +527,55 @@ export default function UserSettings() {
             </Form>
           </CardContent>
         </Card>
+
+        {/* Danger Zone */}
+        <Card className="border-destructive/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Zona Pericolo</CardTitle>
+            </div>
+            <CardDescription>
+              Azioni irreversibili che comportano la perdita permanente dei dati.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-destructive">Elimina Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Elimina definitivamente il tuo account e tutti i dati associati. 
+                    Questa azione non può essere annullata.
+                  </p>
+                  <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
+                    <li>Tutti i crediti residui verranno persi</li>
+                    <li>Gli abbonamenti attivi verranno cancellati</li>
+                    <li>Verrai rimosso da tutte le palestre e chat</li>
+                    <li>I dati personali verranno eliminati definitivamente</li>
+                  </ul>
+                </div>
+                <div className="pt-3">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    Elimina Account
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         </div>
+
+        {/* Delete Account Dialog */}
+        <DeleteAccountDialog 
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+        />
       </div>
     </div>
   );
