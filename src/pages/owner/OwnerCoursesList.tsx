@@ -356,7 +356,16 @@ const OwnerCoursesList: React.FC = () => {
                     <TableCell>
                       {getDifficultyBadge(course.difficulty_level)}
                     </TableCell>
-                    <TableCell>{course.max_participants}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <CourseParticipantsList 
+                          courseId={course.id} 
+                          courseName={course.name}
+                          maxParticipants={course.max_participants}
+                          reservedSpots={0}
+                        />
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{course.credits_required}</Badge>
                     </TableCell>
@@ -367,11 +376,6 @@ const OwnerCoursesList: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-2 justify-end">
-                        <CourseParticipantsList 
-                          courseId={course.id} 
-                          courseName={course.name} 
-                        />
-                        
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">

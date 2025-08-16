@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Search, Mail, UserMinus, Calendar } from 'lucide-react';
+import { Users, Search, Mail, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { UnsubscribeConfirmDialog } from '@/components/dialogs/UnsubscribeConfirmDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Participant {
   id: string;
@@ -14,6 +17,7 @@ interface Participant {
   scheduled_date: string;
   scheduled_time: string;
   status: string;
+  credits_used: number;
   user: {
     first_name: string;
     last_name: string;
@@ -30,12 +34,27 @@ interface Participant {
 interface CourseParticipantsListProps {
   courseId: string;
   courseName: string;
+  maxParticipants?: number;
+  reservedSpots?: number;
 }
 
 export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({ 
   courseId, 
-  courseName 
+  courseName,
+  maxParticipants = 20,
+  reservedSpots = 0
 }) => {
+  const { user } = useAuth();
+  const [userRole, setUserRole] = useState<string>('');
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!user) return;
+      const { data } = await supabase.rpc('get_user_role', { _user_id: user.id });
+      setUserRole(data || '');
+    };
+    checkUserRole();
+  }, [user]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,6 +126,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
           return {
             ...booking,
+            user_id: booking.user_id, // Ensure user_id is available for UnsubscribeDialog
             user: userProfile || {
               first_name: 'Nome non trovato',
               last_name: '',
@@ -150,6 +170,9 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     return <Badge variant="secondary">{participant.subscription.plan_name}</Badge>;
   };
 
+  const availableSpots = maxParticipants - reservedSpots - participants.length;
+  const canManageParticipants = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
+
   if (loading) {
     return <div className="text-center py-8">Caricamento partecipanti...</div>;
   }
@@ -157,16 +180,18 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Users className="h-4 w-4 mr-2" />
-          Partecipanti ({participants.length})
+        <Button variant="outline" size="sm" className="flex items-center gap-1">
+          <Users className="h-4 w-4" />
+          {participants.length}/{maxParticipants}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Partecipanti - {courseName}</DialogTitle>
+          <DialogTitle>Partecipanti al corso</DialogTitle>
           <DialogDescription>
-            Lista dei partecipanti che hanno prenotato questo corso
+            {courseName} - {participants.length}/{maxParticipants} posti occupati
+            {availableSpots > 0 && ` • ${availableSpots} posti disponibili`}
+            {reservedSpots > 0 && ` • ${reservedSpots} posti riservati`}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,10 +214,13 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
           </div>
 
           {/* Stats */}
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <span>Totale partecipanti: {participants.length}</span>
-            <span>•</span>
-            <span>Visualizzati: {filteredParticipants.length}</span>
+          <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
+            <span>{filteredParticipants.length} risultati trovati</span>
+            <div className="flex items-center gap-4">
+              <span>Occupati: {participants.length}/{maxParticipants}</span>
+              {availableSpots > 0 && <span className="text-green-600">Disponibili: {availableSpots}</span>}
+              {reservedSpots > 0 && <span>Riservati: {reservedSpots}</span>}
+            </div>
           </div>
 
           {/* Participants List */}
@@ -243,15 +271,18 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={participant.status === 'confirmed' ? 'default' : 'secondary'}
-                          >
-                            {participant.status === 'confirmed' ? 'Confermato' : participant.status}
+                          {getSubscriptionBadge(participant)}
+                          <Badge variant="outline">
+                            {participant.status}
                           </Badge>
-                          
-                          <Button variant="outline" size="sm">
-                            <UserMinus className="h-4 w-4" />
-                          </Button>
+                          {canManageParticipants && (
+                            <UnsubscribeConfirmDialog
+                              participant={participant}
+                              courseId={courseId}
+                              courseName={courseName}
+                              onUnsubscribeSuccess={loadParticipants}
+                            />
+                          )}
                         </div>
                       </div>
                     </CardContent>
