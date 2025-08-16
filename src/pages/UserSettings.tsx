@@ -218,7 +218,7 @@ export default function UserSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 pb-20">
+    <div className="min-h-screen bg-background p-3 sm:p-4 pb-40 md:pb-20">
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-4xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
