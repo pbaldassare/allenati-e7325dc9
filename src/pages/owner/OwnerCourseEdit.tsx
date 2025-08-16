@@ -5,31 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-
-interface Course {
-  id: string;
-  name: string;
-  description: string;
-  instructor_id: string;
-  category_id: string;
-  max_participants: number;
-  duration_minutes: number;
-  difficulty_level: number;
-  price_per_session: number;
-  credits_required: number;
-  requirements: string[];
-  benefits: string[];
-  equipment_needed: string[];
-  image_url: string;
-  deadline_hours: number;
-  reserved_spots: number;
-  is_active: boolean;
-}
+import { SupabaseCourse } from '@/types/course';
 
 const OwnerCourseEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<SupabaseCourse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +81,7 @@ const OwnerCourseEdit = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <OwnerCourseForm mode="edit" course={course} />
+          <OwnerCourseForm mode="edit" course={course as any} />
         </CardContent>
       </Card>
     </div>

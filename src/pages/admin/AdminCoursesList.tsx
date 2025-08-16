@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { CourseWithRelations, getInstructorName, getDifficultyText, getDayName } from '@/types/course';
 import {
   Plus,
   Search,
@@ -30,38 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface Course {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-  max_participants: number;
-  credits_required: number;
-  price_per_session: number;
-  difficulty_level: number;
-  instructor: {
-    id: string;
-    user_id: string;
-    profiles: {
-      first_name: string;
-      last_name: string;
-    };
-  };
-  course_categories: {
-    name: string;
-  };
-  course_schedules: Array<{
-    day_of_week: number;
-    start_time: string;
-    end_time: string;
-  }>;
-  _count?: {
-    bookings: number;
-  };
-}
-
 const AdminCoursesList = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<CourseWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -75,18 +46,12 @@ const AdminCoursesList = () => {
   const loadCourses = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First, get basic course data
+      const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select(`
           *,
-          instructor:instructors!courses_instructor_id_fkey (
-            id,
-            user_id,
-            profiles:user_id (
-              first_name,
-              last_name
-            )
-          ),
           course_categories (
             name
           ),
@@ -99,13 +64,46 @@ const AdminCoursesList = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (coursesError) throw coursesError;
+      console.log('Courses loaded:', coursesData);
 
-      setCourses(data || []);
+      // Then get instructor data separately to avoid relation issues
+      const coursesWithInstructors = await Promise.all(
+        (coursesData || []).map(async (course) => {
+          // Get instructor data
+          const { data: instructorData } = await supabase
+            .from('instructors')
+            .select('id, user_id')
+            .eq('id', course.instructor_id)
+            .single();
+
+          let instructorProfiles = null;
+          if (instructorData) {
+            // Get profiles data separately
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('user_id', instructorData.user_id)
+              .single();
+            
+            instructorProfiles = profileData;
+          }
+
+          return {
+            ...course,
+            instructor: instructorData ? {
+              ...instructorData,
+              profiles: instructorProfiles
+            } : null
+          };
+        })
+      );
+
+      setCourses(coursesWithInstructors);
       
       // Extract unique categories
       const uniqueCategories = Array.from(
-        new Set(data?.map(course => course.course_categories?.name).filter(Boolean) || [])
+        new Set(coursesWithInstructors.map(course => course.course_categories?.name).filter(Boolean))
       );
       setCategories(uniqueCategories);
     } catch (error) {
@@ -116,7 +114,7 @@ const AdminCoursesList = () => {
   };
 
   const filteredCourses = courses.filter(course => {
-    const instructorName = `${course.instructor?.profiles?.first_name || ''} ${course.instructor?.profiles?.last_name || ''}`.trim();
+    const instructorName = getInstructorName(course);
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          instructorName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || course.course_categories?.name === categoryFilter;
@@ -137,11 +135,6 @@ const AdminCoursesList = () => {
         ? [] 
         : filteredCourses.map(course => course.id)
     );
-  };
-
-  const getDayName = (dayOfWeek: number) => {
-    const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-    return days[dayOfWeek] || 'Non programmato';
   };
 
   return (
@@ -246,13 +239,11 @@ const AdminCoursesList = () => {
                   </div>
                 ) : (
                   filteredCourses.map((course) => {
-                    const instructorName = `${course.instructor?.profiles?.first_name || ''} ${course.instructor?.profiles?.last_name || ''}`.trim();
+                    const instructorName = getInstructorName(course);
                     const currentParticipants = course._count?.bookings || 0;
                     const firstSchedule = course.course_schedules?.[0];
                     const scheduleText = firstSchedule ? getDayName(firstSchedule.day_of_week) : 'Non programmato';
-                    const difficultyText = course.difficulty_level === 1 ? 'Principiante' : 
-                                         course.difficulty_level === 2 ? 'Intermedio' : 
-                                         course.difficulty_level === 3 ? 'Avanzato' : 'Non specificato';
+                    const difficultyText = getDifficultyText(course.difficulty_level);
 
                     return (
                       <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -334,9 +325,9 @@ const AdminCoursesList = () => {
                     );
                   })
                 )}
-              </div>
+          </div>
 
-          {filteredCourses.length === 0 && (
+          {filteredCourses.length === 0 && !loading && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Nessun corso trovato</p>
             </div>
