@@ -31,6 +31,7 @@ const courseSchema = z.object({
   level: z.string().min(1, 'Seleziona un livello'),
   price: z.coerce.number().min(0, 'Il prezzo deve essere positivo'),
   maxParticipants: z.coerce.number().min(1, 'Massimo partecipanti deve essere almeno 1'),
+  reservedSpots: z.coerce.number().min(0, 'I posti riservati non possono essere negativi').optional(),
   duration: z.coerce.number().min(15, 'La durata minima è 15 minuti'),
   deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
   image: z.string().url('Inserisci un URL valido per l\'immagine').optional().or(z.literal("")),
@@ -167,6 +168,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       level: course.level,
       price: course.price,
       maxParticipants: course.maxParticipants,
+      reservedSpots: (course as any).reservedSpots || 0,
       duration: course.duration,
       deadlineHours: course.deadlineHours || 24,
       image: course.image,
@@ -187,6 +189,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       level: '',
       price: 0,
       maxParticipants: 20,
+      reservedSpots: 0,
       duration: 60,
       deadlineHours: 24,
       image: '',
@@ -234,6 +237,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         difficulty_level: data.level === 'Principiante' ? 1 : data.level === 'Intermedio' ? 2 : 3,
         price_per_session: data.price,
         max_participants: data.maxParticipants,
+        reserved_spots: data.reservedSpots || 0,
         duration_minutes: data.duration,
         deadline_hours: data.deadlineHours,
         image_url: data.image,
@@ -424,24 +428,48 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="maxParticipants"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Massimo Partecipanti</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="20"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="maxParticipants"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Massimo Partecipanti</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="20"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reservedSpots"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Posti riservati agli abbonati</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={form.watch('maxParticipants') || 20}
+                      placeholder="0"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Numero di posti riservati esclusivamente a chi ha crediti o abbonamenti.
+                    I restanti {(form.watch('maxParticipants') || 20) - (form.watch('reservedSpots') || 0)} posti saranno disponibili per l'acquisto diretto.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
           <FormField
             control={form.control}

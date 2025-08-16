@@ -487,6 +487,7 @@ export type Database = {
           name: string
           price_per_session: number | null
           requirements: string[] | null
+          reserved_spots: number
           updated_at: string
         }
         Insert: {
@@ -508,6 +509,7 @@ export type Database = {
           name: string
           price_per_session?: number | null
           requirements?: string[] | null
+          reserved_spots?: number
           updated_at?: string
         }
         Update: {
@@ -529,6 +531,7 @@ export type Database = {
           name?: string
           price_per_session?: number | null
           requirements?: string[] | null
+          reserved_spots?: number
           updated_at?: string
         }
         Relationships: [

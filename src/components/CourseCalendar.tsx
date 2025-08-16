@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { BookingConfirmDialog } from "@/components/dialogs/BookingConfirmDialog";
 import { CancellationConfirmDialog } from "@/components/dialogs/CancellationConfirmDialog";
+import { ReservedSpotsDialog } from "@/components/dialogs/ReservedSpotsDialog";
 
 // Icon mapping
 const courseIcons = {
@@ -58,6 +59,7 @@ export const CourseCalendar = () => {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [showReservedSpotsDialog, setShowReservedSpotsDialog] = useState(false);
   const [pendingBookingData, setPendingBookingData] = useState<{
     courseId: string;
     scheduledDate: string;
@@ -139,7 +141,70 @@ export const CourseCalendar = () => {
     loadData();
   }, [user, toast]);
 
-  const openBookingDialog = (course: any, scheduledDate: string, scheduledTime: string) => {
+  const openBookingDialog = async (course: any, scheduledDate: string, scheduledTime: string) => {
+    // Check user credits and subscription status
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('current_credits')
+      .eq('user_id', user?.id)
+      .maybeSingle();
+
+    const { data: activeSubscription } = await supabase
+      .from('user_subscriptions')
+      .select('*, subscription_plans(unlimited_access)')
+      .eq('user_id', user?.id)
+      .eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    const hasCreditsOrUnlimitedAccess = 
+      (profile && profile.current_credits > 0) || 
+      (activeSubscription?.subscription_plans?.unlimited_access);
+
+    // Count current bookings for this course on this date/time
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('course_id', course.id)
+      .eq('scheduled_date', scheduledDate)
+      .eq('scheduled_time', scheduledTime)
+      .eq('status', 'confirmed');
+
+    const currentBookings = bookings?.length || 0;
+    const totalSpots = course.max_participants;
+    const reservedSpots = course.reserved_spots || 0;
+    const publicSpots = totalSpots - reservedSpots;
+
+    // Check availability based on user status
+    if (hasCreditsOrUnlimitedAccess) {
+      // Users with credits/unlimited access can book if total spots available
+      if (currentBookings >= totalSpots) {
+        toast({
+          title: "Corso al completo",
+          description: "Non ci sono più posti disponibili per questo corso",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Users without credits can only book if public spots available
+      if (currentBookings >= publicSpots) {
+        // Show reserved spots dialog if there are reserved spots remaining
+        if (currentBookings < totalSpots && reservedSpots > 0) {
+          setSelectedCourse({ ...course, scheduledDate, scheduledTime });
+          setShowReservedSpotsDialog(true);
+          return;
+        } else {
+          toast({
+            title: "Corso al completo",
+            description: "Non ci sono più posti disponibili per questo corso",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     setSelectedCourse(course);
     setPendingBookingData({
       courseId: course.id,
@@ -517,6 +582,17 @@ export const CourseCalendar = () => {
         booking={selectedBooking || {}}
         onConfirm={handleCancellationConfirm}
         isLoading={loadingBooking === selectedBooking?.course_id}
+      />
+
+      <ReservedSpotsDialog
+        open={showReservedSpotsDialog}
+        onOpenChange={setShowReservedSpotsDialog}
+        courseName={selectedCourse?.name || ''}
+        coursePrice={selectedCourse?.price_per_session}
+        creditsRequired={selectedCourse?.credits_required || 1}
+        availableSpots={selectedCourse ? Math.max(0, (selectedCourse.max_participants - (selectedCourse.reserved_spots || 0)) - (selectedCourse.currentBookings || 0)) : 0}
+        reservedSpots={selectedCourse?.reserved_spots || 0}
+        publicSpots={selectedCourse ? selectedCourse.max_participants - (selectedCourse.reserved_spots || 0) : 0}
       />
     </div>
   );

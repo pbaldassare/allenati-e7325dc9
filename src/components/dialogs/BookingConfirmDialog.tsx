@@ -18,6 +18,7 @@ interface BookingConfirmDialogProps {
     credits_required?: number;
     difficulty_level?: number;
     price_per_session?: number;
+    reserved_spots?: number;
     instructors?: {
       id?: string;
       profiles?: {
@@ -163,6 +164,30 @@ export const BookingConfirmDialog = ({
                 <div className="flex items-center text-muted-foreground">
                   <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                   <span>Max {course.max_participants} partecipanti</span>
+                </div>
+              )}
+
+              {course.reserved_spots && course.reserved_spots > 0 && (
+                <div className="flex items-center justify-between text-foreground">
+                  <div className="flex items-center text-muted-foreground">
+                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                    <span>Posti riservati:</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary">
+                    {course.reserved_spots} per abbonati
+                  </Badge>
+                </div>
+              )}
+
+              {course.max_participants && course.reserved_spots && (
+                <div className="flex items-center justify-between text-foreground">
+                  <div className="flex items-center text-muted-foreground">
+                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                    <span>Posti pubblici:</span>
+                  </div>
+                  <Badge variant="outline">
+                    {course.max_participants - course.reserved_spots} disponibili
+                  </Badge>
                 </div>
               )}
 
