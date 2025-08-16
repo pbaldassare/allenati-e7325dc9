@@ -20,6 +20,9 @@ interface CancellationConfirmDialogProps {
     instructor?: { 
       profiles?: { first_name: string; last_name: string } 
     } | string;
+    instructors?: {
+      profiles?: { first_name: string; last_name: string }
+    };
     deadline_hours?: number;
   };
   booking: {
@@ -60,6 +63,9 @@ export const CancellationConfirmDialog = ({
     }
     if (course.instructor?.profiles) {
       return `${course.instructor.profiles.first_name} ${course.instructor.profiles.last_name}`;
+    }
+    if (course.instructors?.profiles) {
+      return `${course.instructors.profiles.first_name} ${course.instructors.profiles.last_name}`;
     }
     return 'Istruttore non disponibile';
   };
