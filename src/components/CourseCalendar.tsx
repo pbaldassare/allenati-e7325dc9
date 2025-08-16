@@ -96,16 +96,34 @@ export const CourseCalendar = () => {
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
-            instructors(
-              user_id,
-              profiles(first_name, last_name, email)
-            ),
+            instructors(*),
             course_schedules(*)
           `)
           .eq('gym_id', userGym)
           .eq('is_active', true);
 
         if (coursesError) throw coursesError;
+
+        // Load instructor profiles separately 
+        const instructorIds = coursesData?.map(course => course.instructors?.user_id).filter(Boolean) || [];
+        const { data: instructorProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, email')
+          .in('user_id', instructorIds);
+
+        // Create instructor profiles map for easier lookup
+        const instructorProfilesMap = new Map(
+          instructorProfiles?.map(profile => [profile.user_id, profile]) || []
+        );
+
+        // Merge instructor profiles with course data
+        const coursesWithInstructors = coursesData?.map(course => ({
+          ...course,
+          instructors: course.instructors ? {
+            ...course.instructors,
+            profile: instructorProfilesMap.get(course.instructors.user_id)
+          } : null
+        })) || [];
 
         // Load user's bookings
         const { data: bookingsData, error: bookingsError } = await supabase
@@ -127,7 +145,7 @@ export const CourseCalendar = () => {
 
         const categoryNames = ['Tutti', ...(categoriesData?.map(c => c.name) || [])];
 
-        setCourses(coursesData || []);
+        setCourses(coursesWithInstructors);
         setBookings(bookingsData || []);
         setCategories(categoryNames);
         
@@ -501,8 +519,8 @@ export const CourseCalendar = () => {
               <div className="space-y-3">
                 {coursesByDay[day].map((course) => {
                   const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Users;
-                  const instructorName = course.instructors?.profiles ? 
-                    `${course.instructors.profiles.first_name} ${course.instructors.profiles.last_name}` : 
+                  const instructorName = course.instructors?.profile ? 
+                    `${course.instructors.profile.first_name || ''} ${course.instructors.profile.last_name || ''}`.trim() || course.instructors.profile.email?.split('@')[0] : 
                     'Istruttore';
                   
                   return (
