@@ -18,21 +18,21 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 5%;
 
-    /* Ultra-Trendy Neon Lime Primary */
-    --primary: 105 100% 50%;
-    --primary-foreground: 0 0% 8%;
+    /* Digital Blue Primary */
+    --primary: 214 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Deep Electric Purple Secondary */
-    --secondary: 262 70% 55%;
+    /* Navy Blue Secondary */
+    --secondary: 220 100% 25%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Refined Warm Neutrals */
+    /* Refined Neutrals */
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 42%;
 
-    /* Hot Pink Accent */
-    --accent: 330 100% 65%;
-    --accent-foreground: 0 0% 100%;
+    /* Sky Blue Accent */
+    --accent: 205 100% 65%;
+    --accent-foreground: 0 0% 8%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
@@ -51,18 +51,18 @@ All colors MUST be HSL.
     --warning: 43 96% 56%;
     --warning-foreground: 0 0% 5%;
 
-    /* Ultra-Trendy Neon Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(105 100% 50%), hsl(180 100% 45%));
-    --gradient-secondary: linear-gradient(135deg, hsl(262 70% 55%), hsl(240 100% 65%));
-    --gradient-accent: linear-gradient(135deg, hsl(330 100% 65%), hsl(18 100% 55%));
+    /* Professional Blue Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 50%), hsl(205 100% 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 100% 25%), hsl(214 100% 40%));
+    --gradient-accent: linear-gradient(135deg, hsl(205 100% 65%), hsl(214 100% 55%));
     --gradient-success: linear-gradient(135deg, hsl(158 64% 52%), hsl(142 76% 36%));
-    --gradient-warm: linear-gradient(135deg, hsl(330 100% 65%), hsl(262 70% 55%));
+    --gradient-warm: linear-gradient(135deg, hsl(214 100% 50%), hsl(220 100% 25%));
 
-    /* Ultra-Trendy Glow Shadows */
-    --shadow-primary: 0 10px 40px -12px hsla(105, 100%, 50%, 0.4);
-    --shadow-secondary: 0 10px 40px -12px hsla(262, 70%, 55%, 0.3);
-    --shadow-card: 0 4px 24px -4px hsla(0, 0%, 0%, 0.08);
-    --shadow-glow: 0 0 30px hsla(105, 100%, 50%, 0.2);
+    /* Professional Shadows */
+    --shadow-primary: 0 10px 40px -12px hsla(214, 100%, 50%, 0.3);
+    --shadow-secondary: 0 10px 40px -12px hsla(220, 100%, 25%, 0.25);
+    --shadow-card: 0 4px 24px -4px hsla(214, 50%, 30%, 0.1);
+    --shadow-glow: 0 0 20px hsla(214, 100%, 50%, 0.15);
 
     /* Smooth Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -97,17 +97,17 @@ All colors MUST be HSL.
     --popover: 0 0% 8%;
     --popover-foreground: 0 0% 98%;
 
-    /* Ultra-bright neon colors for dark mode */
-    --primary: 105 100% 50%;
-    --primary-foreground: 0 0% 8%;
+    /* Digital Blue for dark mode */
+    --primary: 214 100% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 262 70% 55%;
+    --secondary: 220 100% 30%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 14%;
     --muted-foreground: 0 0% 68%;
 
-    --accent: 330 100% 65%;
+    --accent: 205 100% 70%;
     --accent-foreground: 0 0% 8%;
 
     --destructive: 0 84% 60%;
@@ -117,18 +117,18 @@ All colors MUST be HSL.
     --input: 0 0% 16%;
     --ring: 18 100% 60%;
 
-    /* Enhanced neon gradients for dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(105 100% 50%), hsl(180 100% 45%));
-    --gradient-secondary: linear-gradient(135deg, hsl(262 70% 55%), hsl(240 100% 65%));
-    --gradient-accent: linear-gradient(135deg, hsl(330 100% 65%), hsl(18 100% 55%));
+    /* Professional blue gradients for dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 60%), hsl(205 100% 70%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 100% 30%), hsl(214 100% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(205 100% 70%), hsl(214 100% 60%));
     --gradient-success: linear-gradient(135deg, hsl(158 64% 52%), hsl(142 76% 36%));
-    --gradient-warm: linear-gradient(135deg, hsl(330 100% 65%), hsl(262 70% 55%));
+    --gradient-warm: linear-gradient(135deg, hsl(214 100% 60%), hsl(220 100% 30%));
 
-    /* Enhanced neon shadows for dark mode */
-    --shadow-primary: 0 10px 40px -12px hsla(105, 100%, 50%, 0.6);
-    --shadow-secondary: 0 10px 40px -12px hsla(262, 70%, 55%, 0.4);
+    /* Professional shadows for dark mode */
+    --shadow-primary: 0 10px 40px -12px hsla(214, 100%, 60%, 0.4);
+    --shadow-secondary: 0 10px 40px -12px hsla(220, 100%, 30%, 0.3);
     --shadow-card: 0 4px 24px -4px hsla(0, 0%, 0%, 0.4);
-    --shadow-glow: 0 0 40px hsla(105, 100%, 50%, 0.3);
+    --shadow-glow: 0 0 25px hsla(214, 100%, 60%, 0.2);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
