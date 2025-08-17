@@ -111,7 +111,7 @@ const App = () => (
 
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
-                <Route path="/abbonamenti" element={<Subscriptions />} />
+                <Route path="/subscriptions" element={<Subscriptions />} />
                 <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />
                 <Route path="*" element={<NotFound />} />
