@@ -15,10 +15,8 @@ import { AuthButtons } from "@/components/auth/AuthButtons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthModal } from "@/hooks/useAuthModal";
 import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
-import { GymJoinDropdown } from "@/components/GymJoinDropdown";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HelpCircle, ArrowLeft } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -41,6 +39,10 @@ const Index = () => {
       navigate("/owner");
       return;
     }
+    if (tab === "gyms") {
+      navigate("/gyms");
+      return;
+    }
     
     // Handle internal tabs
     setActiveTab(tab);
@@ -60,36 +62,6 @@ const Index = () => {
         return <UserSubscriptionSelector />;
       case "profile":
         return <Profile onTabChange={handleTabChange} />;
-      case "join-gym":
-        return (
-          <div className="min-h-screen bg-background pb-20">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center gap-3 mb-6">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab("home")}
-                  className="p-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <h1 className="text-xl font-semibold">Unisciti a una Palestra</h1>
-              </div>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cerca e Richiedi Accesso</CardTitle>
-                  <CardDescription>
-                    Trova nuove palestre nella tua zona e richiedi l'accesso
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <GymJoinDropdown onRequestSent={() => setActiveTab("home")} />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
       default:
         return <Dashboard />;
     }

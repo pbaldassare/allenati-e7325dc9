@@ -10,8 +10,6 @@ import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog'
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 import { GymSelector } from './GymSelector';
 import { GymCreditsCard } from './GymCreditsCard';
-import { MyGymsSection } from './MyGymsSection';
-import { GymRequestsCard } from './GymRequestsCard';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 
@@ -303,11 +301,6 @@ export const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Le mie palestre */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <MyGymsSection />
-        <GymRequestsCard />
-      </div>
 
       <BookingConfirmDialog
         open={bookingDialogOpen}

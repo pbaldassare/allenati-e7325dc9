@@ -47,6 +47,7 @@ import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
 import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
+import Gyms from "./pages/Gyms";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,7 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/bookings" element={<BookingHistory />} />
                 <Route path="/subscriptions" element={<Subscriptions />} />
+                <Route path="/gyms" element={<Gyms />} />
                 <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />
                 <Route path="*" element={<NotFound />} />

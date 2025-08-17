@@ -17,7 +17,7 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
     { id: "calendar", icon: Calendar, label: "Corsi" },
     { id: "shop", icon: ShoppingBag, label: "Shop" },
     // Add gym join button for regular users only
-    ...(!isAdmin && !isGymOwner ? [{ id: "join-gym", icon: Plus, label: "Palestre" }] : []),
+    ...(!isAdmin && !isGymOwner ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
     ...(isAdmin
       ? [{ id: "admin", icon: Settings, label: "Admin" }]
       : isGymOwner
