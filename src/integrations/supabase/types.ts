@@ -564,6 +564,7 @@ export type Database = {
           balance_after: number
           created_at: string
           description: string | null
+          gym_id: string | null
           id: string
           reference_id: string | null
           transaction_type: string
@@ -574,6 +575,7 @@ export type Database = {
           balance_after: number
           created_at?: string
           description?: string | null
+          gym_id?: string | null
           id?: string
           reference_id?: string | null
           transaction_type: string
@@ -584,12 +586,21 @@ export type Database = {
           balance_after?: number
           created_at?: string
           description?: string | null
+          gym_id?: string | null
           id?: string
           reference_id?: string | null
           transaction_type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "credits_transactions_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_reports: {
         Row: {
@@ -695,6 +706,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      gym_credits: {
+        Row: {
+          created_at: string
+          credits: number
+          gym_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          gym_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          gym_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_credits_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gym_rooms: {
         Row: {
@@ -1344,6 +1390,7 @@ export type Database = {
           description: string | null
           duration_days: number
           features: string[] | null
+          gym_id: string | null
           id: string
           is_active: boolean
           is_trial: boolean
@@ -1358,6 +1405,7 @@ export type Database = {
           description?: string | null
           duration_days: number
           features?: string[] | null
+          gym_id?: string | null
           id?: string
           is_active?: boolean
           is_trial?: boolean
@@ -1372,6 +1420,7 @@ export type Database = {
           description?: string | null
           duration_days?: number
           features?: string[] | null
+          gym_id?: string | null
           id?: string
           is_active?: boolean
           is_trial?: boolean
@@ -1380,7 +1429,15 @@ export type Database = {
           unlimited_access?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_achievements: {
         Row: {
@@ -1554,6 +1611,7 @@ export type Database = {
           auto_renew: boolean
           created_at: string
           expires_at: string
+          gym_id: string | null
           id: string
           plan_id: string
           starts_at: string
@@ -1565,6 +1623,7 @@ export type Database = {
           auto_renew?: boolean
           created_at?: string
           expires_at: string
+          gym_id?: string | null
           id?: string
           plan_id: string
           starts_at?: string
@@ -1576,6 +1635,7 @@ export type Database = {
           auto_renew?: boolean
           created_at?: string
           expires_at?: string
+          gym_id?: string | null
           id?: string
           plan_id?: string
           starts_at?: string
@@ -1584,6 +1644,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_subscriptions_plan_id_fkey"
             columns: ["plan_id"]
@@ -1622,12 +1689,24 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      get_user_credits_for_gym: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: number
+      }
       get_user_gym_id: {
         Args: { _user_id: string }
         Returns: string
       }
+      get_user_gyms: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
       get_user_role: {
         Args: { _user_id: string }
+        Returns: string
+      }
+      get_user_subscription_for_gym: {
+        Args: { _gym_id: string; _user_id: string }
         Returns: string
       }
       has_role: {
