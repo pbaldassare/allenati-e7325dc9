@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Calendar, Infinity } from 'lucide-react';
@@ -20,29 +21,31 @@ interface UserSubscription {
 
 export default function CreditsSubscriptionCard() {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const navigate = useNavigate();
   const [credits, setCredits] = useState<number>(0);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (user && selectedGym) {
       loadData();
     }
-  }, [user]);
+  }, [user, selectedGym]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user || !selectedGym) return;
 
     try {
-      // Carica crediti
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('current_credits')
+      // Carica crediti per la palestra selezionata
+      const { data: creditsData } = await supabase
+        .from('gym_credits')
+        .select('credits')
         .eq('user_id', user.id)
+        .eq('gym_id', selectedGym.id)
         .single();
 
-      // Carica abbonamento attivo
+      // Carica abbonamento attivo per la palestra selezionata
       const { data: subscriptionData } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -55,11 +58,12 @@ export default function CreditsSubscriptionCard() {
           )
         `)
         .eq('user_id', user.id)
+        .eq('gym_id', selectedGym.id)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
         .single();
 
-      setCredits(profileData?.current_credits || 0);
+      setCredits(creditsData?.credits || 0);
       setSubscription(subscriptionData);
     } catch (error) {
       console.error('Errore nel caricamento dati crediti/abbonamento:', error);
@@ -69,7 +73,7 @@ export default function CreditsSubscriptionCard() {
   };
 
   const handleManageSubscriptions = () => {
-    navigate('/abbonamenti');
+    navigate('/subscriptions');
   };
 
   const getSubscriptionStatus = () => {

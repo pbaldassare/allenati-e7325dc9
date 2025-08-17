@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft } from 'lucide-react';
@@ -33,6 +34,7 @@ interface UserSubscription {
 
 export default function Subscriptions() {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -44,24 +46,25 @@ export default function Subscriptions() {
   useEffect(() => {
     document.title = 'Abbonamenti | FitApp';
     loadData();
-  }, [user]);
+  }, [user, selectedGym]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user || !selectedGym) return;
 
     try {
-      // Carica piani di abbonamento (escludi trial)
+      // Carica piani di abbonamento per la palestra selezionata
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('is_active', true)
         .eq('is_trial', false)
+        .or(`gym_id.is.null,gym_id.eq.${selectedGym.id}`)
         .order('price');
 
       if (plansError) throw plansError;
 
-      // Carica abbonamento corrente - gestisce correttamente il caso senza abbonamento
-      console.log('Loading subscription for user:', user.id);
+      // Carica abbonamento corrente per la palestra selezionata
+      console.log('Loading subscription for user:', user.id, 'gym:', selectedGym.id);
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -69,6 +72,7 @@ export default function Subscriptions() {
           plan:subscription_plans(*)
         `)
         .eq('user_id', user.id)
+        .eq('gym_id', selectedGym.id)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
@@ -85,18 +89,21 @@ export default function Subscriptions() {
       
       console.log('Subscription data loaded:', subscriptionData);
 
-      // Carica crediti utente
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('current_credits')
+      // Carica crediti utente per la palestra selezionata
+      const { data: creditsData, error: creditsError } = await supabase
+        .from('gym_credits')
+        .select('credits')
         .eq('user_id', user.id)
+        .eq('gym_id', selectedGym.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (creditsError && creditsError.code !== 'PGRST116') {
+        console.error('Credits error:', creditsError);
+      }
 
       setPlans(plansData || []);
       setCurrentSubscription(subscriptionData);
-      setUserCredits(profileData?.current_credits || 0);
+      setUserCredits(creditsData?.credits || 0);
     } catch (error) {
       console.error('Errore nel caricamento dati:', error);
       toast({
@@ -110,16 +117,17 @@ export default function Subscriptions() {
   };
 
   const selectPlan = async (plan: SubscriptionPlan) => {
-    if (!user || changing) return;
+    if (!user || !selectedGym || changing) return;
 
     setChanging(plan.id);
 
     try {
-      // Disattiva TUTTI gli abbonamenti attivi per questo utente
+      // Disattiva abbonamenti attivi per questo utente e palestra
       const { error: cancelError } = await supabase
         .from('user_subscriptions')
         .update({ status: 'cancelled' })
         .eq('user_id', user.id)
+        .eq('gym_id', selectedGym.id)
         .eq('status', 'active');
 
       if (cancelError) {
@@ -132,12 +140,13 @@ export default function Subscriptions() {
       const expiresAt = new Date();
       expiresAt.setDate(startsAt.getDate() + plan.duration_days);
 
-      // Crea nuovo abbonamento
+      // Crea nuovo abbonamento per la palestra
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .insert({
           user_id: user.id,
           plan_id: plan.id,
+          gym_id: selectedGym.id,
           status: 'active',
           starts_at: startsAt.toISOString(),
           expires_at: expiresAt.toISOString(),
@@ -148,28 +157,26 @@ export default function Subscriptions() {
 
       // Aggiungi crediti se inclusi nel piano
       if (plan.credits_included > 0) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('current_credits')
+        const { data: currentCreditsData } = await supabase
+          .from('gym_credits')
+          .select('credits')
           .eq('user_id', user.id)
+          .eq('gym_id', selectedGym.id)
           .single();
 
-        const currentCredits = profileData?.current_credits || 0;
+        const currentCredits = currentCreditsData?.credits || 0;
         const newBalance = currentCredits + plan.credits_included;
 
-        await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', user.id);
-
+        // Inserisci transazione per la palestra
         await supabase
           .from('credits_transactions')
           .insert({
             user_id: user.id,
+            gym_id: selectedGym.id,
             amount: plan.credits_included,
             balance_after: newBalance,
             transaction_type: 'subscription_purchase',
-            description: `Crediti da abbonamento ${plan.name}`,
+            description: `Crediti da abbonamento ${plan.name} - ${selectedGym.name}`,
           });
       }
 
@@ -233,18 +240,18 @@ export default function Subscriptions() {
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl font-bold">Gestisci Abbonamenti</h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Scegli il piano perfetto per le tue esigenze di fitness
+              Scegli il piano perfetto per {selectedGym?.name}
             </p>
           </div>
         </div>
 
-        {/* Crediti attuali */}
+        {/* Crediti attuali per palestra */}
         <Card className="border-primary/20 bg-gradient-primary">
           <CardHeader className="text-center text-primary-foreground">
             <CardTitle className="text-xl">I tuoi Crediti</CardTitle>
             <div className="text-4xl font-bold">{userCredits}</div>
             <CardDescription className="text-primary-foreground/80">
-              crediti disponibili
+              crediti disponibili per {selectedGym?.name}
             </CardDescription>
           </CardHeader>
         </Card>

@@ -11,6 +11,7 @@ import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConf
 import CreditsSubscriptionCard from './CreditsSubscriptionCard';
 import { GymSelector } from './GymSelector';
 import { GymCreditsCard } from './GymCreditsCard';
+import { MyGymsSection } from './MyGymsSection';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 
