@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,6 @@ import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConf
 import { GymCreditsCard } from './GymCreditsCard';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
-import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -44,7 +43,8 @@ export const Dashboard = () => {
             *,
             course_categories(name, color_hex, icon_name),
             instructors(user_id),
-            course_schedules(*)
+            course_schedules(*),
+            gyms(name)
           `)
           .eq('gym_id', selectedGym.id)
           .eq('is_active', true)
@@ -192,8 +192,6 @@ export const Dashboard = () => {
         </Button>
       </div>
 
-      {/* Monthly Calendar */}
-      <MonthlyCalendarCompact />
 
       {/* Modern Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
@@ -257,6 +255,10 @@ export const Dashboard = () => {
                     </div>
                     <div>
                       <p className="font-bold text-lg">{course.name}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mb-1">
+                        <Building2 className="h-4 w-4" />
+                        <span>{course.gyms?.name || 'Palestra'}</span>
+                      </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
                         <Clock className="h-4 w-4" />
                         <span>{schedule?.start_time || "N/A"}</span>
