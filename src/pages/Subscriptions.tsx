@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft, Crown, Users } from 'lucide-react';
 
 interface SubscriptionPlan {
   id: string;
@@ -21,6 +21,7 @@ interface SubscriptionPlan {
   is_trial: boolean;
   is_active: boolean;
   features: string[];
+  gym_id: string | null;
 }
 
 interface UserSubscription {
@@ -52,13 +53,14 @@ export default function Subscriptions() {
     if (!user || !selectedGym) return;
 
     try {
-      // Carica piani di abbonamento per la palestra selezionata
+      // Carica piani di abbonamento: globali + specifici della palestra selezionata
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('is_active', true)
         .eq('is_trial', false)
         .or(`gym_id.is.null,gym_id.eq.${selectedGym.id}`)
+        .order('gym_id', { ascending: false }) // Piani specifici della palestra prima
         .order('price');
 
       if (plansError) throw plansError;
@@ -289,11 +291,26 @@ export default function Subscriptions() {
                         : 'hover:border-primary/50 transition-all duration-300'
                     }`}
                   >
-                    {isActive && (
+                     {isActive && (
                       <Badge className="absolute -top-2 left-4 bg-primary">
                         Attivo
                       </Badge>
                     )}
+
+                    {/* Badge per distinguere piano globale vs gym-specific */}
+                    <div className="absolute -top-2 right-4">
+                      {plan.gym_id ? (
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Personalizzato
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Crown className="h-3 w-3" />
+                          Globale
+                        </Badge>
+                      )}
+                    </div>
                     
                     <CardHeader className="text-center pb-4">
                       <div className="flex justify-center mb-2">
