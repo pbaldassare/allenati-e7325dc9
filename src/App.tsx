@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
+import { GymProvider } from "@/contexts/GymContext";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -58,8 +59,9 @@ const App = () => (
       disableTransitionOnChange
     >
       <AuthProvider>
-        <AppDataProvider>
-          <TooltipProvider>
+        <GymProvider>
+          <AppDataProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -116,7 +118,8 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
-        </AppDataProvider>
+          </AppDataProvider>
+        </GymProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

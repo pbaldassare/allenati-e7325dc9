@@ -9,10 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 import CreditsSubscriptionCard from './CreditsSubscriptionCard';
+import { GymSelector } from './GymSelector';
+import { GymCreditsCard } from './GymCreditsCard';
+import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 
 export const Dashboard = () => {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const { toast } = useToast();
   const [courses, setCourses] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -27,20 +31,14 @@ export const Dashboard = () => {
   // Load data from Supabase
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user || !selectedGym) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       try {
-        // Get user's gym ID
-        const { data: userGym } = await supabase
-          .rpc('get_user_gym_id', { _user_id: user.id });
-
-        if (!userGym) {
-          setLoading(false);
-          return;
-        }
-
-        // Load upcoming courses for user's gym (limit to 2)
+        // Load upcoming courses for selected gym (limit to 2)
         const { data: coursesData, error: coursesError } = await supabase
           .from('courses')
           .select(`
@@ -49,7 +47,7 @@ export const Dashboard = () => {
             instructors(user_id),
             course_schedules(*)
           `)
-          .eq('gym_id', userGym)
+          .eq('gym_id', selectedGym.id)
           .eq('is_active', true)
           .limit(2);
 
@@ -80,7 +78,7 @@ export const Dashboard = () => {
     };
 
     loadData();
-  }, [user, toast]);
+  }, [user, selectedGym, toast]);
 
   const openBookingDialog = (course: any) => {
     setSelectedCourse(course);
@@ -183,6 +181,11 @@ export const Dashboard = () => {
       <div className="pt-8 pb-6">
         <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋</h1>
         <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
+        
+        {/* Gym Selector */}
+        <div className="mt-4">
+          <GymSelector />
+        </div>
         <Button
           onClick={() => setShowHowItWorksModal(true)}
           variant="outline"
@@ -220,7 +223,7 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <CreditsSubscriptionCard />
+        <GymCreditsCard />
       </div>
 
 
