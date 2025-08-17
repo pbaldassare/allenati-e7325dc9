@@ -213,6 +213,37 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     try {
       console.log('Form submission started with data:', data);
       
+      // Validate form state before proceeding
+      if (!form.formState.isValid) {
+        console.log('Form validation errors:', form.formState.errors);
+        
+        toast({
+          title: "Errori di validazione",
+          description: "Compila tutti i campi obbligatori per continuare",
+          variant: "destructive"
+        });
+        
+        // Scroll to first error
+        const firstErrorField = Object.keys(form.formState.errors)[0];
+        if (firstErrorField) {
+          const element = document.querySelector(`[name="${firstErrorField}"]`);
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        return;
+      }
+
+      // Validate schedule has rooms assigned
+      const scheduleHasRooms = data.schedule.every(s => s.roomId && s.roomId.trim() !== '');
+      if (!scheduleHasRooms) {
+        toast({
+          title: "Errore",
+          description: "Assegna una sala a tutti gli orari del corso",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Validate required data before proceeding
       if (!data.instructor_id || data.instructor_id.trim() === '') {
         toast({
@@ -319,15 +350,34 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
         if (error) throw error;
 
-        // Insert course schedules
-        const scheduleData = data.schedule.map(s => ({
-          course_id: newCourse.id,
-          day_of_week: s.dayOfWeek,
-          start_time: s.time,
-          end_time: `${String(Math.floor((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) / 60)).padStart(2, '0')}:${String((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) % 60).padStart(2, '0')}`,
-          room_id: s.roomId,
-          is_active: true
-        }));
+        // Insert course schedules with safe calculations
+        const scheduleData = data.schedule.map(s => {
+          console.log('Processing schedule item:', s);
+          
+          // Validate schedule data
+          if (!s.time || !s.roomId || !data.duration) {
+            console.error('Invalid schedule data:', { time: s.time, roomId: s.roomId, duration: data.duration });
+            throw new Error('Dati orario non validi');
+          }
+          
+          const [hours, minutes] = s.time.split(':').map(Number);
+          const totalStartMinutes = hours * 60 + minutes;
+          const totalEndMinutes = totalStartMinutes + data.duration;
+          const endHours = Math.floor(totalEndMinutes / 60);
+          const endMinutes = totalEndMinutes % 60;
+          const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+          
+          console.log('Calculated end time:', endTime);
+          
+          return {
+            course_id: newCourse.id,
+            day_of_week: s.dayOfWeek,
+            start_time: s.time,
+            end_time: endTime,
+            room_id: s.roomId,
+            is_active: true
+          };
+        });
 
         const { error: scheduleError } = await supabase
           .from('course_schedules')
@@ -364,15 +414,34 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           throw deleteScheduleError;
         }
 
-        // Insert new schedules
-        const scheduleData = data.schedule.map(s => ({
-          course_id: course.id,
-          day_of_week: s.dayOfWeek,
-          start_time: s.time,
-          end_time: `${String(Math.floor((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) / 60)).padStart(2, '0')}:${String((parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]) + data.duration) % 60).padStart(2, '0')}`,
-          room_id: s.roomId,
-          is_active: true
-        }));
+        // Insert new schedules with safe calculations
+        const scheduleData = data.schedule.map(s => {
+          console.log('Processing schedule item for update:', s);
+          
+          // Validate schedule data
+          if (!s.time || !s.roomId || !data.duration) {
+            console.error('Invalid schedule data:', { time: s.time, roomId: s.roomId, duration: data.duration });
+            throw new Error('Dati orario non validi');
+          }
+          
+          const [hours, minutes] = s.time.split(':').map(Number);
+          const totalStartMinutes = hours * 60 + minutes;
+          const totalEndMinutes = totalStartMinutes + data.duration;
+          const endHours = Math.floor(totalEndMinutes / 60);
+          const endMinutes = totalEndMinutes % 60;
+          const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+          
+          console.log('Calculated end time for update:', endTime);
+          
+          return {
+            course_id: course.id,
+            day_of_week: s.dayOfWeek,
+            start_time: s.time,
+            end_time: endTime,
+            room_id: s.roomId,
+            is_active: true
+          };
+        });
 
         if (scheduleData.length > 0) {
           const { error: newScheduleError } = await supabase
@@ -440,7 +509,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nome Corso</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Nome Corso 
+                  <span className="text-destructive">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input placeholder="es. Yoga Mattutino" {...field} />
                 </FormControl>
@@ -454,10 +526,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             name="instructor_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Istruttore</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Istruttore 
+                  <span className="text-destructive">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={form.formState.errors.instructor_id ? "border-destructive" : ""}>
                       <SelectValue placeholder="Seleziona istruttore" />
                     </SelectTrigger>
                   </FormControl>
@@ -479,10 +554,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Categoria</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Categoria 
+                  <span className="text-destructive">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={form.formState.errors.category ? "border-destructive" : ""}>
                       <SelectValue placeholder="Seleziona categoria" />
                     </SelectTrigger>
                   </FormControl>
@@ -504,10 +582,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             name="level"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Livello</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Livello 
+                  <span className="text-destructive">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={form.formState.errors.level ? "border-destructive" : ""}>
                       <SelectValue placeholder="Seleziona livello" />
                     </SelectTrigger>
                   </FormControl>
@@ -547,7 +628,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
               name="maxParticipants"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Massimo Partecipanti</FormLabel>
+                  <FormLabel className="flex items-center gap-1">
+                    Massimo Partecipanti 
+                    <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -590,7 +674,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             name="duration"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Durata (minuti)</FormLabel>
+                <FormLabel className="flex items-center gap-1">
+                  Durata (minuti) 
+                  <span className="text-destructive">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -665,7 +752,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         {/* Benefits */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Benefici del Corso</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-1">
+              Benefici del Corso 
+              <span className="text-destructive">*</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {form.watch('benefits').map((_, index) => (
@@ -756,7 +846,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         {/* Schedule */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Orari e Sale</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-1">
+              Orari e Sale 
+              <span className="text-destructive">*</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <FormField
@@ -778,16 +871,36 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           </CardContent>
         </Card>
 
+        {/* Error Summary */}
+        {Object.keys(form.formState.errors).length > 0 && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <h3 className="font-medium text-destructive mb-2">Errori di validazione:</h3>
+            <ul className="text-sm space-y-1">
+              {Object.entries(form.formState.errors).map(([field, error]) => (
+                <li key={field} className="text-destructive">
+                  • {error?.message || `Campo ${field} non valido`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-4">
-          <Button type="submit" size="lg">
-            {mode === 'create' ? 'Crea Corso' : 'Salva Modifiche'}
+          <Button 
+            type="submit" 
+            size="lg"
+            disabled={!form.formState.isValid || form.formState.isSubmitting}
+            className="min-w-[140px]"
+          >
+            {form.formState.isSubmitting ? 'Salvataggio...' : (mode === 'create' ? 'Crea Corso' : 'Salva Modifiche')}
           </Button>
           <Button 
             type="button" 
             variant="outline" 
             size="lg"
             onClick={() => navigate('/owner/courses')}
+            disabled={form.formState.isSubmitting}
           >
             Annulla
           </Button>
