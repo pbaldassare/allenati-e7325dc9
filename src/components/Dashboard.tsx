@@ -2,20 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2 } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
-import { GymCreditsCard } from './GymCreditsCard';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
+import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { selectedGym } = useGym();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,21 +37,43 @@ export const Dashboard = () => {
       
       setLoading(true);
       try {
-        // Load upcoming courses for selected gym (limit to 2)
+        // Load enrolled courses and nearest upcoming courses (max 3)
         const { data: coursesData, error: coursesError } = await supabase
           .from('courses')
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
             instructors(user_id),
-            course_schedules(*),
+            course_schedules(*, gym_rooms(name)),
+            gyms(name),
+            bookings!inner(user_id, status)
+          `)
+          .eq('gym_id', selectedGym.id)
+          .eq('is_active', true)
+          .or(`bookings.user_id.eq.${user.id}.and.bookings.status.eq.confirmed,bookings.is.null`)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        // Also get upcoming available courses if we need more
+        const { data: availableCoursesData, error: availableError } = await supabase
+          .from('courses')
+          .select(`
+            *,
+            course_categories(name, color_hex, icon_name),
+            instructors(user_id),
+            course_schedules(*, gym_rooms(name)),
             gyms(name)
           `)
           .eq('gym_id', selectedGym.id)
           .eq('is_active', true)
-          .limit(2);
+          .not('id', 'in', `(${coursesData?.map(c => c.id).join(',') || 'null'})`)
+          .order('created_at', { ascending: true })
+          .limit(3);
 
-        if (coursesError) throw coursesError;
+        // Combine and limit to 3 total
+        const allCourses = [...(coursesData || []), ...(availableCoursesData || [])].slice(0, 3);
+
+        if (coursesError || availableError) throw coursesError || availableError;
 
         // Load user's bookings
         const { data: bookingsData, error: bookingsError } = await supabase
@@ -61,7 +84,7 @@ export const Dashboard = () => {
 
         if (bookingsError) throw bookingsError;
 
-        setCourses(coursesData || []);
+        setCourses(allCourses || []);
         setBookings(bookingsData || []);
         
       } catch (error) {
@@ -194,7 +217,7 @@ export const Dashboard = () => {
 
 
       {/* Modern Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg border-0 p-3 md:p-0">
           <CardContent className="p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
@@ -213,23 +236,32 @@ export const Dashboard = () => {
               <Users className="h-6 w-6 md:h-10 md:w-10" />
               <div>
                 <p className="text-xl md:text-3xl font-bold">{courses.length}</p>
-                <p className="text-xs md:text-sm opacity-90 font-medium">Corsi disponibili</p>
+                <p className="text-xs md:text-sm opacity-90 font-medium">I tuoi corsi</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <GymCreditsCard />
       </div>
 
 
-      {/* Modern Prossimi Corsi */}
+      {/* I Tuoi Corsi */}
       <Card className="shadow-lg">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-xl font-bold">
-            <Calendar className="h-6 w-6 text-primary" />
-            Corsi Disponibili
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Calendar className="h-6 w-6 text-primary" />
+              I Tuoi Corsi
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/gyms')}
+              className="flex items-center gap-2"
+            >
+              Tutti i Corsi
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {courses.length > 0 ? (
