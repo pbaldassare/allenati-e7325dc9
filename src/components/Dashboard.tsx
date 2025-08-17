@@ -8,10 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
-import { GymSelector } from './GymSelector';
 import { GymCreditsCard } from './GymCreditsCard';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
+import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -177,14 +177,10 @@ export const Dashboard = () => {
   return (
     <div className="pb-20 px-4 space-y-8">
       {/* Modern Header */}
-      <div className="pt-8 pb-6">
-        <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋</h1>
-        <p className="text-muted-foreground text-lg font-medium">Benvenuto nella tua palestra</p>
+      <div className="pt-6 pb-4">
+        <h1 className="text-2xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋</h1>
+        <p className="text-muted-foreground text-base md:text-lg font-medium">Benvenuto nella tua palestra</p>
         
-        {/* Gym Selector */}
-        <div className="mt-4">
-          <GymSelector />
-        </div>
         <Button
           onClick={() => setShowHowItWorksModal(true)}
           variant="outline"
@@ -196,27 +192,30 @@ export const Dashboard = () => {
         </Button>
       </div>
 
+      {/* Monthly Calendar */}
+      <MonthlyCalendarCompact />
+
       {/* Modern Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-10 w-10" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg border-0 p-3 md:p-0">
+          <CardContent className="p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Trophy className="h-6 w-6 md:h-10 md:w-10" />
               <div>
-                <p className="text-3xl font-bold">{bookings.length}</p>
-                <p className="text-sm opacity-90 font-medium">Prenotazioni attive</p>
+                <p className="text-xl md:text-3xl font-bold">{bookings.length}</p>
+                <p className="text-xs md:text-sm opacity-90 font-medium">Prenotazioni attive</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-lg border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Users className="h-10 w-10" />
+        <Card className="bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-lg border-0 p-3 md:p-0">
+          <CardContent className="p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Users className="h-6 w-6 md:h-10 md:w-10" />
               <div>
-                <p className="text-3xl font-bold">{courses.length}</p>
-                <p className="text-sm opacity-90 font-medium">Corsi disponibili</p>
+                <p className="text-xl md:text-3xl font-bold">{courses.length}</p>
+                <p className="text-xs md:text-sm opacity-90 font-medium">Corsi disponibili</p>
               </div>
             </div>
           </CardContent>

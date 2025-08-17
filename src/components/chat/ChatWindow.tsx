@@ -15,6 +15,7 @@ interface Message {
   sender_name: string;
   created_at: string;
   is_from_staff: boolean;
+  avatar_url?: string;
 }
 
 interface ChatWindowProps {

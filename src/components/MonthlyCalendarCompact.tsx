@@ -1,0 +1,201 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
+import { cn } from '@/lib/utils';
+
+interface CourseSchedule {
+  id: string;
+  course_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  course: {
+    name: string;
+    max_participants: number;
+  };
+  bookings_count?: number;
+}
+
+export const MonthlyCalendarCompact: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [courseSchedules, setCourseSchedules] = useState<CourseSchedule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { selectedGym } = useGym();
+
+  useEffect(() => {
+    if (user && selectedGym) {
+      loadCourseSchedules();
+    }
+  }, [user, selectedGym, currentDate]);
+
+  const loadCourseSchedules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('course_schedules')
+        .select(`
+          id,
+          course_id,
+          day_of_week,
+          start_time,
+          end_time,
+          course:courses!inner (
+            name,
+            max_participants,
+            gym_id
+          )
+        `)
+        .eq('is_active', true)
+        .eq('course.gym_id', selectedGym.id);
+
+      if (error) throw error;
+
+      setCourseSchedules(data || []);
+    } catch (error) {
+      console.error('Error loading course schedules:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  const getCoursesForDay = (date: Date) => {
+    const dayOfWeek = getDay(date);
+    return courseSchedules.filter(schedule => schedule.day_of_week === dayOfWeek);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  // Split days into two rows of 7 days each, showing up to 14 days
+  const firstRowDays = monthDays.slice(0, 14);
+  const secondRowDays = monthDays.slice(14, 28);
+
+  const renderDayCell = (day: Date) => {
+    const coursesForDay = getCoursesForDay(day);
+    const hasClasses = coursesForDay.length > 0;
+    
+    return (
+      <div
+        key={day.toISOString()}
+        className={cn(
+          "flex flex-col items-center justify-center p-1 text-xs min-h-[2.5rem] border rounded-md transition-colors",
+          hasClasses ? "bg-primary/10 border-primary/20" : "border-border",
+          isToday(day) ? "ring-2 ring-primary" : ""
+        )}
+      >
+        <div className={cn(
+          "font-medium",
+          isToday(day) ? "text-primary font-bold" : "text-foreground"
+        )}>
+          {format(day, 'd')}
+        </div>
+        {hasClasses && (
+          <Badge variant="secondary" className="text-[0.6rem] px-1 py-0 mt-0.5">
+            {coursesForDay.length}
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="w-5 h-5" />
+            Calendario Corsi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-2">
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="h-10 bg-muted rounded-md" />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="w-5 h-5" />
+            {format(currentDate, 'MMMM yyyy', { locale: it })}
+          </CardTitle>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('prev')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('next')}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {/* Day labels */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['D', 'L', 'M', 'M', 'G', 'V', 'S'].map((day, index) => (
+              <div key={index} className="text-xs font-medium text-muted-foreground text-center py-1">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          {/* First two weeks */}
+          <div className="grid grid-cols-7 gap-1">
+            {firstRowDays.map(renderDayCell)}
+          </div>
+          
+          {/* Second two weeks */}
+          {secondRowDays.length > 0 && (
+            <div className="grid grid-cols-7 gap-1">
+              {secondRowDays.map(renderDayCell)}
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-3 pt-3 border-t">
+          <p className="text-xs text-muted-foreground text-center">
+            I numeri indicano i corsi disponibili per ogni giorno
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
