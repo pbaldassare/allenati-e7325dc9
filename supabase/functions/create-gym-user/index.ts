@@ -170,6 +170,36 @@ serve(async (req) => {
           console.log(`Created default room: ${room.name} for gym ${gymId}`);
         }
       }
+
+      // Create default course categories for new gyms
+      const defaultCategories = [
+        { name: 'Fitness', description: 'Allenamento generale e tonificazione', color_hex: '#10B981', icon_name: 'Dumbbell' },
+        { name: 'Yoga', description: 'Equilibrio e flessibilità', color_hex: '#8B5CF6', icon_name: 'Flower' },
+        { name: 'Pilates', description: 'Rinforzo del core e postura', color_hex: '#F59E0B', icon_name: 'Activity' },
+        { name: 'Cardio', description: 'Allenamento cardiovascolare', color_hex: '#EF4444', icon_name: 'Heart' },
+        { name: 'Functional Training', description: 'Allenamento funzionale', color_hex: '#3B82F6', icon_name: 'Target' },
+        { name: 'Danza', description: 'Corsi di danza e movimento', color_hex: '#EC4899', icon_name: 'Music' }
+      ];
+
+      for (const category of defaultCategories) {
+        const { error: categoryError } = await supabaseAdmin
+          .from('course_categories')
+          .insert({
+            gym_id: gymId,
+            name: category.name,
+            description: category.description,
+            color_hex: category.color_hex,
+            icon_name: category.icon_name,
+            is_active: true,
+          });
+
+        if (categoryError) {
+          console.error(`Error creating category ${category.name}:`, categoryError);
+          // Don't throw error for category creation failures, just log
+        } else {
+          console.log(`Created default category: ${category.name} for gym ${gymId}`);
+        }
+      }
     }
 
     console.log('Successfully set up gym user:', userId, 'for gym:', gymId);
