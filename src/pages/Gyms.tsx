@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Plus, CreditCard } from 'lucide-react';
+import { Building2, Plus, CreditCard, ArrowLeft } from 'lucide-react';
 import { GymJoinDropdown } from '@/components/GymJoinDropdown';
 import CreditsSubscriptionCard from '@/components/CreditsSubscriptionCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +15,7 @@ export default function Gyms() {
   const { user } = useAuth();
   const { userGyms, selectedGym, setSelectedGym, loading } = useGym();
   const [activeTab, setActiveTab] = useState('my-gyms');
+  const navigate = useNavigate();
 
   if (!user) {
     return (
@@ -28,10 +30,22 @@ export default function Gyms() {
   return (
     <div className="container mx-auto px-4 py-6 pb-24 max-w-4xl">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Le Mie Palestre</h1>
-          <p className="text-muted-foreground text-sm">
+        {/* Header with Back Button */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="h-8 w-8 shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold">Le Mie Palestre</h1>
+            </div>
+          </div>
+          <p className="text-muted-foreground text-sm text-center">
             Gestisci le tue palestre, abbonamenti e cerca nuove palestre
           </p>
         </div>
