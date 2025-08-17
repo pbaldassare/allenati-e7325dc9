@@ -1,14 +1,11 @@
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useGym } from '@/contexts/GymContext';
-import { JoinGymModal } from './JoinGymModal';
-import { Dumbbell, MapPin, Plus, CheckCircle } from 'lucide-react';
+import { Dumbbell, MapPin, CheckCircle, ExternalLink } from 'lucide-react';
 
 export function MyGymsSection() {
   const { userGyms, selectedGym, setSelectedGym } = useGym();
-  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   if (userGyms.length === 0) {
     return (
@@ -19,13 +16,9 @@ export function MyGymsSection() {
             <div>
               <h3 className="text-lg font-medium">Nessuna palestra collegata</h3>
               <p className="text-muted-foreground">
-                Cerca e unisciti a una palestra per iniziare
+                Vai alla sezione "Palestre" per unirti a nuove palestre
               </p>
             </div>
-            <Button onClick={() => setJoinModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Trova Palestre
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -36,10 +29,10 @@ export function MyGymsSection() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Le mie Palestre</h3>
-        <Button variant="outline" size="sm" onClick={() => setJoinModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Aggiungi Palestra
-        </Button>
+        <p className="text-sm text-muted-foreground">
+          <ExternalLink className="w-3 h-3 mr-1 inline" />
+          Usa "Palestre" per aggiungerne altre
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -94,10 +87,6 @@ export function MyGymsSection() {
         })}
       </div>
 
-      <JoinGymModal 
-        open={joinModalOpen} 
-        onOpenChange={setJoinModalOpen} 
-      />
     </div>
   );
 }

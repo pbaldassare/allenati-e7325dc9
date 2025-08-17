@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, MessageSquare } from "lucide-react";
+import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
     { id: "chat", icon: MessageSquare, label: "Chat" },
     { id: "calendar", icon: Calendar, label: "Corsi" },
     { id: "shop", icon: ShoppingBag, label: "Shop" },
+    // Add gym join button for regular users only
+    ...(!isAdmin && !isGymOwner ? [{ id: "join-gym", icon: Plus, label: "Palestre" }] : []),
     ...(isAdmin
       ? [{ id: "admin", icon: Settings, label: "Admin" }]
       : isGymOwner
