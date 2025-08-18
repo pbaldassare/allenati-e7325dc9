@@ -6,10 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Edit, Copy, Eye, Users, Trash2 } from "lucide-react";
+import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantsList } from "@/components/CourseParticipantsList";
-import { CourseDeleteConfirmDialog } from "@/components/dialogs/CourseDeleteConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface CourseItem {
@@ -38,8 +37,7 @@ const OwnerCoursesList: React.FC = () => {
   const [filteredCourses, setFilteredCourses] = useState<CourseItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [courseToDelete, setCourseToDelete] = useState<CourseItem | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -296,89 +294,41 @@ const OwnerCoursesList: React.FC = () => {
     }
   };
 
-  const handleDeleteCourse = async () => {
-    if (!courseToDelete) return;
-
+  const toggleCourseStatus = async (course: CourseItem) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) return;
-
-      // Delete course schedules first
-      const { error: scheduleError } = await supabase
-        .from('course_schedules')
-        .delete()
-        .eq('course_id', courseToDelete.id);
-
-      if (scheduleError) throw scheduleError;
-
-      // Cancel all active bookings and refund credits
-      const { data: activeBookings, error: fetchBookingsError } = await supabase
-        .from('bookings')
-        .select('id, user_id, credits_used')
-        .eq('course_id', courseToDelete.id)
-        .in('status', ['confirmed']);
-
-      if (fetchBookingsError) throw fetchBookingsError;
-
-      // Cancel bookings
-      const { error: bookingError } = await supabase
-        .from('bookings')
-        .update({ 
-          status: 'cancelled',
-          cancellation_reason: 'Corso eliminato dal proprietario',
-          cancelled_at: new Date().toISOString()
-        })
-        .eq('course_id', courseToDelete.id)
-        .in('status', ['confirmed']);
-
-      if (bookingError) throw bookingError;
-
-      // Refund credits to users
-      if (activeBookings && activeBookings.length > 0) {
-        for (const booking of activeBookings) {
-          if (booking.credits_used > 0) {
-            await supabase
-              .from('credits_transactions')
-              .insert({
-                user_id: booking.user_id,
-                amount: booking.credits_used,
-                balance_after: 0, // Will be updated by trigger
-                transaction_type: 'refund',
-                description: `Rimborso per cancellazione corso: ${courseToDelete.name}`,
-                gym_id: gymId
-              });
-          }
-        }
-      }
-
-      // Delete the course
-      const { error: courseError } = await supabase
+      setTogglingStatus(course.id);
+      
+      const newStatus = !course.is_active;
+      
+      // Update course status in database
+      const { error } = await supabase
         .from('courses')
-        .delete()
-        .eq('id', courseToDelete.id);
+        .update({ is_active: newStatus })
+        .eq('id', course.id);
 
-      if (courseError) throw courseError;
+      if (error) throw error;
+
+      // Update local state
+      setCourses(prevCourses => 
+        prevCourses.map(c => 
+          c.id === course.id ? { ...c, is_active: newStatus } : c
+        )
+      );
 
       toast({
         title: 'Successo',
-        description: `Corso "${courseToDelete.name}" eliminato con successo`,
+        description: `Corso "${course.name}" ${newStatus ? 'attivato' : 'disattivato'} con successo`,
       });
-
-      // Remove from local state
-      setCourses(courses.filter(c => c.id !== courseToDelete.id));
-      setDeleteDialogOpen(false);
-      setCourseToDelete(null);
 
     } catch (error) {
-      console.error('Error deleting course:', error);
+      console.error('Error toggling course status:', error);
       toast({
         title: 'Errore',
-        description: 'Impossibile eliminare il corso',
+        description: 'Impossibile modificare lo stato del corso',
         variant: 'destructive',
       });
+    } finally {
+      setTogglingStatus(null);
     }
   };
 
@@ -527,14 +477,24 @@ const OwnerCoursesList: React.FC = () => {
                               Duplica
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setCourseToDelete(course);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="text-destructive focus:text-destructive"
+                              onClick={() => toggleCourseStatus(course)}
+                              disabled={togglingStatus === course.id}
+                              className={course.is_active 
+                                ? "text-destructive focus:text-destructive" 
+                                : "text-green-600 focus:text-green-600"
+                              }
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Elimina
+                              {course.is_active ? (
+                                <>
+                                  <EyeOff className="mr-2 h-4 w-4" />
+                                  {togglingStatus === course.id ? 'Disattivando...' : 'Disattiva'}
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  {togglingStatus === course.id ? 'Attivando...' : 'Attiva'}
+                                </>
+                              )}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -548,12 +508,6 @@ const OwnerCoursesList: React.FC = () => {
         </CardContent>
       </Card>
 
-      <CourseDeleteConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteCourse}
-        courseNames={courseToDelete ? [courseToDelete.name] : []}
-      />
     </div>
   );
 };
