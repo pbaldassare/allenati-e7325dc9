@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { SupabaseCourse } from '@/types/course';
 import { X, Plus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 
 const courseSchema = z.object({
@@ -35,6 +36,7 @@ const courseSchema = z.object({
   duration: z.coerce.number().min(15, 'La durata minima è 15 minuti'),
   deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
   image: z.string().url('Inserisci un URL valido per l\'immagine').optional().or(z.literal("")),
+  isVisible: z.boolean().default(true),
   benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
   requirements: z.array(z.string()).optional(),
   schedule: z.array(z.object({
@@ -172,6 +174,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       duration: 60,
       deadlineHours: 24,
       image: '',
+      isVisible: true,
       benefits: [''],
       requirements: [''],
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
@@ -196,6 +199,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         duration: course.duration_minutes || 60,
         deadlineHours: course.deadline_hours || 24,
         image: course.image_url || '',
+        isVisible: course.is_active ?? true,
         benefits: course.benefits || [''],
         requirements: course.requirements || [''],
         schedule: course.schedules?.map((s: any) => ({
@@ -339,7 +343,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         benefits: data.benefits.filter(b => b.trim() !== ''),
         requirements: data.requirements?.filter(r => r.trim() !== '') || [],
         credits_required: 1,
-        is_active: true
+        is_active: data.isVisible
       };
 
       if (mode === 'create') {
@@ -716,20 +720,43 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="image"
-            render={({ field }) => (
-               <FormItem>
-                 <FormLabel>URL Immagine (opzionale)</FormLabel>
+           <FormField
+             control={form.control}
+             name="image"
+             render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL Immagine (opzionale)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+             )}
+           />
+
+           <FormField
+             control={form.control}
+             name="isVisible"
+             render={({ field }) => (
+               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                 <div className="space-y-0.5">
+                   <FormLabel className="text-base">
+                     Visibile agli utenti
+                   </FormLabel>
+                   <FormDescription>
+                     Quando attivo, gli utenti possono vedere e prenotare questo corso
+                   </FormDescription>
+                 </div>
                  <FormControl>
-                   <Input placeholder="https://..." {...field} />
+                   <Switch
+                     checked={field.value}
+                     onCheckedChange={field.onChange}
+                   />
                  </FormControl>
-                 <FormMessage />
                </FormItem>
-            )}
-          />
-        </div>
+             )}
+           />
+         </div>
 
         {/* Description */}
         <FormField
