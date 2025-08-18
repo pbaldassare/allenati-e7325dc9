@@ -87,11 +87,11 @@ const BookingHistory = () => {
           .from('courses')
           .select(`
             *,
-            instructor:instructors(
+            instructor:instructors!instructor_id(
               id,
               user_id,
               bio,
-              profiles:user_id(first_name, last_name, avatar_url)
+              profiles!user_id(first_name, last_name, avatar_url)
             ),
             category:course_categories(name, color_hex),
             schedules:course_schedules(

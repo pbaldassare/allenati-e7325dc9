@@ -34,10 +34,10 @@ export const useBookings = () => {
             course_categories (
               name
             ),
-            instructors (
+            instructors!instructor_id (
               id,
               user_id,
-              profiles (
+              profiles!user_id (
                 first_name,
                 last_name
               )
