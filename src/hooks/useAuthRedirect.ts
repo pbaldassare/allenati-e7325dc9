@@ -39,6 +39,12 @@ export const useAuthRedirect = () => {
       navigate('/', { replace: true });
       return;
     }
+
+    // Se l'utente è instructor, può accedere alle pagine instructor (anche admin)
+    if (currentPath.startsWith('/instructor') && !(user?.role === 'instructor' || user?.role === 'admin')) {
+      navigate('/', { replace: true });
+      return;
+    }
   }, [isAuthenticated, loading, user, navigate, location.pathname]);
 
   return {

@@ -15,6 +15,7 @@ import BookingHistory from "./pages/BookingHistory";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./layouts/AdminLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
+import InstructorLayout from "./layouts/InstructorLayout";
 
 // Admin Course Management Pages
 import AdminCoursesList from "./pages/admin/AdminCoursesList";
@@ -49,6 +50,12 @@ import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
 import Gyms from "./pages/Gyms";
+
+// Instructor Pages
+import InstructorDashboard from "./pages/instructor/InstructorDashboard";
+import InstructorCourses from "./pages/instructor/InstructorCourses";
+import InstructorParticipants from "./pages/instructor/InstructorParticipants";
+import InstructorSchedule from "./pages/instructor/InstructorSchedule";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +117,14 @@ const App = () => (
                   <Route path="subscription-plans" element={<OwnerSubscriptionPlans />} />
                   <Route path="chat" element={<OwnerChat />} />
                   <Route path="reports" element={<OwnerReports />} />
+                </Route>
+
+                {/* Instructor Routes */}
+                <Route path="/instructor" element={<InstructorLayout />}>
+                  <Route index element={<InstructorDashboard />} />
+                  <Route path="courses" element={<InstructorCourses />} />
+                  <Route path="participants" element={<InstructorParticipants />} />
+                  <Route path="schedule" element={<InstructorSchedule />} />
                 </Route>
 
                 <Route path="/shop" element={<Shop />} />
