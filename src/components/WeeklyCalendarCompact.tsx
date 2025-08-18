@@ -187,10 +187,12 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
       {/* Griglia giorni della settimana */}
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((date, index) => {
-          const dayOfWeek = index + 1; // Monday = 1, Sunday = 7
-          const coursesForDay = getCoursesForDay(dayOfWeek === 7 ? 0 : dayOfWeek); // Sunday = 0 in our DB
-          const adjustedDayOfWeek = dayOfWeek === 7 ? 0 : dayOfWeek;
-          const actualCoursesForDay = getCoursesForDay(adjustedDayOfWeek);
+          // Convert calendar index to database day_of_week format
+          // Calendar: Monday=0, Tuesday=1, ..., Sunday=6
+          // Database: Monday=1, Tuesday=2, ..., Sunday=0
+          const calendarDayOfWeek = index; // 0=Monday in our calendar
+          const dbDayOfWeek = calendarDayOfWeek === 6 ? 0 : calendarDayOfWeek + 1; // Convert to DB format
+          const actualCoursesForDay = getCoursesForDay(dbDayOfWeek);
 
           return (
             <div

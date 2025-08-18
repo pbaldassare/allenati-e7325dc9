@@ -164,31 +164,80 @@ export const Dashboard = () => {
     
     setLoadingBooking(selectedCourse.id);
     try {
+      // Get course schedule to determine next occurrence
+      const schedule = selectedCourse.course_schedules?.[0];
+      if (!schedule) {
+        throw new Error('Nessun orario disponibile per questo corso');
+      }
+
+      // Calculate next occurrence of this course
+      const today = new Date();
+      const targetDayOfWeek = schedule.day_of_week; // 0=Sunday, 1=Monday, etc.
+      const todayDayOfWeek = today.getDay();
+      
+      let daysUntilNext = targetDayOfWeek - todayDayOfWeek;
+      if (daysUntilNext <= 0) daysUntilNext += 7; // Next week if today or past
+      
+      const nextDate = new Date(today);
+      nextDate.setDate(today.getDate() + daysUntilNext);
+      
+      // Check if user has enough credits
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('current_credits')
+        .eq('user_id', user.id)
+        .single();
+
+      const currentCredits = profile?.current_credits || 0;
+      const creditsRequired = selectedCourse.credits_required || 1;
+
+      if (currentCredits < creditsRequired) {
+        throw new Error('Crediti insufficienti per prenotare questo corso');
+      }
+
+      // Create booking
       const { data, error } = await supabase
         .from('bookings')
         .insert({
           user_id: user.id,
           course_id: selectedCourse.id,
-          scheduled_date: new Date().toISOString().split('T')[0],
-          scheduled_time: '19:00',
-          status: 'confirmed'
+          scheduled_date: nextDate.toISOString().split('T')[0],
+          scheduled_time: schedule.start_time,
+          status: 'confirmed',
+          credits_used: creditsRequired
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Deduct credits
+      await supabase
+        .from('credits_transactions')
+        .insert({
+          user_id: user.id,
+          amount: -creditsRequired,
+          balance_after: currentCredits - creditsRequired,
+          transaction_type: 'booking',
+          description: `Prenotazione corso: ${selectedCourse.name}`,
+          reference_id: data.id
+        });
+
       setBookings(prev => [...prev, data]);
+      
+      // Update available courses to remove the booked one
+      setAvailableCourses(prev => prev.filter(c => c.id !== selectedCourse.id));
+      
       toast({
         title: "Prenotazione confermata",
-        description: "Corso prenotato con successo!",
+        description: `Corso prenotato per ${nextDate.toLocaleDateString('it-IT')} alle ${schedule.start_time}`,
       });
       setBookingDialogOpen(false);
     } catch (error) {
       console.error('Booking error:', error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'operazione",
+        description: error.message || "Si è verificato un errore durante la prenotazione",
         variant: "destructive",
       });
     } finally {
@@ -261,12 +310,12 @@ export const Dashboard = () => {
     
     // Filter by selected date
     if (selectedDate) {
-      const selectedDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      // Convert JavaScript Date.getDay() to database day_of_week format
+      const jsDay = selectedDate.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const dbDay = jsDay === 0 ? 0 : jsDay; // Keep Sunday as 0, others stay the same
+      
       const courseSchedules = course.course_schedules || [];
-      return courseSchedules.some(schedule => {
-        const scheduleDayOfWeek = schedule.day_of_week === 0 ? 7 : schedule.day_of_week; // Convert DB format (0=Sunday) to JS format
-        return scheduleDayOfWeek === selectedDayOfWeek || (selectedDayOfWeek === 0 && schedule.day_of_week === 0);
-      });
+      return courseSchedules.some(schedule => schedule.day_of_week === dbDay);
     }
     
     return true;
@@ -530,7 +579,17 @@ export const Dashboard = () => {
                         
                         {progress < 100 && (
                           <Button
-                            onClick={() => openBookingDialog(course)}
+                            onClick={() => {
+                              const schedule = course.course_schedules?.[0];
+                              if (schedule) {
+                                setSelectedCourse({
+                                  ...course,
+                                  scheduledDate: new Date().toISOString().split('T')[0],
+                                  scheduledTime: schedule.start_time
+                                });
+                                setBookingDialogOpen(true);
+                              }
+                            }}
                             disabled={isLoading}
                             size="sm"
                             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all"
@@ -607,15 +666,15 @@ export const Dashboard = () => {
         </Card>
       </div>
 
-      <BookingConfirmDialog
-        open={bookingDialogOpen}
-        onOpenChange={setBookingDialogOpen}
-        course={selectedCourse || {}}
-        scheduledDate={new Date().toISOString().split('T')[0]}
-        scheduledTime="19:00"
-        onConfirm={handleBookingConfirm}
-        isLoading={loadingBooking === selectedCourse?.id}
-      />
+        <BookingConfirmDialog
+          open={bookingDialogOpen}
+          onOpenChange={setBookingDialogOpen}
+          course={selectedCourse || {}}
+          scheduledDate={selectedCourse?.scheduledDate || new Date().toISOString().split('T')[0]}
+          scheduledTime={selectedCourse?.scheduledTime || "19:00"}
+          onConfirm={handleBookingConfirm}
+          isLoading={loadingBooking === selectedCourse?.id}
+        />
 
       <CancellationConfirmDialog
         open={cancellationDialogOpen}
