@@ -339,7 +339,7 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="pb-20 px-4 space-y-6">
+    <div className="pb-20 px-4 space-y-4">
       {/* Modern Header */}
       <div className="pt-6 pb-4">
         <h1 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
@@ -360,84 +360,23 @@ export const Dashboard = () => {
         </Button>
       </div>
 
-      {/* I Tuoi Corsi Prenotati */}
-      {courses.length > 0 && (
-        <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-lg font-bold">
-              <Calendar className="h-5 w-5 text-success" />
-              I Tuoi Corsi Prenotati
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {courses.map((course) => {
-              const instructorName = getInstructorName(course);
-              const instructorAvatar = getInstructorAvatar(course);
-              const schedule = course.course_schedules?.[0];
-              const progress = getCourseProgress(course);
-              const isLoading = loadingBooking === course.id;
-              
-              return (
-                <div key={course.id} className="bg-success/10 border border-success/20 rounded-2xl p-4 hover:shadow-lg transition-all duration-300">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="w-12 h-12 border-2 border-success/30">
-                      <AvatarImage src={instructorAvatar} alt={instructorName} />
-                      <AvatarFallback className="bg-success/20 text-success font-bold">
-                        {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-bold text-base text-foreground">{course.name}</h3>
-                          <p className="text-sm text-muted-foreground">{instructorName}</p>
-                        </div>
-                        <Badge variant="secondary" className="bg-success/20 text-success border-success/30">
-                          Prenotato
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{schedule?.start_time || "N/A"}</span>
-                        </div>
-                         <div className="flex items-center gap-1">
-                           <MapPin className="h-4 w-4" />
-                           <span>{course.gyms?.name || 'Palestra'}</span>
-                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {course.current_bookings || 0}/{course.max_participants} posti
-                          </span>
-                          <Progress value={progress} className="w-16 h-2" />
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const booking = bookings.find(b => b.course_id === course.id);
-                            openCancellationDialog(course, booking);
-                          }}
-                          disabled={isLoading}
-                          className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                        >
-                          {isLoading ? "..." : "Cancella"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Summary Stats - Moved to top */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-card cursor-pointer" onClick={() => navigate('/storico-prenotazioni')}>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-primary">
+              {courses.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Posti Prenotati</p>
           </CardContent>
         </Card>
-      )}
+        <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 shadow-card">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-secondary">{filteredAvailableCourses.length}</div>
+            <p className="text-xs text-muted-foreground">Posti Disponibili</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Integrated Weekly Calendar */}
       <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
@@ -503,56 +442,51 @@ export const Dashboard = () => {
               const isFull = spotsLeft <= 0;
               
               return (
-                <Card key={course.id} className="group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <Avatar className="h-6 w-6 border border-primary/20 flex-shrink-0">
-                          <AvatarImage src={instructorAvatar} />
-                          <AvatarFallback className="text-xs">{instructorName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-sm truncate">{course.name}</h4>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground truncate">{instructorName}</span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {schedule?.start_time || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          <span>{course.current_bookings || 0}/{course.max_participants}</span>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const schedule = course.course_schedules?.[0];
-                            if (schedule) {
-                              setSelectedCourse({
-                                ...course,
-                                scheduledDate: new Date().toISOString().split('T')[0],
-                                scheduledTime: schedule.start_time
-                              });
-                              setBookingDialogOpen(true);
-                            }
-                          }}
-                          disabled={isLoading}
-                          className="bg-primary hover:bg-primary/90 h-7 px-3 text-xs"
-                        >
-                          {isLoading ? "..." : "Prenota"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                 <Card key={course.id} className="group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40">
+                   <CardContent className="p-3">
+                     <div className="flex items-center gap-3">
+                       <Avatar className="w-10 h-10 border-2 border-primary/30 flex-shrink-0">
+                         <AvatarImage src={instructorAvatar} alt="Istruttore" />
+                         <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">
+                           I
+                         </AvatarFallback>
+                       </Avatar>
+                       
+                       <div className="flex-1 min-w-0">
+                         <h3 className="font-semibold text-sm text-foreground">{course.name}</h3>
+                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                           <div className="flex items-center gap-1">
+                             <Clock className="h-3 w-3" />
+                             <span>{schedule?.start_time || "N/A"}</span>
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <Users className="h-3 w-3" />
+                             <span>{course.current_bookings || 0}/{course.max_participants}</span>
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <Button
+                         onClick={() => {
+                           const schedule = course.course_schedules?.[0];
+                           if (schedule) {
+                             setSelectedCourse({
+                               ...course,
+                               scheduledDate: new Date().toISOString().split('T')[0],
+                               scheduledTime: schedule.start_time
+                             });
+                             setBookingDialogOpen(true);
+                           }
+                         }}
+                         disabled={isLoading}
+                         size="sm"
+                         className="text-xs h-7 px-2 flex-shrink-0"
+                       >
+                         {isLoading ? "..." : "P"}
+                       </Button>
+                     </div>
+                   </CardContent>
+                 </Card>
               );
             })
           ) : (

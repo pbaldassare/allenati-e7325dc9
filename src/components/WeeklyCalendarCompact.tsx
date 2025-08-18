@@ -153,9 +153,9 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
   }
 
   return (
-    <div className="bg-card rounded-2xl border-2 border-primary/20 p-4 shadow-card">
+    <div className="space-y-3">
       {/* Header con navigazione settimana */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
@@ -166,12 +166,9 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
         </Button>
         
         <div className="text-center">
-          <h3 className="font-space font-semibold text-lg">
+          <h3 className="font-semibold text-base">
             {formatWeekRange()}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            {currentWeek.getFullYear()}
-          </p>
         </div>
 
         <Button
@@ -184,8 +181,8 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
         </Button>
       </div>
 
-      {/* Griglia giorni della settimana */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* Griglia giorni della settimana - senza bordi */}
+      <div className="grid grid-cols-7 gap-1">
         {weekDays.map((date, index) => {
           // Convert calendar index to database day_of_week format
           // Calendar: Monday=0, Tuesday=1, ..., Sunday=6
@@ -197,24 +194,23 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           return (
             <div
               key={date.toISOString()}
-              className={`
-                p-2 rounded-xl text-center transition-all duration-200 min-h-[70px] flex flex-col justify-center items-center
-                ${isToday(date) ? 'bg-primary text-primary-foreground shadow-lg' : ''}
-                ${isSelected(date) ? 'bg-primary/30 border-2 border-primary ring-2 ring-primary/50 shadow-md' : ''}
-                ${!isToday(date) && !isSelected(date) ? 'hover:bg-accent hover:text-accent-foreground hover:scale-105' : ''}
-              `}
+              className="p-2 text-center min-h-[60px] flex flex-col justify-center items-center"
             >
-              <div className="text-xs font-light text-muted-foreground/70 mb-1">
+              <div className="text-xs text-muted-foreground mb-1">
                 {dayNames[index]}
               </div>
-              <div className={`text-lg font-light ${isToday(date) ? 'text-primary-foreground' : 'text-muted-foreground/70'}`}>
+              <div className={`text-base font-medium ${isToday(date) ? 'text-primary' : isSelected(date) ? 'text-primary' : 'text-foreground'}`}>
                 {date.getDate()}
               </div>
               
               {actualCoursesForDay.length > 0 && (
                 <Badge 
                   variant="secondary" 
-                  className="text-xs mt-1 px-2 py-1 min-w-0 cursor-pointer border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className={`text-xs mt-1 px-2 py-1 min-w-0 cursor-pointer transition-colors ${
+                    isSelected(date) 
+                      ? 'bg-primary text-primary-foreground border-primary' 
+                      : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground'
+                  }`}
                   onClick={() => onDayClick?.(date)}
                 >
                   {actualCoursesForDay.length}
@@ -223,13 +219,6 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
             </div>
           );
         })}
-      </div>
-
-      {/* Footer con legenda */}
-      <div className="mt-3 text-center">
-        <p className="text-xs text-muted-foreground">
-          I numeri indicano i corsi disponibili per giorno
-        </p>
       </div>
     </div>
   );

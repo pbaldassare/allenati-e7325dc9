@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Calendar, 
   Clock, 
@@ -12,18 +13,30 @@ import {
   X,
   Search,
   Loader2,
-  MapPin
+  MapPin,
+  Users,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
+import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { useBookings } from '@/hooks/useBookings';
+import { supabase } from '@/integrations/supabase/client';
+import { useGym } from '@/contexts/GymContext';
 
 const BookingHistory = () => {
   const { user } = useAuth();
+  const { userGyms } = useGym();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('booked');
   const [searchTerm, setSearchTerm] = useState('');
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
   const { bookings, loading, cancelBooking: hookCancelBooking } = useBookings();
 
   if (!user) return null;
@@ -88,7 +101,6 @@ const BookingHistory = () => {
 
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
   const openCancellationDialog = (booking: any) => {
     setSelectedBooking(booking);
@@ -201,10 +213,10 @@ const BookingHistory = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Storico Prenotazioni
+            I Miei Corsi
           </h1>
           <p className="text-muted-foreground">
-            Visualizza e gestisci le tue prenotazioni
+            I tuoi corsi prenotati e altri disponibili
           </p>
         </div>
 

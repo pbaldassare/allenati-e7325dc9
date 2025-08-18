@@ -135,33 +135,6 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         </CardContent>
       </Card>
 
-      {/* Recent Classes */}
-      <Card className="shadow-card">
-        <CardHeader className="pb-2 sm:pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-space">
-            <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
-            Ultime Classi Frequentate
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {recentClasses.map((classItem, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-border rounded-xl hover:bg-accent/10 transition-all duration-300">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                  <AvatarFallback className="text-xs sm:text-sm font-space font-semibold">
-                    {classItem.instructor[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm sm:text-base truncate">{classItem.name}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-mono">{classItem.time}</p>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground font-mono ml-2 flex-shrink-0">{classItem.date}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
 
       {/* Profile Actions */}
       <div className="space-y-2 sm:space-y-3">
