@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 export const Dashboard = () => {
   const { user } = useAuth();
-  const { selectedGym } = useGym();
+  const { userGyms } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
@@ -37,12 +37,14 @@ export const Dashboard = () => {
   // Load data from Supabase
   useEffect(() => {
     const loadData = async () => {
-      if (!user || !selectedGym) {
+      if (!user || userGyms.length === 0) {
         setLoading(false);
         return;
       }
       
       setLoading(true);
+      const userGymIds = userGyms.map(gym => gym.id);
+      
       try {
         // Load user's bookings first
         const { data: bookingsData, error: bookingsError } = await supabase
@@ -73,7 +75,7 @@ export const Dashboard = () => {
           if (!error) bookedCoursesData = data || [];
         }
 
-        // Load available courses (not booked by user)
+        // Load available courses from all user gyms (not booked by user)
         const { data: availableCoursesData, error: availableError } = await supabase
           .from('courses')
           .select(`
@@ -83,11 +85,11 @@ export const Dashboard = () => {
             course_schedules(*, gym_rooms(name, color)),
             gyms(name)
           `)
-          .eq('gym_id', selectedGym.id)
+          .in('gym_id', userGymIds)
           .eq('is_active', true)
           .not('id', 'in', `(${bookedCourseIds.join(',') || 'null'})`)
           .order('created_at', { ascending: true })
-          .limit(6);
+          .limit(8);
 
         if (availableError) throw availableError;
 
@@ -143,7 +145,7 @@ export const Dashboard = () => {
     };
 
     loadData();
-  }, [user, selectedGym, toast]);
+  }, [user, userGyms, toast]);
 
   const openBookingDialog = (course: any) => {
     setSelectedCourse(course);
@@ -332,10 +334,10 @@ export const Dashboard = () => {
                           <Clock className="h-4 w-4" />
                           <span>{schedule?.start_time || "N/A"}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{schedule?.gym_rooms?.name || 'Sala'}</span>
-                        </div>
+                         <div className="flex items-center gap-1">
+                           <MapPin className="h-4 w-4" />
+                           <span>{course.gyms?.name || 'Palestra'}</span>
+                         </div>
                       </div>
                       
                       <div className="flex items-center justify-between">
@@ -390,7 +392,7 @@ export const Dashboard = () => {
             </Button>
           </div>
           <CardDescription className="text-sm font-medium">
-            Scopri i corsi disponibili nella tua palestra
+            Scopri i corsi disponibili nelle tue palestre
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -465,10 +467,10 @@ export const Dashboard = () => {
                           <Clock className="h-4 w-4" />
                           <span>{schedule?.start_time || "N/A"}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{schedule?.gym_rooms?.name || 'Sala'}</span>
-                        </div>
+                         <div className="flex items-center gap-1">
+                           <Building2 className="h-4 w-4" />
+                           <span>{course.gyms?.name || 'Palestra'}</span>
+                         </div>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
                           <span>{course.current_bookings || 0}/{course.max_participants}</span>
@@ -506,9 +508,9 @@ export const Dashboard = () => {
               <h3 className="font-bold text-xl mb-3 bg-gradient-primary bg-clip-text text-transparent">
                 Nessun corso disponibile
               </h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Al momento non ci sono corsi disponibili nella tua palestra. Controlla più tardi o esplora altre opzioni.
-              </p>
+               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                 Al momento non ci sono corsi disponibili nelle tue palestre. Controlla più tardi o esplora altre opzioni.
+               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button
                   onClick={() => navigate('/gyms')}
