@@ -169,7 +169,8 @@ const BookingHistory = () => {
       return 'Istruttore non assegnato';
     }
     const { first_name, last_name } = profiles;
-    return `${first_name || ''} ${last_name || ''}`.trim() || 'Istruttore non assegnato';
+    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+    return fullName || 'Istruttore non assegnato';
   };
 
   const getGymInfo = (course: any): string => {
