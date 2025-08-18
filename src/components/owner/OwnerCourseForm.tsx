@@ -335,9 +335,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         reserved_spots: data.reservedSpots || 0,
         duration_minutes: data.duration,
         deadline_hours: data.deadlineHours,
-        image_url: data.image,
+        image_url: data.image || null,
         benefits: data.benefits.filter(b => b.trim() !== ''),
         requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+        credits_required: 1,
         is_active: true
       };
 

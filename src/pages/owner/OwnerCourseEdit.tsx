@@ -15,7 +15,12 @@ const OwnerCourseEdit = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleBack = () => {
-    navigate(-1);
+    // Smart navigation for owner pages
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/owner/courses');
+    }
   };
 
   useEffect(() => {

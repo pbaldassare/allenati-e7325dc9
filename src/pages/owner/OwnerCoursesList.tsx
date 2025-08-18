@@ -314,7 +314,16 @@ const OwnerCoursesList: React.FC = () => {
 
       if (scheduleError) throw scheduleError;
 
-      // Cancel all active bookings
+      // Cancel all active bookings and refund credits
+      const { data: activeBookings, error: fetchBookingsError } = await supabase
+        .from('bookings')
+        .select('id, user_id, credits_used')
+        .eq('course_id', courseToDelete.id)
+        .in('status', ['confirmed']);
+
+      if (fetchBookingsError) throw fetchBookingsError;
+
+      // Cancel bookings
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
@@ -326,6 +335,24 @@ const OwnerCoursesList: React.FC = () => {
         .in('status', ['confirmed']);
 
       if (bookingError) throw bookingError;
+
+      // Refund credits to users
+      if (activeBookings && activeBookings.length > 0) {
+        for (const booking of activeBookings) {
+          if (booking.credits_used > 0) {
+            await supabase
+              .from('credits_transactions')
+              .insert({
+                user_id: booking.user_id,
+                amount: booking.credits_used,
+                balance_after: 0, // Will be updated by trigger
+                transaction_type: 'refund',
+                description: `Rimborso per cancellazione corso: ${courseToDelete.name}`,
+                gym_id: gymId
+              });
+          }
+        }
+      }
 
       // Delete the course
       const { error: courseError } = await supabase

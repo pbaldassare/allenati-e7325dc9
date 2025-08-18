@@ -12,7 +12,12 @@ export const OwnerRooms: React.FC = () => {
   }, []);
 
   const handleBack = () => {
-    navigate(-1);
+    // Smart navigation for owner pages
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/owner/dashboard');
+    }
   };
 
   return (
