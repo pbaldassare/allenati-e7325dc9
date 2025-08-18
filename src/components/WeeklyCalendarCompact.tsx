@@ -198,25 +198,24 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
             <div
               key={date.toISOString()}
               className={`
-                p-2 rounded-xl text-center cursor-pointer transition-all duration-200 min-h-[70px] flex flex-col justify-center items-center
+                p-2 rounded-xl text-center transition-all duration-200 min-h-[70px] flex flex-col justify-center items-center
                 ${isToday(date) ? 'bg-primary text-primary-foreground shadow-lg' : ''}
                 ${isSelected(date) ? 'ring-2 ring-primary ring-offset-2' : ''}
                 ${!isToday(date) && !isSelected(date) ? 'hover:bg-accent hover:text-accent-foreground hover:scale-105' : ''}
-                ${actualCoursesForDay.length > 0 ? 'border border-primary/30' : ''}
               `}
-              onClick={() => onDayClick?.(date)}
             >
-              <div className="text-xs font-medium text-muted-foreground mb-1">
+              <div className="text-xs font-light text-muted-foreground/70 mb-1">
                 {dayNames[index]}
               </div>
-              <div className={`text-lg font-bold ${isToday(date) ? 'text-primary-foreground' : ''}`}>
+              <div className={`text-lg font-light ${isToday(date) ? 'text-primary-foreground' : 'text-muted-foreground/70'}`}>
                 {date.getDate()}
               </div>
               
               {actualCoursesForDay.length > 0 && (
                 <Badge 
                   variant="secondary" 
-                  className="text-xs mt-1 px-1 py-0 min-w-0 pointer-events-none"
+                  className="text-xs mt-1 px-2 py-1 min-w-0 cursor-pointer border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                  onClick={() => onDayClick?.(date)}
                 >
                   {actualCoursesForDay.length}
                 </Badge>

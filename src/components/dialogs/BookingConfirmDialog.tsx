@@ -76,6 +76,9 @@ export const BookingConfirmDialog = ({
   const [hasUnlimitedAccess, setHasUnlimitedAccess] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(true);
   const [showCreditPurchaseDialog, setShowCreditPurchaseDialog] = useState(false);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [gymName, setGymName] = useState<string>('');
+  const [loadingParticipants, setLoadingParticipants] = useState(true);
 
   useEffect(() => {
     if (!user || !open) return;
@@ -109,7 +112,38 @@ export const BookingConfirmDialog = ({
       }
     };
 
+    const fetchParticipants = async () => {
+      if (!course.id) return;
+      
+      try {
+        // Get course info with gym name
+        const { data: courseData } = await supabase
+          .from('courses')
+          .select('gyms(name)')
+          .eq('id', course.id)
+          .single();
+        
+        setGymName(courseData?.gyms?.name || 'Palestra');
+
+        // Get participants
+        const { data: bookingsData } = await supabase
+          .from('bookings')
+          .select(`
+            profiles(first_name, last_name)
+          `)
+          .eq('course_id', course.id)
+          .eq('status', 'confirmed');
+
+        setParticipants(bookingsData || []);
+      } catch (error) {
+        console.error('Error fetching participants:', error);
+      } finally {
+        setLoadingParticipants(false);
+      }
+    };
+
     fetchUserCredits();
+    fetchParticipants();
   }, [user, open]);
 
   const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course.credits_required || 1);
@@ -158,6 +192,11 @@ export const BookingConfirmDialog = ({
               <div className="flex items-center text-foreground">
                 <User className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                 <span>{getInstructorName(course)}</span>
+              </div>
+              
+              <div className="flex items-center text-foreground">
+                <Calendar className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <span>{gymName}</span>
               </div>
 
               {course.max_participants && (
@@ -224,6 +263,22 @@ export const BookingConfirmDialog = ({
               )}
             </div>
           </div>
+
+          {participants.length > 0 && (
+            <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-foreground text-sm flex items-center">
+                <Users className="w-4 h-4 mr-2" />
+                Partecipanti ({participants.length})
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {participants.map((booking, index) => (
+                  <div key={index} className="text-xs text-muted-foreground bg-background rounded p-2">
+                    {booking.profiles?.first_name} {booking.profiles?.last_name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <AlertDialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">

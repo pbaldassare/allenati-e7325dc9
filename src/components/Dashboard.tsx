@@ -502,101 +502,58 @@ export const Dashboard = () => {
               const isFull = spotsLeft <= 0;
               
               return (
-                <div key={course.id} className="group bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-4 hover:shadow-xl hover:scale-[1.02] hover:border-primary/40 transition-all duration-300">
-                  <div className="flex items-start gap-4">
-                    <div className="relative">
-                      <Avatar className="w-14 h-14 border-2 border-primary/30 group-hover:border-primary/50 transition-colors">
-                        <AvatarImage src={instructorAvatar} alt={instructorName} />
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm">
-                          {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      {course.course_categories && (
-                        <div 
-                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background"
-                          style={{ backgroundColor: categoryColor }}
-                        />
-                      )}
-                    </div>
+                <div key={course.id} className="bg-card border border-border rounded-xl p-3 hover:shadow-lg transition-all duration-300 group">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border border-primary/20 group-hover:border-primary/40 transition-colors">
+                      <AvatarImage src={instructorAvatar} alt={instructorName} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                        {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-1">
                         <div>
-                          <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                            {course.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{instructorName}</p>
-                          {course.course_categories && (
-                            <Badge variant="secondary" className="text-xs mt-1" style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}>
-                              {course.course_categories.name}
-                            </Badge>
-                          )}
+                          <h3 className="font-semibold text-sm text-foreground">{course.name}</h3>
+                          <p className="text-xs text-muted-foreground">{instructorName}</p>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {progress >= 100 ? (
-                            <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30">
-                              Completo
-                            </Badge>
-                          ) : progress >= 85 ? (
-                            <Badge variant="secondary" className="bg-warning/20 text-warning border-warning/30">
-                              Ultimi posti
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-primary/30 text-primary">
-                              Disponibile
-                            </Badge>
-                          )}
-                          {course.credits_required > 1 && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Star className="h-3 w-3" />
-                              <span>{course.credits_required} crediti</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{schedule?.start_time || "N/A"}</span>
-                        </div>
-                         <div className="flex items-center gap-1">
-                           <Building2 className="h-4 w-4" />
-                           <span>{course.gyms?.name || 'Palestra'}</span>
-                         </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{course.current_bookings || 0}/{course.max_participants}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Activity className="h-4 w-4" />
-                          <span>{course.duration_minutes}min</span>
-                        </div>
+                        <Badge 
+                          variant="outline"
+                          className="text-xs h-5"
+                          style={{ 
+                            borderColor: course.course_categories?.color_hex,
+                            backgroundColor: `${course.course_categories?.color_hex}15`,
+                            color: course.course_categories?.color_hex
+                          }}
+                        >
+                          {course.course_categories?.name}
+                        </Badge>
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <Progress value={progress} className="flex-1 h-2 mr-3" />
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{schedule?.start_time || "N/A"}</span>
+                        </div>
                         
-                        {progress < 100 && (
-                          <Button
-                            onClick={() => {
-                              const schedule = course.course_schedules?.[0];
-                              if (schedule) {
-                                setSelectedCourse({
-                                  ...course,
-                                  scheduledDate: new Date().toISOString().split('T')[0],
-                                  scheduledTime: schedule.start_time
-                                });
-                                setBookingDialogOpen(true);
-                              }
-                            }}
-                            disabled={isLoading}
-                            size="sm"
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all"
-                          >
-                            {isLoading ? "..." : "Prenota Ora"}
-                          </Button>
-                        )}
+                        <Button
+                          onClick={() => {
+                            const schedule = course.course_schedules?.[0];
+                            if (schedule) {
+                              setSelectedCourse({
+                                ...course,
+                                scheduledDate: new Date().toISOString().split('T')[0],
+                                scheduledTime: schedule.start_time
+                              });
+                              setBookingDialogOpen(true);
+                            }
+                          }}
+                          disabled={isLoading}
+                          size="sm"
+                          className="h-7 px-3 text-xs"
+                        >
+                          {isLoading ? "..." : "Prenota"}
+                        </Button>
                       </div>
                     </div>
                   </div>
