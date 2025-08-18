@@ -15,10 +15,32 @@ export const useAuthRedirect = () => {
 
     const currentPath = location.pathname;
     
-    // Se l'utente è autenticato e si trova sulla pagina auth, redirect alla home
+    // Se l'utente è autenticato e si trova sulla pagina auth, redirect basato sul ruolo
     if (isAuthenticated && currentPath === '/auth') {
-      navigate('/', { replace: true });
+      if (user?.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (user?.role === 'gym_owner') {
+        navigate('/owner', { replace: true });
+      } else if (user?.role === 'instructor') {
+        navigate('/instructor', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
       return;
+    }
+
+    // Se l'utente è autenticato e si trova sulla home, redirect basato sul ruolo
+    if (isAuthenticated && currentPath === '/') {
+      if (user?.role === 'admin') {
+        navigate('/admin', { replace: true });
+        return;
+      } else if (user?.role === 'gym_owner') {
+        navigate('/owner', { replace: true });
+        return;
+      } else if (user?.role === 'instructor') {
+        navigate('/instructor', { replace: true });
+        return;
+      }
     }
 
     // Se l'utente non è autenticato e non si trova su una pagina pubblica
