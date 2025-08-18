@@ -26,7 +26,7 @@ interface BookingConfirmDialogProps {
         last_name?: string;
       };
     };
-  };
+  } | null;
   scheduledDate: string;
   scheduledTime: string;
   onConfirm: () => void;
@@ -113,7 +113,7 @@ export const BookingConfirmDialog = ({
     };
 
     const fetchParticipants = async () => {
-      if (!course.id) return;
+      if (!course?.id) return;
       
       try {
         // Get course info with gym name
@@ -146,7 +146,7 @@ export const BookingConfirmDialog = ({
     fetchParticipants();
   }, [user, open]);
 
-  const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course.credits_required || 1);
+  const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course?.credits_required || 1);
 
   const handleCreditPurchaseComplete = async () => {
     // Ricarica i crediti dopo l'acquisto
@@ -176,7 +176,7 @@ export const BookingConfirmDialog = ({
 
         <div className="space-y-4">
           <div className="bg-accent border border-border rounded-lg p-5 sm:p-4 space-y-4">
-            <h3 className="font-semibold text-foreground text-lg">{course.name}</h3>
+            <h3 className="font-semibold text-foreground text-lg">{course?.name}</h3>
             
             <div className="space-y-3 text-base sm:text-sm">
               <div className="flex items-center text-foreground">
@@ -199,42 +199,42 @@ export const BookingConfirmDialog = ({
                 <span>{gymName}</span>
               </div>
 
-              {course.max_participants && (
+              {course?.max_participants && (
                 <div className="flex items-center text-muted-foreground">
                   <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                  <span>Max {course.max_participants} partecipanti</span>
+                  <span>Max {course?.max_participants} partecipanti</span>
                 </div>
               )}
 
-              {course.reserved_spots && course.reserved_spots > 0 && (
+              {course?.reserved_spots && course.reserved_spots > 0 && (
                 <div className="flex items-center justify-between text-foreground">
                   <div className="flex items-center text-muted-foreground">
                     <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                     <span>Posti riservati:</span>
                   </div>
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {course.reserved_spots} per abbonati
+                    {course?.reserved_spots} per abbonati
                   </Badge>
                 </div>
               )}
 
-              {course.max_participants && course.reserved_spots && (
+              {course?.max_participants && course?.reserved_spots && (
                 <div className="flex items-center justify-between text-foreground">
                   <div className="flex items-center text-muted-foreground">
                     <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
                     <span>Posti pubblici:</span>
                   </div>
                   <Badge variant="outline">
-                    {course.max_participants - course.reserved_spots} disponibili
+                    {(course?.max_participants || 0) - (course?.reserved_spots || 0)} disponibili
                   </Badge>
                 </div>
               )}
 
-              {course.credits_required && (
+              {course?.credits_required && (
                 <div className="flex items-center justify-between text-foreground">
                   <div className="flex items-center">
                     <Coins className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                    <span>{course.credits_required} crediti richiesti</span>
+                    <span>{course?.credits_required} crediti richiesti</span>
                   </div>
                   {!loadingCredits && (
                     <div className="text-right">
@@ -243,10 +243,10 @@ export const BookingConfirmDialog = ({
                           Accesso Illimitato
                         </Badge>
                       ) : (
-                        <Badge 
-                          variant={userCredits >= course.credits_required ? "default" : "destructive"}
-                          className="text-xs"
-                        >
+                         <Badge 
+                           variant={userCredits >= (course?.credits_required || 1) ? "default" : "destructive"}
+                           className="text-xs"
+                         >
                           Hai {userCredits} crediti
                         </Badge>
                       )}
@@ -255,10 +255,10 @@ export const BookingConfirmDialog = ({
                 </div>
               )}
 
-              {course.difficulty_level && (
+              {course?.difficulty_level && (
                 <div className="flex items-center text-muted-foreground">
                   <Award className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                  <span>Livello: {getDifficultyLabel(course.difficulty_level)}</span>
+                  <span>Livello: {getDifficultyLabel(course?.difficulty_level)}</span>
                 </div>
               )}
             </div>
@@ -310,9 +310,9 @@ export const BookingConfirmDialog = ({
     <CreditPurchaseDialog
       open={showCreditPurchaseDialog}
       onOpenChange={setShowCreditPurchaseDialog}
-      courseName={course.name || ''}
-      coursePrice={course.price_per_session}
-      creditsNeeded={course.credits_required || 1}
+      courseName={course?.name || ''}
+      coursePrice={course?.price_per_session}
+      creditsNeeded={course?.credits_required || 1}
       onPurchaseComplete={handleCreditPurchaseComplete}
     />
     </>
