@@ -371,7 +371,166 @@ export const Dashboard = () => {
       {/* Integrated Weekly Calendar */}
       <WeeklyCalendarCompact />
 
-      {/* Modern Stats Cards */}
+      {/* Corsi Disponibili - Moved Higher for Better Visibility */}
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Zap className="h-6 w-6 text-primary" />
+              Corsi Disponibili
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/gyms')}
+              className="flex items-center gap-2 text-primary border-primary/20 hover:bg-primary/5 shadow-sm"
+            >
+              <ArrowRight className="h-4 w-4" />
+              Esplora Tutti
+            </Button>
+          </div>
+          <CardDescription className="text-sm font-medium">
+            Scopri i corsi disponibili nella tua palestra
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {filteredAvailableCourses.length > 0 ? (
+            filteredAvailableCourses.slice(0, 8).map((course) => {
+              const instructorName = getInstructorName(course);
+              const instructorAvatar = getInstructorAvatar(course);
+              const schedule = course.course_schedules?.[0];
+              const progress = getCourseProgress(course);
+              const isLoading = loadingBooking === course.id;
+              const categoryColor = course.course_categories?.color_hex || '#3B82F6';
+              const spotsLeft = course.max_participants - (course.current_bookings || 0);
+              const isAlmostFull = spotsLeft <= 3 && spotsLeft > 0;
+              const isFull = spotsLeft <= 0;
+              
+              return (
+                <div key={course.id} className="group bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-4 hover:shadow-xl hover:scale-[1.02] hover:border-primary/40 transition-all duration-300">
+                  <div className="flex items-start gap-4">
+                    <div className="relative">
+                      <Avatar className="w-14 h-14 border-2 border-primary/30 group-hover:border-primary/50 transition-colors">
+                        <AvatarImage src={instructorAvatar} alt={instructorName} />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm">
+                          {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {course.course_categories && (
+                        <div 
+                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background"
+                          style={{ backgroundColor: categoryColor }}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                            {course.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{instructorName}</p>
+                          {course.course_categories && (
+                            <Badge variant="secondary" className="text-xs mt-1" style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}>
+                              {course.course_categories.name}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {progress >= 100 ? (
+                            <Badge variant="secondary" className="bg-destructive/20 text-destructive border-destructive/30">
+                              Completo
+                            </Badge>
+                          ) : progress >= 85 ? (
+                            <Badge variant="secondary" className="bg-warning/20 text-warning border-warning/30">
+                              Ultimi posti
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-primary/30 text-primary">
+                              Disponibile
+                            </Badge>
+                          )}
+                          {course.credits_required > 1 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Star className="h-3 w-3" />
+                              <span>{course.credits_required} crediti</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{schedule?.start_time || "N/A"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{schedule?.gym_rooms?.name || 'Sala'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          <span>{course.current_bookings || 0}/{course.max_participants}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Activity className="h-4 w-4" />
+                          <span>{course.duration_minutes}min</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Progress value={progress} className="flex-1 h-2 mr-3" />
+                        
+                        {progress < 100 && (
+                          <Button
+                            onClick={() => openBookingDialog(course)}
+                            disabled={isLoading}
+                            size="sm"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all"
+                          >
+                            {isLoading ? "..." : "Prenota Ora"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <Zap className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="font-bold text-xl mb-3 bg-gradient-primary bg-clip-text text-transparent">
+                Nessun corso disponibile
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Al momento non ci sono corsi disponibili nella tua palestra. Controlla più tardi o esplora altre opzioni.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={() => navigate('/gyms')}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Esplora Palestre
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-primary/20 text-primary hover:bg-primary/5"
+                >
+                  Aggiorna
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modern Stats Cards - Moved after courses for better hierarchy */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg">
           <CardContent className="p-4">
@@ -401,107 +560,6 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-
-      {/* Corsi Disponibili */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-lg font-bold">
-              <Zap className="h-5 w-5 text-primary" />
-              Corsi Disponibili
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/gyms')}
-              className="flex items-center gap-2 text-primary border-primary/20 hover:bg-primary/5"
-            >
-              <Filter className="h-4 w-4" />
-              Tutti
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {filteredAvailableCourses.length > 0 ? (
-            filteredAvailableCourses.slice(0, 4).map((course) => {
-              const instructorName = getInstructorName(course);
-              const instructorAvatar = getInstructorAvatar(course);
-              const schedule = course.course_schedules?.[0];
-              const progress = getCourseProgress(course);
-              const isLoading = loadingBooking === course.id;
-              const categoryColor = course.course_categories?.color_hex || '#3B82F6';
-              
-              return (
-                <div key={course.id} className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="w-12 h-12 border-2 border-primary/30">
-                      <AvatarImage src={instructorAvatar} alt={instructorName} />
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                        {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-bold text-base text-foreground">{course.name}</h3>
-                          <p className="text-sm text-muted-foreground">{instructorName}</p>
-                        </div>
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs"
-                          style={{ 
-                            backgroundColor: `${categoryColor}20`, 
-                            color: categoryColor,
-                            borderColor: `${categoryColor}40`
-                          }}
-                        >
-                          {course.course_categories?.name || 'Corso'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{schedule?.start_time || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{schedule?.gym_rooms?.name || 'Sala'}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {course.current_bookings || 0}/{course.max_participants} posti
-                          </span>
-                          <Progress value={progress} className="w-16 h-2" />
-                        </div>
-                        
-                        <Button
-                          size="sm"
-                          onClick={() => openBookingDialog(course)}
-                          disabled={isLoading || progress >= 100}
-                          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
-                        >
-                          {isLoading ? "..." : progress >= 100 ? "Pieno" : "Prenota"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">Nessun corso disponibile al momento</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <BookingConfirmDialog
         open={bookingDialogOpen}
