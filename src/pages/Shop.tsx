@@ -7,11 +7,8 @@ export const Shop: React.FC = () => {
   const navigate = useNavigate();
   
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/', { replace: true });
-    }
+    // Always try to go back, with fallback to home
+    navigate(-1);
   };
 
   return (
