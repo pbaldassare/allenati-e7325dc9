@@ -29,7 +29,9 @@ const OwnerCourseEdit = () => {
       
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // First, get the course data
+        const { data: courseData, error: courseError } = await supabase
           .from('courses')
           .select(`
             *,
@@ -45,35 +47,50 @@ const OwnerCourseEdit = () => {
             ),
             instructors (
               id,
-              user_id,
-              profiles (
-                first_name,
-                last_name
-              )
+              user_id
             )
           `)
           .eq('id', id)
           .single();
 
-        if (error) throw error;
+        if (courseError) throw courseError;
+
+        // Then get the instructor's profile data if instructor exists
+        let instructorProfile = null;
+        if (courseData.instructors?.user_id) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('user_id', courseData.instructors.user_id)
+            .single();
+
+          if (!profileError && profileData) {
+            instructorProfile = profileData;
+          }
+        }
         
         // Map database fields to form-expected format
         const mappedCourse = {
-          ...data,
-          maxParticipants: data.max_participants,
-          durationMinutes: data.duration_minutes,
-          difficultyLevel: data.difficulty_level,
-          pricePerSession: data.price_per_session,
-          creditsRequired: data.credits_required,
-          equipmentNeeded: data.equipment_needed,
-          imageUrl: data.image_url,
-          deadlineHours: data.deadline_hours,
-          reservedSpots: data.reserved_spots,
-          isActive: data.is_active,
-          categoryId: data.category_id,
-          instructorId: data.instructor_id,
-          gymId: data.gym_id,
-          schedules: data.course_schedules || []
+          ...courseData,
+          maxParticipants: courseData.max_participants,
+          durationMinutes: courseData.duration_minutes,
+          difficultyLevel: courseData.difficulty_level,
+          pricePerSession: courseData.price_per_session,
+          creditsRequired: courseData.credits_required,
+          equipmentNeeded: courseData.equipment_needed,
+          imageUrl: courseData.image_url,
+          deadlineHours: courseData.deadline_hours,
+          reservedSpots: courseData.reserved_spots,
+          isActive: courseData.is_active,
+          categoryId: courseData.category_id,
+          instructorId: courseData.instructor_id,
+          gymId: courseData.gym_id,
+          schedules: courseData.course_schedules || [],
+          // Add instructor profile data
+          instructors: courseData.instructors ? {
+            ...courseData.instructors,
+            profiles: instructorProfile
+          } : null
         };
         
         setCourse(mappedCourse);
