@@ -66,7 +66,7 @@ export const Dashboard = () => {
               *,
               course_categories(name, color_hex, icon_name),
               instructors(user_id),
-              course_schedules(*, gym_rooms(name, color)),
+            course_schedules(day_of_week, start_time, end_time),
               gyms(name)
             `)
             .in('id', bookedCourseIds)
@@ -82,7 +82,7 @@ export const Dashboard = () => {
             *,
             course_categories(name, color_hex, icon_name),
             instructors(user_id),
-            course_schedules(*, gym_rooms(name, color)),
+            course_schedules(day_of_week, start_time, end_time),
             gyms(name)
           `)
           .in('gym_id', userGymIds)
