@@ -200,7 +200,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
               className={`
                 p-2 rounded-xl text-center transition-all duration-200 min-h-[70px] flex flex-col justify-center items-center
                 ${isToday(date) ? 'bg-primary text-primary-foreground shadow-lg' : ''}
-                ${isSelected(date) ? 'ring-2 ring-primary ring-offset-2' : ''}
+                ${isSelected(date) ? 'bg-primary/30 border-2 border-primary ring-2 ring-primary/50 shadow-md' : ''}
                 ${!isToday(date) && !isSelected(date) ? 'hover:bg-accent hover:text-accent-foreground hover:scale-105' : ''}
               `}
             >

@@ -311,11 +311,12 @@ export const Dashboard = () => {
     // Filter by selected date
     if (selectedDate) {
       // Convert JavaScript Date.getDay() to database day_of_week format
-      const jsDay = selectedDate.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
-      const dbDay = jsDay === 0 ? 0 : jsDay; // Keep Sunday as 0, others stay the same
+      // JavaScript: 0=Sunday, 1=Monday, ..., 6=Saturday
+      // Database: 0=Sunday, 1=Monday, ..., 6=Saturday (same format)
+      const jsDay = selectedDate.getDay();
       
       const courseSchedules = course.course_schedules || [];
-      return courseSchedules.some(schedule => schedule.day_of_week === dbDay);
+      return courseSchedules.some(schedule => schedule.day_of_week === jsDay);
     }
     
     return true;
@@ -502,41 +503,36 @@ export const Dashboard = () => {
               const isFull = spotsLeft <= 0;
               
               return (
-                <div key={course.id} className="bg-card border border-border rounded-xl p-3 hover:shadow-lg transition-all duration-300 group">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10 border border-primary/20 group-hover:border-primary/40 transition-colors">
-                      <AvatarImage src={instructorAvatar} alt={instructorName} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                        {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-1">
-                        <div>
-                          <h3 className="font-semibold text-sm text-foreground">{course.name}</h3>
-                          <p className="text-xs text-muted-foreground">{instructorName}</p>
+                <Card key={course.id} className="group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Avatar className="h-6 w-6 border border-primary/20 flex-shrink-0">
+                          <AvatarImage src={instructorAvatar} />
+                          <AvatarFallback className="text-xs">{instructorName.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-sm truncate">{course.name}</h4>
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground truncate">{instructorName}</span>
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {schedule?.start_time || "N/A"}
+                            </span>
+                          </div>
                         </div>
-                        <Badge 
-                          variant="outline"
-                          className="text-xs h-5"
-                          style={{ 
-                            borderColor: course.course_categories?.color_hex,
-                            backgroundColor: `${course.course_categories?.color_hex}15`,
-                            color: course.course_categories?.color_hex
-                          }}
-                        >
-                          {course.course_categories?.name}
-                        </Badge>
                       </div>
                       
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{schedule?.start_time || "N/A"}</span>
+                          <Users className="h-3 w-3" />
+                          <span>{course.current_bookings || 0}/{course.max_participants}</span>
                         </div>
-                        
                         <Button
+                          size="sm"
                           onClick={() => {
                             const schedule = course.course_schedules?.[0];
                             if (schedule) {
@@ -549,15 +545,14 @@ export const Dashboard = () => {
                             }
                           }}
                           disabled={isLoading}
-                          size="sm"
-                          className="h-7 px-3 text-xs"
+                          className="bg-primary hover:bg-primary/90 h-7 px-3 text-xs"
                         >
                           {isLoading ? "..." : "Prenota"}
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               );
             })
           ) : (
