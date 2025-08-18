@@ -14,8 +14,10 @@ import {
   Loader2,
   MapPin,
   Users,
-  Zap
+  Zap,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
@@ -28,6 +30,7 @@ const BookingHistory = () => {
   const { user } = useAuth();
   const { userGyms } = useGym();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.title = "I Miei Corsi - FitBooking";
@@ -50,7 +53,7 @@ const BookingHistory = () => {
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
 
-  // Fetch available courses
+  // Fetch available courses with booking counts
   useEffect(() => {
     const fetchAvailableCourses = async () => {
       if (!user || userGyms.length === 0) return;
@@ -58,6 +61,11 @@ const BookingHistory = () => {
       setCoursesLoading(true);
       try {
         const userGymIds = userGyms.map(gym => gym.id);
+        
+        // Get user's confirmed/waitlist bookings first
+        const userBookedCourseIds = bookings
+          .filter(b => ['confirmed', 'waitlist'].includes(b.status))
+          .map(b => b.course_id);
         
         const { data: courses, error } = await supabase
           .from('courses')
@@ -80,20 +88,45 @@ const BookingHistory = () => {
           `)
           .in('gym_id', userGymIds)
           .eq('is_active', true)
-          .order('name');
+          .not('id', 'in', `(${userBookedCourseIds.join(',') || 'null'})`)
+          .order('created_at', { ascending: true })
+          .limit(15);
 
         if (error) throw error;
         
-        // Filter out courses user has already booked
-        const userBookedCourseIds = bookings
-          .filter(b => ['confirmed', 'waitlist'].includes(b.status))
-          .map(b => b.course_id);
-          
-        const filteredCourses = (courses || []).filter(course => 
-          !userBookedCourseIds.includes(course.id)
-        );
-        
-        setAvailableCourses(filteredCourses);
+        // Get booking counts for each course to show availability
+        const courseIds = (courses || []).map(c => c.id);
+        if (courseIds.length > 0) {
+          const { data: bookingCounts } = await supabase
+            .from('bookings')
+            .select('course_id')
+            .in('course_id', courseIds)
+            .eq('status', 'confirmed');
+
+          // Add booking counts to courses and filter out full courses
+          const coursesWithCounts = (courses || []).map(course => {
+            const count = bookingCounts?.filter(b => b.course_id === course.id).length || 0;
+            return {
+              ...course,
+              current_bookings: count
+            };
+          });
+
+          // Filter only courses with available spots and future schedules
+          const availableFilteredCourses = coursesWithCounts.filter(course => {
+            // Check if course has available spots
+            const spotsLeft = course.max_participants - course.current_bookings;
+            if (spotsLeft <= 0) return false;
+            
+            // Check if course has future schedules
+            const hasSchedules = course.schedules && course.schedules.length > 0;
+            return hasSchedules;
+          });
+
+          setAvailableCourses(availableFilteredCourses);
+        } else {
+          setAvailableCourses([]);
+        }
       } catch (error) {
         console.error('Error fetching courses:', error);
       } finally {
@@ -286,19 +319,33 @@ const BookingHistory = () => {
     );
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background p-4 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            I Miei Corsi
-          </h1>
-          <p className="text-muted-foreground">
-            I tuoi corsi prenotati e altri disponibili
-          </p>
-        </div>
+        <header className="mb-4">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Indietro
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              I Miei Corsi
+            </h1>
+            <p className="text-muted-foreground">
+              I tuoi corsi prenotati e altri disponibili
+            </p>
+          </div>
+        </header>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <Input
@@ -368,12 +415,15 @@ const BookingHistory = () => {
                             className="w-10 h-10 rounded-full object-cover"
                           />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm truncate">{course.name}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            {course.gym?.name} - {course.gym?.city}
-                          </p>
-                        </div>
+                         <div className="flex-1 min-w-0">
+                           <h3 className="font-medium text-sm truncate">{course.name}</h3>
+                           <p className="text-xs text-muted-foreground">
+                             {course.gym?.name} - {course.gym?.city}
+                           </p>
+                           <p className="text-xs text-primary font-medium">
+                             {course.max_participants - course.current_bookings} posti disponibili
+                           </p>
+                         </div>
                       </div>
                       <Button 
                         size="sm" 
