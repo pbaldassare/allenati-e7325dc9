@@ -44,6 +44,16 @@ const BookingHistory = () => {
     cancelBooking
   } = useBookings();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('BookingHistory - Debugging info:');
+    console.log('User:', user?.id);
+    console.log('User gyms:', userGyms?.length);
+    console.log('Bookings:', bookings?.length);
+    console.log('Bookings loading:', bookingsLoading);
+    console.log('Full bookings data:', bookings);
+  }, [user, userGyms, bookings, bookingsLoading]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showCancellationDialog, setShowCancellationDialog] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -58,8 +68,12 @@ const BookingHistory = () => {
   // Fetch available courses with booking counts
   useEffect(() => {
     const fetchAvailableCourses = async () => {
-      if (!user || userGyms.length === 0) return;
+      if (!user || userGyms.length === 0) {
+        console.log('BookingHistory - No user or gyms available:', { user: !!user, gymsCount: userGyms.length });
+        return;
+      }
       
+      console.log('BookingHistory - Fetching available courses for user:', user.id);
       setCoursesLoading(true);
       try {
         const userGymIds = userGyms.map(gym => gym.id);
@@ -96,6 +110,8 @@ const BookingHistory = () => {
 
         if (error) throw error;
         
+        console.log('BookingHistory - Fetched courses:', courses?.length);
+        
         // Get booking counts for each course to show availability
         const courseIds = (courses || []).map(c => c.id);
         if (courseIds.length > 0) {
@@ -125,12 +141,19 @@ const BookingHistory = () => {
             return hasSchedules;
           });
 
+          console.log('BookingHistory - Available courses after filtering:', availableFilteredCourses.length);
           setAvailableCourses(availableFilteredCourses);
         } else {
+          console.log('BookingHistory - No course IDs found');
           setAvailableCourses([]);
         }
       } catch (error) {
-        console.error('Error fetching courses:', error);
+        console.error('BookingHistory - Error fetching courses:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare i corsi disponibili",
+          variant: "destructive",
+        });
       } finally {
         setCoursesLoading(false);
       }
@@ -334,7 +357,21 @@ const BookingHistory = () => {
     navigate(`/?tab=${tab}`, { replace: true });
   };
 
-  if (!user) return null;
+  if (!user) {
+    console.log('BookingHistory - No user, redirecting or showing login');
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">Devi effettuare l'accesso per vedere i tuoi corsi.</p>
+            <Button onClick={() => navigate('/auth')} className="mt-4">
+              Accedi
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
