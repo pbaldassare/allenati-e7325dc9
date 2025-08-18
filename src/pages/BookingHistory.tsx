@@ -25,6 +25,7 @@ import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog'
 import { useBookings } from '@/hooks/useBookings';
 import { supabase } from '@/integrations/supabase/client';
 import { useGym } from '@/contexts/GymContext';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 const BookingHistory = () => {
   const { user } = useAuth();
@@ -52,6 +53,7 @@ const BookingHistory = () => {
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('i-miei-corsi');
 
   // Fetch available courses with booking counts
   useEffect(() => {
@@ -320,17 +322,22 @@ const BookingHistory = () => {
   };
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/', { replace: true });
+    navigate('/', { replace: true });
+  };
+
+  const handleTabChange = (tab: string) => {
+    if (tab === 'i-miei-corsi') {
+      return; // Already on this page
     }
+    
+    // Navigate to home and let the tab change be handled there
+    navigate(`/?tab=${tab}`, { replace: true });
   };
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-20">
+    <div className="min-h-screen bg-background p-4 pb-24">
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
@@ -494,6 +501,11 @@ const BookingHistory = () => {
           isLoading={loadingBooking === selectedCourse?.id}
         />
       </div>
+      
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+      />
     </div>
   );
 };
