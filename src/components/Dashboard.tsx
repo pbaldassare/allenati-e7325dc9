@@ -12,7 +12,7 @@ import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog'
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
-import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
+import WeeklyCalendarCompact from './WeeklyCalendarCompact';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -289,40 +289,6 @@ export const Dashboard = () => {
         </Button>
       </div>
 
-      {/* Integrated Calendar */}
-      <MonthlyCalendarCompact />
-
-      {/* Modern Stats Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Trophy className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-primary">{bookings.length}</p>
-                <p className="text-xs text-muted-foreground font-medium">Prenotati</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20 shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-                <Activity className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-success">{availableCourses.length}</p>
-                <p className="text-xs text-muted-foreground font-medium">Disponibili</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* I Tuoi Corsi Prenotati */}
       {courses.length > 0 && (
         <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
@@ -401,6 +367,41 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Integrated Weekly Calendar */}
+      <WeeklyCalendarCompact />
+
+      {/* Modern Stats Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Trophy className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-primary">{bookings.length}</p>
+                <p className="text-xs text-muted-foreground font-medium">Prenotati</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-success">{availableCourses.length}</p>
+                <p className="text-xs text-muted-foreground font-medium">Disponibili</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
 
       {/* Corsi Disponibili */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
