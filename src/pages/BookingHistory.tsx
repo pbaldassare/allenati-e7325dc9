@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
@@ -29,30 +28,84 @@ const BookingHistory = () => {
   const { user } = useAuth();
   const { userGyms } = useGym();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('booked');
+
+  useEffect(() => {
+    document.title = "I Miei Corsi - FitBooking";
+  }, []);
+
+  const {
+    bookings,
+    loading: bookingsLoading,
+    fetchBookings,
+    cancelBooking
+  } = useBookings();
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCancellationDialog, setShowCancellationDialog] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [availableCourses, setAvailableCourses] = useState([]);
-  const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
-  const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [coursesLoading, setCoursesLoading] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
-  const { bookings, loading, cancelBooking: hookCancelBooking } = useBookings();
 
-  if (!user) return null;
-  
-  const filteredBookings = bookings.filter(booking => {
-    const course = booking.courses;
-    const matchesSearch = !searchTerm || 
-      (course?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       getInstructorName(course).toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    if (activeTab === 'all') return matchesSearch;
-    return booking.status === activeTab && matchesSearch;
-  });
+  // Fetch available courses
+  useEffect(() => {
+    const fetchAvailableCourses = async () => {
+      if (!user || userGyms.length === 0) return;
+      
+      setCoursesLoading(true);
+      try {
+        const userGymIds = userGyms.map(gym => gym.id);
+        
+        const { data: courses, error } = await supabase
+          .from('courses')
+          .select(`
+            *,
+            instructor:instructors(
+              id,
+              user_id,
+              bio,
+              profiles:user_id(first_name, last_name, avatar_url)
+            ),
+            category:course_categories(name, color_hex),
+            schedules:course_schedules(
+              day_of_week,
+              start_time,
+              end_time,
+              room_name
+            ),
+            gym:gyms(name, city)
+          `)
+          .in('gym_id', userGymIds)
+          .eq('is_active', true)
+          .order('name');
 
+        if (error) throw error;
+        
+        // Filter out courses user has already booked
+        const userBookedCourseIds = bookings
+          .filter(b => ['confirmed', 'waitlist'].includes(b.status))
+          .map(b => b.course_id);
+          
+        const filteredCourses = (courses || []).filter(course => 
+          !userBookedCourseIds.includes(course.id)
+        );
+        
+        setAvailableCourses(filteredCourses);
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
+    fetchAvailableCourses();
+  }, [user, userGyms, bookings]);
+
+  // Helper functions
   const getInstructorName = (course: any): string => {
-    // Gestisce entrambi i formati: course.instructors.profiles o course.instructor.profiles
     const profiles = course?.instructors?.profiles || course?.instructor?.profiles;
     if (!profiles) {
       return 'Istruttore non assegnato';
@@ -62,10 +115,11 @@ const BookingHistory = () => {
   };
 
   const getGymInfo = (course: any): string => {
-    if (!course?.gyms) {
+    if (!course?.gyms && !course?.gym) {
       return 'Palestra non specificata';
     }
-    const { name, city } = course.gyms;
+    const gymData = course.gyms || course.gym;
+    const { name, city } = gymData;
     return `${name}${city ? ` - ${city}` : ''}`;
   };
 
@@ -99,28 +153,57 @@ const BookingHistory = () => {
     }
   };
 
-  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  // Filter bookings
+  const activeBookings = bookings?.filter(booking => 
+    ['confirmed', 'waitlist'].includes(booking.status)
+  ) || [];
+
+  const completedBookings = bookings?.filter(booking => 
+    ['completed', 'cancelled'].includes(booking.status)
+  ) || [];
+
+  const filteredBookings = bookings?.filter(booking => {
+    const searchTermLower = searchTerm.toLowerCase();
+    const courseNameMatch = booking.course?.name?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(booking.course)?.toLowerCase().includes(searchTermLower);
+    
+    return !searchTerm || courseNameMatch || instructorMatch;
+  }) || [];
 
   const openCancellationDialog = (booking: any) => {
     setSelectedBooking(booking);
-    setSelectedCourse(booking.courses);
-    setCancellationDialogOpen(true);
+    setSelectedCourse(booking.course);
+    setShowCancellationDialog(true);
   };
 
   const handleCancelBooking = async () => {
     if (!selectedBooking) return;
     
-    const success = await hookCancelBooking(selectedBooking.id);
+    setIsProcessing(true);
+    const success = await cancelBooking(selectedBooking.id);
     if (success) {
-      setCancellationDialogOpen(false);
+      setShowCancellationDialog(false);
     }
     setSelectedBooking(null);
     setSelectedCourse(null);
+    setIsProcessing(false);
+  };
+
+  const openBookingDialog = (course: any) => {
+    setSelectedCourse(course);
+    setBookingDialogOpen(true);
+  };
+
+  const handleBookingConfirm = async () => {
+    // This will be handled by the BookingConfirmDialog component
+    setBookingDialogOpen(false);
+    setSelectedCourse(null);
+    // Refresh data
+    await fetchBookings();
   };
 
   const BookingCard = ({ booking }: { booking: any }) => {
-    const course = booking.courses;
+    const course = booking.courses || booking.course;
     if (!course) return null;
 
     const canCancel = booking.status === 'confirmed' || booking.status === 'waitlist';
@@ -203,10 +286,7 @@ const BookingHistory = () => {
     );
   };
 
-  const getTabCount = (status: string) => {
-    if (status === 'all') return bookings.length;
-    return bookings.filter(b => b.status === status).length;
-  };
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background p-4 pb-20">
@@ -220,101 +300,130 @@ const BookingHistory = () => {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <Input
-            placeholder="Cerca per corso o istruttore..."
+            placeholder="Cerca corsi o istruttori..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="max-w-md"
           />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{getTabCount('confirmed')}</div>
-              <p className="text-xs text-muted-foreground">Confermate</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-warning">{getTabCount('waitlist')}</div>
-              <p className="text-xs text-muted-foreground">In Attesa</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-success">{getTabCount('completed')}</div>
-              <p className="text-xs text-muted-foreground">Completate</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-destructive">{getTabCount('cancelled')}</div>
-              <p className="text-xs text-muted-foreground">Cancellate</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all">
-              Tutte ({getTabCount('all')})
-            </TabsTrigger>
-            <TabsTrigger value="confirmed">
-              Confermate
-            </TabsTrigger>
-            <TabsTrigger value="waitlist">
-              In Attesa
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completate
-            </TabsTrigger>
-            <TabsTrigger value="cancelled">
-              Cancellate
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="space-y-4">
-            {filteredBookings.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    {searchTerm ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione'}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm 
-                      ? 'Prova a modificare il termine di ricerca'
-                      : 'Inizia a prenotare i tuoi corsi preferiti'
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredBookings
+        {/* I Miei Corsi Attivi */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-primary">I Miei Corsi Attivi</h2>
+          {bookingsLoading ? (
+            <div className="space-y-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : activeBookings.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Non hai corsi attivi. Prenota un corso qui sotto!
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {activeBookings
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .map((booking) => (
                   <BookingCard key={booking.id} booking={booking} />
-                ))
-            )}
-          </TabsContent>
-        </Tabs>
+                ))}
+            </div>
+          )}
+        </div>
 
-        {loading && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Caricamento prenotazioni...</span>
-          </div>
-        )}
+        {/* Corsi Disponibili */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-primary">Corsi Disponibili</h2>
+          {coursesLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {availableCourses.map((course) => (
+                <Card key={course.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {course.instructor?.profiles?.avatar_url && (
+                          <img 
+                            src={course.instructor.profiles.avatar_url} 
+                            alt="Istruttore"
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm truncate">{course.name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {course.gym?.name} - {course.gym?.city}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="px-3"
+                        onClick={() => openBookingDialog(course)}
+                      >
+                        P
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Storico */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-primary">Storico Lezioni</h2>
+          {bookingsLoading ? (
+            <div className="space-y-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : completedBookings.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nessuna lezione completata o cancellata.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {completedBookings
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .map((booking) => (
+                  <BookingCard key={booking.id} booking={booking} />
+                ))}
+            </div>
+          )}
+        </div>
 
         <CancellationConfirmDialog
-          open={cancellationDialogOpen}
-          onOpenChange={setCancellationDialogOpen}
+          open={showCancellationDialog}
+          onOpenChange={setShowCancellationDialog}
           course={selectedCourse || {}}
           booking={{
             scheduled_date: selectedBooking?.scheduled_date,
@@ -322,6 +431,17 @@ const BookingHistory = () => {
             credits_used: selectedBooking?.credits_used
           }}
           onConfirm={handleCancelBooking}
+          isLoading={isProcessing}
+        />
+
+        <BookingConfirmDialog
+          open={bookingDialogOpen}
+          onOpenChange={setBookingDialogOpen}
+          course={selectedCourse}
+          scheduledDate={new Date().toISOString().split('T')[0]}
+          scheduledTime="08:00"
+          onConfirm={handleBookingConfirm}
+          isLoading={loadingBooking === selectedCourse?.id}
         />
       </div>
     </div>

@@ -362,7 +362,7 @@ export const Dashboard = () => {
 
       {/* Summary Stats - Moved to top */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-card cursor-pointer" onClick={() => navigate('/storico-prenotazioni')}>
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-card cursor-pointer" onClick={() => navigate('/i-miei-corsi')}>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary">
               {courses.length}
