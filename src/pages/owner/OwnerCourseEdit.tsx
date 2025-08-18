@@ -14,6 +14,10 @@ const OwnerCourseEdit = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   useEffect(() => {
     const loadCourse = async () => {
       if (!id) return;
@@ -104,13 +108,19 @@ const OwnerCourseEdit = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Modifica Corso
-        </h1>
-        <p className="text-muted-foreground">
-          Modifica i dettagli del corso "{course.name}"
-        </p>
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={handleBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Indietro
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Modifica Corso
+          </h1>
+          <p className="text-muted-foreground">
+            Modifica i dettagli del corso "{course.name}"
+          </p>
+        </div>
       </div>
 
       <Card>
