@@ -33,7 +33,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
   const [courseSchedules, setCourseSchedules] = useState<CourseSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { selectedGym } = useGym();
+  const { userGyms } = useGym();
 
   const getWeekDays = (date: Date) => {
     const week = [];
@@ -55,10 +55,11 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
 
   useEffect(() => {
     const loadCourseSchedules = async () => {
-      if (!user || !selectedGym) return;
+      if (!user || userGyms.length === 0) return;
 
       try {
         setLoading(true);
+        const userGymIds = userGyms.map(gym => gym.id);
         const { data: schedules } = await supabase
           .from('course_schedules')
           .select(`
@@ -77,7 +78,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
               )
             )
           `)
-          .eq('course.gym_id', selectedGym.id)
+          .in('course.gym_id', userGymIds)
           .eq('course.is_active', true)
           .eq('is_active', true);
 
@@ -108,7 +109,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
     };
 
     loadCourseSchedules();
-  }, [user, selectedGym]);
+  }, [user, userGyms]);
 
   const getCoursesForDay = (dayOfWeek: number) => {
     return courseSchedules.filter(schedule => schedule.day_of_week === dayOfWeek);
@@ -195,10 +196,10 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
             <div
               key={date.toISOString()}
               className={`
-                p-2 rounded-xl text-center cursor-pointer transition-all duration-200 min-h-[70px]
+                p-2 rounded-xl text-center cursor-pointer transition-all duration-200 min-h-[70px] flex flex-col justify-center items-center
                 ${isToday(date) ? 'bg-primary text-primary-foreground shadow-lg' : ''}
                 ${isSelected(date) ? 'ring-2 ring-primary ring-offset-2' : ''}
-                ${!isToday(date) && !isSelected(date) ? 'hover:bg-accent hover:text-accent-foreground' : ''}
+                ${!isToday(date) && !isSelected(date) ? 'hover:bg-accent hover:text-accent-foreground hover:scale-105' : ''}
                 ${actualCoursesForDay.length > 0 ? 'border border-primary/30' : ''}
               `}
               onClick={() => onDayClick?.(date)}
@@ -213,7 +214,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
               {actualCoursesForDay.length > 0 && (
                 <Badge 
                   variant="secondary" 
-                  className="text-xs mt-1 px-1 py-0 min-w-0"
+                  className="text-xs mt-1 px-1 py-0 min-w-0 pointer-events-none"
                 >
                   {actualCoursesForDay.length}
                 </Badge>

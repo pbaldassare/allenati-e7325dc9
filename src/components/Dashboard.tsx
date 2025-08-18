@@ -33,6 +33,7 @@ export const Dashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Load data from Supabase
   useEffect(() => {
@@ -248,9 +249,27 @@ export const Dashboard = () => {
     return (current / max) * 100;
   };
 
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(selectedDate?.toDateString() === date.toDateString() ? null : date);
+  };
+
   const filteredAvailableCourses = availableCourses.filter(course => {
-    if (activeFilter === 'all') return true;
-    return course.course_categories?.name.toLowerCase().includes(activeFilter.toLowerCase());
+    // Filter by category
+    if (activeFilter !== 'all' && !course.course_categories?.name.toLowerCase().includes(activeFilter.toLowerCase())) {
+      return false;
+    }
+    
+    // Filter by selected date
+    if (selectedDate) {
+      const selectedDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const courseSchedules = course.course_schedules || [];
+      return courseSchedules.some(schedule => {
+        const scheduleDayOfWeek = schedule.day_of_week === 0 ? 7 : schedule.day_of_week; // Convert DB format (0=Sunday) to JS format
+        return scheduleDayOfWeek === selectedDayOfWeek || (selectedDayOfWeek === 0 && schedule.day_of_week === 0);
+      });
+    }
+    
+    return true;
   });
 
   if (loading) {
@@ -371,7 +390,7 @@ export const Dashboard = () => {
       )}
 
       {/* Integrated Weekly Calendar */}
-      <WeeklyCalendarCompact />
+      <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
 
       {/* Corsi Disponibili - Moved Higher for Better Visibility */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
@@ -380,19 +399,44 @@ export const Dashboard = () => {
             <CardTitle className="flex items-center gap-3 text-xl font-bold">
               <Zap className="h-6 w-6 text-primary" />
               Corsi Disponibili
+              {selectedDate && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  - {selectedDate.toLocaleDateString('it-IT', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long' 
+                  })}
+                </span>
+              )}
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/gyms')}
-              className="flex items-center gap-2 text-primary border-primary/20 hover:bg-primary/5 shadow-sm"
-            >
-              <ArrowRight className="h-4 w-4" />
-              Esplora Tutti
-            </Button>
+            <div className="flex items-center gap-2">
+              {selectedDate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedDate(null)}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <Filter className="h-4 w-4" />
+                  Mostra Tutti
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/gyms')}
+                className="flex items-center gap-2 text-primary border-primary/20 hover:bg-primary/5 shadow-sm"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Esplora Tutti
+              </Button>
+            </div>
           </div>
           <CardDescription className="text-sm font-medium">
-            Scopri i corsi disponibili nelle tue palestre
+            {selectedDate 
+              ? `Corsi disponibili per ${selectedDate.toLocaleDateString('it-IT', { weekday: 'long' })}`
+              : 'Scopri i corsi disponibili nelle tue palestre'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
