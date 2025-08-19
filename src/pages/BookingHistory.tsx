@@ -26,6 +26,7 @@ import { useBookings } from '@/hooks/useBookings';
 import { supabase } from '@/integrations/supabase/client';
 import { useGym } from '@/contexts/GymContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { getInstructorName } from '@/types/course';
 
 const BookingHistory = () => {
   const { user } = useAuth();
@@ -62,15 +63,6 @@ const BookingHistory = () => {
 
 
   // Helper functions
-  const getInstructorName = (course: any): string => {
-    const profiles = course?.instructors?.profiles || course?.instructor?.profiles;
-    if (!profiles) {
-      return 'Istruttore non assegnato';
-    }
-    const { first_name, last_name } = profiles;
-    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
-    return fullName || 'Istruttore non assegnato';
-  };
 
   const getGymInfo = (course: any): string => {
     if (!course?.gyms && !course?.gym) {
