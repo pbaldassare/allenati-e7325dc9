@@ -117,8 +117,9 @@ const BookingHistory = () => {
     if (!searchTerm) return isActive;
     
     const searchTermLower = searchTerm.toLowerCase();
-    const courseNameMatch = booking.course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(booking.course)?.toLowerCase().includes(searchTermLower);
+    const course = booking.courses || booking.course;
+    const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
     return isActive && (courseNameMatch || instructorMatch);
   }) || [];
@@ -128,8 +129,9 @@ const BookingHistory = () => {
     if (!searchTerm) return isCompleted;
     
     const searchTermLower = searchTerm.toLowerCase();
-    const courseNameMatch = booking.course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(booking.course)?.toLowerCase().includes(searchTermLower);
+    const course = booking.courses || booking.course;
+    const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
     return isCompleted && (courseNameMatch || instructorMatch);
   }) || [];
@@ -372,7 +374,7 @@ const BookingHistory = () => {
         <CancellationConfirmDialog
           open={showCancellationDialog}
           onOpenChange={setShowCancellationDialog}
-          course={selectedBooking?.course || {}}
+          course={selectedBooking?.courses || selectedBooking?.course || {}}
           booking={selectedBooking || {}}
           onConfirm={handleCancelBooking}
           isLoading={isProcessing}
