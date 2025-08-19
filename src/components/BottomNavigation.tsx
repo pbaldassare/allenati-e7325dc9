@@ -15,13 +15,14 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
     { id: "home", icon: Home, label: "Home" },
     { id: "chat", icon: MessageSquare, label: "Chat" },
     { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
-    { id: "shop", icon: ShoppingBag, label: "Shop" },
     // Add gym join button for regular users only
-    ...(!isAdmin && !isGymOwner ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
+    ...(!isAdmin && !isGymOwner && !isInstructor ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
     ...(isAdmin
       ? [{ id: "admin", icon: Settings, label: "Admin" }]
       : isGymOwner
       ? [{ id: "owner", icon: Settings, label: "Owner" }]
+      : isInstructor
+      ? [{ id: "instructor", icon: Settings, label: "Istruttore" }]
       : [{ id: "profile", icon: User, label: "Profilo" }]),
   ];
 

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard } from "lucide-react";
+import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -181,6 +181,15 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         >
           <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
           Certificato Medico
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          onClick={() => navigate('/shop')}
+        >
+          <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          Shop
         </Button>
         
         <Button 

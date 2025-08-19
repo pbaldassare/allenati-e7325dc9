@@ -25,6 +25,7 @@ import {
   MessageSquare,
   CreditCard,
   Settings,
+  ShoppingBag,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -80,6 +81,14 @@ export const OwnerSidebar: React.FC = () => {
         <SidebarGroupLabel>Account</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={currentPath === '/shop'}>
+                <NavLink to="/shop">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  <span>Shop</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />

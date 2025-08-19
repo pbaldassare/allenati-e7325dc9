@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Home, BookOpen, Users, Calendar, BarChart3 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Home, BookOpen, Users, Calendar, BarChart3, ShoppingBag, User, LogOut } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -24,7 +26,19 @@ const items = [
 
 export function InstructorSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const currentPath = location.pathname;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+      toast.success("Logout effettuato con successo");
+    } catch (error) {
+      toast.error("Errore durante il logout");
+    }
+  };
 
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -47,6 +61,36 @@ export function InstructorSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Impostazioni</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/shop" className={getNavCls}>
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    <span>Shop</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/settings" className={getNavCls}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profilo</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
