@@ -106,26 +106,34 @@ const BookingHistory = () => {
   // Filter bookings
   const activeBookings = bookings?.filter(booking => {
     const isActive = ['confirmed', 'waitlist'].includes(booking.status);
-    if (!searchTerm) return isActive;
+    const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+    const isFuture = bookingDateTime > new Date();
+    const shouldBeActive = isActive && isFuture;
+    
+    if (!searchTerm) return shouldBeActive;
     
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
     const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
-    return isActive && (courseNameMatch || instructorMatch);
+    return shouldBeActive && (courseNameMatch || instructorMatch);
   }) || [];
 
   const completedBookings = bookings?.filter(booking => {
     const isCompleted = ['completed', 'cancelled'].includes(booking.status);
-    if (!searchTerm) return isCompleted;
+    const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+    const isPast = bookingDateTime <= new Date();
+    const shouldBeInHistory = isCompleted || ((['confirmed', 'waitlist'].includes(booking.status)) && isPast);
+    
+    if (!searchTerm) return shouldBeInHistory;
     
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
     const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
-    return isCompleted && (courseNameMatch || instructorMatch);
+    return shouldBeInHistory && (courseNameMatch || instructorMatch);
   }) || [];
 
   const openCancellationDialog = (booking: any) => {

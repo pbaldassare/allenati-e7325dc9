@@ -25,6 +25,7 @@ export const useBookings = () => {
             image_url,
             deadline_hours,
             gym_id,
+            instructor_id,
             gyms (
               id,
               name,
@@ -33,6 +34,13 @@ export const useBookings = () => {
             ),
             course_categories (
               name
+            ),
+            instructors (
+              id,
+              profiles (
+                first_name,
+                last_name
+              )
             )
           )
         `)
