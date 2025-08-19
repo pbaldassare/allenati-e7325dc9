@@ -38,15 +38,27 @@ export interface CourseWithRelations extends SupabaseCourse {
     start_time: string;
     end_time: string;
   }>;
+  instructors?: {
+    profiles?: {
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
+  } | null;
   _count?: {
     bookings: number;
   };
 }
 
-// Helper function to get instructor name (now returns gym name)
+// Helper function to get instructor name from profile data
 export const getInstructorName = (course: CourseWithRelations): string => {
-  // Always return the gym name as the "instructor"
-  return course.gym?.name || 'Palestra';
+  const instructorProfile = course.instructors?.profiles;
+  if (!instructorProfile) {
+    return 'Istruttore non assegnato';
+  }
+  
+  const { first_name, last_name } = instructorProfile;
+  const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+  return fullName || 'Istruttore non assegnato';
 };
 
 // Helper function to get difficulty level text
