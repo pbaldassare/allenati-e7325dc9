@@ -58,109 +58,8 @@ const BookingHistory = () => {
   const [showCancellationDialog, setShowCancellationDialog] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [availableCourses, setAvailableCourses] = useState([]);
-  const [coursesLoading, setCoursesLoading] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
-  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
-  const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('i-miei-corsi');
+  const [activeSection, setActiveSection] = useState<'active' | 'history'>('active');
 
-  // Fetch available courses with booking counts
-  useEffect(() => {
-    const fetchAvailableCourses = async () => {
-      if (!user || userGyms.length === 0) {
-        console.log('BookingHistory - No user or gyms available:', { user: !!user, gymsCount: userGyms.length });
-        return;
-      }
-      
-      console.log('BookingHistory - Fetching available courses for user:', user.id);
-      setCoursesLoading(true);
-      try {
-        const userGymIds = userGyms.map(gym => gym.id);
-        
-        // Get user's confirmed/waitlist bookings first
-        const userBookedCourseIds = bookings
-          .filter(b => ['confirmed', 'waitlist'].includes(b.status))
-          .map(b => b.course_id);
-        
-        const { data: courses, error } = await supabase
-          .from('courses')
-          .select(`
-            *,
-            instructor:instructors!instructor_id(
-              id,
-              user_id,
-              bio,
-              profiles!user_id(first_name, last_name, avatar_url)
-            ),
-            category:course_categories(name, color_hex),
-            schedules:course_schedules(
-              day_of_week,
-              start_time,
-              end_time,
-              room_name
-            ),
-            gym:gyms(name, city)
-          `)
-          .in('gym_id', userGymIds)
-          .eq('is_active', true)
-          .not('id', 'in', `(${userBookedCourseIds.join(',') || 'null'})`)
-          .order('created_at', { ascending: true })
-          .limit(15);
-
-        if (error) throw error;
-        
-        console.log('BookingHistory - Fetched courses:', courses?.length);
-        
-        // Get booking counts for each course to show availability
-        const courseIds = (courses || []).map(c => c.id);
-        if (courseIds.length > 0) {
-          const { data: bookingCounts } = await supabase
-            .from('bookings')
-            .select('course_id')
-            .in('course_id', courseIds)
-            .eq('status', 'confirmed');
-
-          // Add booking counts to courses and filter out full courses
-          const coursesWithCounts = (courses || []).map(course => {
-            const count = bookingCounts?.filter(b => b.course_id === course.id).length || 0;
-            return {
-              ...course,
-              current_bookings: count
-            };
-          });
-
-          // Filter only courses with available spots and future schedules
-          const availableFilteredCourses = coursesWithCounts.filter(course => {
-            // Check if course has available spots
-            const spotsLeft = course.max_participants - course.current_bookings;
-            if (spotsLeft <= 0) return false;
-            
-            // Check if course has future schedules
-            const hasSchedules = course.schedules && course.schedules.length > 0;
-            return hasSchedules;
-          });
-
-          console.log('BookingHistory - Available courses after filtering:', availableFilteredCourses.length);
-          setAvailableCourses(availableFilteredCourses);
-        } else {
-          console.log('BookingHistory - No course IDs found');
-          setAvailableCourses([]);
-        }
-      } catch (error) {
-        console.error('BookingHistory - Error fetching courses:', error);
-        toast({
-          title: "Errore",
-          description: "Impossibile caricare i corsi disponibili",
-          variant: "destructive",
-        });
-      } finally {
-        setCoursesLoading(false);
-      }
-    };
-
-    fetchAvailableCourses();
-  }, [user, userGyms, bookings]);
 
   // Helper functions
   const getInstructorName = (course: any): string => {
@@ -213,25 +112,30 @@ const BookingHistory = () => {
   };
 
   // Filter bookings
-  const activeBookings = bookings?.filter(booking => 
-    ['confirmed', 'waitlist'].includes(booking.status)
-  ) || [];
-
-  const completedBookings = bookings?.filter(booking => 
-    ['completed', 'cancelled'].includes(booking.status)
-  ) || [];
-
-  const filteredBookings = bookings?.filter(booking => {
+  const activeBookings = bookings?.filter(booking => {
+    const isActive = ['confirmed', 'waitlist'].includes(booking.status);
+    if (!searchTerm) return isActive;
+    
     const searchTermLower = searchTerm.toLowerCase();
     const courseNameMatch = booking.course?.name?.toLowerCase().includes(searchTermLower);
     const instructorMatch = getInstructorName(booking.course)?.toLowerCase().includes(searchTermLower);
     
-    return !searchTerm || courseNameMatch || instructorMatch;
+    return isActive && (courseNameMatch || instructorMatch);
+  }) || [];
+
+  const completedBookings = bookings?.filter(booking => {
+    const isCompleted = ['completed', 'cancelled'].includes(booking.status);
+    if (!searchTerm) return isCompleted;
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    const courseNameMatch = booking.course?.name?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(booking.course)?.toLowerCase().includes(searchTermLower);
+    
+    return isCompleted && (courseNameMatch || instructorMatch);
   }) || [];
 
   const openCancellationDialog = (booking: any) => {
     setSelectedBooking(booking);
-    setSelectedCourse(booking.course);
     setShowCancellationDialog(true);
   };
 
@@ -244,22 +148,9 @@ const BookingHistory = () => {
       setShowCancellationDialog(false);
     }
     setSelectedBooking(null);
-    setSelectedCourse(null);
     setIsProcessing(false);
   };
 
-  const openBookingDialog = (course: any) => {
-    setSelectedCourse(course);
-    setBookingDialogOpen(true);
-  };
-
-  const handleBookingConfirm = async () => {
-    // This will be handled by the BookingConfirmDialog component
-    setBookingDialogOpen(false);
-    setSelectedCourse(null);
-    // Refresh data
-    await fetchBookings();
-  };
 
   const BookingCard = ({ booking }: { booking: any }) => {
     const course = booking.courses || booking.course;
@@ -349,14 +240,6 @@ const BookingHistory = () => {
     navigate('/', { replace: true });
   };
 
-  const handleTabChange = (tab: string) => {
-    if (tab === 'i-miei-corsi') {
-      return; // Already on this page
-    }
-    
-    // Navigate to home and let the tab change be handled there
-    navigate(`/?tab=${tab}`, { replace: true });
-  };
 
   if (!user) {
     console.log('BookingHistory - No user, redirecting or showing login');
@@ -387,12 +270,29 @@ const BookingHistory = () => {
               I Miei Corsi
             </h1>
             <p className="text-muted-foreground">
-              I tuoi corsi prenotati e altri disponibili
+              I tuoi corsi prenotati e storico delle prenotazioni
             </p>
           </div>
         </header>
 
+        {/* Search and Tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex gap-2">
+            <Button
+              variant={activeSection === 'active' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveSection('active')}
+            >
+              Corsi Prenotati
+            </Button>
+            <Button
+              variant={activeSection === 'history' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveSection('history')}
+            >
+              Storico
+            </Button>
+          </div>
           <Input
             placeholder="Cerca corsi o istruttori..."
             value={searchTerm}
@@ -401,148 +301,91 @@ const BookingHistory = () => {
           />
         </div>
 
-        {/* I Miei Corsi Attivi */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-primary">I Miei Corsi Attivi</h2>
-          {bookingsLoading ? (
-            <div className="space-y-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="p-4 border rounded-lg">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : activeBookings.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Non hai corsi attivi. Prenota un corso qui sotto!
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {activeBookings
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .map((booking) => (
-                  <BookingCard key={booking.id} booking={booking} />
-                ))}
-            </div>
-          )}
-        </div>
-
-        {/* Corsi Disponibili */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-primary">Corsi Disponibili</h2>
-          {coursesLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="p-4 border rounded-lg">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {availableCourses.map((course) => (
-                <Card key={course.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {course.instructor?.profiles?.avatar_url && (
-                          <img 
-                            src={course.instructor.profiles.avatar_url} 
-                            alt="Istruttore"
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        )}
-                         <div className="flex-1 min-w-0">
-                           <h3 className="font-medium text-sm truncate">{course.name}</h3>
-                           <p className="text-xs text-muted-foreground">
-                             {course.gym?.name} - {course.gym?.city}
-                           </p>
-                           <p className="text-xs text-primary font-medium">
-                             {course.max_participants - course.current_bookings} posti disponibili
-                           </p>
-                         </div>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        className="px-3"
-                        onClick={() => openBookingDialog(course)}
-                      >
-                        P
-                      </Button>
+        {/* Active Section - Corsi Prenotati */}
+        {activeSection === 'active' && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-primary">Corsi Prenotati</h2>
+            {bookingsLoading ? (
+              <div className="space-y-4">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="p-4 border rounded-lg">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Storico */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-primary">Storico Lezioni</h2>
-          {bookingsLoading ? (
-            <div className="space-y-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="p-4 border rounded-lg">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : completedBookings.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Nessuna lezione completata o cancellata.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {completedBookings
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .map((booking) => (
-                  <BookingCard key={booking.id} booking={booking} />
                 ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ) : activeBookings.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>Non hai corsi prenotati al momento.</p>
+                  <p className="text-sm mt-2">Vai alla home per prenotare un corso!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {activeBookings
+                  .sort((a, b) => new Date(`${a.scheduled_date}T${a.scheduled_time}`).getTime() - new Date(`${b.scheduled_date}T${b.scheduled_time}`).getTime())
+                  .map((booking) => (
+                    <BookingCard key={booking.id} booking={booking} />
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* History Section - Storico */}
+        {activeSection === 'history' && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-primary">Storico</h2>
+            {bookingsLoading ? (
+              <div className="space-y-4">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="p-4 border rounded-lg">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : completedBookings.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>Nessun corso nello storico.</p>
+                  <p className="text-sm mt-2">I corsi completati o cancellati appariranno qui.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {completedBookings
+                  .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
+                  .map((booking) => (
+                    <BookingCard key={booking.id} booking={booking} />
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <CancellationConfirmDialog
           open={showCancellationDialog}
           onOpenChange={setShowCancellationDialog}
-          course={selectedCourse || {}}
-          booking={{
-            scheduled_date: selectedBooking?.scheduled_date,
-            scheduled_time: selectedBooking?.scheduled_time,
-            credits_used: selectedBooking?.credits_used
-          }}
+          course={selectedBooking?.course || {}}
+          booking={selectedBooking || {}}
           onConfirm={handleCancelBooking}
           isLoading={isProcessing}
-        />
-
-        <BookingConfirmDialog
-          open={bookingDialogOpen}
-          onOpenChange={setBookingDialogOpen}
-          course={selectedCourse}
-          scheduledDate={new Date().toISOString().split('T')[0]}
-          scheduledTime="08:00"
-          onConfirm={handleBookingConfirm}
-          isLoading={loadingBooking === selectedCourse?.id}
         />
       </div>
       
       <BottomNavigation 
-        activeTab={activeTab} 
-        onTabChange={handleTabChange} 
+        activeTab="i-miei-corsi" 
+        onTabChange={(tab) => {
+          if (tab !== 'i-miei-corsi') {
+            navigate(`/?tab=${tab}`, { replace: true });
+          }
+        }} 
       />
     </div>
   );
