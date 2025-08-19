@@ -43,6 +43,10 @@ const Index = () => {
       navigate("/gyms");
       return;
     }
+    if (tab === "i-miei-corsi") {
+      navigate("/i-miei-corsi");
+      return;
+    }
     
     // Handle internal tabs
     setActiveTab(tab);
