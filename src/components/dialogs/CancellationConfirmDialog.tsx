@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,12 +10,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, AlertTriangle, Info } from "lucide-react";
+import { Calendar, Clock, User, AlertTriangle, Info, Users } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
 
 interface CancellationConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: {
+    id?: string;
     name: string;
     instructor?: { 
       profiles?: { first_name: string; last_name: string } 
@@ -24,6 +26,8 @@ interface CancellationConfirmDialogProps {
       profiles?: { first_name: string; last_name: string }
     };
     deadline_hours?: number;
+    max_participants?: number;
+    reserved_spots?: number;
   };
   booking: {
     scheduled_date?: string;
@@ -42,6 +46,36 @@ export const CancellationConfirmDialog = ({
   onConfirm,
   isLoading = false
 }: CancellationConfirmDialogProps) => {
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(true);
+
+  useEffect(() => {
+    if (!open || !course.id) {
+      setParticipants([]);
+      setLoadingParticipants(true);
+      return;
+    }
+
+    const fetchParticipants = async () => {
+      try {
+        const { data: bookingsData } = await supabase
+          .from('bookings')
+          .select(`
+            profiles(first_name, last_name)
+          `)
+          .eq('course_id', course.id)
+          .eq('status', 'confirmed');
+
+        setParticipants(bookingsData || []);
+      } catch (error) {
+        console.error('Error fetching participants:', error);
+      } finally {
+        setLoadingParticipants(false);
+      }
+    };
+
+    fetchParticipants();
+  }, [open, course.id]);
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Data non disponibile';
     return new Date(dateString).toLocaleDateString('it-IT', {
@@ -166,6 +200,36 @@ export const CancellationConfirmDialog = ({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Partecipanti al corso */}
+          {participants.length > 0 && (
+            <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-foreground text-sm flex items-center">
+                <Users className="w-4 h-4 mr-2" />
+                Partecipanti attuali ({participants.length}{course.max_participants ? `/${course.max_participants}` : ''})
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {participants.slice(0, 6).map((booking, index) => (
+                  <div key={index} className="text-xs text-muted-foreground bg-background rounded p-2">
+                    {booking.profiles?.first_name} {booking.profiles?.last_name}
+                  </div>
+                ))}
+                {participants.length > 6 && (
+                  <div className="text-xs text-muted-foreground bg-background rounded p-2 flex items-center justify-center">
+                    +{participants.length - 6} altri
+                  </div>
+                )}
+              </div>
+              
+              {course.max_participants && (
+                <div className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">
+                    {course.max_participants - participants.length + 1} posti disponibili dopo la cancellazione
+                  </Badge>
+                </div>
+              )}
             </div>
           )}
         </div>

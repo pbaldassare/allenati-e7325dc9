@@ -1,5 +1,5 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, User, Users, CreditCard, Award, Coins } from 'lucide-react';
+import { Calendar, Clock, User, Users, CreditCard, Award, Coins, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -200,9 +200,15 @@ export const BookingConfirmDialog = ({
               </div>
 
               {course?.max_participants && (
-                <div className="flex items-center text-muted-foreground">
-                  <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                  <span>Max {course?.max_participants} partecipanti</span>
+                <div className="flex items-center justify-between text-foreground">
+                  <div className="flex items-center text-muted-foreground">
+                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                    <span>Partecipanti:</span>
+                  </div>
+                  <Badge variant="outline" className={`text-xs ${participants.length >= course.max_participants ? 'border-destructive text-destructive' : ''}`}>
+                    {participants.length}/{course.max_participants}
+                    {participants.length >= course.max_participants ? ' (Completo)' : ` (${course.max_participants - participants.length} liberi)`}
+                  </Badge>
                 </div>
               )}
 
@@ -268,15 +274,27 @@ export const BookingConfirmDialog = ({
             <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
               <h4 className="font-semibold text-foreground text-sm flex items-center">
                 <Users className="w-4 h-4 mr-2" />
-                Partecipanti ({participants.length})
+                Partecipanti attuali ({participants.length}{course?.max_participants ? `/${course.max_participants}` : ''})
               </h4>
               <div className="grid grid-cols-2 gap-2">
-                {participants.map((booking, index) => (
+                {participants.slice(0, 6).map((booking, index) => (
                   <div key={index} className="text-xs text-muted-foreground bg-background rounded p-2">
                     {booking.profiles?.first_name} {booking.profiles?.last_name}
                   </div>
                 ))}
+                {participants.length > 6 && (
+                  <div className="text-xs text-muted-foreground bg-background rounded p-2 flex items-center justify-center">
+                    +{participants.length - 6} altri
+                  </div>
+                )}
               </div>
+              
+              {course?.max_participants && participants.length >= course.max_participants - (course.reserved_spots || 0) && (
+                <div className="flex items-center text-warning text-xs">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  <span>Corso quasi al completo!</span>
+                </div>
+              )}
             </div>
           )}
         </div>
