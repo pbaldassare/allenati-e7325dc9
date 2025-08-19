@@ -217,6 +217,7 @@ export type Database = {
           notes: string | null
           scheduled_date: string
           scheduled_time: string
+          session_id: string | null
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
           user_id: string
@@ -232,6 +233,7 @@ export type Database = {
           notes?: string | null
           scheduled_date: string
           scheduled_time: string
+          session_id?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
           user_id: string
@@ -247,6 +249,7 @@ export type Database = {
           notes?: string | null
           scheduled_date?: string
           scheduled_time?: string
+          session_id?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
           user_id?: string
@@ -257,6 +260,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "course_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -467,8 +477,72 @@ export type Database = {
           },
         ]
       }
+      course_sessions: {
+        Row: {
+          available_spots: number
+          course_id: string
+          created_at: string
+          end_time: string
+          id: string
+          max_participants: number
+          notes: string | null
+          room_id: string | null
+          room_name: string | null
+          session_date: string
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          available_spots?: number
+          course_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          max_participants?: number
+          notes?: string | null
+          room_id?: string | null
+          room_name?: string | null
+          session_date: string
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          available_spots?: number
+          course_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          max_participants?: number
+          notes?: string | null
+          room_id?: string | null
+          room_name?: string | null
+          session_date?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "gym_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
+          auto_generate_sessions: boolean
           benefits: string[] | null
           category_id: string
           created_at: string
@@ -477,6 +551,7 @@ export type Database = {
           description: string | null
           difficulty_level: number | null
           duration_minutes: number
+          end_date: string | null
           equipment_needed: string[] | null
           gym_id: string | null
           id: string
@@ -488,9 +563,11 @@ export type Database = {
           price_per_session: number | null
           requirements: string[] | null
           reserved_spots: number
+          start_date: string | null
           updated_at: string
         }
         Insert: {
+          auto_generate_sessions?: boolean
           benefits?: string[] | null
           category_id: string
           created_at?: string
@@ -499,6 +576,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number
+          end_date?: string | null
           equipment_needed?: string[] | null
           gym_id?: string | null
           id?: string
@@ -510,9 +588,11 @@ export type Database = {
           price_per_session?: number | null
           requirements?: string[] | null
           reserved_spots?: number
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
+          auto_generate_sessions?: boolean
           benefits?: string[] | null
           category_id?: string
           created_at?: string
@@ -521,6 +601,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number
+          end_date?: string | null
           equipment_needed?: string[] | null
           gym_id?: string | null
           id?: string
@@ -532,6 +613,7 @@ export type Database = {
           price_per_session?: number | null
           requirements?: string[] | null
           reserved_spots?: number
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: [
