@@ -25,7 +25,6 @@ export const useBookings = () => {
             image_url,
             deadline_hours,
             gym_id,
-            instructor_id,
             gyms (
               id,
               name,
@@ -34,13 +33,6 @@ export const useBookings = () => {
             ),
             course_categories (
               name
-            ),
-            instructors (
-              id,
-              profiles!instructors_user_id_fkey (
-                first_name,
-                last_name
-              )
             )
           )
         `)

@@ -24,13 +24,11 @@ export interface SupabaseCourse {
 
 // Extended Course interface with joined data
 export interface CourseWithRelations extends SupabaseCourse {
-  instructor?: {
+  gym?: {
     id: string;
-    user_id: string;
-    profiles?: {
-      first_name: string | null;
-      last_name: string | null;
-    } | null;
+    name: string;
+    address?: string;
+    city?: string;
   } | null;
   course_categories?: {
     name: string;
@@ -45,13 +43,10 @@ export interface CourseWithRelations extends SupabaseCourse {
   };
 }
 
-// Helper function to get instructor name
+// Helper function to get instructor name (now returns gym name)
 export const getInstructorName = (course: CourseWithRelations): string => {
-  if (!course.instructor?.profiles) {
-    return 'Istruttore non assegnato';
-  }
-  const { first_name, last_name } = course.instructor.profiles;
-  return `${first_name || ''} ${last_name || ''}`.trim() || 'Istruttore non assegnato';
+  // Always return the gym name as the "instructor"
+  return course.gym?.name || 'Palestra';
 };
 
 // Helper function to get difficulty level text
