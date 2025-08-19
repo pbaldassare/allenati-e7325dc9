@@ -106,9 +106,12 @@ const BookingHistory = () => {
   // Filter bookings
   const activeBookings = bookings?.filter(booking => {
     const isActive = ['confirmed', 'waitlist'].includes(booking.status);
-    const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
-    const isFuture = bookingDateTime > new Date();
-    const shouldBeActive = isActive && isFuture;
+    const today = new Date();
+    const bookingDate = new Date(booking.scheduled_date);
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const courseDateOnly = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+    const isTodayOrFuture = courseDateOnly >= todayDate;
+    const shouldBeActive = isActive && isTodayOrFuture;
     
     if (!searchTerm) return shouldBeActive;
     
@@ -122,8 +125,11 @@ const BookingHistory = () => {
 
   const completedBookings = bookings?.filter(booking => {
     const isCompleted = ['completed', 'cancelled'].includes(booking.status);
-    const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
-    const isPast = bookingDateTime <= new Date();
+    const today = new Date();
+    const bookingDate = new Date(booking.scheduled_date);
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const courseDateOnly = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+    const isPast = courseDateOnly < todayDate;
     const shouldBeInHistory = isCompleted || ((['confirmed', 'waitlist'].includes(booking.status)) && isPast);
     
     if (!searchTerm) return shouldBeInHistory;
