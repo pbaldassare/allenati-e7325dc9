@@ -1,0 +1,298 @@
+import React, { useState, useEffect } from 'react';
+import { format, addWeeks, startOfWeek, endOfWeek } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface CourseSession {
+  id?: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  room_id?: string;
+  room_name?: string;
+  max_participants: number;
+  available_spots: number;
+  status: 'scheduled' | 'cancelled' | 'completed';
+}
+
+interface CourseSchedule {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room_id?: string;
+  room_name?: string;
+}
+
+interface CourseSessionManagerProps {
+  courseId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  schedules: CourseSchedule[];
+  maxParticipants: number;
+  onSessionsChange: (sessions: CourseSession[]) => void;
+  autoGenerate?: boolean;
+}
+
+const getDayName = (dayOfWeek: number): string => {
+  const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+  return days[dayOfWeek] || '';
+};
+
+export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
+  courseId,
+  startDate,
+  endDate,
+  schedules,
+  maxParticipants,
+  onSessionsChange,
+  autoGenerate = true
+}) => {
+  const [sessions, setSessions] = useState<CourseSession[]>([]);
+  const [generatedSessions, setGeneratedSessions] = useState<CourseSession[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Generate sessions automatically based on schedules and date range
+  const generateSessions = () => {
+    if (!startDate || !endDate || !schedules.length) {
+      setGeneratedSessions([]);
+      return;
+    }
+
+    const newSessions: CourseSession[] = [];
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      schedules.forEach(schedule => {
+        if (currentDate.getDay() === schedule.day_of_week) {
+          newSessions.push({
+            session_date: format(currentDate, 'yyyy-MM-dd'),
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            room_id: schedule.room_id,
+            room_name: schedule.room_name,
+            max_participants: maxParticipants,
+            available_spots: maxParticipants,
+            status: 'scheduled'
+          });
+        }
+      });
+      currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    setGeneratedSessions(newSessions);
+    setShowPreview(true);
+  };
+
+  // Apply generated sessions
+  const applyGeneratedSessions = () => {
+    setSessions(generatedSessions);
+    onSessionsChange(generatedSessions);
+    setShowPreview(false);
+  };
+
+  // Add manual session
+  const addManualSession = () => {
+    const newSession: CourseSession = {
+      session_date: format(new Date(), 'yyyy-MM-dd'),
+      start_time: '10:00',
+      end_time: '11:00',
+      max_participants: maxParticipants,
+      available_spots: maxParticipants,
+      status: 'scheduled'
+    };
+    
+    const updatedSessions = [...sessions, newSession];
+    setSessions(updatedSessions);
+    onSessionsChange(updatedSessions);
+  };
+
+  // Remove session
+  const removeSession = (index: number) => {
+    const updatedSessions = sessions.filter((_, i) => i !== index);
+    setSessions(updatedSessions);
+    onSessionsChange(updatedSessions);
+  };
+
+  // Update session
+  const updateSession = (index: number, updates: Partial<CourseSession>) => {
+    const updatedSessions = sessions.map((session, i) => 
+      i === index ? { ...session, ...updates } : session
+    );
+    setSessions(updatedSessions);
+    onSessionsChange(updatedSessions);
+  };
+
+  // Auto generate when dependencies change
+  useEffect(() => {
+    if (autoGenerate && startDate && endDate && schedules.length > 0) {
+      generateSessions();
+    }
+  }, [startDate, endDate, schedules, maxParticipants, autoGenerate]);
+
+  const sessionCount = sessions.length;
+  const weeklySessionCount = schedules.length;
+  const totalWeeks = startDate && endDate ? 
+    Math.ceil((endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Generation Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Gestione Sessioni Corso
+          </CardTitle>
+          <CardDescription>
+            Genera automaticamente le sessioni basate sui pattern ricorrenti o aggiungi manualmente
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {startDate && endDate && schedules.length > 0 && (
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  Periodo: {format(startDate, 'dd/MM/yyyy')} - {format(endDate, 'dd/MM/yyyy')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {weeklySessionCount} sessioni settimanali × {totalWeeks} settimane = {weeklySessionCount * totalWeeks} sessioni totali
+                </p>
+              </div>
+              <Button onClick={generateSessions} variant="outline">
+                Genera Sessioni
+              </Button>
+            </div>
+          )}
+
+          {!startDate || !endDate ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Imposta le date di inizio e fine del corso per generare le sessioni automaticamente.
+              </AlertDescription>
+            </Alert>
+          ) : !schedules.length ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Configura almeno un pattern di orario ricorrente per generare le sessioni.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Preview Generated Sessions */}
+      {showPreview && generatedSessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Anteprima Sessioni Generate</CardTitle>
+            <CardDescription>
+              {generatedSessions.length} sessioni verranno create. Conferma per applicare.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {generatedSessions.slice(0, 10).map((session, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">
+                      {format(new Date(session.session_date), 'dd/MM/yyyy')}
+                    </Badge>
+                    <span className="text-sm">
+                      {session.start_time} - {session.end_time}
+                    </span>
+                    {session.room_name && (
+                      <Badge variant="secondary">{session.room_name}</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {generatedSessions.length > 10 && (
+                <p className="text-sm text-muted-foreground text-center">
+                  ... e altre {generatedSessions.length - 10} sessioni
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={applyGeneratedSessions} className="flex-1">
+                Conferma e Applica ({generatedSessions.length} sessioni)
+              </Button>
+              <Button onClick={() => setShowPreview(false)} variant="outline">
+                Annulla
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Sessions */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Sessioni Programmate</CardTitle>
+              <CardDescription>
+                {sessionCount} sessioni totali configurate
+              </CardDescription>
+            </div>
+            <Button onClick={addManualSession} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Aggiungi Manuale
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sessions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nessuna sessione programmata</p>
+              <p className="text-sm">Genera automaticamente o aggiungi manualmente le sessioni</p>
+            </div>
+          ) : (
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {sessions.map((session, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">
+                      {format(new Date(session.session_date), 'dd/MM/yyyy')}
+                    </Badge>
+                    <span className="text-sm font-medium">
+                      {session.start_time} - {session.end_time}
+                    </span>
+                    {session.room_name && (
+                      <Badge variant="secondary">{session.room_name}</Badge>
+                    )}
+                    <Badge variant={session.status === 'scheduled' ? 'default' : 'secondary'}>
+                      {session.status === 'scheduled' ? 'Programmata' : 
+                       session.status === 'cancelled' ? 'Cancellata' : 'Completata'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {session.available_spots}/{session.max_participants} posti
+                    </span>
+                    <Button
+                      onClick={() => removeSession(index)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

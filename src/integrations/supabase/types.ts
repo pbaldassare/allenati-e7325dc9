@@ -1815,6 +1815,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      generate_course_sessions: {
+        Args: { _course_id: string; _end_date: string; _start_date: string }
+        Returns: number
+      }
       get_user_credits_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: number

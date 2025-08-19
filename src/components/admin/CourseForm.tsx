@@ -38,6 +38,9 @@ const courseSchema = z.object({
   image: z.string().url('Inserisci un URL valido per l\'immagine'),
   benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
   requirements: z.array(z.string()).optional(),
+  startDate: z.date({ required_error: "Seleziona la data di inizio" }),
+  endDate: z.date({ required_error: "Seleziona la data di fine" }),
+  autoGenerateSessions: z.boolean().default(true),
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
     time: z.string(),
