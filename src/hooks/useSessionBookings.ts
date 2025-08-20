@@ -44,6 +44,15 @@ export const useSessionBookings = () => {
             instructors (
               user_id
             )
+          ),
+          course_sessions (
+            id,
+            session_date,
+            start_time,
+            end_time,
+            room_name,
+            available_spots,
+            max_participants
           )
         `)
         .eq('user_id', user.id)
@@ -99,8 +108,11 @@ export const useSessionBookings = () => {
     }
   };
 
-  // Check if a specific session is booked
-  const isSessionBooked = (courseId: string, date: string, time: string) => {
+  // Check if a specific session is booked (prefer session_id)
+  const isSessionBooked = (sessionId?: string, courseId?: string, date?: string, time?: string) => {
+    if (sessionId) {
+      return bookings.some(b => b.session_id === sessionId);
+    }
     return bookings.some(b => 
       b.course_id === courseId && 
       b.scheduled_date === date && 
@@ -108,8 +120,11 @@ export const useSessionBookings = () => {
     );
   };
 
-  // Get booking for a specific session
-  const getSessionBooking = (courseId: string, date: string, time: string) => {
+  // Get booking for a specific session (prefer session_id)
+  const getSessionBooking = (sessionId?: string, courseId?: string, date?: string, time?: string) => {
+    if (sessionId) {
+      return bookings.find(b => b.session_id === sessionId);
+    }
     return bookings.find(b => 
       b.course_id === courseId && 
       b.scheduled_date === date && 
@@ -127,9 +142,9 @@ export const useSessionBookings = () => {
     return bookings.filter(b => b.scheduled_date === date);
   };
 
-  // Cancel a session booking
-  const cancelSessionBooking = async (courseId: string, date: string, time: string) => {
-    const booking = getSessionBooking(courseId, date, time);
+  // Cancel a session booking (support both session_id and legacy courseId + date + time)
+  const cancelSessionBooking = async (sessionId?: string, courseId?: string, date?: string, time?: string) => {
+    const booking = getSessionBooking(sessionId, courseId, date, time);
     if (!booking) {
       toast({
         title: "Errore",
@@ -158,6 +173,21 @@ export const useSessionBookings = () => {
         .eq('id', booking.id);
 
       if (bookingError) throw bookingError;
+
+      // Update session available spots if session_id is available
+      if (booking.session_id) {
+        const { error: sessionError } = await supabase
+          .from('course_sessions')
+          .update({ 
+            available_spots: Math.min(
+              booking.course_sessions?.max_participants || 20,
+              (booking.course_sessions?.available_spots || 0) + 1
+            )
+          })
+          .eq('id', booking.session_id);
+
+        if (sessionError) console.error('Error updating session spots:', sessionError);
+      }
 
       // If within deadline and credits were used, refund them
       if (isWithinDeadline && booking.credits_used > 0) {

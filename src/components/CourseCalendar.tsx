@@ -61,6 +61,7 @@ export const CourseCalendar = () => {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showReservedSpotsDialog, setShowReservedSpotsDialog] = useState(false);
   const [pendingBookingData, setPendingBookingData] = useState<{
+    sessionId?: string;
     courseId: string;
     scheduledDate: string;
     scheduledTime: string;
@@ -69,7 +70,7 @@ export const CourseCalendar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load data from Supabase
+  // Load data from Supabase - using course_sessions for exact sessions
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
@@ -90,22 +91,34 @@ export const CourseCalendar = () => {
           return;
         }
 
-        // Load courses for user's gym
-        const { data: coursesData, error: coursesError } = await supabase
-          .from('courses')
+        // Load course sessions for current week instead of dynamic schedules
+        const weekInfo = getWeekDates(currentWeek);
+        const weekStart = weekInfo.start.toISOString().split('T')[0];
+        const weekEnd = weekInfo.end.toISOString().split('T')[0];
+
+        // Load course sessions with complete course and instructor data
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('course_sessions')
           .select(`
             *,
-            course_categories(name, color_hex, icon_name),
-            instructors(*),
-            course_schedules(*)
+            courses!inner(
+              *,
+              course_categories(name, color_hex, icon_name),
+              instructors(*)
+            )
           `)
-          .eq('gym_id', userGym)
-          .eq('is_active', true);
+          .eq('courses.gym_id', userGym)
+          .eq('courses.is_active', true)
+          .eq('status', 'scheduled')
+          .gte('session_date', weekStart)
+          .lte('session_date', weekEnd)
+          .order('session_date', { ascending: true })
+          .order('start_time', { ascending: true });
 
-        if (coursesError) throw coursesError;
+        if (sessionsError) throw sessionsError;
 
         // Load instructor profiles separately 
-        const instructorIds = coursesData?.map(course => course.instructors?.user_id).filter(Boolean) || [];
+        const instructorIds = sessionsData?.map(session => session.courses?.instructors?.user_id).filter(Boolean) || [];
         const { data: instructorProfiles } = await supabase
           .from('profiles')
           .select('user_id, first_name, last_name, email')
@@ -116,16 +129,23 @@ export const CourseCalendar = () => {
           instructorProfiles?.map(profile => [profile.user_id, profile]) || []
         );
 
-        // Merge instructor profiles with course data - format compatibile con gli altri componenti
-        const coursesWithInstructors = coursesData?.map(course => ({
-          ...course,
-          instructors: course.instructors ? {
-            ...course.instructors,
-            profiles: instructorProfilesMap.get(course.instructors.user_id)
+        // Transform sessions data to match component expectations
+        const sessionsWithInstructors = sessionsData?.map(session => ({
+          ...session.courses,
+          session_id: session.id,
+          session_date: session.session_date,
+          session_start_time: session.start_time,
+          session_end_time: session.end_time,
+          session_room_name: session.room_name,
+          session_max_participants: session.max_participants,
+          session_available_spots: session.available_spots,
+          instructors: session.courses?.instructors ? {
+            ...session.courses.instructors,
+            profiles: instructorProfilesMap.get(session.courses.instructors.user_id)
           } : null
         })) || [];
 
-        // Load user's bookings
+        // Load user's bookings with session_id
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
           .select('*')
@@ -135,6 +155,7 @@ export const CourseCalendar = () => {
         if (bookingsError) throw bookingsError;
         
         console.log('User bookings loaded:', bookingsData);
+        console.log('Sessions with instructors loaded:', sessionsWithInstructors);
 
         // Load categories for filters
         const { data: categoriesData } = await supabase
@@ -145,8 +166,7 @@ export const CourseCalendar = () => {
 
         const categoryNames = ['Tutti', ...(categoriesData?.map(c => c.name) || [])];
 
-        setCourses(coursesWithInstructors);
-        console.log('Courses with instructors loaded:', coursesWithInstructors);
+        setCourses(sessionsWithInstructors);
         setBookings(bookingsData || []);
         setCategories(categoryNames);
         
@@ -163,10 +183,10 @@ export const CourseCalendar = () => {
     };
 
     loadData();
-  }, [user, toast]);
+  }, [user, currentWeek, toast]);
 
-  const openBookingDialog = async (course: any, scheduledDate: string, scheduledTime: string) => {
-    console.log('Opening booking dialog for session:', { courseId: course.id, scheduledDate, scheduledTime });
+  const openBookingDialog = async (session: any) => {
+    console.log('Opening booking dialog for session:', { sessionId: session.session_id, courseId: session.id });
     // Check user credits and subscription status
     const { data: profile } = await supabase
       .from('profiles')
@@ -186,43 +206,36 @@ export const CourseCalendar = () => {
       (profile && profile.current_credits > 0) || 
       (activeSubscription?.subscription_plans?.unlimited_access);
 
-    // Count current bookings for this course on this date/time
-    const { data: bookings } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('course_id', course.id)
-      .eq('scheduled_date', scheduledDate)
-      .eq('scheduled_time', scheduledTime)
-      .eq('status', 'confirmed');
-
-    const currentBookings = bookings?.length || 0;
-    const totalSpots = course.max_participants;
-    const reservedSpots = course.reserved_spots || 0;
+    // Use session's available spots instead of counting bookings
+    const availableSpots = session.session_available_spots || 0;
+    const totalSpots = session.session_max_participants || session.max_participants;
+    const reservedSpots = session.reserved_spots || 0;
     const publicSpots = totalSpots - reservedSpots;
 
     // Check availability based on user status
     if (hasCreditsOrUnlimitedAccess) {
-      // Users with credits/unlimited access can book if total spots available
-      if (currentBookings >= totalSpots) {
+      // Users with credits/unlimited access can book if spots available
+      if (availableSpots <= 0) {
         toast({
           title: "Corso al completo",
-          description: "Non ci sono più posti disponibili per questo corso",
+          description: "Non ci sono più posti disponibili per questa sessione",
           variant: "destructive",
         });
         return;
       }
     } else {
       // Users without credits can only book if public spots available
-      if (currentBookings >= publicSpots) {
+      const bookedSpots = totalSpots - availableSpots;
+      if (bookedSpots >= publicSpots) {
         // Show reserved spots dialog if there are reserved spots remaining
-        if (currentBookings < totalSpots && reservedSpots > 0) {
-          setSelectedCourse({ ...course, scheduledDate, scheduledTime });
+        if (availableSpots > 0 && reservedSpots > 0) {
+          setSelectedCourse({ ...session, scheduledDate: session.session_date, scheduledTime: session.session_start_time });
           setShowReservedSpotsDialog(true);
           return;
         } else {
           toast({
             title: "Corso al completo",
-            description: "Non ci sono più posti disponibili per questo corso",
+            description: "Non ci sono più posti disponibili per questa sessione",
             variant: "destructive",
           });
           return;
@@ -230,11 +243,12 @@ export const CourseCalendar = () => {
       }
     }
 
-    setSelectedCourse(course);
+    setSelectedCourse(session);
     setPendingBookingData({
-      courseId: course.id,
-      scheduledDate,
-      scheduledTime
+      sessionId: session.session_id,
+      courseId: session.id,
+      scheduledDate: session.session_date,
+      scheduledTime: session.session_start_time
     });
     setBookingDialogOpen(true);
   };
@@ -248,7 +262,7 @@ export const CourseCalendar = () => {
   const handleBookingConfirm = async () => {
     if (!user || !pendingBookingData) return;
     
-    const sessionKey = `${pendingBookingData.courseId}-${pendingBookingData.scheduledDate}-${pendingBookingData.scheduledTime}`;
+    const sessionKey = pendingBookingData.sessionId || `${pendingBookingData.courseId}-${pendingBookingData.scheduledDate}-${pendingBookingData.scheduledTime}`;
     setLoadingBooking(sessionKey);
     try {
       // Check if user has sufficient credits or active unlimited subscription
@@ -285,21 +299,40 @@ export const CourseCalendar = () => {
         return;
       }
 
-      // Create booking
+      // Create booking with session_id
+      const bookingData: any = {
+        user_id: user.id,
+        course_id: pendingBookingData.courseId,
+        scheduled_date: pendingBookingData.scheduledDate,
+        scheduled_time: pendingBookingData.scheduledTime,
+        status: 'confirmed',
+        credits_used: hasUnlimitedAccess ? 0 : creditsRequired
+      };
+
+      // Add session_id if available
+      if (pendingBookingData.sessionId) {
+        bookingData.session_id = pendingBookingData.sessionId;
+      }
+
       const { data, error } = await supabase
         .from('bookings')
-        .insert({
-          user_id: user.id,
-          course_id: pendingBookingData.courseId,
-          scheduled_date: pendingBookingData.scheduledDate,
-          scheduled_time: pendingBookingData.scheduledTime,
-          status: 'confirmed',
-          credits_used: hasUnlimitedAccess ? 0 : creditsRequired
-        })
+        .insert(bookingData)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Update session available spots
+      if (pendingBookingData.sessionId) {
+        const { error: sessionError } = await supabase
+          .from('course_sessions')
+          .update({ 
+            available_spots: Math.max(0, (selectedCourse?.session_available_spots || 0) - 1)
+          })
+          .eq('id', pendingBookingData.sessionId);
+
+        if (sessionError) console.error('Error updating session spots:', sessionError);
+      }
 
       // Consume credits if not unlimited subscription
       if (!hasUnlimitedAccess) {
@@ -323,10 +356,52 @@ export const CourseCalendar = () => {
       toast({
         title: "Prenotazione confermata", 
         description: hasUnlimitedAccess 
-          ? "Corso prenotato con successo! (Abbonamento illimitato)"
-          : `Corso prenotato con successo! Utilizzati ${creditsRequired} crediti.`,
+          ? "Sessione prenotata con successo! (Abbonamento illimitato)"
+          : `Sessione prenotata con successo! Utilizzati ${creditsRequired} crediti.`,
       });
       setBookingDialogOpen(false);
+      
+      // Refresh data to update available spots
+      const loadData = async () => {
+        const { data: userGym } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
+        if (userGym) {
+          const weekInfo = getWeekDates(currentWeek);
+          const weekStart = weekInfo.start.toISOString().split('T')[0];
+          const weekEnd = weekInfo.end.toISOString().split('T')[0];
+
+          const { data: sessionsData } = await supabase
+            .from('course_sessions')
+            .select(`
+              *,
+              courses!inner(
+                *,
+                course_categories(name, color_hex, icon_name),
+                instructors(*)
+              )
+            `)
+            .eq('courses.gym_id', userGym)
+            .eq('courses.is_active', true)
+            .eq('status', 'scheduled')
+            .gte('session_date', weekStart)
+            .lte('session_date', weekEnd);
+
+          if (sessionsData) {
+            const transformedSessions = sessionsData.map(session => ({
+              ...session.courses,
+              session_id: session.id,
+              session_date: session.session_date,
+              session_start_time: session.start_time,
+              session_end_time: session.end_time,
+              session_room_name: session.room_name,
+              session_max_participants: session.max_participants,
+              session_available_spots: session.available_spots,
+            }));
+            setCourses(transformedSessions);
+          }
+        }
+      };
+      loadData();
+      
     } catch (error) {
       console.error('Booking error:', error);
       toast({
@@ -372,8 +447,11 @@ export const CourseCalendar = () => {
     }
   };
 
-  // Check if specific session is booked (course + date + time)
-  const isSessionBooked = (courseId: string, date: string, time: string) => {
+  // Check if specific session is booked (prefer session_id, fallback to course + date + time)
+  const isSessionBooked = (sessionId?: string, courseId?: string, date?: string, time?: string) => {
+    if (sessionId) {
+      return bookings.some(b => b.session_id === sessionId && b.status === 'confirmed');
+    }
     return bookings.some(b => 
       b.course_id === courseId && 
       b.scheduled_date === date && 
@@ -383,7 +461,10 @@ export const CourseCalendar = () => {
   };
 
   // Get booking for specific session
-  const getSessionBooking = (courseId: string, date: string, time: string) => {
+  const getSessionBooking = (sessionId?: string, courseId?: string, date?: string, time?: string) => {
+    if (sessionId) {
+      return bookings.find(b => b.session_id === sessionId && b.status === 'confirmed');
+    }
     return bookings.find(b => 
       b.course_id === courseId && 
       b.scheduled_date === date && 
@@ -392,72 +473,52 @@ export const CourseCalendar = () => {
     );
   };
 
-  // Get current week dates for filtering sessions
-  const weekInfo = getWeekDates(currentWeek);
-  const getCurrentDateForDay = (dayOfWeek: number) => {
-    const weekStart = weekInfo.start;
-    const targetDate = new Date(weekStart);
-    targetDate.setDate(weekStart.getDate() + dayOfWeek);
-    return targetDate.toISOString().split('T')[0];
-  };
-
-  // Filter courses based on selected filters
-  const filteredCourses = courses.filter(course => {
-    const categoryMatch = selectedCategory === 'Tutti' || course.course_categories?.name === selectedCategory;
-    const levelMatch = selectedLevel === 'Tutti' || course.difficulty_level?.toString() === selectedLevel;
+  // Filter sessions based on selected filters
+  const filteredSessions = courses.filter(session => {
+    const categoryMatch = selectedCategory === 'Tutti' || session.course_categories?.name === selectedCategory;
+    const levelMatch = selectedLevel === 'Tutti' || session.difficulty_level?.toString() === selectedLevel;
     
     let availabilityMatch = true;
     if (selectedAvailability === 'Disponibili' || selectedAvailability === 'Prenotati') {
-      // Check if any session of this course matches the availability filter
-      const hasSessions = course.course_schedules?.some((schedule: any) => {
-        const sessionDate = getCurrentDateForDay(schedule.day_of_week);
-        const sessionBooked = isSessionBooked(course.id, sessionDate, schedule.start_time);
-        return selectedAvailability === 'Disponibili' ? !sessionBooked : sessionBooked;
-      });
-      availabilityMatch = hasSessions;
+      const sessionBooked = isSessionBooked(session.session_id, session.id, session.session_date, session.session_start_time);
+      availabilityMatch = selectedAvailability === 'Disponibili' ? !sessionBooked : sessionBooked;
     }
     
     return categoryMatch && levelMatch && availabilityMatch;
   });
 
-  // Group filtered courses by day - each schedule becomes a separate session entry
-  const coursesByDay = filteredCourses.reduce((acc, course) => {
-    if (course.course_schedules && course.course_schedules.length > 0) {
-      course.course_schedules.forEach((schedule: any) => {
-        const day = weekDays[schedule.day_of_week] || 'Lunedì';
-        const sessionDate = getCurrentDateForDay(schedule.day_of_week);
-        
-        if (!acc[day]) acc[day] = [];
-        
-        // Create separate entry for each course session (course + specific time)
-        acc[day].push({ 
-          ...course, 
-          schedule,
-          sessionDate,
-          sessionKey: `${course.id}-${sessionDate}-${schedule.start_time}` // Unique key for this session
-        });
-      });
-    }
+  // Group filtered sessions by day
+  const coursesByDay = filteredSessions.reduce((acc, session) => {
+    const sessionDate = new Date(session.session_date);
+    const dayOfWeek = sessionDate.getDay();
+    const day = weekDays[dayOfWeek] || 'Lunedì';
+    
+    if (!acc[day]) acc[day] = [];
+    
+    // Each session is a separate entry
+    acc[day].push({ 
+      ...session,
+      sessionKey: session.session_id || `${session.id}-${session.session_date}-${session.session_start_time}`
+    });
+    
     return acc;
   }, {} as { [key: string]: any[] });
 
-  const getActionButton = (course: any) => {
-    const sessionDate = course.sessionDate;
-    const sessionTime = course.schedule?.start_time;
-    const sessionIsBooked = isSessionBooked(course.id, sessionDate, sessionTime);
-    const isLoading = loadingBooking === course.sessionKey;
+  const getActionButton = (session: any) => {
+    const sessionIsBooked = isSessionBooked(session.session_id, session.id, session.session_date, session.session_start_time);
+    const isLoading = loadingBooking === session.sessionKey;
     
     if (isLoading) {
       return <Button size="sm" disabled>...</Button>;
     }
     
     if (sessionIsBooked) {
-      const booking = getSessionBooking(course.id, sessionDate, sessionTime);
+      const booking = getSessionBooking(session.session_id, session.id, session.session_date, session.session_start_time);
       return (
         <Button 
           size="sm" 
           variant="outline" 
-          onClick={() => openCancellationDialog(course, booking)}
+          onClick={() => openCancellationDialog(session, booking)}
         >
           Disdici
         </Button>
@@ -468,7 +529,7 @@ export const CourseCalendar = () => {
       <Button 
         size="sm" 
         className="bg-success text-success-foreground hover:bg-success/90"
-        onClick={() => openBookingDialog(course, sessionDate, sessionTime)}
+        onClick={() => openBookingDialog(session)}
       >
         Prenota
       </Button>
@@ -539,7 +600,7 @@ export const CourseCalendar = () => {
              currentWeek > 0 ? `Settimana +${currentWeek}` : 
              `Settimana ${currentWeek}`}
           </h2>
-          <p className="text-sm text-muted-foreground">{weekInfo.formatRange}</p>
+          <p className="text-sm text-muted-foreground">{getWeekDates(currentWeek).formatRange}</p>
         </div>
         <Button 
           variant="outline" 
@@ -562,8 +623,8 @@ export const CourseCalendar = () => {
               <div className="space-y-3">
                 {coursesByDay[day].map((course) => {
                   const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Users;
-                  const instructorName = course.instructors?.profile ? 
-                    `${course.instructors.profile.first_name || ''} ${course.instructors.profile.last_name || ''}`.trim() || course.instructors.profile.email?.split('@')[0] : 
+                  const instructorName = course.instructors?.profiles ? 
+                    `${course.instructors.profiles.first_name || ''} ${course.instructors.profiles.last_name || ''}`.trim() || course.instructors.profiles.email?.split('@')[0] : 
                     'Istruttore';
                   
                   return (
@@ -577,50 +638,50 @@ export const CourseCalendar = () => {
                           
                           {/* Course Info */}
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-foreground">{course.name}</h4>
-                              <Badge variant="secondary" className="text-xs font-mono">
-                                {course.schedule?.start_time} - {course.schedule?.end_time}
-                              </Badge>
-                              {course.difficulty_level && (
-                                <Badge variant="outline" className="text-xs">Livello {course.difficulty_level}</Badge>
-                              )}
-                              {course.course_categories?.name && (
-                                <Badge variant="outline" className="text-xs">{course.course_categories.name}</Badge>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{course.duration_minutes} min</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4" />
-                                <span>{course.max_participants} posti</span>
-                              </div>
-                              {course.schedule?.room_name && (
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{course.schedule.room_name}</span>
-                                </div>
-                              )}
-                            </div>
+                             <div className="flex items-center gap-2 mb-1">
+                               <h4 className="font-semibold text-foreground">{course.name}</h4>
+                               <Badge variant="secondary" className="text-xs font-mono">
+                                 {course.session_start_time?.slice(0, 5)} - {course.session_end_time?.slice(0, 5)}
+                               </Badge>
+                               {course.difficulty_level && (
+                                 <Badge variant="outline" className="text-xs">Livello {course.difficulty_level}</Badge>
+                               )}
+                               {course.course_categories?.name && (
+                                 <Badge variant="outline" className="text-xs">{course.course_categories.name}</Badge>
+                               )}
+                             </div>
+                             
+                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                               <div className="flex items-center gap-1">
+                                 <Clock className="h-4 w-4" />
+                                 <span>{course.duration_minutes} min</span>
+                               </div>
+                               <div className="flex items-center gap-1">
+                                 <Users className="h-4 w-4" />
+                                 <span>{course.session_available_spots || 0}/{course.session_max_participants || course.max_participants} disponibili</span>
+                               </div>
+                               {course.session_room_name && (
+                                 <div className="flex items-center gap-1">
+                                   <MapPin className="h-4 w-4" />
+                                   <span>{course.session_room_name}</span>
+                                 </div>
+                               )}
+                             </div>
                             
                             <p className="text-sm text-muted-foreground mt-1">
                               Istruttore: {instructorName}
                             </p>
                           </div>
                           
-                          {/* Status and Action */}
-                          <div className="flex flex-col items-end gap-2">
-                            {isSessionBooked(course.id, course.sessionDate, course.schedule?.start_time) ? (
-                              <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
-                            ) : (
-                              <Badge className="bg-success text-success-foreground">Disponibile</Badge>
-                            )}
-                            {getActionButton(course)}
-                          </div>
+                           {/* Status and Action */}
+                           <div className="flex flex-col items-end gap-2">
+                             {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
+                               <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
+                             ) : (
+                               <Badge className="bg-success text-success-foreground">Disponibile</Badge>
+                             )}
+                             {getActionButton(course)}
+                           </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -644,8 +705,9 @@ export const CourseCalendar = () => {
         open={bookingDialogOpen}
         onOpenChange={setBookingDialogOpen}
         course={selectedCourse || {}}
-        scheduledDate={pendingBookingData?.scheduledDate || ''}
-        scheduledTime={pendingBookingData?.scheduledTime || ''}
+          scheduledDate={pendingBookingData?.scheduledDate || ''}
+          scheduledTime={pendingBookingData?.scheduledTime || ''}
+          sessionId={pendingBookingData?.sessionId}
         onConfirm={handleBookingConfirm}
         isLoading={loadingBooking === `${pendingBookingData?.courseId}-${pendingBookingData?.scheduledDate}-${pendingBookingData?.scheduledTime}`}
       />

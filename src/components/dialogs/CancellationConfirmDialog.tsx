@@ -58,18 +58,39 @@ export const CancellationConfirmDialog = ({
 
     const fetchParticipants = async () => {
       try {
-        // Get participants for this specific session
-        const { data: bookingsData } = await supabase
+        // Get participants for this specific session - prefer session_id if available
+        let bookingsQuery = supabase
           .from('bookings')
           .select(`
             user_id,
+            session_id,
             profiles!fk_bookings_user_profiles(first_name, last_name)
           `)
+          .eq('status', 'confirmed');
+
+        // Try to use session_id if the booking has one
+        const currentBooking = await supabase
+          .from('bookings')
+          .select('session_id')
           .eq('course_id', course.id)
           .eq('scheduled_date', booking.scheduled_date)
           .eq('scheduled_time', booking.scheduled_time)
-          .eq('status', 'confirmed');
+          .eq('status', 'confirmed')
+          .limit(1)
+          .single();
 
+        if (currentBooking.data?.session_id) {
+          // Use session_id for more accurate participant data
+          bookingsQuery = bookingsQuery.eq('session_id', currentBooking.data.session_id);
+        } else {
+          // Fallback to course + date + time
+          bookingsQuery = bookingsQuery
+            .eq('course_id', course.id)
+            .eq('scheduled_date', booking.scheduled_date)
+            .eq('scheduled_time', booking.scheduled_time);
+        }
+
+        const { data: bookingsData } = await bookingsQuery;
         setParticipants(bookingsData || []);
       } catch (error) {
         console.error('Error fetching participants:', error);

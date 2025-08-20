@@ -29,6 +29,7 @@ interface BookingConfirmDialogProps {
   } | null;
   scheduledDate: string;
   scheduledTime: string;
+  sessionId?: string;
   onConfirm: () => void;
   isLoading?: boolean;
 }
@@ -68,6 +69,7 @@ export const BookingConfirmDialog = ({
   course, 
   scheduledDate, 
   scheduledTime, 
+  sessionId,
   onConfirm, 
   isLoading 
 }: BookingConfirmDialogProps) => {
@@ -125,17 +127,25 @@ export const BookingConfirmDialog = ({
         
         setGymName(courseData?.gyms?.name || 'Palestra');
 
-        // Get participants for this specific session
-        const { data: bookingsData } = await supabase
+        // Get participants for this specific session - prefer session_id
+        let bookingsQuery = supabase
           .from('bookings')
           .select(`
             user_id,
             profiles!fk_bookings_user_profiles(first_name, last_name)
           `)
-          .eq('course_id', course.id)
-          .eq('scheduled_date', scheduledDate)
-          .eq('scheduled_time', scheduledTime)
           .eq('status', 'confirmed');
+
+        if (sessionId) {
+          bookingsQuery = bookingsQuery.eq('session_id', sessionId);
+        } else {
+          bookingsQuery = bookingsQuery
+            .eq('course_id', course.id)
+            .eq('scheduled_date', scheduledDate)
+            .eq('scheduled_time', scheduledTime);
+        }
+
+        const { data: bookingsData } = await bookingsQuery;
 
         setParticipants(bookingsData || []);
       } catch (error) {
@@ -147,7 +157,7 @@ export const BookingConfirmDialog = ({
 
     fetchUserCredits();
     fetchParticipants();
-  }, [user, open, course?.id, scheduledDate, scheduledTime]);
+  }, [user, open, course?.id, scheduledDate, scheduledTime, sessionId]);
 
   const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course?.credits_required || 1);
 
