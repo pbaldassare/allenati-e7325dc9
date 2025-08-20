@@ -20,10 +20,11 @@ interface GymContextType {
 const GymContext = createContext<GymContextType | undefined>(undefined);
 
 export function GymProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [selectedGym, setSelectedGymState] = useState<Gym | null>(null);
   const [userGyms, setUserGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   const setSelectedGym = (gym: Gym | null) => {
     setSelectedGymState(gym);
@@ -35,9 +36,16 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchUserGyms = async () => {
-    if (!user) {
-      console.log('GymContext: No user found, clearing gyms');
+  const fetchUserGyms = async (retry = false) => {
+    // Wait for auth to be fully initialized
+    if (authLoading) {
+      console.log('GymContext: Waiting for auth to initialize...');
+      return;
+    }
+
+    // If not authenticated, clear gyms
+    if (!isAuthenticated || !user) {
+      console.log('GymContext: No authenticated user found, clearing gyms');
       setUserGyms([]);
       setSelectedGymState(null);
       setLoading(false);
@@ -47,10 +55,7 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       console.log('GymContext: Fetching gyms for user ID:', user.id);
-      console.log('GymContext: Full user object:', user);
-      
-      // Ensure auth session is fresh by refreshing it
-      await supabase.auth.refreshSession();
+      console.log('GymContext: Auth status - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading);
       
       // Get user's gym memberships and fetch gym details separately
       const { data: memberships, error: membershipsError } = await supabase
@@ -60,7 +65,16 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
         .eq('status', 'active');
 
       if (membershipsError) {
-        console.error('Error fetching memberships:', membershipsError);
+        console.error('GymContext: Error fetching memberships:', membershipsError);
+        
+        // If this is the first attempt and we get an error, try once more
+        if (!retry && retryCount < 2) {
+          console.log('GymContext: Retrying query in 1 second...');
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => fetchUserGyms(true), 1000);
+          return;
+        }
+        
         setUserGyms([]);
         setLoading(false);
         return;
@@ -96,6 +110,9 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
       console.log('GymContext: Gyms query result:', gyms);
       setUserGyms(gyms || []);
 
+      // Reset retry count on success
+      setRetryCount(0);
+
       // Auto-select gym based on localStorage or first available
       const availableGyms = gyms || [];
       const savedGymId = localStorage.getItem('selectedGymId');
@@ -119,7 +136,7 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
       }
 
     } catch (error) {
-      console.error('Error in fetchUserGyms:', error);
+      console.error('GymContext: Error in fetchUserGyms:', error);
     } finally {
       setLoading(false);
     }
@@ -130,8 +147,11 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUserGyms();
-  }, [user]);
+    // Only fetch when auth is fully initialized
+    if (!authLoading) {
+      fetchUserGyms();
+    }
+  }, [user, authLoading, isAuthenticated]);
 
   return (
     <GymContext.Provider
