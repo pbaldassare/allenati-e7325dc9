@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Search, Mail, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Search, Mail, Calendar, Plus, Clock, MapPin, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UnsubscribeConfirmDialog } from '@/components/dialogs/UnsubscribeConfirmDialog';
@@ -31,6 +32,25 @@ interface Participant {
   };
 }
 
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  current_credits: number;
+  profile_picture_url?: string;
+}
+
+interface CourseSession {
+  id: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  room_name?: string;
+  available_spots: number;
+  max_participants: number;
+}
+
 interface CourseParticipantsListProps {
   courseId: string;
   courseName: string;
@@ -45,6 +65,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
   reservedSpots = 0
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
@@ -55,13 +76,24 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     };
     checkUserRole();
   }, [user]);
+  
+  // Participants tab state
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Enrollment tab state
+  const [searchUsers, setSearchUsers] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [courseSessions, setCourseSessions] = useState<CourseSession[]>([]);
+  const [enrollingSessionId, setEnrollingSessionId] = useState<string | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   useEffect(() => {
     loadParticipants();
+    loadCourseSessions();
   }, [courseId]);
 
   useEffect(() => {
@@ -75,6 +107,18 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
       setFilteredParticipants(filtered);
     }
   }, [searchTerm, participants]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchUsers.length >= 2) {
+        searchUsersFunction();
+      } else {
+        setUsers([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchUsers]);
 
   const loadParticipants = async () => {
     try {
@@ -150,12 +194,115 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     }
   };
 
+  const loadCourseSessions = async () => {
+    try {
+      const { data: sessions, error } = await supabase
+        .from('course_sessions')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'scheduled')
+        .gte('session_date', new Date().toISOString().split('T')[0])
+        .order('session_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+
+      setCourseSessions(sessions || []);
+    } catch (error) {
+      console.error('Error loading course sessions:', error);
+    }
+  };
+
+  const searchUsersFunction = async () => {
+    if (!searchUsers.trim()) return;
+    
+    setUsersLoading(true);
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, current_credits, profile_picture_url')
+        .or(`first_name.ilike.%${searchUsers}%,last_name.ilike.%${searchUsers}%,email.ilike.%${searchUsers}%`)
+        .limit(10);
+
+      if (error) throw error;
+
+      const mappedUsers: User[] = (profiles || []).map(profile => ({
+        id: profile.user_id,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        current_credits: profile.current_credits || 0,
+        profile_picture_url: profile.profile_picture_url
+      }));
+
+      setUsers(mappedUsers);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast({
+        title: "Errore",
+        description: "Errore durante la ricerca degli utenti",
+        variant: "destructive"
+      });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const enrollUser = async (sessionId: string, userId: string) => {
+    setEnrollingSessionId(sessionId);
+    try {
+      const { error } = await supabase.rpc('manual_enroll_user', {
+        _user_id: userId,
+        _session_id: sessionId,
+        _enrolled_by: user?.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Utente iscritto con successo alla sessione"
+      });
+
+      // Refresh data
+      loadParticipants();
+      loadCourseSessions();
+      setSelectedUser(null);
+    } catch (error: any) {
+      console.error('Error enrolling user:', error);
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'iscrizione",
+        variant: "destructive"
+      });
+    } finally {
+      setEnrollingSessionId(null);
+    }
+  };
+
   const formatDateTime = (date: string, time: string) => {
     const dateObj = new Date(`${date}T${time}`);
     return {
       date: dateObj.toLocaleDateString('it-IT'),
       time: dateObj.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
     };
+  };
+
+  const formatSessionDateTime = (date: string, startTime: string, endTime: string) => {
+    const sessionDate = new Date(date);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    let dateStr = sessionDate.toLocaleDateString('it-IT');
+    if (sessionDate.toDateString() === today.toDateString()) {
+      dateStr = 'Oggi';
+    } else if (sessionDate.toDateString() === tomorrow.toDateString()) {
+      dateStr = 'Domani';
+    }
+    
+    return `${dateStr} ${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
   };
 
   const getSubscriptionBadge = (participant: Participant) => {
@@ -195,7 +342,21 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <Tabs defaultValue="participants" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="participants" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Partecipanti Attuali
+            </TabsTrigger>
+            {canManageParticipants && (
+              <TabsTrigger value="enroll" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Iscrivere Utente
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="participants" className="space-y-4">
           {/* Search */}
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
@@ -271,7 +432,6 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {getSubscriptionBadge(participant)}
                           <Badge variant="outline">
                             {participant.status}
                           </Badge>
@@ -291,7 +451,171 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
               })
             )}
           </div>
-        </div>
+          </TabsContent>
+
+          {canManageParticipants && (
+            <TabsContent value="enroll" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Search */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Search className="h-5 w-5" />
+                      Cerca Utente
+                    </CardTitle>
+                    <CardDescription>
+                      Cerca per nome o email per trovare l'utente da iscrivere
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cerca utente..."
+                        value={searchUsers}
+                        onChange={(e) => setSearchUsers(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+
+                    {usersLoading && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        Ricerca in corso...
+                      </div>
+                    )}
+
+                    {users.length > 0 && (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {users.map((user) => (
+                          <div
+                            key={user.id}
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              selectedUser?.id === user.id
+                                ? 'bg-primary/10 border-primary'
+                                : 'hover:bg-muted'
+                            }`}
+                            onClick={() => setSelectedUser(user)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={user.profile_picture_url} />
+                                <AvatarFallback>
+                                  {user.first_name?.[0]}{user.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">
+                                  {user.first_name} {user.last_name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {user.email}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Crediti: {user.current_credits}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedUser && (
+                      <Card className="border-primary/20 bg-primary/5">
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={selectedUser.profile_picture_url} />
+                              <AvatarFallback>
+                                {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="font-medium">
+                                {selectedUser.first_name} {selectedUser.last_name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {selectedUser.email}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Crediti disponibili: {selectedUser.current_credits}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Course Sessions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Sessioni Disponibili
+                    </CardTitle>
+                    <CardDescription>
+                      Seleziona una sessione per iscrivere l'utente
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!selectedUser ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Seleziona prima un utente
+                      </div>
+                    ) : courseSessions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Nessuna sessione disponibile
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                        {courseSessions.map((session) => (
+                          <Card key={session.id} className="border">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 text-sm font-medium">
+                                    <Clock className="h-4 w-4" />
+                                    {formatSessionDateTime(session.session_date, session.start_time, session.end_time)}
+                                  </div>
+                                  {session.room_name && (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <MapPin className="h-3 w-3" />
+                                      {session.room_name}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-muted-foreground">
+                                    Posti: {session.available_spots}/{session.max_participants}
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => enrollUser(session.id, selectedUser.id)}
+                                  disabled={session.available_spots <= 0 || enrollingSessionId === session.id}
+                                  className="flex items-center gap-1"
+                                >
+                                  {enrollingSessionId === session.id ? (
+                                    'Iscrizione...'
+                                  ) : (
+                                    <>
+                                      <UserCheck className="h-4 w-4" />
+                                      Iscrivi
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          )}
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
