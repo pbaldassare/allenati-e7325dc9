@@ -37,7 +37,8 @@ export const useBookings = () => {
             ),
             instructors (
               id,
-              profiles (
+              user_id,
+              profiles!instructors_user_id_fkey (
                 first_name,
                 last_name
               )
