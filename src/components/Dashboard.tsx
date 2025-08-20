@@ -68,12 +68,13 @@ export const Dashboard = () => {
             .select(`
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(user_id),
+              instructors!inner(user_id, is_active),
               course_schedules(day_of_week, start_time, end_time),
               gyms(name)
             `)
             .in('id', bookedCourseIds)
-            .eq('is_active', true);
+            .eq('is_active', true)
+            .eq('instructors.is_active', true);
           
           if (!error) bookedCoursesData = data || [];
         }
@@ -84,12 +85,13 @@ export const Dashboard = () => {
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
-            instructors(user_id),
+            instructors!inner(user_id, is_active),
             course_schedules(day_of_week, start_time, end_time),
             gyms(name)
           `)
           .in('gym_id', userGymIds)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('instructors.is_active', true);
 
         // Only apply the exclusion filter if there are actually booked courses
         if (bookedCourseIds.length > 0) {
@@ -130,7 +132,7 @@ export const Dashboard = () => {
             .from('bookings')
             .select('course_id')
             .in('course_id', courseIds)
-            .eq('status', 'confirmed');
+            .neq('status', 'cancelled'); // Include confirmed and pending bookings
 
           // Add booking counts to courses
           allCourses.forEach(course => {
