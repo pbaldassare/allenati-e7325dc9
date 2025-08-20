@@ -15,6 +15,7 @@ import { HowItWorksModal } from './modals/HowItWorksModal';
 import WeeklyCalendarCompact from './WeeklyCalendarCompact';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { CourseParticipantCount } from './CourseParticipantCount';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -470,10 +471,10 @@ export const Dashboard = () => {
                              <Clock className="h-3 w-3" />
                              <span>{schedule?.start_time || "N/A"}</span>
                            </div>
-                           <div className="flex items-center gap-1">
-                             <Users className="h-3 w-3" />
-                             <span>{course.current_bookings || 0}/{course.max_participants}</span>
-                           </div>
+                            <CourseParticipantCount 
+                              courseId={course.id} 
+                              maxParticipants={course.max_participants}
+                            />
                          </div>
                        </div>
                        
