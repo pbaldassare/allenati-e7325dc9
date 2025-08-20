@@ -106,7 +106,17 @@ export const Dashboard = () => {
 
         // Get instructor profiles for all courses
         const allCourses = [...bookedCoursesData, ...(availableCoursesData || [])];
-        const instructorUserIds = [...new Set(allCourses.map(c => c.instructors?.user_id).filter(Boolean))];
+        
+        // Debug logging per verificare i dati
+        console.log('All courses from database:', allCourses);
+        console.log('Available courses:', availableCoursesData);
+        console.log('Booked courses:', bookedCoursesData);
+        const instructorUserIds = [...new Set(allCourses.map(c => {
+          console.log(`Course ${c.name}: instructors data =`, c.instructors);
+          return c.instructors?.user_id;
+        }).filter(Boolean))];
+        
+        console.log('Instructor user IDs found:', instructorUserIds);
         
         if (instructorUserIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
@@ -114,28 +124,38 @@ export const Dashboard = () => {
             .select('user_id, first_name, last_name, profile_picture_url')
             .in('user_id', instructorUserIds);
 
+          console.log('Instructor profiles data:', profilesData);
+          console.log('Profiles error:', profilesError);
+
           if (!profilesError && profilesData) {
             const profilesMap: Record<string, any> = {};
             profilesData.forEach(profile => {
               profilesMap[profile.user_id] = profile;
             });
             setInstructorProfiles(profilesMap);
+            console.log('Instructor profiles map:', profilesMap);
           }
         }
 
         // Get booking counts for each course to show progress
         const courseIds = allCourses.map(c => c.id);
+        console.log('Course IDs for booking count:', courseIds);
+        
         if (courseIds.length > 0) {
-          const { data: bookingCounts } = await supabase
+          const { data: bookingCounts, error: bookingError } = await supabase
             .from('bookings')
             .select('course_id')
             .in('course_id', courseIds)
             .neq('status', 'cancelled'); // Include confirmed and pending bookings
 
+          console.log('Booking counts data:', bookingCounts);
+          console.log('Booking error:', bookingError);
+
           // Add booking counts to courses
           allCourses.forEach(course => {
             const count = bookingCounts?.filter(b => b.course_id === course.id).length || 0;
             course.current_bookings = count;
+            console.log(`Course ${course.name}: current_bookings = ${count}`);
           });
         }
 
