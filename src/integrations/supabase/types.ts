@@ -433,6 +433,47 @@ export type Database = {
           },
         ]
       }
+      course_schedule_exceptions: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          reason: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          reason?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          reason?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_schedule_exceptions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_schedules: {
         Row: {
           course_id: string
@@ -1819,6 +1860,10 @@ export type Database = {
         Args: { _course_id: string; _end_date: string; _start_date: string }
         Returns: number
       }
+      generate_course_sessions_with_exceptions: {
+        Args: { _course_id: string; _end_date: string; _start_date: string }
+        Returns: number
+      }
       get_user_credits_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: number
@@ -1849,6 +1894,10 @@ export type Database = {
       is_backoffice_user: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      manual_enroll_user: {
+        Args: { _enrolled_by: string; _session_id: string; _user_id: string }
+        Returns: string
       }
       promote_user_to_instructor: {
         Args: { bio?: string; target_user_id: string }

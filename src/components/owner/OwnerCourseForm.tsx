@@ -28,6 +28,8 @@ import { SupabaseCourse } from '@/types/course';
 import { X, Plus } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
+import { CourseScheduleExceptions, ScheduleException } from './CourseScheduleExceptions';
+import { ManualEnrollment } from './ManualEnrollment';
 
 const courseSchema = z.object({
   name: z.string().min(3, 'Il nome deve essere almeno 3 caratteri'),
@@ -93,6 +95,8 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
+  const [activeTab, setActiveTab] = useState<'general' | 'schedule' | 'exceptions' | 'enrollment'>('general');
   
   // Load owner's gym data
   useEffect(() => {
@@ -159,6 +163,11 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         setInstructors(instructorsWithProfiles);
         if (categoriesData) setCategories(categoriesData);
 
+        // Load existing exceptions if editing
+        if (mode === 'edit' && course?.id) {
+          loadExceptions(course.id);
+        }
+
       } catch (error) {
         console.error('Error loading owner data:', error);
         toast({
@@ -172,7 +181,65 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     };
     
     loadOwnerData();
-  }, [toast]);
+  }, [toast, mode, course]);
+
+  // Load course exceptions
+  const loadExceptions = async (courseId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('course_schedule_exceptions')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('start_date');
+
+      if (error) throw error;
+
+      const mappedExceptions = data?.map(exception => ({
+        id: exception.id,
+        start_date: new Date(exception.start_date),
+        end_date: new Date(exception.end_date),
+        reason: exception.reason || '',
+      })) || [];
+
+      setExceptions(mappedExceptions);
+    } catch (error) {
+      console.error('Error loading exceptions:', error);
+    }
+  };
+
+  // Save course exceptions
+  const saveExceptions = async (courseId: string) => {
+    try {
+      // Delete existing exceptions
+      const { error: deleteError } = await supabase
+        .from('course_schedule_exceptions')
+        .delete()
+        .eq('course_id', courseId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new exceptions
+      if (exceptions.length > 0) {
+        const { data: user } = await supabase.auth.getUser();
+        const exceptionsToInsert = exceptions.map(exception => ({
+          course_id: courseId,
+          start_date: exception.start_date.toISOString().split('T')[0],
+          end_date: exception.end_date.toISOString().split('T')[0],
+          reason: exception.reason,
+          created_by: user.user?.id,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('course_schedule_exceptions')
+          .insert(exceptionsToInsert);
+
+        if (insertError) throw insertError;
+      }
+    } catch (error) {
+      console.error('Error saving exceptions:', error);
+      throw error;
+    }
+  };
 
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
@@ -366,6 +433,8 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         end_date: data.endDate.toISOString().split('T')[0]
       };
 
+      let courseId: string;
+
       if (mode === 'create') {
         const { data: newCourse, error } = await supabase
           .from('courses')
@@ -374,6 +443,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           .single();
 
         if (error) throw error;
+        courseId = newCourse.id;
 
         // Insert course schedules with safe calculations
         const scheduleData = data.schedule.map(s => {
@@ -410,6 +480,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
         if (scheduleError) throw scheduleError;
       } else if (mode === 'edit' && course) {
+        courseId = course.id;
         // Update existing course
         console.log('Updating course with data:', data);
         console.log('Course ID:', course.id);
@@ -477,7 +548,29 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             console.error('Schedule insert error:', newScheduleError);
             throw newScheduleError;
           }
+        }
+      } else {
+        throw new Error('Course ID not available');
+      }
 
+      // Save exceptions
+      await saveExceptions(courseId);
+
+      // Generate sessions with exceptions if dates are provided
+      if (data.startDate && data.endDate) {
+        const { error: sessionError } = await supabase.rpc('generate_course_sessions_with_exceptions', {
+          _course_id: courseId,
+          _start_date: data.startDate.toISOString().split('T')[0],
+          _end_date: data.endDate.toISOString().split('T')[0]
+        });
+        
+        if (sessionError) {
+          console.error('Error generating sessions:', sessionError);
+          toast({
+            title: "Avviso",
+            description: "Corso salvato ma errore nella generazione delle sessioni",
+            variant: "destructive"
+          });
         }
       }
 
@@ -499,445 +592,254 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     }
   };
 
-  const addBenefit = () => {
-    const currentBenefits = form.getValues('benefits');
-    form.setValue('benefits', [...currentBenefits, '']);
-  };
-
-  const removeBenefit = (index: number) => {
-    const currentBenefits = form.getValues('benefits');
-    if (currentBenefits.length > 1) {
-      form.setValue('benefits', currentBenefits.filter((_, i) => i !== index));
-    }
-  };
-
-  const addRequirement = () => {
-    const currentRequirements = form.getValues('requirements') || [];
-    form.setValue('requirements', [...currentRequirements, '']);
-  };
-
-  const removeRequirement = (index: number) => {
-    const currentRequirements = form.getValues('requirements') || [];
-    form.setValue('requirements', currentRequirements.filter((_, i) => i !== index));
-  };
-
   if (loading) {
-    return <div className="flex justify-center p-8">Caricamento...</div>;
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="text-lg text-muted-foreground">Caricamento dati...</div>
+      </div>
+    );
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1">
-                  Nome Corso 
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="es. Yoga Mattutino" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="flex space-x-4 border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab('general')}
+          className={`px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'general' 
+              ? 'border-primary text-primary' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Informazioni Generali
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('schedule')}
+          className={`px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'schedule' 
+              ? 'border-primary text-primary' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Programmazione
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('exceptions')}
+          className={`px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'exceptions' 
+              ? 'border-primary text-primary' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Eccezioni
+        </button>
+        {mode === 'edit' && course?.id && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('enrollment')}
+            className={`px-4 py-2 border-b-2 transition-colors ${
+              activeTab === 'enrollment' 
+                ? 'border-primary text-primary' 
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Iscrizioni Manuali
+          </button>
+        )}
+      </div>
 
-          <FormField
-            control={form.control}
-            name="instructor_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1">
-                  Istruttore 
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className={form.formState.errors.instructor_id ? "border-destructive" : ""}>
-                      <SelectValue placeholder="Seleziona istruttore" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {instructors.map((instructor) => (
-                      <SelectItem key={instructor.id} value={instructor.id}>
-                        {instructor.first_name} {instructor.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1">
-                  Categoria 
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className={form.formState.errors.category ? "border-destructive" : ""}>
-                      <SelectValue placeholder="Seleziona categoria" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1">
-                  Livello 
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className={form.formState.errors.level ? "border-destructive" : ""}>
-                      <SelectValue placeholder="Seleziona livello" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Principiante">Principiante</SelectItem>
-                    <SelectItem value="Intermedio">Intermedio</SelectItem>
-                    <SelectItem value="Avanzato">Avanzato</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Prezzo per Sessione (€)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="25.00"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-            <FormField
-              control={form.control}
-              name="maxParticipants"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1">
-                    Massimo Partecipanti 
-                    <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="20"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="reservedSpots"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Posti riservati agli abbonati</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={form.watch('maxParticipants') || 20}
-                      placeholder="0"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Numero di posti riservati esclusivamente a chi ha crediti o abbonamenti.
-                    I restanti {(form.watch('maxParticipants') || 20) - (form.watch('reservedSpots') || 0)} posti saranno disponibili per l'acquisto diretto.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1">
-                  Durata (minuti) 
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="15"
-                    step="15"
-                    placeholder="60"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="deadlineHours"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Deadline Prenotazione (ore)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    placeholder="24"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Ore prima del corso entro cui gli utenti possono prenotare/cancellare
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-           <FormField
-             control={form.control}
-             name="image"
-             render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL Immagine (opzionale)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-             )}
-           />
-
-           <FormField
-             control={form.control}
-             name="isVisible"
-             render={({ field }) => (
-               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                 <div className="space-y-0.5">
-                   <FormLabel className="text-base">
-                     Visibile agli utenti
-                   </FormLabel>
-                   <FormDescription>
-                     Quando attivo, gli utenti possono vedere e prenotare questo corso
-                   </FormDescription>
-                 </div>
-                 <FormControl>
-                   <Switch
-                     checked={field.value}
-                     onCheckedChange={field.onChange}
-                   />
-                 </FormControl>
-               </FormItem>
-             )}
-           />
-         </div>
-
-        {/* Description */}
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-             <FormItem>
-               <FormLabel>Descrizione (opzionale)</FormLabel>
-               <FormControl>
-                 <Textarea 
-                   placeholder="Descrivi il corso, gli obiettivi e cosa aspettarsi..."
-                   className="min-h-[100px]"
-                   {...field} 
-                 />
-               </FormControl>
-               <FormMessage />
-             </FormItem>
-          )}
-        />
-
-        {/* Benefits */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-1">
-              Benefici del Corso 
-              <span className="text-destructive">*</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {form.watch('benefits').map((_, index) => (
-              <div key={index} className="flex gap-2">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {activeTab === 'general' && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name={`benefits.${index}`}
+                  name="name"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
+                    <FormItem>
+                      <FormLabel>Nome Corso *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="es. Migliora la flessibilità"
-                          {...field} 
-                        />
+                        <Input placeholder="Es. Yoga Mattutino" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeBenefit(index)}
-                  disabled={form.watch('benefits').length === 1}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addBenefit}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Beneficio
-            </Button>
-          </CardContent>
-        </Card>
 
-        {/* Requirements */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Requisiti (opzionale)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {(form.watch('requirements') || []).map((_, index) => (
-              <div key={index} className="flex gap-2">
                 <FormField
                   control={form.control}
-                  name={`requirements.${index}`}
+                  name="category"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input 
-                          placeholder="es. Esperienza di base con yoga"
-                          {...field} 
-                        />
-                      </FormControl>
+                    <FormItem>
+                      <FormLabel>Categoria *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona categoria" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeRequirement(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addRequirement}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Requisito
-            </Button>
-          </CardContent>
-        </Card>
 
-        {/* Course Period */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-1">
-              Periodo del Corso 
-              <span className="text-destructive">*</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="startDate"
+                name="description"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data di Inizio</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                  <FormItem>
+                    <FormLabel>Descrizione</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Descrivi il corso..." 
+                        className="min-h-[100px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="instructor_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Istruttore *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy")
-                            ) : (
-                              <span>Seleziona data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona istruttore" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                        <SelectContent>
+                          {instructors.map((instructor) => (
+                            <SelectItem key={instructor.id} value={instructor.id}>
+                              {instructor.first_name} {instructor.last_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Livello *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona livello" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Principiante">Principiante</SelectItem>
+                          <SelectItem value="Intermedio">Intermedio</SelectItem>
+                          <SelectItem value="Avanzato">Avanzato</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Durata (minuti) *</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="60" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Course Settings */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="maxParticipants"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Partecipanti *</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="20" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reservedSpots"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Posti Riservati</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Numero di posti riservati per iscrizioni dell'ultimo minuto
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prezzo (€) *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="15.00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="deadlineHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deadline Prenotazione (ore) *</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.5" placeholder="24" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Ore prima dell'inizio del corso entro cui è possibile prenotare
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -945,190 +847,389 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
               <FormField
                 control={form.control}
-                name="endDate"
+                name="image"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data di Fine</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
+                  <FormItem>
+                    <FormLabel>URL Immagine</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      URL dell'immagine che rappresenta il corso
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Benefits */}
+              <FormField
+                control={form.control}
+                name="benefits"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Benefici del Corso *</FormLabel>
+                    <FormDescription>
+                      Elenca i principali benefici che i partecipanti otterranno
+                    </FormDescription>
+                    <div className="space-y-2">
+                      {field.value.map((benefit, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder="Es. Migliora la flessibilità"
+                            value={benefit}
+                            onChange={(e) => {
+                              const newBenefits = [...field.value];
+                              newBenefits[index] = e.target.value;
+                              field.onChange(newBenefits);
+                            }}
+                          />
+                          {field.value.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                const newBenefits = field.value.filter((_, i) => i !== index);
+                                field.onChange(newBenefits);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => field.onChange([...field.value, ''])}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Aggiungi Beneficio
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Requirements */}
+              <FormField
+                control={form.control}
+                name="requirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requisiti (opzionale)</FormLabel>
+                    <FormDescription>
+                      Eventuali prerequisiti o attrezzature richieste
+                    </FormDescription>
+                    <div className="space-y-2">
+                      {field.value?.map((requirement, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder="Es. Tappetino yoga"
+                            value={requirement}
+                            onChange={(e) => {
+                              const newRequirements = [...(field.value || [])];
+                              newRequirements[index] = e.target.value;
+                              field.onChange(newRequirements);
+                            }}
+                          />
                           <Button
+                            type="button"
                             variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
+                            size="icon"
+                            onClick={() => {
+                              const newRequirements = (field.value || []).filter((_, i) => i !== index);
+                              field.onChange(newRequirements);
+                            }}
                           >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy")
-                            ) : (
-                              <span>Seleziona data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <X className="h-4 w-4" />
                           </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date <= form.getValues('startDate')}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                        </div>
+                      )) || []}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => field.onChange([...(field.value || []), ''])}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Aggiungi Requisito
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isVisible"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Corso Attivo</FormLabel>
+                      <FormDescription>
+                        Il corso sarà visibile e prenotabile dagli utenti
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Course Period */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Periodo del Corso</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Data Inizio</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Seleziona data</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Data Fine</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Seleziona data</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'schedule' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium">Programmazione Settimanale</h3>
+              <FormField
+                control={form.control}
+                name="schedule"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orari Settimanali *</FormLabel>
+                    <FormDescription>
+                      Configura gli orari ricorrenti del corso per ogni settimana
+                    </FormDescription>
+                    <div className="space-y-4">
+                      {field.value.map((schedule, index) => (
+                        <Card key={index}>
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div>
+                                <FormLabel>Giorno</FormLabel>
+                                <Select
+                                  value={schedule.dayOfWeek.toString()}
+                                  onValueChange={(value) => {
+                                    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+                                    const newSchedule = [...field.value];
+                                    newSchedule[index] = {
+                                      ...schedule,
+                                      dayOfWeek: parseInt(value),
+                                      day: dayNames[parseInt(value)]
+                                    };
+                                    field.onChange(newSchedule);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">Lunedì</SelectItem>
+                                    <SelectItem value="2">Martedì</SelectItem>
+                                    <SelectItem value="3">Mercoledì</SelectItem>
+                                    <SelectItem value="4">Giovedì</SelectItem>
+                                    <SelectItem value="5">Venerdì</SelectItem>
+                                    <SelectItem value="6">Sabato</SelectItem>
+                                    <SelectItem value="0">Domenica</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <FormLabel>Orario</FormLabel>
+                                <Input
+                                  type="time"
+                                  value={schedule.time}
+                                  onChange={(e) => {
+                                    const newSchedule = [...field.value];
+                                    newSchedule[index] = { ...schedule, time: e.target.value };
+                                    field.onChange(newSchedule);
+                                  }}
+                                />
+                              </div>
+
+                              <div>
+                                <FormLabel>Sala</FormLabel>
+                                <Select
+                                  value={schedule.roomId}
+                                  onValueChange={(value) => {
+                                    const newSchedule = [...field.value];
+                                    newSchedule[index] = { ...schedule, roomId: value };
+                                    field.onChange(newSchedule);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seleziona sala" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {gymRooms.map((room) => (
+                                      <SelectItem key={room.id} value={room.id}>
+                                        {room.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex items-end">
+                                {field.value.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => {
+                                      const newSchedule = field.value.filter((_, i) => i !== index);
+                                      field.onChange(newSchedule);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          field.onChange([
+                            ...field.value,
+                            { dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }
+                          ]);
+                        }}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Aggiungi Orario
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+          )}
 
-          </CardContent>
-        </Card>
+          {activeTab === 'exceptions' && (
+            <CourseScheduleExceptions
+              exceptions={exceptions}
+              onChange={setExceptions}
+            />
+          )}
 
-        {/* Schedule */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-1">
-              Orari del Corso
-              <span className="text-destructive">*</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {form.watch('schedule').map((scheduleItem, index) => (
-              <div key={index} className="grid gap-4 md:grid-cols-4 p-4 border rounded-lg">
-                <div>
-                  <label className="text-sm font-medium">Giorno</label>
-                  <Select 
-                    value={scheduleItem.dayOfWeek.toString()} 
-                    onValueChange={(value) => {
-                      const newSchedule = [...form.getValues('schedule')];
-                      newSchedule[index] = {
-                        ...newSchedule[index],
-                        dayOfWeek: parseInt(value),
-                        day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][parseInt(value)]
-                      };
-                      form.setValue('schedule', newSchedule);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Lunedì</SelectItem>
-                      <SelectItem value="2">Martedì</SelectItem>
-                      <SelectItem value="3">Mercoledì</SelectItem>
-                      <SelectItem value="4">Giovedì</SelectItem>
-                      <SelectItem value="5">Venerdì</SelectItem>
-                      <SelectItem value="6">Sabato</SelectItem>
-                      <SelectItem value="0">Domenica</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Orario</label>
-                  <Input
-                    type="time"
-                    value={scheduleItem.time}
-                    onChange={(e) => {
-                      const newSchedule = [...form.getValues('schedule')];
-                      newSchedule[index] = { ...newSchedule[index], time: e.target.value };
-                      form.setValue('schedule', newSchedule);
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Sala</label>
-                  <Select 
-                    value={scheduleItem.roomId} 
-                    onValueChange={(value) => {
-                      const newSchedule = [...form.getValues('schedule')];
-                      newSchedule[index] = { ...newSchedule[index], roomId: value };
-                      form.setValue('schedule', newSchedule);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona sala" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gymRooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const newSchedule = form.getValues('schedule').filter((_, i) => i !== index);
-                      form.setValue('schedule', newSchedule.length > 0 ? newSchedule : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]);
-                    }}
-                    disabled={form.watch('schedule').length === 1}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
+          {activeTab === 'enrollment' && mode === 'edit' && course?.id && (
+            <ManualEnrollment
+              courseId={course.id}
+              courseName={course.name}
+            />
+          )}
+
+          <div className="flex justify-end space-x-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                const currentSchedule = form.getValues('schedule');
-                form.setValue('schedule', [...currentSchedule, { dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]);
-              }}
+              onClick={() => window.history.back()}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Orario
+              Annulla
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Error Summary */}
-        {Object.keys(form.formState.errors).length > 0 && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-            <h3 className="font-medium text-destructive mb-2">Errori di validazione:</h3>
-            <ul className="text-sm space-y-1">
-              {Object.entries(form.formState.errors).map(([field, error]) => (
-                <li key={field} className="text-destructive">
-                  • {error?.message || `Campo ${field} non valido`}
-                </li>
-              ))}
-            </ul>
+            {activeTab !== 'enrollment' && (
+              <Button type="submit">
+                {mode === 'create' ? 'Crea Corso' : 'Aggiorna Corso'}
+              </Button>
+            )}
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-4">
-          <Button 
-            type="submit" 
-            size="lg"
-            disabled={!form.formState.isValid || form.formState.isSubmitting}
-            className="min-w-[140px]"
-          >
-            {form.formState.isSubmitting ? 'Salvataggio...' : (mode === 'create' ? 'Crea Corso' : 'Salva Modifiche')}
-          </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="lg"
-            onClick={() => navigate('/owner/courses')}
-            disabled={form.formState.isSubmitting}
-          >
-            Annulla
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 };
