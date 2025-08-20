@@ -63,6 +63,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch user profile and role data
   const fetchUserDataInternal = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
+      console.log('AuthContext: Fetching user data for ID:', userId);
+      console.log('AuthContext: Current session:', session);
+      
       // Get profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -71,9 +74,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error('AuthContext: Error fetching profile:', profileError);
         return null;
       }
+
+      console.log('AuthContext: Profile data found:', profile);
 
       // Get role data using the new utility function
       const { data: roleData, error: roleError } = await supabase
@@ -178,15 +183,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthContext: Initial session check:', session);
       setSession(session);
       
       if (session?.user) {
+        console.log('AuthContext: Found existing session for user:', session.user.id);
         fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
           setUser(userData);
           setLoading(false);
           setInitialized(true);
         });
       } else {
+        console.log('AuthContext: No existing session found');
         setLoading(false);
         setInitialized(true);
       }
