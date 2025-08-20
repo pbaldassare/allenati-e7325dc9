@@ -68,10 +68,7 @@ export const Dashboard = () => {
             .select(`
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(
-                user_id,
-                profiles(first_name, last_name, profile_picture_url)
-              ),
+              instructors(user_id),
               course_schedules(day_of_week, start_time, end_time),
               gyms(name)
             `)
@@ -87,10 +84,7 @@ export const Dashboard = () => {
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
-            instructors(
-              user_id,
-              profiles(first_name, last_name, profile_picture_url)
-            ),
+            instructors(user_id),
             course_schedules(day_of_week, start_time, end_time),
             gyms(name)
           `)
@@ -110,8 +104,24 @@ export const Dashboard = () => {
 
         console.log('Available courses query result:', availableCoursesData);
 
-        // Get all courses for booking count calculation
+        // Get instructor profiles for all courses
         const allCourses = [...bookedCoursesData, ...(availableCoursesData || [])];
+        const instructorUserIds = [...new Set(allCourses.map(c => c.instructors?.user_id).filter(Boolean))];
+        
+        if (instructorUserIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, first_name, last_name, profile_picture_url')
+            .in('user_id', instructorUserIds);
+
+          if (!profilesError && profilesData) {
+            const profilesMap: Record<string, any> = {};
+            profilesData.forEach(profile => {
+              profilesMap[profile.user_id] = profile;
+            });
+            setInstructorProfiles(profilesMap);
+          }
+        }
 
         // Get booking counts for each course to show progress
         const courseIds = allCourses.map(c => c.id);
@@ -282,15 +292,13 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (course: any) => {
-    const instructor = course.instructors;
-    const profile = instructor?.profiles;
+    const profile = instructorProfiles[course.instructors?.user_id];
     if (!profile) return 'Istruttore';
     return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Istruttore';
   };
 
   const getInstructorAvatar = (course: any) => {
-    const instructor = course.instructors;
-    const profile = instructor?.profiles;
+    const profile = instructorProfiles[course.instructors?.user_id];
     return profile?.profile_picture_url || null;
   };
 
