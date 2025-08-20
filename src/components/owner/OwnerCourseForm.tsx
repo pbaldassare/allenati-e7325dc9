@@ -7,7 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
+import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import {
   Form,
   FormControl,
@@ -39,6 +44,9 @@ const courseSchema = z.object({
   isVisible: z.boolean().default(true),
   benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
   requirements: z.array(z.string()).optional(),
+  startDate: z.date({ required_error: 'La data di inizio è obbligatoria' }),
+  endDate: z.date({ required_error: 'La data di fine è obbligatoria' }),
+  autoGenerateSessions: z.boolean().default(true),
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
     time: z.string(),
@@ -46,13 +54,21 @@ const courseSchema = z.object({
     date: z.string().optional(),
     day: z.string().optional()
   })).min(1, 'È necessario inserire almeno un orario'),
+}).refine((data) => data.endDate > data.startDate, {
+  message: "La data di fine deve essere successiva alla data di inizio",
+  path: ["endDate"]
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
 
 interface CourseFormProps {
   mode: 'create' | 'edit';
-  course?: SupabaseCourse & { schedules?: any[] };
+  course?: SupabaseCourse & { 
+    schedules?: any[];
+    start_date?: string;
+    end_date?: string;
+    auto_generate_sessions?: boolean;
+  };
 }
 
 interface GymRoom {
@@ -79,6 +95,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<any[]>([]);
   
   // Load owner's gym data
   useEffect(() => {
@@ -177,6 +194,9 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       isVisible: true,
       benefits: [''],
       requirements: [''],
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000), // 3 mesi dopo
+      autoGenerateSessions: true,
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },
   });
@@ -202,6 +222,9 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         isVisible: course.is_active ?? true,
         benefits: course.benefits || [''],
         requirements: course.requirements || [''],
+        startDate: course.start_date ? new Date(course.start_date) : new Date(),
+        endDate: course.end_date ? new Date(course.end_date) : new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000),
+        autoGenerateSessions: course.auto_generate_sessions ?? true,
         schedule: course.schedules?.map((s: any) => ({
           dayOfWeek: s.day_of_week || 1,
           time: s.start_time || '09:00',
@@ -343,7 +366,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         benefits: data.benefits.filter(b => b.trim() !== ''),
         requirements: data.requirements?.filter(r => r.trim() !== '') || [],
         credits_required: 1,
-        is_active: data.isVisible
+        is_active: data.isVisible,
+        start_date: data.startDate.toISOString().split('T')[0],
+        end_date: data.endDate.toISOString().split('T')[0],
+        auto_generate_sessions: data.autoGenerateSessions
       };
 
       if (mode === 'create') {
@@ -389,6 +415,25 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           .insert(scheduleData);
 
         if (scheduleError) throw scheduleError;
+
+        // Generate sessions if auto-generate is enabled
+        if (data.autoGenerateSessions) {
+          const { error: sessionError } = await supabase
+            .rpc('generate_course_sessions', {
+              _course_id: newCourse.id,
+              _start_date: data.startDate.toISOString().split('T')[0],
+              _end_date: data.endDate.toISOString().split('T')[0]
+            });
+
+          if (sessionError) {
+            console.error('Error generating sessions:', sessionError);
+            toast({
+              title: "Attenzione",
+              description: "Corso creato ma errore nella generazione delle sessioni",
+              variant: "destructive"
+            });
+          }
+        }
       } else if (mode === 'edit' && course) {
         // Update existing course
         console.log('Updating course with data:', data);
@@ -456,6 +501,25 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           if (newScheduleError) {
             console.error('Schedule insert error:', newScheduleError);
             throw newScheduleError;
+          }
+
+          // Generate sessions if auto-generate is enabled
+          if (data.autoGenerateSessions) {
+            const { error: sessionError } = await supabase
+              .rpc('generate_course_sessions', {
+                _course_id: course.id,
+                _start_date: data.startDate.toISOString().split('T')[0],
+                _end_date: data.endDate.toISOString().split('T')[0]
+              });
+
+            if (sessionError) {
+              console.error('Error generating sessions:', sessionError);
+              toast({
+                title: "Attenzione",
+                description: "Corso aggiornato ma errore nella generazione delle sessioni",
+                variant: "destructive"
+              });
+            }
           }
         }
       }
@@ -871,11 +935,129 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           </CardContent>
         </Card>
 
-        {/* Schedule */}
+        {/* Course Period */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-1">
-              Orari e Sale 
+              Periodo del Corso 
+              <span className="text-destructive">*</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data di Inizio</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy")
+                            ) : (
+                              <span>Seleziona data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data di Fine</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy")
+                            ) : (
+                              <span>Seleziona data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date <= form.getValues('startDate')}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="autoGenerateSessions"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Genera Sessioni Automaticamente
+                    </FormLabel>
+                    <FormDescription>
+                      Crea automaticamente le sessioni del corso in base agli orari e al periodo selezionato
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Schedule and Sessions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-1">
+              Orari e Sessioni
               <span className="text-destructive">*</span>
             </CardTitle>
           </CardHeader>
@@ -885,11 +1067,21 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
               name="schedule"
               render={({ field }) => (
                 <FormItem>
+                  <FormLabel>Orari Ricorrenti</FormLabel>
                   <FormControl>
-                    <CourseScheduleManager
-                      schedule={field.value as any}
-                      onChange={field.onChange}
-                      gymRooms={gymRooms}
+                    <CourseSessionManager
+                      courseId={mode === 'edit' ? course?.id : undefined}
+                      startDate={form.watch('startDate')}
+                      endDate={form.watch('endDate')}
+                      schedules={field.value.map(s => ({
+                        day_of_week: s.dayOfWeek,
+                        start_time: s.time,
+                        end_time: '',
+                        room_id: s.roomId,
+                        room_name: gymRooms.find(r => r.id === s.roomId)?.name || ''
+                      }))}
+                      maxParticipants={form.watch('maxParticipants')}
+                      onSessionsChange={setSessions}
                     />
                   </FormControl>
                   <FormMessage />
