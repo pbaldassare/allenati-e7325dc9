@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      achievements: {
-        Row: {
-          badge_color: string | null
-          created_at: string
-          criteria: Json | null
-          description: string | null
-          icon_name: string | null
-          id: string
-          is_active: boolean
-          name: string
-          points_reward: number
-        }
-        Insert: {
-          badge_color?: string | null
-          created_at?: string
-          criteria?: Json | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          points_reward?: number
-        }
-        Update: {
-          badge_color?: string | null
-          created_at?: string
-          criteria?: Json | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          points_reward?: number
-        }
-        Relationships: []
-      }
       admin_action_logs: {
         Row: {
           action: string
@@ -1602,38 +1566,6 @@ export type Database = {
             columns: ["gym_id"]
             isOneToOne: false
             referencedRelation: "gyms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_achievements: {
-        Row: {
-          achievement_id: string
-          earned_at: string
-          id: string
-          points_earned: number
-          user_id: string
-        }
-        Insert: {
-          achievement_id: string
-          earned_at?: string
-          id?: string
-          points_earned?: number
-          user_id: string
-        }
-        Update: {
-          achievement_id?: string
-          earned_at?: string
-          id?: string
-          points_earned?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_achievements_achievement_id_fkey"
-            columns: ["achievement_id"]
-            isOneToOne: false
-            referencedRelation: "achievements"
             referencedColumns: ["id"]
           },
         ]

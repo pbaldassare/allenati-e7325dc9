@@ -55,16 +55,6 @@ export interface Subscription {
   accessLevel: string[];
 }
 
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  points: number;
-  category: string;
-  requirement: number;
-  unlockedBy: string[];
-}
 
 export interface Notification {
   id: string;
@@ -124,11 +114,6 @@ interface AppDataContextType {
   // Subscriptions
   subscriptions: Subscription[];
   
-  // Achievements & Gamification
-  achievements: Achievement[];
-  userAchievements: string[];
-  unlockAchievement: (achievementId: string) => void;
-  addPoints: (userId: string, points: number) => void;
   
   // Notifications
   notifications: Notification[];
@@ -198,39 +183,6 @@ const initializeFakeData = () => {
     }
   ];
 
-  // Achievements
-  const FAKE_ACHIEVEMENTS: Achievement[] = [
-    {
-      id: '1',
-      name: 'Newcomer',
-      description: 'Completa il tuo primo allenamento',
-      icon: '🎯',
-      points: 50,
-      category: 'milestone',
-      requirement: 1,
-      unlockedBy: ['1']
-    },
-    {
-      id: '2',
-      name: 'Week Warrior',
-      description: 'Completa 7 allenamenti in una settimana',
-      icon: '⚡',
-      points: 200,
-      category: 'consistency',
-      requirement: 7,
-      unlockedBy: []
-    },
-    {
-      id: '3',
-      name: 'Yoga Master',
-      description: 'Partecipa a 20 sessioni di yoga',
-      icon: '🧘',
-      points: 300,
-      category: 'specialty',
-      requirement: 20,
-      unlockedBy: []
-    }
-  ];
 
   // Products
   const FAKE_PRODUCTS: Product[] = [
@@ -270,13 +222,11 @@ const initializeFakeData = () => {
   return {
     courses: FAKE_COURSES,
     subscriptions: FAKE_SUBSCRIPTIONS,
-    achievements: FAKE_ACHIEVEMENTS,
     products: FAKE_PRODUCTS,
     bookings: JSON.parse(localStorage.getItem('app_bookings') || '[]'),
     notifications: JSON.parse(localStorage.getItem('app_notifications') || '[]'),
     cart: JSON.parse(localStorage.getItem('app_cart') || '[]'),
-    orders: JSON.parse(localStorage.getItem('app_orders') || '[]'),
-    userAchievements: JSON.parse(localStorage.getItem('user_achievements') || '[]')
+    orders: JSON.parse(localStorage.getItem('app_orders') || '[]')
   };
 };
 
@@ -300,9 +250,6 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     localStorage.setItem('app_orders', JSON.stringify(data.orders));
   }, [data.orders]);
 
-  useEffect(() => {
-    localStorage.setItem('user_achievements', JSON.stringify(data.userAchievements));
-  }, [data.userAchievements]);
 
   const getCourseById = (id: string) => {
     return data.courses.find(course => course.id === id);
@@ -389,19 +336,6 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     }));
   };
 
-  const unlockAchievement = (achievementId: string) => {
-    if (!data.userAchievements.includes(achievementId)) {
-      setData(prev => ({
-        ...prev,
-        userAchievements: [...prev.userAchievements, achievementId]
-      }));
-    }
-  };
-
-  const addPoints = (userId: string, points: number) => {
-    // This would update user points in a real app
-    console.log(`Added ${points} points to user ${userId}`);
-  };
 
   const addToCart = (productId: string, quantity: number) => {
     setData(prev => {
@@ -516,10 +450,6 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     bookings: data.bookings,
     getUserBookings,
     subscriptions: data.subscriptions,
-    achievements: data.achievements,
-    userAchievements: data.userAchievements,
-    unlockAchievement,
-    addPoints,
     notifications: data.notifications,
     getUserNotifications,
     markNotificationAsRead,
