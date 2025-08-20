@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
+import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { CalendarIcon, Info, Clock, Users, Calendar as CalendarDays, AlertTriangle, UserPlus } from 'lucide-react';
+import { format, addDays, startOfWeek, isWithinInterval } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
   Form,
@@ -97,6 +98,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const [loading, setLoading] = useState(true);
   const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
   const [activeTab, setActiveTab] = useState<'general' | 'schedule' | 'exceptions' | 'enrollment'>('general');
+  const [generatedSessions, setGeneratedSessions] = useState<any[]>([]);
+  const [validationIssues, setValidationIssues] = useState({
+    general: 0,
+    schedule: 0,
+    exceptions: 0,
+    enrollment: 0
+  });
   
   // Load owner's gym data
   useEffect(() => {
@@ -297,6 +305,93 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       });
     }
   }, [mode, course, categories, instructors, loading, form]);
+
+  // Generate session preview when dates or schedule changes
+  useEffect(() => {
+    const generateSessionPreview = () => {
+      const formData = form.getValues();
+      if (!formData.startDate || !formData.endDate || !formData.schedule?.length) {
+        setGeneratedSessions([]);
+        return;
+      }
+
+      const sessions: any[] = [];
+      const currentDate = new Date(formData.startDate);
+      const endDate = new Date(formData.endDate);
+      
+      while (currentDate <= endDate && sessions.length < 10) {
+        formData.schedule.forEach(schedule => {
+          if (currentDate.getDay() === schedule.dayOfWeek) {
+            // Check if date is in exceptions
+            const isException = exceptions.some(exception => 
+              isWithinInterval(currentDate, { start: exception.start_date, end: exception.end_date })
+            );
+            
+            if (!isException) {
+              const roomName = gymRooms.find(room => room.id === schedule.roomId)?.name || 'Sala non assegnata';
+              sessions.push({
+                date: new Date(currentDate),
+                time: schedule.time,
+                room: roomName,
+                dayName: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][currentDate.getDay()]
+              });
+            }
+          }
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      setGeneratedSessions(sessions.slice(0, 10));
+    };
+
+    generateSessionPreview();
+  }, [form.watch('startDate'), form.watch('endDate'), form.watch('schedule'), exceptions, gymRooms]);
+
+  // Validate form and update issue counts
+  useEffect(() => {
+    const validateSections = () => {
+      const formState = form.formState;
+      const formData = form.getValues();
+      
+      let generalIssues = 0;
+      let scheduleIssues = 0;
+      
+      // General tab validation
+      if (!formData.name || formData.name.trim().length < 3) generalIssues++;
+      if (!formData.instructor_id) generalIssues++;
+      if (!formData.category) generalIssues++;
+      if (!formData.level) generalIssues++;
+      if (!formData.benefits?.length || !formData.benefits.some(b => b.trim())) generalIssues++;
+      
+      // Schedule tab validation
+      if (!formData.startDate) scheduleIssues++;
+      if (!formData.endDate) scheduleIssues++;
+      if (!formData.schedule?.length) scheduleIssues++;
+      else {
+        formData.schedule.forEach(s => {
+          if (!s.roomId || !s.time) scheduleIssues++;
+        });
+      }
+      
+      setValidationIssues(prev => ({
+        ...prev,
+        general: generalIssues,
+        schedule: scheduleIssues
+      }));
+    };
+
+    validateSections();
+  }, [form.watch(), exceptions]);
+
+  const getTabIcon = (tab: string) => {
+    switch (tab) {
+      case 'general': return Info;
+      case 'schedule': return CalendarDays;
+      case 'exceptions': return AlertTriangle;
+      case 'enrollment': return UserPlus;
+      default: return Info;
+    }
+  };
 
   const onSubmit = async (data: CourseFormData) => {
     try {
@@ -603,53 +698,37 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex space-x-4 border-b">
-        <button
-          type="button"
-          onClick={() => setActiveTab('general')}
-          className={`px-4 py-2 border-b-2 transition-colors ${
-            activeTab === 'general' 
-              ? 'border-primary text-primary' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Informazioni Generali
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('schedule')}
-          className={`px-4 py-2 border-b-2 transition-colors ${
-            activeTab === 'schedule' 
-              ? 'border-primary text-primary' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Programmazione
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('exceptions')}
-          className={`px-4 py-2 border-b-2 transition-colors ${
-            activeTab === 'exceptions' 
-              ? 'border-primary text-primary' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Eccezioni
-        </button>
-        {mode === 'edit' && course?.id && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('enrollment')}
-            className={`px-4 py-2 border-b-2 transition-colors ${
-              activeTab === 'enrollment' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Iscrizioni Manuali
-          </button>
-        )}
+      <div className="flex space-x-1 border-b bg-muted/20 p-1 rounded-t-lg">
+        {[
+          { key: 'general', label: 'Informazioni Generali', icon: getTabIcon('general') },
+          { key: 'schedule', label: 'Programmazione', icon: getTabIcon('schedule') },
+          { key: 'exceptions', label: 'Eccezioni', icon: getTabIcon('exceptions') },
+          ...(mode === 'edit' && course?.id ? [{ key: 'enrollment', label: 'Iscrizioni Manuali', icon: getTabIcon('enrollment') }] : [])
+        ].map(tab => {
+          const Icon = tab.icon;
+          const issueCount = validationIssues[tab.key as keyof typeof validationIssues];
+          
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`relative flex items-center gap-2 px-4 py-3 rounded-md transition-all ${
+                activeTab === tab.key 
+                  ? 'bg-background text-primary shadow-sm border border-border' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="font-medium">{tab.label}</span>
+              {issueCount > 0 && (
+                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex items-center justify-center">
+                  {issueCount}
+                </Badge>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <Form {...form}>
@@ -984,182 +1063,194 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                   </FormItem>
                 )}
               />
-
-              {/* Course Period */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Periodo del Corso</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Data Inizio</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Seleziona data</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                              className="p-3 pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Data Fine</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Seleziona data</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                              className="p-3 pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
             </div>
           )}
 
           {activeTab === 'schedule' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Programmazione Settimanale</h3>
-              <FormField
-                control={form.control}
-                name="schedule"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Orari Settimanali *</FormLabel>
-                    <FormDescription>
-                      Configura gli orari ricorrenti del corso per ogni settimana
-                    </FormDescription>
-                    <div className="space-y-4">
-                      {field.value.map((schedule, index) => (
-                        <Card key={index}>
-                          <CardContent className="pt-6">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                              <div>
-                                <FormLabel>Giorno</FormLabel>
-                                <Select
-                                  value={schedule.dayOfWeek.toString()}
-                                  onValueChange={(value) => {
-                                    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-                                    const newSchedule = [...field.value];
-                                    newSchedule[index] = {
-                                      ...schedule,
-                                      dayOfWeek: parseInt(value),
-                                      day: dayNames[parseInt(value)]
-                                    };
-                                    field.onChange(newSchedule);
-                                  }}
+              {/* Course Period */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5" />
+                    Periodo del Corso
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Data Inizio *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
                                 >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">Lunedì</SelectItem>
-                                    <SelectItem value="2">Martedì</SelectItem>
-                                    <SelectItem value="3">Mercoledì</SelectItem>
-                                    <SelectItem value="4">Giovedì</SelectItem>
-                                    <SelectItem value="5">Venerdì</SelectItem>
-                                    <SelectItem value="6">Sabato</SelectItem>
-                                    <SelectItem value="0">Domenica</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                                  {field.value ? (
+                                    format(field.value, "PPP", { locale: it })
+                                  ) : (
+                                    <span>Seleziona data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                              <div>
-                                <FormLabel>Orario</FormLabel>
-                                <Input
-                                  type="time"
-                                  value={schedule.time}
-                                  onChange={(e) => {
-                                    const newSchedule = [...field.value];
-                                    newSchedule[index] = { ...schedule, time: e.target.value };
-                                    field.onChange(newSchedule);
-                                  }}
-                                />
-                              </div>
-
-                              <div>
-                                <FormLabel>Sala</FormLabel>
-                                <Select
-                                  value={schedule.roomId}
-                                  onValueChange={(value) => {
-                                    const newSchedule = [...field.value];
-                                    newSchedule[index] = { ...schedule, roomId: value };
-                                    field.onChange(newSchedule);
-                                  }}
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Data Fine *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
                                 >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleziona sala" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {gymRooms.map((room) => (
-                                      <SelectItem key={room.id} value={room.id}>
-                                        {room.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                                  {field.value ? (
+                                    format(field.value, "PPP", { locale: it })
+                                  ) : (
+                                    <span>Seleziona data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date() || (form.getValues('startDate') && date <= form.getValues('startDate'))}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-                              <div className="flex items-end">
-                                {field.value.length > 1 && (
+              {/* Course Schedule */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Orari Settimanali
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="schedule"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Programmazione Ricorrente *</FormLabel>
+                        <FormDescription>
+                          Configura gli orari che si ripeteranno ogni settimana
+                        </FormDescription>
+                        <div className="space-y-4">
+                          {field.value.map((scheduleItem, index) => (
+                            <Card key={index} className="p-4 bg-muted/20">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                <div>
+                                  <label className="text-sm font-medium">Giorno *</label>
+                                  <Select
+                                    value={scheduleItem.dayOfWeek?.toString()}
+                                    onValueChange={(value) => {
+                                      const newSchedule = [...field.value];
+                                      newSchedule[index] = {
+                                        ...scheduleItem,
+                                        dayOfWeek: parseInt(value),
+                                        day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][parseInt(value)]
+                                      };
+                                      field.onChange(newSchedule);
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleziona giorno" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1">Lunedì</SelectItem>
+                                      <SelectItem value="2">Martedì</SelectItem>
+                                      <SelectItem value="3">Mercoledì</SelectItem>
+                                      <SelectItem value="4">Giovedì</SelectItem>
+                                      <SelectItem value="5">Venerdì</SelectItem>
+                                      <SelectItem value="6">Sabato</SelectItem>
+                                      <SelectItem value="0">Domenica</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div>
+                                  <label className="text-sm font-medium">Orario *</label>
+                                  <Input
+                                    type="time"
+                                    value={scheduleItem.time}
+                                    onChange={(e) => {
+                                      const newSchedule = [...field.value];
+                                      newSchedule[index] = { ...scheduleItem, time: e.target.value };
+                                      field.onChange(newSchedule);
+                                    }}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-sm font-medium">Sala *</label>
+                                  <Select
+                                    value={scheduleItem.roomId}
+                                    onValueChange={(value) => {
+                                      const newSchedule = [...field.value];
+                                      newSchedule[index] = { ...scheduleItem, roomId: value };
+                                      field.onChange(newSchedule);
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleziona sala" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {gymRooms.map((room) => (
+                                        <SelectItem key={room.id} value={room.id}>
+                                          {room.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="flex gap-2">
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1168,35 +1259,63 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                                       const newSchedule = field.value.filter((_, i) => i !== index);
                                       field.onChange(newSchedule);
                                     }}
+                                    disabled={field.value.length === 1}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
-                                )}
+                                </div>
                               </div>
+                            </Card>
+                          ))}
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => field.onChange([...field.value, { dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }])}
+                            className="w-full"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Aggiungi Orario
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Schedule Preview */}
+              {generatedSessions.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarDays className="h-5 w-5" />
+                      Anteprima Prime Sessioni
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {generatedSessions.map((session, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm font-medium">
+                              {format(session.date, "eeee d MMMM", { locale: it })}
                             </div>
-                          </CardContent>
-                        </Card>
+                            <Badge variant="outline">{session.time}</Badge>
+                            <div className="text-sm text-muted-foreground">{session.room}</div>
+                          </div>
+                        </div>
                       ))}
-                      
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          field.onChange([
-                            ...field.value,
-                            { dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }
-                          ]);
-                        }}
-                        className="w-full"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Aggiungi Orario
-                      </Button>
+                      {generatedSessions.length === 10 && (
+                        <div className="text-center text-sm text-muted-foreground pt-2">
+                          Mostrate le prime 10 sessioni. Altre sessioni verranno generate automaticamente.
+                        </div>
+                      )}
                     </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
