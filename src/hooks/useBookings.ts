@@ -14,6 +14,8 @@ export const useBookings = () => {
   const fetchBookings = async () => {
     if (!user) return;
 
+    console.log('Fetching bookings for user:', user.id);
+
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -38,7 +40,7 @@ export const useBookings = () => {
             instructors (
               id,
               user_id,
-              profiles!instructors_user_id_fkey (
+              profiles (
                 first_name,
                 last_name
               )
@@ -48,7 +50,11 @@ export const useBookings = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log('Bookings query result:', { data, error });
+
       if (error) throw error;
+      
+      console.log('Setting bookings:', data);
       setBookings(data || []);
     } catch (error) {
       console.error('Error fetching bookings:', error);
