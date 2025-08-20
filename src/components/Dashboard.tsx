@@ -68,7 +68,7 @@ export const Dashboard = () => {
           .select(`
             *,
             course_categories(name, color_hex, icon_name),
-            instructors(user_id),
+            instructors!inner(id, user_id, is_active),
             course_schedules(day_of_week, start_time, end_time),
             gyms(name)
           `)
@@ -84,7 +84,7 @@ export const Dashboard = () => {
         .select(`
           *,
           course_categories(name, color_hex, icon_name),
-          instructors(user_id),
+          instructors!inner(id, user_id, is_active),
           course_schedules(day_of_week, start_time, end_time),
           gyms(name)
         `)
