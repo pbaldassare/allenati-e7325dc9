@@ -3,18 +3,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-export type BookingWithCourse = any;
+export interface SessionBooking {
+  id: string;
+  course_id: string;
+  user_id: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  status: 'confirmed' | 'cancelled' | 'completed' | 'waitlist' | 'no_show';
+  credits_used: number;
+  created_at: string;
+  courses?: {
+    name: string;
+    deadline_hours?: number;
+    instructors?: {
+      profiles?: {
+        first_name: string;
+        last_name: string;
+      }
+    }
+  }
+}
 
-export const useBookings = () => {
+export const useSessionBookings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [bookings, setBookings] = useState<BookingWithCourse[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchBookings = async () => {
     if (!user) return;
-
-    console.log('Fetching bookings for user:', user.id);
 
     try {
       const { data, error } = await supabase
@@ -22,34 +39,19 @@ export const useBookings = () => {
         .select(`
           *,
           courses (
-            id,
             name,
-            image_url,
             deadline_hours,
-            gym_id,
-            instructor_id,
-            gyms (
-              id,
-              name,
-              address,
-              city
-            ),
-            course_categories (
-              name
-            ),
             instructors (
-              id,
               user_id
             )
           )
         `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      console.log('Bookings query result:', { data, error });
+        .eq('status', 'confirmed')
+        .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
-      
+
       // Get instructor profiles separately
       if (data && data.length > 0) {
         const instructorUserIds = data
@@ -77,18 +79,16 @@ export const useBookings = () => {
             });
             setBookings(enrichedBookings);
           } else {
-            setBookings(data);
+            setBookings(data || []);
           }
         } else {
-          setBookings(data);
+          setBookings(data || []);
         }
       } else {
-        setBookings(data || []);
+        setBookings([]);
       }
-      
-      console.log('Setting bookings:', data);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error('Error fetching session bookings:', error);
       toast({
         title: "Errore",
         description: "Impossibile caricare le prenotazioni",
@@ -99,17 +99,47 @@ export const useBookings = () => {
     }
   };
 
-  const cancelBooking = async (bookingId: string) => {
-    if (!user) return false;
+  // Check if a specific session is booked
+  const isSessionBooked = (courseId: string, date: string, time: string) => {
+    return bookings.some(b => 
+      b.course_id === courseId && 
+      b.scheduled_date === date && 
+      b.scheduled_time === time
+    );
+  };
 
-    console.log('Cancelling booking:', bookingId);
+  // Get booking for a specific session
+  const getSessionBooking = (courseId: string, date: string, time: string) => {
+    return bookings.find(b => 
+      b.course_id === courseId && 
+      b.scheduled_date === date && 
+      b.scheduled_time === time
+    );
+  };
+
+  // Get all bookings for a course (all sessions)
+  const getCourseBookings = (courseId: string) => {
+    return bookings.filter(b => b.course_id === courseId);
+  };
+
+  // Get bookings for a specific date
+  const getDateBookings = (date: string) => {
+    return bookings.filter(b => b.scheduled_date === date);
+  };
+
+  // Cancel a session booking
+  const cancelSessionBooking = async (courseId: string, date: string, time: string) => {
+    const booking = getSessionBooking(courseId, date, time);
+    if (!booking) {
+      toast({
+        title: "Errore",
+        description: "Prenotazione non trovata",
+        variant: "destructive"
+      });
+      return false;
+    }
 
     try {
-      const booking = bookings.find(b => b.id === bookingId);
-      if (!booking) throw new Error('Prenotazione non trovata');
-
-      console.log('Found booking to cancel:', booking);
-
       // Check if within cancellation deadline
       const course = booking.courses;
       const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
@@ -125,7 +155,7 @@ export const useBookings = () => {
           cancelled_at: new Date().toISOString(),
           cancellation_reason: 'Cancellato dall\'utente'
         })
-        .eq('id', bookingId);
+        .eq('id', booking.id);
 
       if (bookingError) throw bookingError;
 
@@ -135,35 +165,30 @@ export const useBookings = () => {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('current_credits')
-          .eq('user_id', user.id)
+          .eq('user_id', user!.id)
           .single();
 
         if (profileError) throw profileError;
 
         const newBalance = (profileData.current_credits || 0) + booking.credits_used;
 
-        // Update credits
-        const { error: creditsError } = await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', user.id);
-
-        if (creditsError) throw creditsError;
-
-        // Log transaction
+        // Log transaction for refund
         const { error: transactionError } = await supabase
           .from('credits_transactions')
           .insert({
-            user_id: user.id,
+            user_id: user!.id,
             amount: booking.credits_used,
             balance_after: newBalance,
             transaction_type: 'refund',
             description: `Rimborso per cancellazione prenotazione: ${course?.name}`,
-            reference_id: bookingId
+            reference_id: booking.id
           });
 
         if (transactionError) throw transactionError;
       }
+
+      // Remove from local state
+      setBookings(prev => prev.filter(b => b.id !== booking.id));
 
       toast({
         title: "Prenotazione cancellata",
@@ -174,7 +199,7 @@ export const useBookings = () => {
 
       return true;
     } catch (error) {
-      console.error('Error cancelling booking:', error);
+      console.error('Error cancelling session booking:', error);
       toast({
         title: "Errore",
         description: "Non è possibile cancellare questa prenotazione",
@@ -189,9 +214,9 @@ export const useBookings = () => {
 
     fetchBookings();
 
-    // Set up real-time subscription
+    // Set up real-time subscription for session-specific bookings
     const channel = supabase
-      .channel('bookings-changes')
+      .channel('session-bookings-changes')
       .on(
         'postgres_changes',
         {
@@ -211,37 +236,14 @@ export const useBookings = () => {
     };
   }, [user?.id]);
 
-  // Helper functions for session-specific booking management
-  const isSessionBooked = (courseId: string, date: string, time: string) => {
-    return bookings.some(b => 
-      b.course_id === courseId && 
-      b.scheduled_date === date && 
-      b.scheduled_time === time &&
-      b.status === 'confirmed'
-    );
-  };
-
-  const getSessionBooking = (courseId: string, date: string, time: string) => {
-    return bookings.find(b => 
-      b.course_id === courseId && 
-      b.scheduled_date === date && 
-      b.scheduled_time === time &&
-      b.status === 'confirmed'
-    );
-  };
-
-  const getBookingsForCourse = (courseId: string) => {
-    return bookings.filter(b => b.course_id === courseId && b.status === 'confirmed');
-  };
-
   return {
     bookings,
     loading,
     fetchBookings,
-    cancelBooking,
-    // Session-specific helpers
     isSessionBooked,
     getSessionBooking,
-    getBookingsForCourse
+    getCourseBookings,
+    getDateBookings,
+    cancelSessionBooking
   };
 };

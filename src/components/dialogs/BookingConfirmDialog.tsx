@@ -125,13 +125,15 @@ export const BookingConfirmDialog = ({
         
         setGymName(courseData?.gyms?.name || 'Palestra');
 
-        // Get participants
+        // Get participants for this specific session
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select(`
             profiles(first_name, last_name)
           `)
           .eq('course_id', course.id)
+          .eq('scheduled_date', scheduledDate)
+          .eq('scheduled_time', scheduledTime)
           .eq('status', 'confirmed');
 
         setParticipants(bookingsData || []);
@@ -144,7 +146,7 @@ export const BookingConfirmDialog = ({
 
     fetchUserCredits();
     fetchParticipants();
-  }, [user, open]);
+  }, [user, open, course?.id, scheduledDate, scheduledTime]);
 
   const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course?.credits_required || 1);
 

@@ -58,12 +58,15 @@ export const CancellationConfirmDialog = ({
 
     const fetchParticipants = async () => {
       try {
+        // Get participants for this specific session
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select(`
             profiles(first_name, last_name)
           `)
           .eq('course_id', course.id)
+          .eq('scheduled_date', booking.scheduled_date)
+          .eq('scheduled_time', booking.scheduled_time)
           .eq('status', 'confirmed');
 
         setParticipants(bookingsData || []);
@@ -75,7 +78,7 @@ export const CancellationConfirmDialog = ({
     };
 
     fetchParticipants();
-  }, [open, course.id]);
+  }, [open, course.id, booking.scheduled_date, booking.scheduled_time]);
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Data non disponibile';
     return new Date(dateString).toLocaleDateString('it-IT', {
