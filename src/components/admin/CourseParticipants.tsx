@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useAppData } from '@/contexts/AppDataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Search, Mail, Phone, Calendar, UserMinus } from 'lucide-react';
 
 interface CourseParticipantsProps {
@@ -12,17 +12,105 @@ interface CourseParticipantsProps {
 }
 
 export const CourseParticipants: React.FC<CourseParticipantsProps> = ({ courseId }) => {
-  const { getAllUsers, bookings } = useAppData();
-  const users = getAllUsers();
-  
-  // Get participants for this course
-  const courseBookings = bookings.filter(booking => 
-    booking.courseId === courseId && booking.status === 'confirmed'
-  );
-  
-  const participants = users.filter(user => 
-    courseBookings.some(booking => booking.userId === user.id)
-  );
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredParticipants, setFilteredParticipants] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadParticipants();
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredParticipants(participants);
+    } else {
+      const filtered = participants.filter(p => 
+        `${p.user.first_name} ${p.user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredParticipants(filtered);
+    }
+  }, [searchTerm, participants]);
+
+  const loadParticipants = async () => {
+    try {
+      setLoading(true);
+      
+      // Get all confirmed bookings for this course
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'confirmed')
+        .order('scheduled_date', { ascending: true });
+
+      if (bookingsError) throw bookingsError;
+
+      if (!bookings || bookings.length === 0) {
+        setParticipants([]);
+        return;
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(bookings.map(b => b.user_id))];
+      
+      // Fetch profiles for all users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Get subscription data for each user
+      const participantsWithData = await Promise.all(
+        bookings.map(async (booking: any) => {
+          const userProfile = profiles?.find(p => p.user_id === booking.user_id);
+          
+          const { data: subData } = await supabase
+            .from('user_subscriptions')
+            .select('subscription_plans!inner(name, unlimited_access)')
+            .eq('user_id', booking.user_id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          return {
+            ...booking,
+            user: userProfile || {
+              first_name: 'Nome non trovato',
+              last_name: '',
+              email: 'Email non trovata',
+              current_credits: 0
+            },
+            subscription: subData?.subscription_plans ? {
+              plan_name: subData.subscription_plans.name,
+              unlimited_access: subData.subscription_plans.unlimited_access
+            } : { plan_name: 'Nessuno', unlimited_access: false }
+          };
+        })
+      );
+
+      setParticipants(participantsWithData);
+    } catch (error) {
+      console.error('Error loading participants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Partecipanti</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Caricamento partecipanti...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -42,30 +130,33 @@ export const CourseParticipants: React.FC<CourseParticipantsProps> = ({ courseId
           <Input
             placeholder="Cerca partecipanti..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         {/* Participants List */}
         <div className="space-y-3">
-          {participants.map((participant) => {
-            const booking = courseBookings.find(b => b.userId === participant.id);
+          {filteredParticipants.map((participant) => {
             return (
               <div key={participant.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-primary text-white text-xs">
-                      {participant.name.split(' ').map(n => n[0]).join('')}
+                      {participant.user.first_name?.[0]}{participant.user.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{participant.name}</p>
-                    <p className="text-xs text-muted-foreground">{participant.email}</p>
+                    <p className="text-sm font-medium">
+                      {participant.user.first_name} {participant.user.last_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{participant.user.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Badge variant={participant.subscription === 'Premium' ? 'default' : 'secondary'}>
-                    {participant.subscription}
+                  <Badge variant={participant.subscription?.unlimited_access ? 'default' : 'secondary'}>
+                    {participant.subscription?.plan_name}
                   </Badge>
                   <Button variant="ghost" size="sm">
                     <UserMinus className="h-4 w-4" />
@@ -76,9 +167,11 @@ export const CourseParticipants: React.FC<CourseParticipantsProps> = ({ courseId
           })}
         </div>
 
-        {participants.length === 0 && (
+        {filteredParticipants.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">Nessun partecipante iscritto</p>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Nessun partecipante trovato' : 'Nessun partecipante iscritto'}
+            </p>
           </div>
         )}
 
