@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
+
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -46,7 +46,6 @@ const courseSchema = z.object({
   requirements: z.array(z.string()).optional(),
   startDate: z.date({ required_error: 'La data di inizio è obbligatoria' }),
   endDate: z.date({ required_error: 'La data di fine è obbligatoria' }),
-  autoGenerateSessions: z.boolean().default(true),
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
     time: z.string(),
@@ -67,7 +66,6 @@ interface CourseFormProps {
     schedules?: any[];
     start_date?: string;
     end_date?: string;
-    auto_generate_sessions?: boolean;
   };
 }
 
@@ -95,7 +93,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sessions, setSessions] = useState<any[]>([]);
   
   // Load owner's gym data
   useEffect(() => {
@@ -196,7 +193,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       requirements: [''],
       startDate: new Date(),
       endDate: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000), // 3 mesi dopo
-      autoGenerateSessions: true,
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },
   });
@@ -224,7 +220,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         requirements: course.requirements || [''],
         startDate: course.start_date ? new Date(course.start_date) : new Date(),
         endDate: course.end_date ? new Date(course.end_date) : new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000),
-        autoGenerateSessions: course.auto_generate_sessions ?? true,
         schedule: course.schedules?.map((s: any) => ({
           dayOfWeek: s.day_of_week || 1,
           time: s.start_time || '09:00',
@@ -368,8 +363,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         credits_required: 1,
         is_active: data.isVisible,
         start_date: data.startDate.toISOString().split('T')[0],
-        end_date: data.endDate.toISOString().split('T')[0],
-        auto_generate_sessions: data.autoGenerateSessions
+        end_date: data.endDate.toISOString().split('T')[0]
       };
 
       if (mode === 'create') {
@@ -415,25 +409,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           .insert(scheduleData);
 
         if (scheduleError) throw scheduleError;
-
-        // Generate sessions if auto-generate is enabled
-        if (data.autoGenerateSessions) {
-          const { error: sessionError } = await supabase
-            .rpc('generate_course_sessions', {
-              _course_id: newCourse.id,
-              _start_date: data.startDate.toISOString().split('T')[0],
-              _end_date: data.endDate.toISOString().split('T')[0]
-            });
-
-          if (sessionError) {
-            console.error('Error generating sessions:', sessionError);
-            toast({
-              title: "Attenzione",
-              description: "Corso creato ma errore nella generazione delle sessioni",
-              variant: "destructive"
-            });
-          }
-        }
       } else if (mode === 'edit' && course) {
         // Update existing course
         console.log('Updating course with data:', data);
@@ -503,24 +478,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
             throw newScheduleError;
           }
 
-          // Generate sessions if auto-generate is enabled
-          if (data.autoGenerateSessions) {
-            const { error: sessionError } = await supabase
-              .rpc('generate_course_sessions', {
-                _course_id: course.id,
-                _start_date: data.startDate.toISOString().split('T')[0],
-                _end_date: data.endDate.toISOString().split('T')[0]
-              });
-
-            if (sessionError) {
-              console.error('Error generating sessions:', sessionError);
-              toast({
-                title: "Attenzione",
-                description: "Corso aggiornato ma errore nella generazione delle sessioni",
-                variant: "destructive"
-              });
-            }
-          }
         }
       }
 
@@ -1028,66 +985,112 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="autoGenerateSessions"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Genera Sessioni Automaticamente
-                    </FormLabel>
-                    <FormDescription>
-                      Crea automaticamente le sessioni del corso in base agli orari e al periodo selezionato
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
           </CardContent>
         </Card>
 
-        {/* Schedule and Sessions */}
+        {/* Schedule */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-1">
-              Orari e Sessioni
+              Orari del Corso
               <span className="text-destructive">*</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <FormField
-              control={form.control}
-              name="schedule"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orari Ricorrenti</FormLabel>
-                  <FormControl>
-                    <CourseSessionManager
-                      courseId={mode === 'edit' ? course?.id : undefined}
-                      startDate={form.watch('startDate')}
-                      endDate={form.watch('endDate')}
-                      schedules={field.value.map(s => ({
-                        day_of_week: s.dayOfWeek,
-                        start_time: s.time,
-                        end_time: '',
-                        room_id: s.roomId,
-                        room_name: gymRooms.find(r => r.id === s.roomId)?.name || ''
-                      }))}
-                      maxParticipants={form.watch('maxParticipants')}
-                      onSessionsChange={setSessions}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <CardContent className="space-y-4">
+            {form.watch('schedule').map((scheduleItem, index) => (
+              <div key={index} className="grid gap-4 md:grid-cols-4 p-4 border rounded-lg">
+                <div>
+                  <label className="text-sm font-medium">Giorno</label>
+                  <Select 
+                    value={scheduleItem.dayOfWeek.toString()} 
+                    onValueChange={(value) => {
+                      const newSchedule = [...form.getValues('schedule')];
+                      newSchedule[index] = {
+                        ...newSchedule[index],
+                        dayOfWeek: parseInt(value),
+                        day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][parseInt(value)]
+                      };
+                      form.setValue('schedule', newSchedule);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Lunedì</SelectItem>
+                      <SelectItem value="2">Martedì</SelectItem>
+                      <SelectItem value="3">Mercoledì</SelectItem>
+                      <SelectItem value="4">Giovedì</SelectItem>
+                      <SelectItem value="5">Venerdì</SelectItem>
+                      <SelectItem value="6">Sabato</SelectItem>
+                      <SelectItem value="0">Domenica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Orario</label>
+                  <Input
+                    type="time"
+                    value={scheduleItem.time}
+                    onChange={(e) => {
+                      const newSchedule = [...form.getValues('schedule')];
+                      newSchedule[index] = { ...newSchedule[index], time: e.target.value };
+                      form.setValue('schedule', newSchedule);
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Sala</label>
+                  <Select 
+                    value={scheduleItem.roomId} 
+                    onValueChange={(value) => {
+                      const newSchedule = [...form.getValues('schedule')];
+                      newSchedule[index] = { ...newSchedule[index], roomId: value };
+                      form.setValue('schedule', newSchedule);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona sala" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gymRooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const newSchedule = form.getValues('schedule').filter((_, i) => i !== index);
+                      form.setValue('schedule', newSchedule.length > 0 ? newSchedule : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]);
+                    }}
+                    disabled={form.watch('schedule').length === 1}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const currentSchedule = form.getValues('schedule');
+                form.setValue('schedule', [...currentSchedule, { dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Aggiungi Orario
+            </Button>
           </CardContent>
         </Card>
 
