@@ -60,6 +60,8 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      console.log('User memberships:', memberships);
+
       if (!memberships || memberships.length === 0) {
         setUserGyms([]);
         setLoading(false);
@@ -82,6 +84,7 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUserGyms(gyms || []);
+      console.log('User gyms loaded:', gyms);
 
       // Auto-select gym based on localStorage or first available
       const availableGyms = gyms || [];

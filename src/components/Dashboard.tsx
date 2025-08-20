@@ -45,6 +45,8 @@ export const Dashboard = () => {
       
       setLoading(true);
       const userGymIds = userGyms.map(gym => gym.id);
+      console.log('Dashboard loadData - userGyms:', userGyms);
+      console.log('Dashboard loadData - userGymIds:', userGymIds);
       
       try {
         // Load user's bookings first
@@ -93,6 +95,8 @@ export const Dashboard = () => {
           .limit(8);
 
         if (availableError) throw availableError;
+
+        console.log('Available courses query result:', availableCoursesData);
 
         // Get instructor profiles for all courses
         const allCourses = [...bookedCoursesData, ...(availableCoursesData || [])];
