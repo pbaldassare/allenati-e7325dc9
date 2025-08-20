@@ -36,7 +36,7 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchUserGyms = async (retry = false) => {
+  const fetchUserGyms = async (retry = false, forceRefresh = false) => {
     // Wait for auth to be fully initialized
     if (authLoading) {
       console.log('GymContext: Waiting for auth to initialize...');
@@ -52,10 +52,25 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Add strategic delay for auth stabilization on first load
+    if (!retry && !forceRefresh) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     try {
       setLoading(true);
       console.log('GymContext: Fetching gyms for user ID:', user.id);
       console.log('GymContext: Auth status - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading);
+      console.log('GymContext: Current auth.uid():', (await supabase.auth.getUser()).data.user?.id);
+      
+      // Ensure we have a fresh session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.log('GymContext: No valid session found');
+        setUserGyms([]);
+        setLoading(false);
+        return;
+      }
       
       // Get user's gym memberships and fetch gym details separately
       const { data: memberships, error: membershipsError } = await supabase
@@ -67,11 +82,11 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
       if (membershipsError) {
         console.error('GymContext: Error fetching memberships:', membershipsError);
         
-        // If this is the first attempt and we get an error, try once more
-        if (!retry && retryCount < 2) {
-          console.log('GymContext: Retrying query in 1 second...');
+        // Enhanced retry logic with longer delays
+        if (!retry && retryCount < 5) {
+          console.log(`GymContext: Retrying query (attempt ${retryCount + 1}/5) in 2 seconds...`);
           setRetryCount(prev => prev + 1);
-          setTimeout(() => fetchUserGyms(true), 1000);
+          setTimeout(() => fetchUserGyms(true), 2000);
           return;
         }
         
@@ -85,6 +100,15 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
 
       if (!memberships || memberships.length === 0) {
         console.log('GymContext: No active memberships found');
+        
+        // If no memberships found and this is not a retry, try again
+        if (!retry && retryCount < 3) {
+          console.log(`GymContext: No memberships found, retrying (attempt ${retryCount + 1}/3) in 3 seconds...`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => fetchUserGyms(true), 3000);
+          return;
+        }
+        
         setUserGyms([]);
         setLoading(false);
         return;
@@ -137,21 +161,49 @@ export function GymProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error) {
       console.error('GymContext: Error in fetchUserGyms:', error);
+      
+      // Retry on unexpected errors
+      if (!retry && retryCount < 3) {
+        console.log(`GymContext: Unexpected error, retrying (attempt ${retryCount + 1}/3) in 2 seconds...`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => fetchUserGyms(true), 2000);
+        return;
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const refreshGyms = async () => {
-    await fetchUserGyms();
+    console.log('GymContext: Force refreshing gyms...');
+    setRetryCount(0); // Reset retry count
+    await fetchUserGyms(false, true); // Force refresh
   };
 
   useEffect(() => {
     // Only fetch when auth is fully initialized
-    if (!authLoading) {
-      fetchUserGyms();
+    if (!authLoading && isAuthenticated && user) {
+      console.log('GymContext: useEffect triggered - Auth initialized, starting gym fetch...');
+      // Add small delay to ensure session is stable
+      const timer = setTimeout(() => {
+        fetchUserGyms();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [user, authLoading, isAuthenticated]);
+  }, [user?.id, authLoading, isAuthenticated]);
+
+  // Auto-refresh every 30 seconds if no gyms are loaded and user is authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user && userGyms.length === 0 && !loading) {
+      console.log('GymContext: No gyms loaded, setting up auto-refresh...');
+      const autoRefreshTimer = setInterval(() => {
+        console.log('GymContext: Auto-refreshing due to empty gyms...');
+        fetchUserGyms(false, true);
+      }, 30000);
+      
+      return () => clearInterval(autoRefreshTimer);
+    }
+  }, [authLoading, isAuthenticated, user, userGyms.length, loading]);
 
   return (
     <GymContext.Provider
