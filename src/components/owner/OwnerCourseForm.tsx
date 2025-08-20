@@ -96,6 +96,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
   const [activeTab, setActiveTab] = useState<'general' | 'schedule' | 'exceptions' | 'enrollment'>('general');
   const [generatedSessions, setGeneratedSessions] = useState<any[]>([]);
@@ -394,7 +395,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   };
 
   const onSubmit = async (data: CourseFormData) => {
+    if (isSubmitting) return;
+    
     try {
+      setIsSubmitting(true);
       console.log('Form submission started with data:', data);
       
       // Validate form state before proceeding
@@ -684,6 +688,8 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         description: "Errore nel salvataggio del corso",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1342,8 +1348,11 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
               Annulla
             </Button>
             {activeTab !== 'enrollment' && (
-              <Button type="submit">
-                {mode === 'create' ? 'Crea Corso' : 'Aggiorna Corso'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting 
+                  ? 'Salvataggio...' 
+                  : mode === 'create' ? 'Crea Corso' : 'Aggiorna Corso'
+                }
               </Button>
             )}
           </div>

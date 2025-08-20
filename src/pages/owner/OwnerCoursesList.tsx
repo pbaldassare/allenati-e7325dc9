@@ -29,6 +29,12 @@ interface CourseItem {
   };
   credits_required: number;
   difficulty_level?: number;
+  schedules?: Array<{
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    room_name?: string;
+  }>;
 }
 
 const OwnerCoursesList: React.FC = () => {
@@ -128,9 +134,10 @@ const OwnerCoursesList: React.FC = () => {
         } else if (data) {
           console.log('Loaded courses:', data);
           
-          // Get categories and instructors separately
+          // Get categories, instructors and schedules separately
           const categoryIds = [...new Set(data.map(c => c.category_id).filter(Boolean))];
           const instructorIds = [...new Set(data.map(c => c.instructor_id).filter(Boolean))];
+          const courseIds = data.map(c => c.id);
           
           console.log('Instructor IDs from courses:', instructorIds);
           
@@ -177,9 +184,18 @@ const OwnerCoursesList: React.FC = () => {
           
           const instructorsPromise = Promise.resolve({ data: instructorsWithProfiles });
 
-          const [categoriesResult, instructorsResult] = await Promise.all([
+          // Fetch course schedules
+          const schedulesPromise = courseIds.length > 0 
+            ? supabase.from('course_schedules')
+                     .select('course_id, day_of_week, start_time, end_time, room_name')
+                     .in('course_id', courseIds)
+                     .eq('is_active', true)
+            : Promise.resolve({ data: [] });
+
+          const [categoriesResult, instructorsResult, schedulesResult] = await Promise.all([
             categoriesPromise,
-            instructorsPromise
+            instructorsPromise,
+            schedulesPromise
           ]);
 
           const categoriesMap = new Map(
@@ -189,14 +205,25 @@ const OwnerCoursesList: React.FC = () => {
           const instructorsMap = new Map(
             (instructorsResult.data || []).map(inst => [inst.id, inst])
           );
+
+          // Group schedules by course_id
+          const schedulesMap = new Map();
+          (schedulesResult.data || []).forEach(schedule => {
+            if (!schedulesMap.has(schedule.course_id)) {
+              schedulesMap.set(schedule.course_id, []);
+            }
+            schedulesMap.get(schedule.course_id).push(schedule);
+          });
           
           console.log('Categories Map:', categoriesMap);
           console.log('Instructors Map:', instructorsMap);
+          console.log('Schedules Map:', schedulesMap);
 
           // Transform the data to match our interface
           const transformedCourses = data.map(course => {
             const category = course.category_id ? categoriesMap.get(course.category_id) || null : null;
             const instructorData = course.instructor_id ? instructorsMap.get(course.instructor_id) : null;
+            const schedules = schedulesMap.get(course.id) || [];
             
             console.log(`Course ${course.name} - instructor_id: ${course.instructor_id}, found instructor:`, instructorData);
             
@@ -212,7 +239,8 @@ const OwnerCoursesList: React.FC = () => {
               category,
               instructor: instructorData ? {
                 user: instructorData
-              } : null
+              } : null,
+              schedules
             };
           });
           
@@ -343,6 +371,34 @@ const OwnerCoursesList: React.FC = () => {
     return difficulty ? <Badge variant={difficulty.variant}>{difficulty.label}</Badge> : null;
   };
 
+  const getScheduleDisplay = (schedules?: CourseItem['schedules']) => {
+    if (!schedules || schedules.length === 0) {
+      return <span className="text-muted-foreground text-sm">Nessun programma</span>;
+    }
+
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    
+    const sortedSchedules = schedules.sort((a, b) => a.day_of_week - b.day_of_week);
+    
+    return (
+      <div className="space-y-1">
+        {sortedSchedules.map((schedule, index) => (
+          <div key={index} className="text-sm">
+            <span className="font-medium">{dayNames[schedule.day_of_week]}</span>
+            <span className="text-muted-foreground ml-2">
+              {schedule.start_time} - {schedule.end_time}
+            </span>
+            {schedule.room_name && (
+              <span className="text-xs text-muted-foreground ml-2">
+                ({schedule.room_name})
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -401,6 +457,7 @@ const OwnerCoursesList: React.FC = () => {
                   <TableHead>Istruttore</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Livello</TableHead>
+                  <TableHead>Programma</TableHead>
                   <TableHead>Partecipanti</TableHead>
                   <TableHead>Crediti</TableHead>
                   <TableHead>Stato</TableHead>
@@ -436,6 +493,9 @@ const OwnerCoursesList: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       {getDifficultyBadge(course.difficulty_level)}
+                    </TableCell>
+                    <TableCell>
+                      {getScheduleDisplay(course.schedules)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
