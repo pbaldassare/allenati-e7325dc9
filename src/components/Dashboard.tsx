@@ -103,6 +103,9 @@ export const Dashboard = () => {
         if (availableError) throw availableError;
 
         console.log('Available courses query result:', availableCoursesData);
+        console.log('Booked courses from query:', bookedCoursesData);
+        console.log('Booked course IDs:', bookedCourseIds);
+        console.log('User gym IDs:', userGymIds);
 
         // Get instructor profiles for all courses
         const allCourses = [...bookedCoursesData, ...(availableCoursesData || [])];
@@ -390,6 +393,67 @@ export const Dashboard = () => {
 
       {/* Integrated Weekly Calendar */}
       <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
+
+      {/* I Tuoi Corsi - Sezione corsi prenotati */}
+      {courses.length > 0 && (
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Trophy className="h-6 w-6 text-primary" />
+              I Tuoi Corsi
+            </CardTitle>
+            <CardDescription className="text-sm font-medium">
+              Corsi che hai prenotato
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {courses.map((course) => {
+              const instructorName = getInstructorName(course);
+              const instructorAvatar = getInstructorAvatar(course);
+              const schedule = course.course_schedules?.[0];
+              const booking = bookings.find(b => b.course_id === course.id);
+              
+              return (
+                <Card key={course.id} className="group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10 border-2 border-primary/30 flex-shrink-0">
+                        <AvatarImage src={instructorAvatar} alt="Istruttore" />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">
+                          I
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm text-foreground">{course.name}</h3>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{booking?.scheduled_date || "N/A"}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{booking?.scheduled_time || schedule?.start_time || "N/A"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={() => openCancellationDialog(course, booking)}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7 px-2 flex-shrink-0 text-destructive border-destructive/20 hover:bg-destructive/5"
+                      >
+                        Cancella
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Corsi Disponibili - Moved Higher for Better Visibility */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
