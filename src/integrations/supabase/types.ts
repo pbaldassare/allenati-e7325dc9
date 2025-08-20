@@ -233,6 +233,13 @@ export type Database = {
             referencedRelation: "course_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_bookings_user_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       chat_messages: {

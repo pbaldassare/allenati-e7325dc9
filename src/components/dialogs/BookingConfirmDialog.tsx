@@ -129,7 +129,8 @@ export const BookingConfirmDialog = ({
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select(`
-            profiles(first_name, last_name)
+            user_id,
+            profiles!fk_bookings_user_profiles(first_name, last_name)
           `)
           .eq('course_id', course.id)
           .eq('scheduled_date', scheduledDate)
