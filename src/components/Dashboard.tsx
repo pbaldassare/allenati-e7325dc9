@@ -79,7 +79,7 @@ export const Dashboard = () => {
         }
 
         // Load available courses from all user gyms (not booked by user)
-        const { data: availableCoursesData, error: availableError } = await supabase
+        let availableCoursesQuery = supabase
           .from('courses')
           .select(`
             *,
@@ -89,8 +89,14 @@ export const Dashboard = () => {
             gyms(name)
           `)
           .in('gym_id', userGymIds)
-          .eq('is_active', true)
-          .not('id', 'in', `(${bookedCourseIds.join(',') || 'null'})`)
+          .eq('is_active', true);
+
+        // Only apply the exclusion filter if there are actually booked courses
+        if (bookedCourseIds.length > 0) {
+          availableCoursesQuery = availableCoursesQuery.not('id', 'in', `(${bookedCourseIds.join(',')})`);
+        }
+
+        const { data: availableCoursesData, error: availableError } = await availableCoursesQuery
           .order('created_at', { ascending: true })
           .limit(8);
 
