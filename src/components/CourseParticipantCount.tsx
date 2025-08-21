@@ -5,14 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
 interface CourseParticipantCountProps {
-  courseId: string;
+  sessionId: string;
   maxParticipants: number;
   showProgressBar?: boolean;
   className?: string;
 }
 
 export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({ 
-  courseId, 
+  sessionId, 
   maxParticipants, 
   showProgressBar = false,
   className = ""
@@ -23,14 +23,14 @@ export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({
 
   useEffect(() => {
     loadParticipantCount();
-  }, [courseId]);
+  }, [sessionId]);
 
   const loadParticipantCount = async () => {
     try {
       const { count, error } = await supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('course_id', courseId)
+        .eq('session_id', sessionId)
         .eq('status', 'confirmed');
 
       if (error) throw error;
@@ -100,7 +100,7 @@ export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({
 
       {showParticipantsList && (
         <CourseParticipantsViewModal 
-          courseId={courseId}
+          sessionId={sessionId}
           isOpen={showParticipantsList}
           onClose={() => setShowParticipantsList(false)}
         />

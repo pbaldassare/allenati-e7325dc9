@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { CourseParticipantsList } from "@/components/CourseParticipantsList";
+import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
 
 interface CourseItem {
@@ -499,11 +499,9 @@ const OwnerCoursesList: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <CourseParticipantsList 
+                        <CourseParticipantOverview 
                           courseId={course.id} 
-                          courseName={course.name}
                           maxParticipants={course.max_participants}
-                          reservedSpots={0}
                         />
                       </div>
                     </TableCell>

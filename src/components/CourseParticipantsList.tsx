@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Participant {
   id: string;
   user_id: string;
+  course_id: string;
   scheduled_date: string;
   scheduled_time: string;
   status: string;
@@ -52,14 +53,14 @@ interface CourseSession {
 }
 
 interface CourseParticipantsListProps {
-  courseId: string;
+  sessionId: string;
   courseName: string;
   maxParticipants?: number;
   reservedSpots?: number;
 }
 
 export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({ 
-  courseId, 
+  sessionId, 
   courseName,
   maxParticipants = 20,
   reservedSpots = 0
@@ -93,8 +94,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
   useEffect(() => {
     loadParticipants();
-    loadCourseSessions();
-  }, [courseId]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!searchTerm) {
@@ -122,13 +122,13 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
   const loadParticipants = async () => {
     try {
-      console.log('Loading participants for course:', courseId);
+      console.log('Loading participants for session:', sessionId);
       
-      // First, get all confirmed bookings for this course
+      // First, get all confirmed bookings for this session
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('*')
-        .eq('course_id', courseId)
+        .eq('session_id', sessionId)
         .eq('status', 'confirmed')
         .order('scheduled_date', { ascending: true });
 
@@ -194,25 +194,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     }
   };
 
-  const loadCourseSessions = async () => {
-    try {
-      const { data: sessions, error } = await supabase
-        .from('course_sessions')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'scheduled')
-        .gte('session_date', new Date().toISOString().split('T')[0])
-        .order('session_date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(10);
-
-      if (error) throw error;
-
-      setCourseSessions(sessions || []);
-    } catch (error) {
-      console.error('Error loading course sessions:', error);
-    }
-  };
+  // Remove loadCourseSessions since we're now session-specific
 
   const searchUsersFunction = async () => {
     if (!searchUsers.trim()) return;
@@ -267,7 +249,6 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
 
       // Refresh data
       loadParticipants();
-      loadCourseSessions();
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Error enrolling user:', error);
@@ -342,21 +323,9 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="participants" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="participants" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Partecipanti Attuali
-            </TabsTrigger>
-            {canManageParticipants && (
-              <TabsTrigger value="enroll" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Iscrivere Utente
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <div className="space-y-4">
 
-          <TabsContent value="participants" className="space-y-4">
+          
           {/* Search */}
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
@@ -435,10 +404,10 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                           <Badge variant="outline">
                             {participant.status}
                           </Badge>
-                          {canManageParticipants && (
+                           {canManageParticipants && (
                             <UnsubscribeConfirmDialog
                               participant={participant}
-                              courseId={courseId}
+                              courseId={participant.course_id}
                               courseName={courseName}
                               onUnsubscribeSuccess={loadParticipants}
                             />
@@ -451,171 +420,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
               })
             )}
           </div>
-          </TabsContent>
-
-          {canManageParticipants && (
-            <TabsContent value="enroll" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* User Search */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Search className="h-5 w-5" />
-                      Cerca Utente
-                    </CardTitle>
-                    <CardDescription>
-                      Cerca per nome o email per trovare l'utente da iscrivere
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Cerca utente..."
-                        value={searchUsers}
-                        onChange={(e) => setSearchUsers(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-
-                    {usersLoading && (
-                      <div className="text-center py-4 text-muted-foreground">
-                        Ricerca in corso...
-                      </div>
-                    )}
-
-                    {users.length > 0 && (
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {users.map((user) => (
-                          <div
-                            key={user.id}
-                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                              selectedUser?.id === user.id
-                                ? 'bg-primary/10 border-primary'
-                                : 'hover:bg-muted'
-                            }`}
-                            onClick={() => setSelectedUser(user)}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={user.profile_picture_url} />
-                                <AvatarFallback>
-                                  {user.first_name?.[0]}{user.last_name?.[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <p className="font-medium text-sm">
-                                  {user.first_name} {user.last_name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {user.email}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Crediti: {user.current_credits}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {selectedUser && (
-                      <Card className="border-primary/20 bg-primary/5">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={selectedUser.profile_picture_url} />
-                              <AvatarFallback>
-                                {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h4 className="font-medium">
-                                {selectedUser.first_name} {selectedUser.last_name}
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {selectedUser.email}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Crediti disponibili: {selectedUser.current_credits}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Course Sessions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Sessioni Disponibili
-                    </CardTitle>
-                    <CardDescription>
-                      Seleziona una sessione per iscrivere l'utente
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {!selectedUser ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        Seleziona prima un utente
-                      </div>
-                    ) : courseSessions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        Nessuna sessione disponibile
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
-                        {courseSessions.map((session) => (
-                          <Card key={session.id} className="border">
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2 text-sm font-medium">
-                                    <Clock className="h-4 w-4" />
-                                    {formatSessionDateTime(session.session_date, session.start_time, session.end_time)}
-                                  </div>
-                                  {session.room_name && (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <MapPin className="h-3 w-3" />
-                                      {session.room_name}
-                                    </div>
-                                  )}
-                                  <div className="text-xs text-muted-foreground">
-                                    Posti: {session.available_spots}/{session.max_participants}
-                                  </div>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => enrollUser(session.id, selectedUser.id)}
-                                  disabled={session.available_spots <= 0 || enrollingSessionId === session.id}
-                                  className="flex items-center gap-1"
-                                >
-                                  {enrollingSessionId === session.id ? (
-                                    'Iscrizione...'
-                                  ) : (
-                                    <>
-                                      <UserCheck className="h-4 w-4" />
-                                      Iscrivi
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-        </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

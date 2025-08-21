@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { CourseParticipantCount } from "@/components/CourseParticipantCount";
 
 interface SessionData {
   id: string;
@@ -220,8 +221,12 @@ const SessionCalendar: React.FC = () => {
                       <div className="text-xs text-muted-foreground">{session.time}</div>
                       <div className="text-xs text-muted-foreground">{session.room}</div>
                       <div className="text-xs text-muted-foreground">{session.instructor}</div>
-                      <div className="text-xs font-medium mt-1">
-                        {session.participants}/{session.maxParticipants} partecipanti
+                       <div className="mt-1">
+                        <CourseParticipantCount 
+                          sessionId={session.id}
+                          maxParticipants={session.maxParticipants}
+                          className="text-xs"
+                        />
                       </div>
                     </Card>
                   ))}

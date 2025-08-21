@@ -26,15 +26,15 @@ interface Participant {
 }
 
 interface CourseParticipantsViewModalProps {
-  courseId: string;
+  sessionId: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalProps> = ({
-  courseId,
-  isOpen,
-  onClose
+export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalProps> = ({ 
+  sessionId, 
+  isOpen, 
+  onClose 
 }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
@@ -43,11 +43,10 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
   const [courseName, setCourseName] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && sessionId) {
       loadParticipants();
-      loadCourseInfo();
     }
-  }, [courseId, isOpen]);
+  }, [isOpen, sessionId]);
 
   useEffect(() => {
     if (!searchTerm) {
@@ -61,30 +60,15 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     }
   }, [searchTerm, participants]);
 
-  const loadCourseInfo = async () => {
-    try {
-      const { data: course, error } = await supabase
-        .from('courses')
-        .select('name')
-        .eq('id', courseId)
-        .single();
-
-      if (error) throw error;
-      setCourseName(course?.name || 'Corso');
-    } catch (error) {
-      console.error('Error loading course info:', error);
-    }
-  };
-
   const loadParticipants = async () => {
     try {
       setLoading(true);
       
-      // Get all confirmed bookings for this course
+      // Get all confirmed bookings for this session
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('*')
-        .eq('course_id', courseId)
+        .eq('session_id', sessionId)
         .eq('status', 'confirmed')
         .order('scheduled_date', { ascending: true });
 
@@ -93,6 +77,19 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
       if (!bookings || bookings.length === 0) {
         setParticipants([]);
         return;
+      }
+
+      // Get course name from first booking
+      if (bookings.length > 0) {
+        const { data: course, error: courseError } = await supabase
+          .from('courses')
+          .select('name')
+          .eq('id', bookings[0].course_id)
+          .single();
+        
+        if (!courseError && course) {
+          setCourseName(course.name);
+        }
       }
 
       // Get unique user IDs
@@ -169,7 +166,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Partecipanti al corso
+            Partecipanti alla sessione
           </DialogTitle>
           <DialogDescription>
             {courseName} - {participants.length} partecipanti iscritti
