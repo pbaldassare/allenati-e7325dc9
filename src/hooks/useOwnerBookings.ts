@@ -87,12 +87,6 @@ export const useOwnerBookings = () => {
             gym_id,
             gyms (
               name
-            ),
-            instructors (
-              profiles (
-                first_name,
-                last_name
-              )
             )
           )
         `)
