@@ -82,6 +82,7 @@ interface Instructor {
   user_id: string;
   first_name: string;
   last_name: string;
+  isOwner?: boolean;
 }
 
 interface Category {
@@ -106,6 +107,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     exceptions: 0,
     enrollment: 0
   });
+  const [defaultInstructorId, setDefaultInstructorId] = useState<string | null>(null);
   
   // Load owner's gym data
   useEffect(() => {
@@ -126,6 +128,12 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           });
           return;
         }
+
+        // Get gym owner instructor ID
+        const { data: ownerInstructorData } = await supabase
+          .rpc('get_gym_owner_instructor', { _gym_id: gymData });
+        
+        setDefaultInstructorId(ownerInstructorData);
 
         // Load gym rooms for this gym
         const { data: roomsData } = await supabase
@@ -151,12 +159,21 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
 
           instructorsWithProfiles = instructorsData.map(instructor => {
             const profile = profilesData?.find(p => p.user_id === instructor.user_id);
+            const isOwner = instructor.id === ownerInstructorData;
             return {
               id: instructor.id,
               user_id: instructor.user_id,
               first_name: profile?.first_name || 'Nome',
-              last_name: profile?.last_name || 'Cognome'
+              last_name: profile?.last_name || 'Cognome',
+              isOwner
             };
+          });
+
+          // Sort with owner first
+          instructorsWithProfiles.sort((a, b) => {
+            if (a.isOwner && !b.isOwner) return -1;
+            if (!a.isOwner && b.isOwner) return 1;
+            return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
           });
         }
 
@@ -272,6 +289,13 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },
   });
+
+  // Set default instructor when data is loaded (only for create mode)
+  useEffect(() => {
+    if (defaultInstructorId && mode === 'create' && !form.getValues('instructor_id')) {
+      form.setValue('instructor_id', defaultInstructorId);
+    }
+  }, [defaultInstructorId, mode, form]);
 
   // Reset form values when in edit mode and data is loaded
   useEffect(() => {
@@ -814,13 +838,18 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                             <SelectValue placeholder="Seleziona istruttore" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {instructors.map((instructor) => (
-                            <SelectItem key={instructor.id} value={instructor.id}>
-                              {instructor.first_name} {instructor.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                         <SelectContent>
+                           {instructors.length === 0 ? (
+                             <SelectItem value="" disabled>Nessun istruttore disponibile</SelectItem>
+                           ) : (
+                             instructors.map((instructor) => (
+                               <SelectItem key={instructor.id} value={instructor.id}>
+                                 {instructor.first_name} {instructor.last_name}
+                                 {instructor.isOwner && ' (Proprietario)'}
+                               </SelectItem>
+                             ))
+                           )}
+                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

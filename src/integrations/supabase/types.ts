@@ -1803,6 +1803,10 @@ export type Database = {
         Args: { _course_id: string; _end_date: string; _start_date: string }
         Returns: number
       }
+      get_gym_owner_instructor: {
+        Args: { _gym_id: string }
+        Returns: string
+      }
       get_user_credits_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: number
