@@ -45,7 +45,7 @@ const courseSchema = z.object({
   deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
   image: z.string().url('Inserisci un URL valido per l\'immagine').optional().or(z.literal("")),
   isVisible: z.boolean().default(true),
-  benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
+  benefits: z.array(z.string()).optional(),
   requirements: z.array(z.string()).optional(),
   startDate: z.date({ required_error: 'La data di inizio è obbligatoria' }),
   endDate: z.date({ required_error: 'La data di fine è obbligatoria' }),
@@ -825,6 +825,27 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="isVisible"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Corso Attivo</FormLabel>
+                      <FormDescription>
+                        Il corso sarà visibile e prenotabile dagli utenti
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -1078,26 +1099,6 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="isVisible"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Corso Attivo</FormLabel>
-                      <FormDescription>
-                        Il corso sarà visibile e prenotabile dagli utenti
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
             </div>
           )}
 

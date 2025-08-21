@@ -36,7 +36,7 @@ const courseSchema = z.object({
   duration: z.coerce.number().min(15, 'La durata minima è 15 minuti'),
   deadlineHours: z.coerce.number().min(0.5, 'La deadline deve essere almeno 0.5 ore').default(24),
   image: z.string().url('Inserisci un URL valido per l\'immagine'),
-  benefits: z.array(z.string()).min(1, 'Aggiungi almeno un beneficio'),
+  benefits: z.array(z.string()).optional(),
   requirements: z.array(z.string()).optional(),
   startDate: z.date({ required_error: "Seleziona la data di inizio" }),
   endDate: z.date({ required_error: "Seleziona la data di fine" }),
