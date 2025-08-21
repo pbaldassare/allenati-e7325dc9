@@ -8,12 +8,16 @@ import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, startOfMon
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CourseParticipantCount } from "@/components/CourseParticipantCount";
+import { SessionManagementDrawer } from "./SessionManagementDrawer";
 
 interface SessionData {
   id: string;
+  course_id: string;
   courseName: string;
   date: string;
   time: string;
+  start_time: string;
+  end_time: string;
   room: string;
   instructor: string;
   participants: number;
@@ -104,9 +108,12 @@ const SessionCalendar: React.FC = () => {
       // Transform data
       const transformedSessions: SessionData[] = (sessionsData || []).map(session => ({
         id: session.id,
+        course_id: session.course_id,
         courseName: session.courses.name,
         date: session.session_date,
         time: `${session.start_time} - ${session.end_time}`,
+        start_time: session.start_time,
+        end_time: session.end_time,
         room: session.room_name || 'Non specificata',
         instructor: 'Non assegnato',
         participants: bookingCountMap[session.id] || 0,
@@ -213,22 +220,38 @@ const SessionCalendar: React.FC = () => {
               ) : (
                 <div className="space-y-2">
                   {daySessions.map((session) => (
-                    <Card 
-                      key={session.id} 
-                      className={`p-3 ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                    <SessionManagementDrawer
+                      key={session.id}
+                      session={{
+                        id: session.id,
+                        course_id: session.course_id,
+                        course_name: session.courseName,
+                        session_date: session.date,
+                        start_time: session.start_time,
+                        end_time: session.end_time,
+                        room_name: session.room,
+                        max_participants: session.maxParticipants,
+                        available_spots: session.maxParticipants - session.participants,
+                        participant_count: session.participants
+                      }}
+                      onSessionUpdate={fetchSessions}
                     >
-                      <div className="text-sm font-medium">{session.courseName}</div>
-                      <div className="text-xs text-muted-foreground">{session.time}</div>
-                      <div className="text-xs text-muted-foreground">{session.room}</div>
-                      <div className="text-xs text-muted-foreground">{session.instructor}</div>
-                       <div className="mt-1">
-                        <CourseParticipantCount 
-                          sessionId={session.id}
-                          maxParticipants={session.maxParticipants}
-                          className="text-xs"
-                        />
-                      </div>
-                    </Card>
+                      <Card 
+                        className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                      >
+                        <div className="text-sm font-medium">{session.courseName}</div>
+                        <div className="text-xs text-muted-foreground">{session.time}</div>
+                        <div className="text-xs text-muted-foreground">{session.room}</div>
+                        <div className="text-xs text-muted-foreground">{session.instructor}</div>
+                         <div className="mt-1">
+                          <CourseParticipantCount 
+                            sessionId={session.id}
+                            maxParticipants={session.maxParticipants}
+                            className="text-xs"
+                          />
+                        </div>
+                      </Card>
+                    </SessionManagementDrawer>
                   ))}
                 </div>
               )}
@@ -294,9 +317,26 @@ const SessionCalendar: React.FC = () => {
                           {daySessionCount} sessioni
                         </Badge>
                         {daySessions.slice(0, 2).map((session, idx) => (
-                          <div key={idx} className="text-xs truncate text-muted-foreground">
-                            {session.courseName}
-                          </div>
+                          <SessionManagementDrawer
+                            key={session.id}
+                            session={{
+                              id: session.id,
+                              course_id: session.course_id,
+                              course_name: session.courseName,
+                              session_date: session.date,
+                              start_time: session.start_time,
+                              end_time: session.end_time,
+                              room_name: session.room,
+                              max_participants: session.maxParticipants,
+                              available_spots: session.maxParticipants - session.participants,
+                              participant_count: session.participants
+                            }}
+                            onSessionUpdate={fetchSessions}
+                          >
+                            <div className="text-xs truncate text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                              {session.courseName}
+                            </div>
+                          </SessionManagementDrawer>
                         ))}
                         {daySessionCount > 2 && (
                           <div className="text-xs text-muted-foreground">

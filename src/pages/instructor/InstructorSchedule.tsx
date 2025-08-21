@@ -1,15 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { Calendar, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { SessionManagementDrawer } from '@/components/owner/SessionManagementDrawer';
+import { supabase } from '@/integrations/supabase/client';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 const InstructorSchedule = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [courseSessions, setCourseSessions] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [currentWeek, courses]);
+
+  const fetchSessions = async () => {
+    if (!courses.length) return;
+    
+    try {
+      const weekStart = startOfWeek(currentWeek, { locale: it });
+      const weekEnd = endOfWeek(currentWeek, { locale: it });
+      
+      const courseIds = courses.map(c => c.id);
+      
+      const { data: sessionsData, error } = await supabase
+        .from('course_sessions')
+        .select(`
+          *,
+          courses!inner (
+            name,
+            instructor_id
+          )
+        `)
+        .in('course_id', courseIds)
+        .gte('session_date', format(weekStart, 'yyyy-MM-dd'))
+        .lte('session_date', format(weekEnd, 'yyyy-MM-dd'))
+        .eq('status', 'scheduled')
+        .order('session_date')
+        .order('start_time');
+
+      if (error) throw error;
+
+      // Get booking counts
+      const sessionIds = sessionsData?.map(s => s.id) || [];
+      const { data: bookingCounts } = await supabase
+        .from('bookings')
+        .select('session_id')
+        .in('session_id', sessionIds)
+        .eq('status', 'confirmed');
+
+      const bookingCountMap = (bookingCounts || []).reduce((acc, booking) => {
+        acc[booking.session_id] = (acc[booking.session_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const transformedSessions = (sessionsData || []).map(session => ({
+        ...session,
+        participant_count: bookingCountMap[session.id] || 0,
+        course_name: session.courses.name
+      }));
+
+      setCourseSessions(transformedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    }
+  };
 
   const getDayName = (dayOfWeek: number) => {
     const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
@@ -27,6 +88,13 @@ const InstructorSchedule = () => {
       week.push(day);
     }
     return week;
+  };
+
+  const getSessionsForDay = (date: Date) => {
+    const dayString = format(date, 'yyyy-MM-dd');
+    return courseSessions
+      .filter(session => session.session_date === dayString)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
   };
 
   const getSchedulesForDay = (dayOfWeek: number) => {
@@ -128,7 +196,7 @@ const InstructorSchedule = () => {
           <div className="grid grid-cols-7 gap-4">
             {weekDays.map((day, index) => {
               const dayOfWeek = day.getDay();
-              const schedules = getSchedulesForDay(dayOfWeek);
+              const sessions = getSessionsForDay(day);
               
               return (
                 <div 
@@ -147,43 +215,47 @@ const InstructorSchedule = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    {schedules.length === 0 ? (
+                    {sessions.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-2">
                         Nessuna lezione
                       </p>
                     ) : (
-                      schedules.map((schedule, scheduleIndex) => (
-                        <div 
-                          key={scheduleIndex} 
-                          className="p-2 rounded bg-background border text-xs space-y-1"
+                      sessions.map((session, sessionIndex) => (
+                        <SessionManagementDrawer
+                          key={session.id}
+                          session={{
+                            id: session.id,
+                            course_id: session.course_id,
+                            course_name: session.course_name,
+                            session_date: session.session_date,
+                            start_time: session.start_time,
+                            end_time: session.end_time,
+                            room_name: session.room_name,
+                            max_participants: session.max_participants,
+                            available_spots: session.max_participants - session.participant_count,
+                            participant_count: session.participant_count
+                          }}
+                          onSessionUpdate={fetchSessions}
                         >
-                          <div className="font-medium line-clamp-1">
-                            {schedule.course.name}
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Clock className="w-3 h-3" />
-                            {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
-                          </div>
-                          {schedule.room_name && (
-                            <div className="text-muted-foreground">
-                              📍 {schedule.room_name}
+                          <div className="p-2 rounded bg-background border text-xs space-y-1 cursor-pointer hover:shadow-md transition-shadow">
+                            <div className="font-medium line-clamp-1">
+                              {session.course_name}
                             </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span>{schedule.course.current_bookings}/{schedule.course.max_participants}</span>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {session.start_time.slice(0, 5)}-{session.end_time.slice(0, 5)}
+                            </div>
+                            {session.room_name && (
+                              <div className="text-muted-foreground">
+                                📍 {session.room_name}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              <span>{session.participant_count}/{session.max_participants}</span>
+                            </div>
                           </div>
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs"
-                            style={{ 
-                              backgroundColor: schedule.course.category.color_hex + '20', 
-                              borderColor: schedule.course.category.color_hex 
-                            }}
-                          >
-                            {schedule.course.category.name}
-                          </Badge>
-                        </div>
+                        </SessionManagementDrawer>
                       ))
                     )}
                   </div>
