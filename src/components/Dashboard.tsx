@@ -13,10 +13,12 @@ import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConf
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 import WeeklyCalendarCompact from './WeeklyCalendarCompact';
+import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { CourseParticipantCount } from './CourseParticipantCount';
 import { useSessionBookings } from '@/hooks/useSessionBookings';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -35,6 +37,7 @@ export const Dashboard = () => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
 
   // Load available sessions from Supabase
   useEffect(() => {
@@ -312,8 +315,33 @@ export const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Integrated Weekly Calendar */}
-      <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
+      {/* Calendar Section with Toggle */}
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-lg">Calendario</h3>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value: 'weekly' | 'monthly') => value && setViewMode(value)}
+              className="bg-muted/50 p-1 rounded-lg"
+            >
+              <ToggleGroupItem value="weekly" className="text-xs">
+                Settimana
+              </ToggleGroupItem>
+              <ToggleGroupItem value="monthly" className="text-xs">
+                Mese
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          
+          {viewMode === 'weekly' ? (
+            <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
+          ) : (
+            <MonthlyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
+          )}
+        </CardContent>
+      </Card>
 
 
       {/* Sessioni Disponibili - Session-based Booking */}
@@ -345,15 +373,6 @@ export const Dashboard = () => {
                   Mostra Tutti
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/gyms')}
-                className="flex items-center gap-2 text-primary border-primary/20 hover:bg-primary/5 shadow-sm"
-              >
-                <ArrowRight className="h-4 w-4" />
-                Esplora Tutti
-              </Button>
             </div>
           </div>
           <CardDescription className="text-sm font-medium">
