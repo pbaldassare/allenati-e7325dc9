@@ -226,10 +226,21 @@ export default function UserSettings() {
             variant="outline"
             size="sm"
             onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/', { replace: true });
+              console.log('Pulsante "Torna indietro" cliccato');
+              console.log('History length:', window.history.length);
+              
+              try {
+                if (window.history.length > 1) {
+                  console.log('Navigating back...');
+                  navigate(-1);
+                } else {
+                  console.log('Navigating to home...');
+                  navigate('/', { replace: true });
+                }
+              } catch (error) {
+                console.error('Errore nella navigazione:', error);
+                // Fallback assoluto
+                window.location.href = '/';
               }
             }}
             className="flex items-center gap-2 w-fit min-h-[44px]"
