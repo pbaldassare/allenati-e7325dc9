@@ -63,6 +63,9 @@ export const OwnerProfile: React.FC = () => {
     const loadData = async () => {
       if (!user || !selectedGym) return;
 
+      // Don't reload data if currently uploading logo to prevent overwriting the new URL
+      if (isUploadingLogo) return;
+
       try {
         // Load gym data
         const { data: gymData, error: gymError } = await supabase
@@ -97,7 +100,10 @@ export const OwnerProfile: React.FC = () => {
           phone: profileData.phone || '',
         });
 
-        setLogoUrl(gymData.logo_url || '');
+        // Only update logoUrl if it's not currently being uploaded and if there's no current logoUrl set
+        if (!logoUrl || logoUrl === '') {
+          setLogoUrl(gymData.logo_url || '');
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         toast({
@@ -109,7 +115,7 @@ export const OwnerProfile: React.FC = () => {
     };
 
     loadData();
-  }, [user, selectedGym, form]);
+  }, [user, selectedGym, form, isUploadingLogo, logoUrl]);
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -141,13 +147,19 @@ export const OwnerProfile: React.FC = () => {
 
       if (updateError) throw updateError;
 
+      // Set the new logo URL immediately to prevent it from disappearing
       setLogoUrl(newLogoUrl);
-      await refreshGyms();
       
       toast({
         title: 'Successo',
         description: 'Logo aggiornato con successo',
       });
+
+      // Refresh gyms data after a short delay to ensure database is synced
+      setTimeout(() => {
+        refreshGyms();
+      }, 1000);
+      
     } catch (error) {
       console.error('Error uploading logo:', error);
       toast({
