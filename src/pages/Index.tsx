@@ -39,6 +39,10 @@ const Index = () => {
       navigate("/owner");
       return;
     }
+    if (tab === "instructor") {
+      navigate("/instructor");
+      return;
+    }
     if (tab === "gyms") {
       navigate("/gyms");
       return;
