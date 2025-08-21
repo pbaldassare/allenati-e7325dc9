@@ -206,7 +206,7 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
       duration: 60,
       deadlineHours: 24,
       image: '',
-      benefits: [''],
+      benefits: [],
       requirements: [''],
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

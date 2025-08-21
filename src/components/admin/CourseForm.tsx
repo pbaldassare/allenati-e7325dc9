@@ -119,7 +119,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       duration: 60,
       deadlineHours: 24,
       image: '',
-      benefits: [''],
+      benefits: [],
       requirements: [''],
       schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
     },

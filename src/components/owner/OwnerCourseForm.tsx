@@ -282,7 +282,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       deadlineHours: 24,
       image: '',
       isVisible: true,
-      benefits: [''],
+      benefits: [],
       requirements: [''],
       startDate: new Date(),
       endDate: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000), // 3 mesi dopo
@@ -1003,7 +1003,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 name="benefits"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Benefici del Corso *</FormLabel>
+                    <FormLabel>Benefici del Corso</FormLabel>
                     <FormDescription>
                       Elenca i principali benefici che i partecipanti otterranno
                     </FormDescription>
