@@ -303,31 +303,54 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
       console.log('Resetting form with course data:', course);
       const categoryName = categories.find(c => c.id === course.category_id)?.name || '';
       
-      form.reset({
+      // Handle benefits and requirements arrays properly
+      const formattedBenefits = Array.isArray(course.benefits) && course.benefits.length > 0 
+        ? course.benefits 
+        : [''];
+      const formattedRequirements = Array.isArray(course.requirements) && course.requirements.length > 0 
+        ? course.requirements 
+        : [''];
+      
+      // Handle schedule mapping with proper room names
+      const formattedSchedule = course.schedules?.length > 0 
+        ? course.schedules.map((s: any) => ({
+            dayOfWeek: s.day_of_week || 1,
+            time: s.start_time || '09:00',
+            roomId: s.room_id || '',
+            day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
+            date: s.date
+          }))
+        : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }];
+      
+      const formData = {
         name: course.name || '',
         description: course.description || '',
         instructor_id: course.instructor_id || '',
         category: categoryName,
-        level: course.difficulty_level === 1 ? 'Principiante' : course.difficulty_level === 2 ? 'Intermedio' : course.difficulty_level === 3 ? 'Avanzato' : 'Principiante',
-        price: course.price_per_session || 0,
+        level: course.difficulty_level === 1 ? 'Principiante' : 
+               course.difficulty_level === 2 ? 'Intermedio' : 
+               course.difficulty_level === 3 ? 'Avanzato' : 'Principiante',
+        price: Number(course.price_per_session) || 0,
         maxParticipants: course.max_participants || 20,
         reservedSpots: course.reserved_spots || 0,
         duration: course.duration_minutes || 60,
-        deadlineHours: course.deadline_hours || 24,
+        deadlineHours: Number(course.deadline_hours) || 24,
         image: course.image_url || '',
         isVisible: course.is_active ?? true,
-        benefits: course.benefits || [''],
-        requirements: course.requirements || [''],
+        benefits: formattedBenefits,
+        requirements: formattedRequirements,
         startDate: course.start_date ? new Date(course.start_date) : new Date(),
         endDate: course.end_date ? new Date(course.end_date) : new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000),
-        schedule: course.schedules?.map((s: any) => ({
-          dayOfWeek: s.day_of_week || 1,
-          time: s.start_time || '09:00',
-          roomId: s.room_id || '',
-          day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
-          date: s.date
-        })) || [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
-      });
+        schedule: formattedSchedule,
+      };
+      
+      console.log('Formatted form data for reset:', formData);
+      form.reset(formData);
+      
+      // Force re-render to ensure UI updates
+      setTimeout(() => {
+        console.log('Form values after reset:', form.getValues());
+      }, 100);
     }
   }, [mode, course, categories, instructors, loading, form]);
 
