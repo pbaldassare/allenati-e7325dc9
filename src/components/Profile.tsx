@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +57,7 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
           <ThemeToggle />
         </div>
         <Avatar className="w-20 sm:w-24 h-20 sm:h-24 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20">
+          <AvatarImage src={user?.profile_picture_url || undefined} alt="Foto profilo" />
           <AvatarFallback className="text-lg sm:text-xl font-space font-bold">{userInitials}</AvatarFallback>
         </Avatar>
         <h1 className="text-xl sm:text-2xl font-space font-bold">{userName}</h1>
