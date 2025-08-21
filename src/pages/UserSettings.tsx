@@ -47,6 +47,22 @@ export default function UserSettings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Redirect automatico da /impostazioni alle route specifiche per ruolo
+  useEffect(() => {
+    if (location.pathname === '/impostazioni') {
+      if (isAdmin) {
+        navigate('/admin/settings', { replace: true });
+        return;
+      } else if (isGymOwner) {
+        navigate('/owner/settings', { replace: true });
+        return;
+      } else if (isInstructor) {
+        navigate('/instructor/settings', { replace: true });
+        return;
+      }
+    }
+  }, [location.pathname, isAdmin, isGymOwner, isInstructor, navigate]);
+
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -239,6 +255,17 @@ export default function UserSettings() {
                   destination = '/owner';
                 } else if (currentPath.startsWith('/instructor/settings') && isInstructor) {
                   destination = '/instructor';
+                } else if (currentPath === '/impostazioni') {
+                  // Gestisci il caso dell'utente sulla route globale /impostazioni
+                  if (isInstructor) {
+                    destination = '/instructor';
+                  } else if (isGymOwner) {
+                    destination = '/owner';
+                  } else if (isAdmin) {
+                    destination = '/admin';
+                  } else {
+                    destination = '/';
+                  }
                 } else if (window.history.length > 1) {
                   navigate(-1);
                   return;
