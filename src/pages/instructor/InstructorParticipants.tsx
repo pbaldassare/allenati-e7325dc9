@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
-import { Users, Search, Calendar, Mail, Phone, X } from 'lucide-react';
+import { Users, Search, Calendar, Mail, Phone, X, UserPlus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { InstructorManualEnrollment } from '@/components/instructor/InstructorManualEnrollment';
 
 const InstructorParticipants = () => {
   const [searchParams] = useSearchParams();
@@ -95,6 +96,20 @@ const InstructorParticipants = () => {
           {filteredBookings.length} partecipanti
         </Badge>
       </div>
+
+      <Tabs defaultValue="participants" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="participants">
+            <Users className="w-4 h-4 mr-2" />
+            Partecipanti
+          </TabsTrigger>
+          <TabsTrigger value="enroll">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Iscrivi Nuovo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="participants" className="space-y-6">{/* Filters */}
 
       {/* Filters */}
       <Card>
@@ -226,6 +241,12 @@ const InstructorParticipants = () => {
           ))}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="enroll" className="space-y-6">
+          <InstructorManualEnrollment />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
