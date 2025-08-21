@@ -91,13 +91,23 @@ export const CourseCalendar = () => {
           return;
         }
 
-        // Load course sessions for current week instead of dynamic schedules
+        // Get courses where user has active bookings
+        const { data: userBookings } = await supabase
+          .from('bookings')
+          .select('course_id')
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed');
+
+        const userCourseIds = [...new Set(userBookings?.map(b => b.course_id) || [])];
+
+        // Load course sessions for current week + all future sessions from enrolled courses
         const weekInfo = getWeekDates(currentWeek);
         const weekStart = weekInfo.start.toISOString().split('T')[0];
         const weekEnd = weekInfo.end.toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
 
-        // Load course sessions with complete course and instructor data
-        const { data: sessionsData, error: sessionsError } = await supabase
+        // Build query conditions
+        let query = supabase
           .from('course_sessions')
           .select(`
             *,
@@ -110,8 +120,16 @@ export const CourseCalendar = () => {
           .eq('courses.gym_id', userGym)
           .eq('courses.is_active', true)
           .eq('status', 'scheduled')
-          .gte('session_date', weekStart)
-          .lte('session_date', weekEnd)
+          .gte('session_date', today); // Only future sessions
+
+        // Include current week sessions OR sessions from enrolled courses
+        if (userCourseIds.length > 0) {
+          query = query.or(`and(session_date.gte.${weekStart},session_date.lte.${weekEnd}),course_id.in.(${userCourseIds.map(id => `"${id}"`).join(',')})`);
+        } else {
+          query = query.gte('session_date', weekStart).lte('session_date', weekEnd);
+        }
+
+        const { data: sessionsData, error: sessionsError } = await query
           .order('session_date', { ascending: true })
           .order('start_time', { ascending: true });
 
@@ -142,7 +160,8 @@ export const CourseCalendar = () => {
           instructors: session.courses?.instructors ? {
             ...session.courses.instructors,
             profiles: instructorProfilesMap.get(session.courses.instructors.user_id)
-          } : null
+          } : null,
+          isFromEnrolledCourse: userCourseIds.includes(session.course_id)
         })) || [];
 
         // Load user's bookings with session_id
