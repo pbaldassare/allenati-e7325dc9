@@ -79,7 +79,7 @@ export function InstructorSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/impostazioni" className={getNavCls}>
+                  <NavLink to="/instructor/settings" className={getNavCls}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profilo</span>
                   </NavLink>

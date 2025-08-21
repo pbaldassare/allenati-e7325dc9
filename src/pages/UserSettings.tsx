@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,8 +38,9 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function UserSettings() {
-  const { user, fetchUserData } = useAuth();
+  const { user, fetchUserData, isAdmin, isGymOwner, isInstructor } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -226,21 +227,27 @@ export default function UserSettings() {
             variant="outline"
             size="sm"
             onClick={() => {
-              console.log('Pulsante "Torna indietro" cliccato');
-              console.log('History length:', window.history.length);
-              
               try {
-                if (window.history.length > 1) {
-                  console.log('Navigating back...');
+                // Determina la destinazione in base al ruolo e al percorso corrente
+                const currentPath = location.pathname;
+                
+                let destination = '/';
+                
+                if (currentPath.startsWith('/admin/settings') && isAdmin) {
+                  destination = '/admin';
+                } else if (currentPath.startsWith('/owner/settings') && isGymOwner) {
+                  destination = '/owner';
+                } else if (currentPath.startsWith('/instructor/settings') && isInstructor) {
+                  destination = '/instructor';
+                } else if (window.history.length > 1) {
                   navigate(-1);
-                } else {
-                  console.log('Navigating to home...');
-                  navigate('/', { replace: true });
+                  return;
                 }
+                
+                navigate(destination, { replace: true });
               } catch (error) {
                 console.error('Errore nella navigazione:', error);
-                // Fallback assoluto
-                window.location.href = '/';
+                navigate('/', { replace: true });
               }
             }}
             className="flex items-center gap-2 w-fit min-h-[44px]"

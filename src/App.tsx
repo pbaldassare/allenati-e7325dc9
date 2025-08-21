@@ -101,6 +101,9 @@ const App = () => (
                   
                   {/* Communication */}
                   <Route path="chat" element={<AdminChat />} />
+                  
+                  {/* Settings */}
+                  <Route path="settings" element={<UserSettings />} />
                 </Route>
 
                 {/* Owner Routes */}
@@ -119,6 +122,7 @@ const App = () => (
                   <Route path="chat" element={<OwnerChat />} />
                   <Route path="reports" element={<OwnerReports />} />
                   <Route path="profile" element={<OwnerProfile />} />
+                  <Route path="settings" element={<UserSettings />} />
                 </Route>
 
                 {/* Instructor Routes */}
@@ -127,6 +131,7 @@ const App = () => (
                   <Route path="courses" element={<InstructorCourses />} />
                   <Route path="participants" element={<InstructorParticipants />} />
                   <Route path="schedule" element={<InstructorSchedule />} />
+                  <Route path="settings" element={<UserSettings />} />
                 </Route>
 
                 <Route path="/shop" element={<Shop />} />

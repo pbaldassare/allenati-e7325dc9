@@ -92,6 +92,14 @@ export const OwnerSidebar: React.FC = () => {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={currentPath === '/owner/settings'}>
+                <NavLink to="/owner/settings">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profilo</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Esci</span>
