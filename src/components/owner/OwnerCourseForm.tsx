@@ -770,11 +770,15 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="name"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Nome Corso *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Es. Yoga Mattutino" {...field} />
+                        <Input 
+                          placeholder="Es. Yoga Mattutino" 
+                          className={cn(fieldState.error && "border-red-500 focus:border-red-500")}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -784,12 +788,12 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="category"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Categoria *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className={cn(fieldState.error && "border-red-500 focus:border-red-500")}>
                             <SelectValue placeholder="Seleziona categoria" />
                           </SelectTrigger>
                         </FormControl>
@@ -850,12 +854,12 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="instructor_id"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Istruttore *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className={cn(fieldState.error && "border-red-500 focus:border-red-500")}>
                             <SelectValue placeholder="Seleziona istruttore" />
                           </SelectTrigger>
                         </FormControl>
@@ -880,12 +884,12 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="level"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Livello *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className={cn(fieldState.error && "border-red-500 focus:border-red-500")}>
                             <SelectValue placeholder="Seleziona livello" />
                           </SelectTrigger>
                         </FormControl>
@@ -903,11 +907,16 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="duration"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Durata (minuti) *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="60" {...field} />
+                        <Input 
+                          type="number" 
+                          placeholder="60" 
+                          className={cn(fieldState.error && "border-red-500 focus:border-red-500")}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -920,11 +929,16 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="maxParticipants"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Max Partecipanti *</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="20" {...field} />
+                        <Input 
+                          type="number" 
+                          placeholder="20" 
+                          className={cn(fieldState.error && "border-red-500 focus:border-red-500")}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -951,11 +965,17 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                 <FormField
                   control={form.control}
                   name="price"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Prezzo (€) *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="15.00" {...field} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="15.00" 
+                          className={cn(fieldState.error && "border-red-500 focus:border-red-500")}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1117,7 +1137,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                     <FormField
                       control={form.control}
                       name="startDate"
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Data Inizio *</FormLabel>
                           <Popover>
@@ -1127,7 +1147,8 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                                   variant="outline"
                                   className={cn(
                                     "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
+                                    !field.value && "text-muted-foreground",
+                                    fieldState.error && "border-red-500 focus:border-red-500"
                                   )}
                                 >
                                   {field.value ? (
@@ -1158,7 +1179,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                     <FormField
                       control={form.control}
                       name="endDate"
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Data Fine *</FormLabel>
                           <Popover>
@@ -1168,7 +1189,8 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
                                   variant="outline"
                                   className={cn(
                                     "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
+                                    !field.value && "text-muted-foreground",
+                                    fieldState.error && "border-red-500 focus:border-red-500"
                                   )}
                                 >
                                   {field.value ? (
