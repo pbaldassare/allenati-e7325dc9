@@ -73,7 +73,7 @@ export const useOwnerBookings = () => {
         .from('bookings')
         .select(`
           *,
-          profiles!bookings_user_id_fkey (
+          profiles (
             first_name,
             last_name,
             email,
@@ -124,7 +124,7 @@ export const useOwnerBookings = () => {
         .from('bookings')
         .select(`
           *,
-          profiles!bookings_user_id_fkey (current_credits),
+          profiles (current_credits),
           courses (name, deadline_hours)
         `)
         .eq('id', bookingId)
