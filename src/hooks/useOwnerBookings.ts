@@ -52,6 +52,23 @@ export const useOwnerBookings = () => {
     try {
       setLoading(true);
       
+      // First get the owner's gym ID
+      const { data: gymData, error: gymError } = await supabase
+        .rpc('get_user_gym_id', { _user_id: user.id });
+
+      if (gymError) {
+        console.error('Error getting gym ID:', gymError);
+        toast.error('Errore nel recupero dei dati palestra');
+        return;
+      }
+
+      if (!gymData) {
+        console.error('No gym found for owner');
+        toast.error('Nessuna palestra associata al proprietario');
+        setBookings([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -64,9 +81,10 @@ export const useOwnerBookings = () => {
             profile_picture_url,
             current_credits
           ),
-          courses (
+          courses!inner (
             name,
             deadline_hours,
+            gym_id,
             gyms (
               name
             ),
@@ -78,6 +96,7 @@ export const useOwnerBookings = () => {
             )
           )
         `)
+        .eq('courses.gym_id', gymData)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
 
