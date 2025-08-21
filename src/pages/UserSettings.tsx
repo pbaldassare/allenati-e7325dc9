@@ -225,7 +225,13 @@ export default function UserSettings() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/', { replace: true });
+              }
+            }}
             className="flex items-center gap-2 w-fit min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />

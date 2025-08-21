@@ -36,7 +36,13 @@ export default function Gyms() {
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate('/', { replace: true });
+                }
+              }}
               className="h-8 w-8 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
