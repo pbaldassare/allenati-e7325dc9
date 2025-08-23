@@ -27,12 +27,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGym } from '@/contexts/GymContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { getInstructorName } from '@/types/course';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const BookingHistory = () => {
   const { user } = useAuth();
   const { userGyms } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     document.title = "I Miei Corsi - FitBooking";
@@ -259,14 +261,17 @@ const BookingHistory = () => {
               {/* Cancel button */}
               {canCancel && isUpcoming && (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="destructive"
+                  size={isMobile ? "default" : "sm"}
                   onClick={() => openCancellationDialog(booking)}
-                  className="text-destructive hover:text-destructive ml-4 md:ml-0 flex-shrink-0"
+                  className={`ml-4 md:ml-0 flex-shrink-0 transition-all duration-200 ${
+                    isMobile 
+                      ? 'min-h-[44px] px-4 text-sm font-medium shadow-sm' 
+                      : 'hover:shadow-md'
+                  }`}
                 >
-                  <X className="mr-1 h-3 w-3" />
-                  <span className="hidden sm:inline">Cancella</span>
-                  <span className="sm:hidden">X</span>
+                  <X className={`${isMobile ? 'mr-2 h-4 w-4' : 'mr-1 h-3 w-3'}`} />
+                  <span>Cancella</span>
                 </Button>
               )}
             </div>
