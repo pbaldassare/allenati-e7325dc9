@@ -161,7 +161,7 @@ export default function CreditsSubscriptionCard() {
           size="sm"
           className="w-full"
         >
-          Gestisci Abbonamento
+          Gestisci Crediti e Abbonamenti
         </Button>
       </CardContent>
     </Card>

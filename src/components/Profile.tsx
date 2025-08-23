@@ -160,19 +160,10 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         <Button 
           variant="outline" 
           className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
-          onClick={() => setShowCreditsPurchase(true)}
+          onClick={() => navigate('/subscriptions')}
         >
           <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
-          Gestisci Crediti
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
-          onClick={() => window.location.href = '/abbonamenti'}
-        >
-          <Star className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
-          Gestisci Abbonamento
+          Gestisci Crediti e Abbonamenti
         </Button>
         
         <Button 
