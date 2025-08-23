@@ -195,8 +195,8 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         
         <Button 
           onClick={handleLogout}
-          variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 text-destructive hover:text-destructive transition-all duration-300 min-h-[44px]"
+          variant="destructive" 
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
         >
           <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
           Esci
