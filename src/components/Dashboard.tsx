@@ -252,8 +252,20 @@ export const Dashboard = () => {
     
     // Filter by selected date
     if (selectedDate) {
+      // Ensure proper date comparison by normalizing both dates to YYYY-MM-DD format
       const sessionDate = new Date(session.session_date);
-      return sessionDate.toDateString() === selectedDate.toDateString();
+      const selectedDateNormalized = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const sessionDateNormalized = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate());
+      
+      // Debug logging
+      console.log('Date filter debug:', {
+        selectedDate: selectedDate.toISOString().split('T')[0],
+        sessionDate: session.session_date,
+        sessionDateFormatted: sessionDate.toISOString().split('T')[0],
+        matches: sessionDateNormalized.getTime() === selectedDateNormalized.getTime()
+      });
+      
+      return sessionDateNormalized.getTime() === selectedDateNormalized.getTime();
     }
     
     return true;
@@ -383,6 +395,13 @@ export const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Debug information */}
+          {selectedDate && (
+            <div className="text-xs bg-muted/50 p-2 rounded text-muted-foreground">
+              Filtro attivo: {selectedDate.toLocaleDateString('it-IT')} ({filteredAvailableSessions.length} sessioni trovate)
+            </div>
+          )}
+          
           {filteredAvailableSessions.length > 0 ? (
             filteredAvailableSessions.slice(0, 12).map((session) => {
               const instructorName = getInstructorName(session);
