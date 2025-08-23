@@ -179,7 +179,7 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
               </div>
 
               <div className="space-y-2">
-                {plan.features.map((feature, index) => (
+                {(plan.features || []).map((feature, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary" />
                     <span>{feature}</span>
