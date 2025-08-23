@@ -416,53 +416,63 @@ export const Dashboard = () => {
               
               return (
                  <Card key={session.id} className={cn(
-                   "group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40",
-                   isAlreadyBooked && "bg-primary/5 border-primary/40"
-                 )}>
-                   <CardContent className="p-3">
-                     <div className="flex items-center gap-3">
-                       <Avatar className="w-10 h-10 border-2 border-primary/30 flex-shrink-0">
-                          <AvatarImage src={instructorAvatar} alt="Istruttore" />
-                          <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">
-                            I
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-foreground">{session.courses?.name}</h3>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(session.session_date).toLocaleDateString('it-IT')}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{session.start_time}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              <span>{spotsLeft} posti</span>
-                            </div>
+                    "group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40",
+                    isAlreadyBooked && "bg-primary/5 border-primary/40"
+                  )}>
+                    <CardContent className="p-4 sm:p-3">
+                      {/* Mobile: Vertical Layout, Desktop: Horizontal Layout */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        {/* Header section with avatar and main info */}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Avatar className="w-12 h-12 sm:w-10 sm:h-10 border-2 border-primary/30 flex-shrink-0">
+                             <AvatarImage src={instructorAvatar} alt="Istruttore" />
+                             <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm sm:text-xs">
+                               I
+                             </AvatarFallback>
+                          </Avatar>
+                           
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base sm:text-sm text-foreground">{session.courses?.name}</h3>
+                            <p className="text-sm sm:text-xs text-muted-foreground truncate">{instructorName}</p>
                           </div>
                         </div>
                         
-                        {isAlreadyBooked ? (
-                          <Badge variant="secondary" className="text-xs">
-                            Prenotato
-                          </Badge>
-                        ) : (
-                          <Button
-                            onClick={() => openBookingDialog(session)}
-                            disabled={isLoading || isFull}
-                            size="sm"
-                            className="text-xs h-7 px-2 flex-shrink-0"
-                          >
-                            {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
-                          </Button>
-                        )}
+                        {/* Details section - Mobile: Below header, Desktop: Same row */}
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 text-sm sm:text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
+                            <span>{new Date(session.session_date).toLocaleDateString('it-IT')}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
+                            <span>{session.start_time}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4 sm:h-3 sm:w-3" />
+                            <span>{spotsLeft} posti</span>
+                          </div>
+                        </div>
+                        
+                        {/* Action button - Mobile: Full width, Desktop: Compact */}
+                        <div className="flex justify-center sm:justify-end mt-2 sm:mt-0">
+                          {isAlreadyBooked ? (
+                            <Badge variant="secondary" className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1">
+                              Prenotato
+                            </Badge>
+                          ) : (
+                            <Button
+                              onClick={() => openBookingDialog(session)}
+                              disabled={isLoading || isFull}
+                              size="sm"
+                              className="w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium"
+                            >
+                              {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
-                  </Card>
+                   </Card>
                );
              })
            ) : (
