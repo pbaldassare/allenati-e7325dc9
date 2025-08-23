@@ -194,28 +194,36 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           return (
             <div
               key={date.toISOString()}
-              className="p-2 text-center min-h-[60px] flex flex-col justify-center items-center"
+              className="p-2 text-center h-[80px] flex flex-col justify-between items-center"
             >
-              <div className="text-xs text-muted-foreground mb-1">
+              {/* Nome giorno - sempre in alto */}
+              <div className="text-xs text-muted-foreground">
                 {dayNames[index]}
               </div>
+              
+              {/* Numero giorno - sempre al centro */}
               <div className={`text-base font-medium ${isToday(date) ? 'text-primary' : isSelected(date) ? 'text-primary' : 'text-foreground'}`}>
                 {date.getDate()}
               </div>
               
-              {actualCoursesForDay.length > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs mt-1 px-2 py-1 min-w-0 cursor-pointer transition-colors ${
-                    isSelected(date) 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground'
-                  }`}
-                  onClick={() => onDayClick?.(date)}
-                >
-                  {actualCoursesForDay.length}
-                </Badge>
-              )}
+              {/* Area badge - sempre in basso */}
+              <div className="h-6 flex items-center justify-center">
+                {actualCoursesForDay.length > 0 ? (
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs px-2 py-1 min-w-0 cursor-pointer transition-colors ${
+                      isSelected(date) 
+                        ? 'bg-primary text-primary-foreground border-primary' 
+                        : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground'
+                    }`}
+                    onClick={() => onDayClick?.(date)}
+                  >
+                    {actualCoursesForDay.length}
+                  </Badge>
+                ) : (
+                  <div className="h-6"></div>
+                )}
+              </div>
             </div>
           );
         })}
