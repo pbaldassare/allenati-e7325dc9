@@ -314,9 +314,26 @@ export const Dashboard = () => {
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-card cursor-pointer" onClick={() => navigate('/i-miei-corsi')}>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary">
-              {bookings.length}
+              {(() => {
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+                const currentTime = now.toTimeString().split(' ')[0];
+                
+                return bookings.filter(booking => {
+                  const bookingDate = booking.scheduled_date;
+                  const bookingTime = booking.scheduled_time;
+                  
+                  // Include future dates
+                  if (bookingDate > today) return true;
+                  
+                  // For today, include sessions that haven't started yet
+                  if (bookingDate === today && bookingTime > currentTime) return true;
+                  
+                  return false;
+                }).length;
+              })()}
             </div>
-            <p className="text-xs text-muted-foreground">Sessioni Prenotate</p>
+            <p className="text-xs text-muted-foreground">Prossime Sessioni</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 shadow-card">
