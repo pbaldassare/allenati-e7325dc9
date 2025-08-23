@@ -185,21 +185,21 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         </Button>
         
         <Button 
-          variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
-          onClick={() => navigate('/shop')}
-        >
-          <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
-          Shop
-        </Button>
-        
-        <Button 
           onClick={handleLogout}
           variant="destructive" 
           className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
         >
           <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
           Esci
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          onClick={() => navigate('/shop')}
+        >
+          <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          Shop
         </Button>
       </div>
     </div>
