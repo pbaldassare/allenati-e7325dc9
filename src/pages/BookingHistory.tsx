@@ -103,6 +103,24 @@ const BookingHistory = () => {
     }
   };
 
+  // Helper function to get instructor name with proper fallback
+  const getInstructorDisplayName = (course: any): string => {
+    if (!course?.instructors) {
+      return 'Istruttore non assegnato';
+    }
+    
+    const instructor = course.instructors;
+    const profile = instructor.profiles;
+    
+    if (!profile) {
+      return 'Istruttore non assegnato';
+    }
+    
+    const { first_name, last_name } = profile;
+    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+    return fullName || 'Istruttore non assegnato';
+  };
+
   // Filter bookings
   const activeBookings = bookings?.filter(booking => {
     const isActive = ['confirmed', 'waitlist'].includes(booking.status);
@@ -118,7 +136,7 @@ const BookingHistory = () => {
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorDisplayName(course)?.toLowerCase().includes(searchTermLower);
     
     return shouldBeActive && (courseNameMatch || instructorMatch);
   }) || [];
@@ -137,7 +155,7 @@ const BookingHistory = () => {
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorDisplayName(course)?.toLowerCase().includes(searchTermLower);
     
     return shouldBeInHistory && (courseNameMatch || instructorMatch);
   }) || [];
@@ -159,7 +177,6 @@ const BookingHistory = () => {
     setIsProcessing(false);
   };
 
-
   const BookingCard = ({ booking }: { booking: any }) => {
     const course = booking.courses || booking.course;
     if (!course) return null;
@@ -170,71 +187,86 @@ const BookingHistory = () => {
 
     return (
       <Card className="hover:shadow-card transition-all duration-300">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-4">
+        <CardContent className="p-4 md:p-6">
+          {/* Mobile-optimized layout: vertical stack on mobile, horizontal on desktop */}
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-4 md:space-y-0">
+            {/* Main content area */}
+            <div className="flex items-start space-x-3 md:space-x-4 flex-1">
               <img 
                 src={course.image_url || '/placeholder.svg'} 
                 alt={course.name}
-                className="w-16 h-16 rounded-lg object-cover"
+                className="w-12 h-12 md:w-16 md:h-16 rounded-lg object-cover flex-shrink-0"
               />
-               <div className="space-y-2">
-                 <div>
-                   <h3 className="font-medium">{course.name}</h3>
-                   <div className="space-y-1">
-                     <p className="text-sm text-muted-foreground flex items-center">
-                       <User className="mr-1 h-3 w-3" />
-                       {getInstructorName(course)}
-                     </p>
-                     <p className="text-sm text-muted-foreground flex items-center">
-                       <MapPin className="mr-1 h-3 w-3" />
-                       {getGymInfo(course)}
-                     </p>
-                   </div>
-                 </div>
+              
+              <div className="space-y-2 md:space-y-3 flex-1 min-w-0">
+                {/* Course title */}
+                <div>
+                  <h3 className="font-medium text-sm md:text-base leading-tight">{course.name}</h3>
+                  
+                  {/* Instructor and gym info - stack vertically on mobile */}
+                  <div className="space-y-1 mt-1">
+                    <p className="text-xs md:text-sm text-muted-foreground flex items-center">
+                      <User className="mr-1 h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{getInstructorDisplayName(course)}</span>
+                    </p>
+                    <p className="text-xs md:text-sm text-muted-foreground flex items-center">
+                      <MapPin className="mr-1 h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{getGymInfo(course)}</span>
+                    </p>
+                  </div>
+                </div>
                 
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                {/* Date and time - horizontal layout on all screens */}
+                <div className="flex items-center space-x-3 md:space-x-4 text-xs md:text-sm text-muted-foreground">
                   <div className="flex items-center">
-                    <Calendar className="mr-1 h-3 w-3" />
-                    {new Date(booking.scheduled_date).toLocaleDateString()}
+                    <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{new Date(booking.scheduled_date).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center">
-                    <Clock className="mr-1 h-3 w-3" />
-                    {booking.scheduled_time?.slice(0, 5)}
+                    <Clock className="mr-1 h-3 w-3 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{booking.scheduled_time?.slice(0, 5)}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Badge className={getStatusColor(booking.status)}>
+                {/* Status and category badges */}
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                  <Badge className={`${getStatusColor(booking.status)} text-xs`}>
                     {getStatusText(booking.status)}
                   </Badge>
-                  <Badge variant="outline">{course.course_categories?.name || 'Categoria non disponibile'}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {course.course_categories?.name || 'Categoria non disponibile'}
+                  </Badge>
                 </div>
 
+                {/* Completion indicator */}
                 {booking.status === 'completed' && (
-                  <div className="flex items-center text-sm text-success">
-                    <Star className="mr-1 h-3 w-3 fill-current" />
-                    Corso completato
+                  <div className="flex items-center text-xs md:text-sm text-success">
+                    <Star className="mr-1 h-3 w-3 fill-current flex-shrink-0" />
+                    <span>Corso completato</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col items-end space-y-2">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Crediti utilizzati</p>
-                <p className="font-medium">{booking.credits_used}</p>
+            {/* Credits and action area */}
+            <div className="flex items-center justify-between md:flex-col md:items-end md:space-y-2 md:ml-4">
+              {/* Credits info */}
+              <div className="text-left md:text-right">
+                <p className="text-xs text-muted-foreground">Crediti utilizzati</p>
+                <p className="font-medium text-sm md:text-base">{booking.credits_used}</p>
               </div>
               
+              {/* Cancel button */}
               {canCancel && isUpcoming && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => openCancellationDialog(booking)}
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive ml-4 md:ml-0 flex-shrink-0"
                 >
                   <X className="mr-1 h-3 w-3" />
-                  Cancella
+                  <span className="hidden sm:inline">Cancella</span>
+                  <span className="sm:hidden">X</span>
                 </Button>
               )}
             </div>
