@@ -1355,6 +1355,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          belt: Database["public"]["Enums"]["belt_level"] | null
           bio: string | null
           city: string | null
           created_at: string
@@ -1378,6 +1379,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          belt?: Database["public"]["Enums"]["belt_level"] | null
           bio?: string | null
           city?: string | null
           created_at?: string
@@ -1401,6 +1403,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          belt?: Database["public"]["Enums"]["belt_level"] | null
           bio?: string | null
           city?: string | null
           created_at?: string
@@ -1854,6 +1857,7 @@ export type Database = {
     Enums: {
       access_level: "backoffice" | "mobile" | "both"
       app_role: "admin" | "gym_owner" | "instructor" | "basic_user"
+      belt_level: "Bianca" | "Blu" | "Viola" | "Marrone" | "Nera"
       booking_status:
         | "confirmed"
         | "waitlist"
@@ -2002,6 +2006,7 @@ export const Constants = {
     Enums: {
       access_level: ["backoffice", "mobile", "both"],
       app_role: ["admin", "gym_owner", "instructor", "basic_user"],
+      belt_level: ["Bianca", "Blu", "Viola", "Marrone", "Nera"],
       booking_status: [
         "confirmed",
         "waitlist",
