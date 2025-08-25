@@ -105,23 +105,6 @@ const BookingHistory = () => {
     }
   };
 
-  // Helper function to get instructor name with proper fallback
-  const getInstructorDisplayName = (course: any): string => {
-    if (!course?.instructors) {
-      return 'Istruttore non assegnato';
-    }
-    
-    const instructor = course.instructors;
-    const profile = instructor.profiles;
-    
-    if (!profile) {
-      return 'Istruttore non assegnato';
-    }
-    
-    const { first_name, last_name } = profile;
-    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
-    return fullName || 'Istruttore non assegnato';
-  };
 
   // Filter bookings
   const activeBookings = bookings?.filter(booking => {
@@ -138,7 +121,7 @@ const BookingHistory = () => {
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorDisplayName(course)?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
     return shouldBeActive && (courseNameMatch || instructorMatch);
   }) || [];
@@ -157,7 +140,7 @@ const BookingHistory = () => {
     const searchTermLower = searchTerm.toLowerCase();
     const course = booking.courses || booking.course;
     const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorDisplayName(course)?.toLowerCase().includes(searchTermLower);
+    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
     
     return shouldBeInHistory && (courseNameMatch || instructorMatch);
   }) || [];
@@ -209,7 +192,7 @@ const BookingHistory = () => {
                   <div className="space-y-1 mt-1">
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <User className="mr-1 h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{getInstructorDisplayName(course)}</span>
+                      <span className="truncate">{getInstructorName(course)}</span>
                     </p>
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <MapPin className="mr-1 h-3 w-3 flex-shrink-0" />
