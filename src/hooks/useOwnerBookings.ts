@@ -97,7 +97,10 @@ export const useOwnerBookings = () => {
       const formattedData = data?.map(booking => ({
         ...booking,
         user: booking.profiles,
-        course: booking.courses
+        course: {
+          ...booking.courses,
+          gym: booking.courses?.gyms || null
+        }
       })) as OwnerBooking[];
 
       if (error) {
