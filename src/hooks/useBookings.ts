@@ -10,6 +10,7 @@ export const useBookings = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<BookingWithCourse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
 
   const fetchBookings = async () => {
     if (!user) return;
@@ -39,11 +40,7 @@ export const useBookings = () => {
             ),
             instructors (
               id,
-              user_id,
-              profiles (
-                first_name,
-                last_name
-              )
+              user_id
             )
           )
         `)
@@ -53,8 +50,38 @@ export const useBookings = () => {
       console.log('Bookings query result:', { data, error });
 
       if (error) throw error;
+
+      // Get instructor profiles
+      const instructorUserIds = [...new Set(data?.map(b => b.courses?.instructors?.user_id).filter(Boolean))];
+      let profilesMap: Record<string, any> = {};
       
-      setBookings(data || []);
+      if (instructorUserIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, profile_picture_url')
+          .in('user_id', instructorUserIds);
+
+        if (!profilesError && profilesData) {
+          profilesData.forEach(profile => {
+            profilesMap[profile.user_id] = profile;
+          });
+          setInstructorProfiles(profilesMap);
+        }
+      }
+
+      // Enrich bookings data with instructor profiles
+      const enrichedData = data?.map(booking => ({
+        ...booking,
+        courses: booking.courses ? {
+          ...booking.courses,
+          instructors: booking.courses.instructors ? {
+            ...booking.courses.instructors,
+            profiles: profilesMap[booking.courses.instructors.user_id] || null
+          } : null
+        } : null
+      })) || [];
+      
+      setBookings(enrichedData);
       
       console.log('Setting bookings:', data);
     } catch (error) {
