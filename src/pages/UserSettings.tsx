@@ -465,7 +465,7 @@ export default function UserSettings() {
                            </SelectTrigger>
                          </FormControl>
                          <SelectContent>
-                           <SelectItem value="">Nessuna cintura</SelectItem>
+                           <SelectItem value="none">Nessuna cintura</SelectItem>
                            <SelectItem value="Bianca">🥋 Bianca</SelectItem>
                            <SelectItem value="Blu">🥋 Blu</SelectItem>
                            <SelectItem value="Viola">🥋 Viola</SelectItem>
