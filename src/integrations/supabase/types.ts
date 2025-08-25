@@ -973,10 +973,12 @@ export type Database = {
           certifications: string[] | null
           created_at: string
           experience_years: number | null
+          first_name: string | null
           gym_id: string | null
           hourly_rate: number | null
           id: string
           is_active: boolean
+          last_name: string | null
           specializations: string[] | null
           updated_at: string
           user_id: string
@@ -986,10 +988,12 @@ export type Database = {
           certifications?: string[] | null
           created_at?: string
           experience_years?: number | null
+          first_name?: string | null
           gym_id?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
           specializations?: string[] | null
           updated_at?: string
           user_id: string
@@ -999,10 +1003,12 @@ export type Database = {
           certifications?: string[] | null
           created_at?: string
           experience_years?: number | null
+          first_name?: string | null
           gym_id?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
           specializations?: string[] | null
           updated_at?: string
           user_id?: string

@@ -99,7 +99,7 @@ export const Dashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       
       try {
-        // Load all future sessions from user's gyms with instructor profiles included
+        // Load all future sessions from user's gyms with instructor names
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('course_sessions')
           .select(`
@@ -107,7 +107,7 @@ export const Dashboard = () => {
             courses!inner(
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(id, user_id, is_active, profiles(first_name, last_name, profile_picture_url)),
+              instructors(id, first_name, last_name),
               gyms(name)
             )
           `)
@@ -254,15 +254,15 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    const profile = session.courses?.instructors?.profiles;
-    if (!profile) return 'Istruttore non assegnato';
-    const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    const instructor = session.courses?.instructors;
+    if (!instructor) return 'Istruttore non assegnato';
+    const fullName = `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim();
     return fullName || 'Istruttore non assegnato';
   };
 
   const getInstructorAvatar = (session: any) => {
-    const profile = session.courses?.instructors?.profiles;
-    return profile?.profile_picture_url || null;
+    // For now return null, we can add profile_picture_url to instructors table later if needed
+    return null;
   };
 
   const getSessionProgress = (session: any) => {
