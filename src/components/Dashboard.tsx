@@ -534,10 +534,11 @@ export const Dashboard = () => {
                             <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
                             <span>{session.start_time}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-4 w-4 sm:h-3 sm:w-3" />
-                            <span>{spotsLeft} posti</span>
-                          </div>
+                    <CourseParticipantCount
+                      sessionId={session.id}
+                      maxParticipants={session.max_participants}
+                      className="text-sm sm:text-xs"
+                    />
                         </div>
                         
                         {/* Action button - Mobile: Full width, Desktop: Compact */}
