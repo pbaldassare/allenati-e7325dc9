@@ -29,7 +29,8 @@ interface MemberProfile {
   // Added medical certificate info
   medical_expiry_date?: string | null;
   medical_file_path?: string | null;
-  
+  // Added belt info
+  belt?: string | null;
 }
 
 const OwnerUsers = () => {
@@ -95,7 +96,7 @@ const OwnerUsers = () => {
         // Get profiles
         const { data: profiles, error: profErr } = await supabase
           .from('profiles')
-          .select('user_id, first_name, last_name, email, profile_picture_url')
+          .select('user_id, first_name, last_name, email, profile_picture_url, belt')
           .in('user_id', userIds);
         
         if (profErr) throw profErr;
@@ -164,7 +165,7 @@ const OwnerUsers = () => {
             is_instructor: instructorUserIds.has(p.user_id),
             medical_expiry_date: cert?.expiry_date ?? null,
             medical_file_path: cert?.file_path ?? null,
-            
+            belt: p.belt ?? null,
           } as MemberProfile;
         });
 
@@ -376,6 +377,7 @@ const OwnerUsers = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Ruolo</TableHead>
+                    <TableHead>Cintura</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Certificato</TableHead>
                     <TableHead>Azione</TableHead>
@@ -384,11 +386,11 @@ const OwnerUsers = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6}>Caricamento...</TableCell>
+                      <TableCell colSpan={7}>Caricamento...</TableCell>
                     </TableRow>
                   ) : listToShow.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={7}>
                         {members.length === 0
                           ? 'Nessun membro nella palestra.'
                           : 'Nessun risultato per la ricerca.'}
@@ -413,6 +415,15 @@ const OwnerUsers = () => {
                               <RoleIcon className="h-3 w-3" />
                               {roleInfo.label}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {m.belt ? (
+                              <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                                🥋 {m.belt}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Nessuna</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant={m.membership_status === 'active' ? 'default' : 'secondary'}>

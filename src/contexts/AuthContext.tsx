@@ -19,6 +19,7 @@ interface User {
   emergency_contact_phone: string | null;
   bio: string | null;
   profile_picture_url: string | null;
+  belt: string | null;
   role: 'admin' | 'gym_owner' | 'instructor' | 'basic_user';
   gym_id?: string;
   gym_name?: string;
@@ -131,6 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         emergency_contact_phone: profile.emergency_contact_phone,
         bio: profile.bio,
         profile_picture_url: profile.profile_picture_url,
+        belt: profile.belt,
         role: role as 'admin' | 'gym_owner' | 'instructor' | 'basic_user',
         gym_id: gymId,
         gym_name: gymName,

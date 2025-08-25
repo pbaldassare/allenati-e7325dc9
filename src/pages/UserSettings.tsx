@@ -32,7 +32,8 @@ const profileSchema = z.object({
   fiscal_code: z.string().optional(),
   emergency_contact_name: z.string().optional(),
   emergency_contact_phone: z.string().optional(),
-  bio: z.string().optional()
+  bio: z.string().optional(),
+  belt: z.string().optional()
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -78,7 +79,8 @@ export default function UserSettings() {
       fiscal_code: '',
       emergency_contact_name: '',
       emergency_contact_phone: '',
-      bio: ''
+      bio: '',
+      belt: ''
     }
   });
 
@@ -98,7 +100,8 @@ export default function UserSettings() {
         fiscal_code: user.fiscal_code || '',
         emergency_contact_name: user.emergency_contact_name || '',
         emergency_contact_phone: user.emergency_contact_phone || '',
-        bio: user.bio || ''
+        bio: user.bio || '',
+        belt: user.belt || ''
       });
       setAvatarUrl(user.profile_picture_url);
     }
@@ -200,6 +203,7 @@ export default function UserSettings() {
           emergency_contact_name: data.emergency_contact_name || null,
           emergency_contact_phone: data.emergency_contact_phone || null,
           bio: data.bio || null,
+          belt: (data.belt as any) || null,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
@@ -428,11 +432,38 @@ export default function UserSettings() {
                         </Select>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                </div>
+                     )}
+                   />
+                 </div>
 
-                {/* Data di nascita */}
+                 {/* Cintura */}
+                 <FormField
+                   control={form.control}
+                   name="belt"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-medium">Cintura</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                         <FormControl>
+                           <SelectTrigger className="h-12 sm:h-11">
+                             <SelectValue placeholder="Seleziona la tua cintura" />
+                           </SelectTrigger>
+                         </FormControl>
+                         <SelectContent>
+                           <SelectItem value="">Nessuna cintura</SelectItem>
+                           <SelectItem value="Bianca">🥋 Bianca</SelectItem>
+                           <SelectItem value="Blu">🥋 Blu</SelectItem>
+                           <SelectItem value="Viola">🥋 Viola</SelectItem>
+                           <SelectItem value="Marrone">🥋 Marrone</SelectItem>
+                           <SelectItem value="Nera">🥋 Nera</SelectItem>
+                         </SelectContent>
+                       </Select>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+
+                 {/* Data di nascita */}
                 <FormField
                   control={form.control}
                   name="date_of_birth"

@@ -33,6 +33,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     confirmPassword: '',
     phone: '',
     gymId: '',
+    belt: '',
     guardianFirstName: '',
     guardianLastName: '',
     guardianPhone: '',
@@ -122,6 +123,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             last_name: formData.lastName,
             phone: formData.phone,
             selected_gym_id: formData.gymId,
+            belt: formData.belt || null,
             ...(isMinor
               ? {
                   is_minor: true,
@@ -152,6 +154,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         confirmPassword: '',
         phone: '',
         gymId: '',
+        belt: '',
         guardianFirstName: '',
         guardianLastName: '',
         guardianPhone: '',
@@ -287,6 +290,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="h-14 sm:h-12 text-base"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="belt" className="text-lg sm:text-base">Cintura</Label>
+                <Select
+                  value={formData.belt}
+                  onValueChange={(value) => setFormData({ ...formData, belt: value })}
+                >
+                  <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
+                    <SelectValue placeholder="Seleziona la tua cintura (opzionale)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nessuna cintura</SelectItem>
+                    <SelectItem value="Bianca">🥋 Bianca</SelectItem>
+                    <SelectItem value="Blu">🥋 Blu</SelectItem>
+                    <SelectItem value="Viola">🥋 Viola</SelectItem>
+                    <SelectItem value="Marrone">🥋 Marrone</SelectItem>
+                    <SelectItem value="Nera">🥋 Nera</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
