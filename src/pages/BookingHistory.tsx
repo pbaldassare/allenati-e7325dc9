@@ -192,7 +192,7 @@ const BookingHistory = () => {
                   <div className="space-y-1 mt-1">
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <User className="mr-1 h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{getInstructorName(course)}</span>
+                      <span className="truncate">{course.description || 'Nessuna descrizione'}</span>
                     </p>
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <MapPin className="mr-1 h-3 w-3 flex-shrink-0" />
