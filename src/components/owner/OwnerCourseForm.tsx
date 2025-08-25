@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -108,6 +108,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     enrollment: 0
   });
   const [defaultInstructorId, setDefaultInstructorId] = useState<string | null>(null);
+  const formInitialized = useRef(false);
   
   // Load owner's gym data
   useEffect(() => {
@@ -297,10 +298,10 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     }
   }, [defaultInstructorId, mode, form]);
 
-  // Reset form values when in edit mode and data is loaded
-  useEffect(() => {
+  // Memoize formatted form data to avoid recalculations
+  const formattedFormData = useMemo(() => {
     if (mode === 'edit' && course && categories.length > 0 && instructors.length > 0 && !loading) {
-      console.log('Resetting form with course data:', course);
+      console.log('Preparing form data for course:', course);
       const categoryName = categories.find(c => c.id === course.category_id)?.name || '';
       
       // Handle benefits and requirements arrays properly
@@ -322,7 +323,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
           }))
         : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }];
       
-      const formData = {
+      return {
         name: course.name || '',
         description: course.description || '',
         instructor_id: course.instructor_id || '',
@@ -343,16 +344,23 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
         endDate: course.end_date ? new Date(course.end_date) : new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000),
         schedule: formattedSchedule,
       };
-      
-      console.log('Formatted form data for reset:', formData);
-      form.reset(formData);
+    }
+    return null;
+  }, [mode, course, categories, instructors, loading]);
+
+  // Reset form values when in edit mode and data is ready
+  useEffect(() => {
+    if (formattedFormData && !formInitialized.current) {
+      console.log('Resetting form with formatted data:', formattedFormData);
+      form.reset(formattedFormData);
+      formInitialized.current = true;
       
       // Force re-render to ensure UI updates
       setTimeout(() => {
         console.log('Form values after reset:', form.getValues());
       }, 100);
     }
-  }, [mode, course, categories, instructors, loading, form]);
+  }, [formattedFormData]);
 
   // Generate session preview when dates or schedule changes
   useEffect(() => {
