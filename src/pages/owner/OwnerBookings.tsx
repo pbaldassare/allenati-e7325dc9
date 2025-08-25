@@ -155,9 +155,9 @@ const OwnerBookings: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Utente</TableHead>
-                  <TableHead>Corso</TableHead>
-                  <TableHead>Palestra</TableHead>
-                  <TableHead>Data/Ora</TableHead>
+                    <TableHead>Corso</TableHead>
+                    <TableHead>Sala</TableHead>
+                    <TableHead>Data/Ora</TableHead>
                   <TableHead>Crediti</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead>Prenotato</TableHead>
@@ -187,7 +187,7 @@ const OwnerBookings: React.FC = () => {
                     </TableCell>
                     <TableCell className="font-medium">{booking.course?.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{booking.course?.gym?.name || 'N/A'}</Badge>
+                      <Badge variant="outline">{booking.room_name || 'Non specificata'}</Badge>
                     </TableCell>
                     <TableCell>
                       <div>

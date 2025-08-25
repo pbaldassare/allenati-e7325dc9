@@ -16,6 +16,7 @@ export interface OwnerBooking {
   created_at: string;
   notes?: string;
   cancellation_reason?: string;
+  room_name?: string;
   // User details
   user?: {
     first_name?: string;
@@ -29,15 +30,6 @@ export interface OwnerBooking {
   course?: {
     name: string;
     deadline_hours?: number;
-    gym?: {
-      name: string;
-    };
-    instructors?: {
-      profiles?: {
-        first_name?: string;
-        last_name?: string;
-      };
-    };
   };
 }
 
@@ -84,10 +76,10 @@ export const useOwnerBookings = () => {
           courses!inner (
             name,
             deadline_hours,
-            gym_id,
-            gyms (
-              name
-            )
+            gym_id
+          ),
+          course_sessions (
+            room_name
           )
         `)
         .eq('courses.gym_id', gymData)
@@ -97,10 +89,8 @@ export const useOwnerBookings = () => {
       const formattedData = data?.map(booking => ({
         ...booking,
         user: booking.profiles,
-        course: {
-          ...booking.courses,
-          gym: booking.courses?.gyms || null
-        }
+        course: booking.courses,
+        room_name: (booking as any).course_sessions?.room_name || null
       })) as OwnerBooking[];
 
       if (error) {
