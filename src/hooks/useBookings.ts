@@ -39,7 +39,11 @@ export const useBookings = () => {
             ),
             instructors (
               id,
-              user_id
+              user_id,
+              profiles (
+                first_name,
+                last_name
+              )
             )
           )
         `)
@@ -50,41 +54,7 @@ export const useBookings = () => {
 
       if (error) throw error;
       
-      // Get instructor profiles separately
-      if (data && data.length > 0) {
-        const instructorUserIds = data
-          .map(booking => booking.courses?.instructors?.user_id)
-          .filter(Boolean);
-        
-        if (instructorUserIds.length > 0) {
-          const { data: instructorProfiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('user_id, first_name, last_name')
-            .in('user_id', instructorUserIds);
-          
-          if (!profilesError && instructorProfiles) {
-            // Map instructor profiles to bookings
-            const enrichedBookings = data.map((booking: any) => {
-              if (booking.courses?.instructors?.user_id) {
-                const profile = instructorProfiles.find(p => 
-                  p.user_id === booking.courses.instructors.user_id
-                );
-                if (profile) {
-                  (booking.courses.instructors as any).profiles = profile;
-                }
-              }
-              return booking;
-            });
-            setBookings(enrichedBookings);
-          } else {
-            setBookings(data);
-          }
-        } else {
-          setBookings(data);
-        }
-      } else {
-        setBookings(data || []);
-      }
+      setBookings(data || []);
       
       console.log('Setting bookings:', data);
     } catch (error) {
