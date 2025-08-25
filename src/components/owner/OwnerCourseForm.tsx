@@ -372,6 +372,25 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
   const level = form.watch('level');
   const benefits = form.watch('benefits');
 
+  // Auto-populate description with instructor name
+  useEffect(() => {
+    if (instructorId && instructors.length > 0) {
+      const selectedInstructor = instructors.find(i => i.id === instructorId);
+      if (selectedInstructor) {
+        const instructorName = `${selectedInstructor.first_name} ${selectedInstructor.last_name}`;
+        const currentDescription = form.getValues('description') || '';
+        
+        // If description is empty or already contains instructor info, update it
+        if (!currentDescription || currentDescription.includes('Corso tenuto da')) {
+          form.setValue('description', `Corso tenuto da ${instructorName}`);
+        } else {
+          // Append instructor name to existing description
+          form.setValue('description', `${currentDescription}${currentDescription.endsWith('.') ? '' : '.'} Corso tenuto da ${instructorName}`);
+        }
+      }
+    }
+  }, [instructorId, instructors, form]);
+
   // Generate session preview when dates or schedule changes
   useEffect(() => {
     const generateSessionPreview = () => {
