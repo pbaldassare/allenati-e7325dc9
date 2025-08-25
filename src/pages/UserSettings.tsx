@@ -39,7 +39,7 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function UserSettings() {
-  const { user, fetchUserData, isAdmin, isGymOwner, isInstructor } = useAuth();
+  const { user, fetchUserData, isAdmin, isGymOwner, isInstructor, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -48,9 +48,17 @@ export default function UserSettings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+  }, [authLoading, isAuthenticated, navigate]);
+
   // Redirect automatico da /impostazioni alle route specifiche per ruolo
   useEffect(() => {
-    if (location.pathname === '/impostazioni') {
+    if (!authLoading && isAuthenticated && location.pathname === '/impostazioni') {
       if (isAdmin) {
         navigate('/admin/settings', { replace: true });
         return;
@@ -61,8 +69,9 @@ export default function UserSettings() {
         navigate('/instructor/settings', { replace: true });
         return;
       }
+      // Regular users can stay on /impostazioni
     }
-  }, [location.pathname, isAdmin, isGymOwner, isInstructor, navigate]);
+  }, [authLoading, isAuthenticated, location.pathname, isAdmin, isGymOwner, isInstructor, navigate]);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -230,12 +239,18 @@ export default function UserSettings() {
     }
   };
 
-  if (!user) {
+  // Show loading only during auth initialization or when user data is being loaded
+  if (authLoading || (!user && isAuthenticated)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  // If not authenticated, the redirect useEffect will handle navigation
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
