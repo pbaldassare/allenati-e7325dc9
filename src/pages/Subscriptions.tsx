@@ -233,13 +233,11 @@ export default function Subscriptions() {
             variant="outline"
             size="sm"
             onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/', { replace: true });
-              }
+              console.log('Back button clicked, navigating to home');
+              navigate('/', { replace: true });
             }}
             className="flex items-center gap-2"
+            disabled={loading}
           >
             <ArrowLeft className="h-4 w-4" />
             Torna indietro
