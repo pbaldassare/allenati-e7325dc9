@@ -114,7 +114,7 @@ export const CourseCalendar = () => {
             courses!inner(
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(*)
+              instructors(*, profiles(*))
             )
           `)
           .eq('courses.gym_id', userGym)
@@ -135,18 +135,6 @@ export const CourseCalendar = () => {
 
         if (sessionsError) throw sessionsError;
 
-        // Load instructor profiles separately 
-        const instructorIds = sessionsData?.map(session => session.courses?.instructors?.user_id).filter(Boolean) || [];
-        const { data: instructorProfiles } = await supabase
-          .from('profiles')
-          .select('user_id, first_name, last_name, email')
-          .in('user_id', instructorIds);
-
-        // Create instructor profiles map for easier lookup
-        const instructorProfilesMap = new Map(
-          instructorProfiles?.map(profile => [profile.user_id, profile]) || []
-        );
-
         // Transform sessions data to match component expectations
         const sessionsWithInstructors = sessionsData?.map(session => ({
           ...session.courses,
@@ -157,10 +145,7 @@ export const CourseCalendar = () => {
           session_room_name: session.room_name,
           session_max_participants: session.max_participants,
           session_available_spots: session.available_spots,
-          instructors: session.courses?.instructors ? {
-            ...session.courses.instructors,
-            profiles: instructorProfilesMap.get(session.courses.instructors.user_id)
-          } : null,
+          instructors: session.courses?.instructors || null,
           isFromEnrolledCourse: userCourseIds.includes(session.course_id)
         })) || [];
 
