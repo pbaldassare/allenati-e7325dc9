@@ -99,7 +99,7 @@ export const Dashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       
       try {
-        // Load all future sessions from user's gyms with instructor names directly
+        // Load all future sessions from user's gyms with instructor names via foreign key
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('course_sessions')
           .select(`
@@ -107,7 +107,7 @@ export const Dashboard = () => {
             courses!inner(
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(id, first_name, last_name, user_id, is_active),
+              instructors!instructor_id(first_name, last_name),
               gyms(name)
             )
           `)
