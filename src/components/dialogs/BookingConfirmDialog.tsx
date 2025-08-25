@@ -1,5 +1,5 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, User, Users, CreditCard, Award, Coins, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Award, Coins } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,12 +47,6 @@ const formatTime = (timeString: string) => {
   return timeString?.split('T')[1]?.split('.')[0]?.slice(0, 5) || timeString;
 };
 
-const getInstructorName = (course: any) => {
-  if (course?.instructors?.profiles) {
-    return `${course.instructors.profiles.first_name || ''} ${course.instructors.profiles.last_name || ''}`.trim();
-  }
-  return 'Istruttore non specificato';
-};
 
 const getDifficultyLabel = (level?: number) => {
   switch (level) {
@@ -78,9 +72,7 @@ export const BookingConfirmDialog = ({
   const [hasUnlimitedAccess, setHasUnlimitedAccess] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(true);
   const [showCreditPurchaseDialog, setShowCreditPurchaseDialog] = useState(false);
-  const [participants, setParticipants] = useState<any[]>([]);
   const [gymName, setGymName] = useState<string>('');
-  const [loadingParticipants, setLoadingParticipants] = useState(true);
 
   useEffect(() => {
     if (!user || !open) return;
@@ -114,7 +106,7 @@ export const BookingConfirmDialog = ({
       }
     };
 
-    const fetchParticipants = async () => {
+    const fetchGymName = async () => {
       if (!course?.id) return;
       
       try {
@@ -126,37 +118,13 @@ export const BookingConfirmDialog = ({
           .single();
         
         setGymName(courseData?.gyms?.name || 'Palestra');
-
-        // Get participants for this specific session - prefer session_id
-        let bookingsQuery = supabase
-          .from('bookings')
-          .select(`
-            user_id,
-            profiles!fk_bookings_user_profiles(first_name, last_name)
-          `)
-          .eq('status', 'confirmed');
-
-        if (sessionId) {
-          bookingsQuery = bookingsQuery.eq('session_id', sessionId);
-        } else {
-          bookingsQuery = bookingsQuery
-            .eq('course_id', course.id)
-            .eq('scheduled_date', scheduledDate)
-            .eq('scheduled_time', scheduledTime);
-        }
-
-        const { data: bookingsData } = await bookingsQuery;
-
-        setParticipants(bookingsData || []);
       } catch (error) {
-        console.error('Error fetching participants:', error);
-      } finally {
-        setLoadingParticipants(false);
+        console.error('Error fetching gym name:', error);
       }
     };
 
     fetchUserCredits();
-    fetchParticipants();
+    fetchGymName();
   }, [user, open, course?.id, scheduledDate, scheduledTime, sessionId]);
 
   const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course?.credits_required || 1);
@@ -187,72 +155,30 @@ export const BookingConfirmDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-4">
-          <div className="bg-accent border border-border rounded-lg p-5 sm:p-4 space-y-4">
-            <h3 className="font-semibold text-foreground text-lg">{course?.name}</h3>
+        <div className="space-y-3">
+          <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-3">
+            <h3 className="font-semibold text-foreground text-base">{course?.name}</h3>
             
-            <div className="space-y-3 text-base sm:text-sm">
+            <div className="space-y-2 text-sm">
               <div className="flex items-center text-foreground">
-                <Calendar className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <Calendar className="w-4 h-4 mr-2" />
                 <span className="font-medium">{formatDate(scheduledDate)}</span>
               </div>
               
               <div className="flex items-center text-foreground">
-                <Clock className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <Clock className="w-4 h-4 mr-2" />
                 <span className="font-medium">{formatTime(scheduledTime)}</span>
               </div>
               
               <div className="flex items-center text-foreground">
-                <User className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                <span>{getInstructorName(course)}</span>
-              </div>
-              
-              <div className="flex items-center text-foreground">
-                <Calendar className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                <Calendar className="w-4 h-4 mr-2" />
                 <span>{gymName}</span>
               </div>
-
-              {course?.max_participants && (
-                <div className="flex items-center justify-between text-foreground">
-                  <div className="flex items-center text-muted-foreground">
-                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                    <span>Partecipanti:</span>
-                  </div>
-                  <Badge variant="outline" className={`text-xs ${participants.length >= course.max_participants ? 'border-destructive text-destructive' : ''}`}>
-                    {participants.length}/{course.max_participants}
-                    {participants.length >= course.max_participants ? ' (Completo)' : ` (${course.max_participants - participants.length} liberi)`}
-                  </Badge>
-                </div>
-              )}
-
-              {course?.reserved_spots && course.reserved_spots > 0 && (
-                <div className="flex items-center justify-between text-foreground">
-                  <div className="flex items-center text-muted-foreground">
-                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                    <span>Posti riservati:</span>
-                  </div>
-                  <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {course?.reserved_spots} per abbonati
-                  </Badge>
-                </div>
-              )}
-
-              {course?.max_participants && course?.reserved_spots && (
-                <div className="flex items-center justify-between text-foreground">
-                  <div className="flex items-center text-muted-foreground">
-                    <Users className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
-                    <span>Posti pubblici:</span>
-                  </div>
-                  <Badge variant="outline">
-                    {(course?.max_participants || 0) - (course?.reserved_spots || 0)} disponibili
-                  </Badge>
-                </div>
-              )}
 
               {course?.credits_required && (
                 <div className="flex items-center justify-between text-foreground">
                   <div className="flex items-center">
-                    <Coins className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                    <Coins className="w-4 h-4 mr-2" />
                     <span>{course?.credits_required} crediti richiesti</span>
                   </div>
                   {!loadingCredits && (
@@ -276,40 +202,12 @@ export const BookingConfirmDialog = ({
 
               {course?.difficulty_level && (
                 <div className="flex items-center text-muted-foreground">
-                  <Award className="w-5 h-5 sm:w-4 sm:h-4 mr-3 sm:mr-2" />
+                  <Award className="w-4 h-4 mr-2" />
                   <span>Livello: {getDifficultyLabel(course?.difficulty_level)}</span>
                 </div>
               )}
             </div>
           </div>
-
-          {participants.length > 0 && (
-            <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
-              <h4 className="font-semibold text-foreground text-sm flex items-center">
-                <Users className="w-4 h-4 mr-2" />
-                Partecipanti attuali ({participants.length}{course?.max_participants ? `/${course.max_participants}` : ''})
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                {participants.slice(0, 6).map((booking, index) => (
-                  <div key={index} className="text-xs text-muted-foreground bg-background rounded p-2">
-                    {booking.profiles?.first_name} {booking.profiles?.last_name}
-                  </div>
-                ))}
-                {participants.length > 6 && (
-                  <div className="text-xs text-muted-foreground bg-background rounded p-2 flex items-center justify-center">
-                    +{participants.length - 6} altri
-                  </div>
-                )}
-              </div>
-              
-              {course?.max_participants && participants.length >= course.max_participants - (course.reserved_spots || 0) && (
-                <div className="flex items-center text-warning text-xs">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  <span>Corso quasi al completo!</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <AlertDialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">
