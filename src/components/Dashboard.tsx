@@ -27,7 +27,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { bookings, isSessionBooked, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
   const [availableSessions, setAvailableSessions] = useState([]);
-  const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
+  
   const [loading, setLoading] = useState(true);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
@@ -107,7 +107,7 @@ export const Dashboard = () => {
             courses!inner(
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(id, user_id, is_active),
+              instructors(id, user_id, is_active, profiles(first_name, last_name, profile_picture_url)),
               gyms(name)
             )
           `)
@@ -120,23 +120,6 @@ export const Dashboard = () => {
 
         if (sessionsError) throw sessionsError;
 
-        // Get instructor profiles
-        const instructorUserIds = [...new Set(sessionsData?.map(s => s.courses?.instructors?.user_id).filter(Boolean))];
-        
-        if (instructorUserIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('user_id, first_name, last_name, profile_picture_url')
-            .in('user_id', instructorUserIds);
-
-          if (!profilesError && profilesData) {
-            const profilesMap: Record<string, any> = {};
-            profilesData.forEach(profile => {
-              profilesMap[profile.user_id] = profile;
-            });
-            setInstructorProfiles(profilesMap);
-          }
-        }
 
         setAvailableSessions(sessionsData || []);
         
@@ -272,13 +255,13 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    const profile = instructorProfiles[session.courses?.instructors?.user_id];
+    const profile = session.courses?.instructors?.profiles;
     if (!profile) return 'Istruttore';
     return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Istruttore';
   };
 
   const getInstructorAvatar = (session: any) => {
-    const profile = instructorProfiles[session.courses?.instructors?.user_id];
+    const profile = session.courses?.instructors?.profiles;
     return profile?.profile_picture_url || null;
   };
 
