@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter, Infinity, Coins, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,53 @@ export const Dashboard = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [userSubscription, setUserSubscription] = useState<any>(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+
+  const loadUserCreditsAndSubscription = async () => {
+    if (!user || userGyms.length === 0) return;
+    
+    setCreditsLoading(true);
+    try {
+      // For now, use the first gym - later we can enhance this with selectedGym from GymContext
+      const gymId = userGyms[0]?.id;
+      if (!gymId) return;
+
+      // Carica crediti per la palestra selezionata
+      const { data: creditsData } = await supabase
+        .from('gym_credits')
+        .select('credits')
+        .eq('user_id', user.id)
+        .eq('gym_id', gymId)
+        .single();
+
+      // Carica abbonamento attivo per la palestra selezionata
+      const { data: subscriptionData } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          expires_at,
+          status,
+          plan:subscription_plans(
+            name,
+            unlimited_access
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('gym_id', gymId)
+        .eq('status', 'active')
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      setUserCredits(creditsData?.credits || 0);
+      setUserSubscription(subscriptionData);
+    } catch (error) {
+      console.error('Errore nel caricamento dati crediti/abbonamento:', error);
+    } finally {
+      setCreditsLoading(false);
+    }
+  };
 
   // Load available sessions from Supabase
   useEffect(() => {
@@ -106,6 +153,7 @@ export const Dashboard = () => {
     };
 
     loadAvailableSessions();
+    loadUserCreditsAndSubscription();
   }, [user, userGyms, toast]);
 
   const openBookingDialog = (session: any) => {
@@ -336,10 +384,49 @@ export const Dashboard = () => {
             <p className="text-xs text-muted-foreground">Prossime Sessioni</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 shadow-card">
+        <Card 
+          className={`cursor-pointer transition-all duration-300 border-2 shadow-card ${
+            creditsLoading 
+              ? 'bg-gradient-to-br from-muted/10 to-muted/5 border-muted/20' 
+              : userSubscription?.plan?.unlimited_access
+                ? 'bg-gradient-to-br from-green-500/10 to-green-400/5 border-green-500/20 hover:border-green-500/40'
+                : userCredits > 0
+                  ? 'bg-gradient-to-br from-blue-500/10 to-blue-400/5 border-blue-500/20 hover:border-blue-500/40'
+                  : 'bg-gradient-to-br from-orange-500/10 to-orange-400/5 border-orange-500/20 hover:border-orange-500/40'
+          }`}
+          onClick={() => navigate('/subscriptions')}
+        >
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-secondary">{filteredAvailableSessions.length}</div>
-            <p className="text-xs text-muted-foreground">Sessioni Disponibili</p>
+            {creditsLoading ? (
+              <>
+                <div className="text-2xl font-bold text-muted-foreground">—</div>
+                <p className="text-xs text-muted-foreground">Caricamento...</p>
+              </>
+            ) : userSubscription?.plan?.unlimited_access ? (
+              <>
+                <div className="flex items-center justify-center space-x-2 text-green-600">
+                  <Infinity className="w-6 h-6" />
+                  <span className="text-2xl font-bold">Illimitato</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Abbonamento Attivo</p>
+              </>
+            ) : userCredits > 0 ? (
+              <>
+                <div className="flex items-center justify-center space-x-2 text-blue-600">
+                  <Coins className="w-6 h-6" />
+                  <span className="text-2xl font-bold">{userCredits}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Crediti Disponibili</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center space-x-2 text-orange-600">
+                  <ShoppingCart className="w-6 h-6" />
+                  <span className="text-lg font-bold">Acquista</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Crediti o Abbonamento</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
