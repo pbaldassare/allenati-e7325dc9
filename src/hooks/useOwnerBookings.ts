@@ -79,7 +79,10 @@ export const useOwnerBookings = () => {
             gym_id
           ),
           course_sessions (
-            room_name
+            room_id,
+            gym_rooms!inner (
+              name
+            )
           )
         `)
         .eq('courses.gym_id', gymData)
@@ -90,7 +93,7 @@ export const useOwnerBookings = () => {
         ...booking,
         user: booking.profiles,
         course: booking.courses,
-        room_name: (booking as any).course_sessions?.room_name || null
+        room_name: (booking as any).course_sessions?.gym_rooms?.name || 'Sala non assegnata'
       })) as OwnerBooking[];
 
       if (error) {
