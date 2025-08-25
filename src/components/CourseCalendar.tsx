@@ -114,7 +114,7 @@ export const CourseCalendar = () => {
             courses!inner(
               *,
               course_categories(name, color_hex, icon_name),
-              instructors(*, profiles(*))
+              instructors!courses_instructor_id_fkey(*, profiles(*))
             )
           `)
           .eq('courses.gym_id', userGym)
@@ -380,7 +380,7 @@ export const CourseCalendar = () => {
               courses!inner(
                 *,
                 course_categories(name, color_hex, icon_name),
-                instructors(*)
+                instructors!courses_instructor_id_fkey(*)
               )
             `)
             .eq('courses.gym_id', userGym)

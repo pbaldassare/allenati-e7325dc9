@@ -41,7 +41,7 @@ export const useSessionBookings = () => {
           courses (
             name,
             deadline_hours,
-            instructors (
+            instructors!courses_instructor_id_fkey (
               user_id
             )
           ),

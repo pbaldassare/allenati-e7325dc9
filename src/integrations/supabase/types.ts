@@ -650,13 +650,6 @@ export type Database = {
             referencedRelation: "instructors"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_courses_instructor"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructors"
-            referencedColumns: ["id"]
-          },
         ]
       }
       credits_transactions: {

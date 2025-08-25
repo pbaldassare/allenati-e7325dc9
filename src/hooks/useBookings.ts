@@ -38,7 +38,7 @@ export const useBookings = () => {
             course_categories (
               name
             ),
-            instructors (
+            instructors!courses_instructor_id_fkey (
               id,
               user_id
             )
