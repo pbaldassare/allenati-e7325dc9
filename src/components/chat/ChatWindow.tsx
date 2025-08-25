@@ -24,12 +24,15 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
-  const { user } = useAuth();
+  const { user, isAdmin, isGymOwner, isInstructor } = useAuth();
   const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Determina se l'utente può scrivere (solo staff: admin, gym_owner, instructor)
+  const canWriteMessages = isAdmin || isGymOwner || isInstructor;
 
   // Load initial messages
   useEffect(() => {
@@ -265,7 +268,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
         </ScrollArea>
 
         <div className="border-t bg-background/80 backdrop-blur-sm p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <MessageInput onSend={sendMessage} disabled={sending} />
+          {canWriteMessages ? (
+            <MessageInput onSend={sendMessage} disabled={sending} />
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-3">
+              Solo lo staff può scrivere in questa chat. Puoi leggere tutti i messaggi.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -296,7 +305,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
       </ScrollArea>
 
       <div className="border-t p-4">
-        <MessageInput onSend={sendMessage} disabled={sending} />
+        {canWriteMessages ? (
+          <MessageInput onSend={sendMessage} disabled={sending} />
+        ) : (
+          <div className="text-center text-sm text-muted-foreground py-3">
+            Solo lo staff può scrivere in questa chat. Puoi leggere tutti i messaggi.
+          </div>
+        )}
       </div>
     </Card>
   );
