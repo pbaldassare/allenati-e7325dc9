@@ -31,6 +31,49 @@ interface SubscriptionPlanFormProps {
   editingPlan: SubscriptionPlan | null;
 }
 
+const presets = [
+  {
+    name: 'Piano 10 entrate',
+    description: 'Ideale per chi va in palestra saltuariamente',
+    price: 50,
+    duration_days: 60,
+    credits_included: 10,
+    unlimited_access: false,
+    is_trial: false,
+    features: ['10 ingressi in 60 giorni', 'Valido per tutti i corsi', 'Assistenza clienti']
+  },
+  {
+    name: 'Piano 20 entrate',
+    description: 'Perfetto per chi si allena regolarmente',
+    price: 90,
+    duration_days: 90,
+    credits_included: 20,
+    unlimited_access: false,
+    is_trial: false,
+    features: ['20 ingressi in 90 giorni', 'Valido per tutti i corsi', 'Assistenza clienti']
+  },
+  {
+    name: 'Abbonamento Mensile',
+    description: 'Accesso illimitato per 30 giorni',
+    price: 60,
+    duration_days: 30,
+    credits_included: 0,
+    unlimited_access: true,
+    is_trial: false,
+    features: ['Accesso illimitato', 'Tutti i corsi inclusi', 'Assistenza clienti', 'App mobile']
+  },
+  {
+    name: 'Abbonamento Annuale',
+    description: 'Accesso illimitato per un anno intero',
+    price: 600,
+    duration_days: 365,
+    credits_included: 0,
+    unlimited_access: true,
+    is_trial: false,
+    features: ['Accesso illimitato', 'Tutti i corsi inclusi', 'Assistenza clienti', 'App mobile', 'Sconto 17%']
+  }
+];
+
 const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
   isOpen,
   onClose,
@@ -80,7 +123,28 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
   }, [editingPlan, isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Validation: if unlimited_access is true, force credits_included to 0
+      if (field === 'unlimited_access' && value === true) {
+        updated.credits_included = 0;
+      }
+      
+      // If setting credits_included > 0, force unlimited_access to false
+      if (field === 'credits_included' && value > 0) {
+        updated.unlimited_access = false;
+      }
+      
+      return updated;
+    });
+  };
+
+  const handlePresetSelect = (preset: typeof presets[0]) => {
+    setFormData({
+      ...formData,
+      ...preset
+    });
   };
 
   const handleAddFeature = () => {
@@ -164,6 +228,29 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Preset Selection - Only show for new plans */}
+        {!editingPlan && (
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+            <h3 className="font-semibold text-sm">Modelli Rapidi</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {presets.map((preset, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePresetSelect(preset)}
+                  className="text-xs h-auto p-2 flex flex-col items-start"
+                >
+                  <div className="font-medium">{preset.name}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {preset.unlimited_access ? 'Illimitato' : `${preset.credits_included} crediti`} - {preset.duration_days}gg
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
@@ -216,7 +303,12 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="credits">Crediti Inclusi</Label>
+              <Label htmlFor="credits">
+                Crediti Inclusi 
+                {formData.unlimited_access && (
+                  <span className="text-xs text-muted-foreground ml-1">(disabilitato per accesso illimitato)</span>
+                )}
+              </Label>
               <Input
                 id="credits"
                 type="number"
@@ -224,29 +316,38 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
                 value={formData.credits_included}
                 onChange={(e) => handleInputChange('credits_included', parseInt(e.target.value) || 0)}
                 disabled={formData.unlimited_access}
+                className={formData.unlimited_access ? 'bg-muted' : ''}
               />
+              {!formData.unlimited_access && formData.credits_included > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Piano a crediti: ogni prenotazione consumerà 1 credito
+                </p>
+              )}
             </div>
           </div>
 
           {/* Toggles */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Accesso Illimitato</Label>
-                <p className="text-sm text-muted-foreground">
-                  Permette accesso illimitato a tutti i corsi
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">Accesso Illimitato</Label>
+                <p className="text-xs text-muted-foreground">
+                  Abbonamento mensile/annuale senza limite di ingressi
                 </p>
               </div>
               <Switch
                 checked={formData.unlimited_access}
-                onCheckedChange={(checked) => {
-                  handleInputChange('unlimited_access', checked);
-                  if (checked) {
-                    handleInputChange('credits_included', 0);
-                  }
-                }}
+                onCheckedChange={(checked) => handleInputChange('unlimited_access', checked)}
               />
             </div>
+            
+            {formData.unlimited_access && formData.credits_included > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  ⚠️ Attenzione: Non puoi avere accesso illimitato E crediti inclusi contemporaneamente
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <div>

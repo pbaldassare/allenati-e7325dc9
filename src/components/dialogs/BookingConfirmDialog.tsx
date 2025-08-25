@@ -86,14 +86,22 @@ export const BookingConfirmDialog = ({
           .eq('user_id', user.id)
           .single();
 
-        // Check for active unlimited subscription
+        // Check for active unlimited subscription for this gym
+        const { data: courseData } = await supabase
+          .from('courses')
+          .select('gym_id')
+          .eq('id', course?.id)
+          .single();
+
         const { data: subscription } = await supabase
           .from('user_subscriptions')
           .select(`
-            subscription_plans!inner(unlimited_access)
+            subscription_plans!inner(unlimited_access),
+            gym_id
           `)
           .eq('user_id', user.id)
           .eq('status', 'active')
+          .eq('gym_id', courseData?.gym_id)
           .gt('expires_at', new Date().toISOString())
           .single();
 

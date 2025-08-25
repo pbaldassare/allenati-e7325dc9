@@ -152,6 +152,7 @@ export const useBookings = () => {
           .from('credits_transactions')
           .insert({
             user_id: user.id,
+            gym_id: course?.gym_id,
             amount: booking.credits_used,
             balance_after: newBalance,
             transaction_type: 'refund',

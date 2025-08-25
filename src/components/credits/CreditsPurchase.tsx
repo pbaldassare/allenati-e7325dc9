@@ -62,7 +62,26 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
 
     setPurchasing(plan.id);
     try {
-      // Create subscription
+      // Get gym_id from the plan (assuming it's gym-specific)
+      const { data: planData } = await supabase
+        .from('subscription_plans')
+        .select('gym_id')
+        .eq('id', plan.id)
+        .single();
+
+      const gymId = planData?.gym_id;
+
+      // Cancel existing active subscriptions for this gym
+      if (gymId) {
+        await supabase
+          .from('user_subscriptions')
+          .update({ status: 'cancelled' })
+          .eq('user_id', user.id)
+          .eq('gym_id', gymId)
+          .eq('status', 'active');
+      }
+
+      // Create new subscription
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
 
@@ -71,13 +90,14 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
         .insert({
           user_id: user.id,
           plan_id: plan.id,
+          gym_id: gymId,
           status: 'active',
           expires_at: expiresAt.toISOString()
         });
 
       if (subscriptionError) throw subscriptionError;
 
-      // Add credits if not unlimited
+      // Add credits ONLY if it's a credit-based plan (not unlimited)
       if (!plan.unlimited_access && plan.credits_included > 0) {
         // Get current credits
         const { data: profile } = await supabase
@@ -89,11 +109,18 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
         const currentCredits = profile?.current_credits || 0;
         const newBalance = currentCredits + plan.credits_included;
 
+        // Update user credits
+        await supabase
+          .from('profiles')
+          .update({ current_credits: newBalance })
+          .eq('user_id', user.id);
+
         // Create transaction
         const { error: transactionError } = await supabase
           .from('credits_transactions')
           .insert({
             user_id: user.id,
+            gym_id: gymId,
             amount: plan.credits_included,
             balance_after: newBalance,
             transaction_type: 'purchase',
