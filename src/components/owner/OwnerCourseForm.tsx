@@ -362,69 +362,67 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     }
   }, [formattedFormData]);
 
+  // Watch specific form fields for session preview generation
+  const startDate = form.watch('startDate');
+  const endDate = form.watch('endDate');
+  const schedule = form.watch('schedule');
+  const courseName = form.watch('name');
+  const instructorId = form.watch('instructor_id');
+  const category = form.watch('category');
+  const level = form.watch('level');
+  const benefits = form.watch('benefits');
+
   // Generate session preview when dates or schedule changes
   useEffect(() => {
     const generateSessionPreview = () => {
-      const formData = form.getValues();
-      if (!formData.startDate || !formData.endDate || !formData.schedule?.length) {
+      if (!startDate || !endDate || !schedule || schedule.length === 0) {
         setGeneratedSessions([]);
         return;
       }
 
-      const sessions: any[] = [];
-      const currentDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
+      const sessions = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
       
-      while (currentDate <= endDate && sessions.length < 10) {
-        formData.schedule.forEach(schedule => {
-          if (currentDate.getDay() === schedule.dayOfWeek) {
-            // Check if date is in exceptions
-            const isException = exceptions.some(exception => 
-              isWithinInterval(currentDate, { start: exception.start_date, end: exception.end_date })
-            );
-            
-            if (!isException) {
-              const roomName = gymRooms.find(room => room.id === schedule.roomId)?.name || 'Sala non assegnata';
-              sessions.push({
-                date: new Date(currentDate),
-                time: schedule.time,
-                room: roomName,
-                dayName: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][currentDate.getDay()]
-              });
-            }
-          }
-        });
-        currentDate.setDate(currentDate.getDate() + 1);
+      for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        const dayOfWeek = date.getDay();
+        const scheduleForDay = schedule.find(s => s.dayOfWeek === dayOfWeek);
+        
+        if (scheduleForDay) {
+          const room = gymRooms.find(r => r.id === scheduleForDay.roomId);
+          sessions.push({
+            date: new Date(date),
+            time: scheduleForDay.time,
+            room: room?.name || 'Sala non trovata'
+          });
+        }
       }
       
       setGeneratedSessions(sessions.slice(0, 10));
     };
 
     generateSessionPreview();
-  }, [form.watch('startDate'), form.watch('endDate'), form.watch('schedule'), exceptions, gymRooms]);
+  }, [startDate, endDate, schedule, exceptions, gymRooms]);
 
-  // Validate form and update issue counts
+  // Validate form and update issue counts using specific watched fields
   useEffect(() => {
     const validateSections = () => {
-      const formState = form.formState;
-      const formData = form.getValues();
-      
       let generalIssues = 0;
       let scheduleIssues = 0;
       
       // General tab validation
-      if (!formData.name || formData.name.trim().length < 3) generalIssues++;
-      if (!formData.instructor_id) generalIssues++;
-      if (!formData.category) generalIssues++;
-      if (!formData.level) generalIssues++;
-      if (!formData.benefits?.length || !formData.benefits.some(b => b.trim())) generalIssues++;
+      if (!courseName || courseName.trim().length < 3) generalIssues++;
+      if (!instructorId) generalIssues++;
+      if (!category) generalIssues++;
+      if (!level) generalIssues++;
+      if (!benefits?.length || !benefits.some(b => b.trim())) generalIssues++;
       
       // Schedule tab validation
-      if (!formData.startDate) scheduleIssues++;
-      if (!formData.endDate) scheduleIssues++;
-      if (!formData.schedule?.length) scheduleIssues++;
+      if (!startDate) scheduleIssues++;
+      if (!endDate) scheduleIssues++;
+      if (!schedule?.length) scheduleIssues++;
       else {
-        formData.schedule.forEach(s => {
+        schedule.forEach(s => {
           if (!s.roomId || !s.time) scheduleIssues++;
         });
       }
@@ -437,7 +435,7 @@ export const OwnerCourseForm: React.FC<CourseFormProps> = ({ mode, course }) => 
     };
 
     validateSections();
-  }, [form.watch(), exceptions]);
+  }, [courseName, instructorId, category, level, benefits, startDate, endDate, schedule, exceptions]);
 
   const getTabIcon = (tab: string) => {
     switch (tab) {
