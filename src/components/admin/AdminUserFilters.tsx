@@ -31,7 +31,7 @@ export const AdminUserFilters: React.FC<AdminUserFiltersProps> = ({
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const hasActiveFilters = Object.values(filters).some(value => value !== '');
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => value !== '' && value !== 'all');
 
   return (
     <div className="space-y-4">
@@ -67,7 +67,7 @@ export const AdminUserFilters: React.FC<AdminUserFiltersProps> = ({
             <SelectValue placeholder="Tutti i ruoli" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tutti i ruoli</SelectItem>
+            <SelectItem value="all">Tutti i ruoli</SelectItem>
             <SelectItem value="admin">Amministratori</SelectItem>
             <SelectItem value="gym_owner">Proprietari Palestre</SelectItem>
             <SelectItem value="instructor">Istruttori</SelectItem>
@@ -83,7 +83,7 @@ export const AdminUserFilters: React.FC<AdminUserFiltersProps> = ({
             <SelectValue placeholder="Tutti gli stati" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tutti gli stati</SelectItem>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
             <SelectItem value="active">Attivi</SelectItem>
             <SelectItem value="inactive">Inattivi</SelectItem>
           </SelectContent>
@@ -97,7 +97,7 @@ export const AdminUserFilters: React.FC<AdminUserFiltersProps> = ({
             <SelectValue placeholder="Tutte le palestre" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tutte le palestre</SelectItem>
+            <SelectItem value="all">Tutte le palestre</SelectItem>
             {gyms.map(gym => (
               <SelectItem key={gym.id} value={gym.id}>
                 {gym.name}
@@ -114,7 +114,7 @@ export const AdminUserFilters: React.FC<AdminUserFiltersProps> = ({
             <SelectValue placeholder="Tutte le città" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tutte le città</SelectItem>
+            <SelectItem value="all">Tutte le città</SelectItem>
             {cities.map(city => (
               <SelectItem key={city} value={city}>
                 {city}

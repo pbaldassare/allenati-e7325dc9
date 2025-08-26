@@ -29,10 +29,10 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilters>({
     search: '',
-    role: '',
-    status: '',
-    gym: '',
-    city: ''
+    role: 'all',
+    status: 'all',
+    gym: 'all',
+    city: 'all'
   });
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -157,13 +157,13 @@ const AdminUsers = () => {
       user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
       user.phone.includes(filters.search);
     
-    const matchesRole = !filters.role || user.role === filters.role;
-    const matchesStatus = !filters.status || 
+    const matchesRole = filters.role === 'all' || user.role === filters.role;
+    const matchesStatus = filters.status === 'all' || 
       (filters.status === 'active' && user.is_active) ||
       (filters.status === 'inactive' && !user.is_active);
     
-    const matchesGym = !filters.gym || user.gym_name?.includes(filters.gym);
-    const matchesCity = !filters.city || user.city === filters.city;
+    const matchesGym = filters.gym === 'all' || user.gym_name?.includes(filters.gym);
+    const matchesCity = filters.city === 'all' || user.city === filters.city;
 
     return matchesSearch && matchesRole && matchesStatus && matchesGym && matchesCity;
   });
@@ -171,10 +171,10 @@ const AdminUsers = () => {
   const clearFilters = () => {
     setFilters({
       search: '',
-      role: '',
-      status: '',
-      gym: '',
-      city: ''
+      role: 'all',
+      status: 'all',
+      gym: 'all',
+      city: 'all'
     });
   };
 
@@ -348,7 +348,7 @@ const AdminUsers = () => {
                 {filteredUsers.length === 0 && !loading && (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {Object.values(filters).some(v => v) ? 
+                      {Object.entries(filters).some(([key, value]) => value !== '' && value !== 'all') ? 
                         'Nessun utente corrisponde ai filtri selezionati' : 
                         'Nessun utente trovato'
                       }
