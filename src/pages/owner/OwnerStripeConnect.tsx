@@ -196,6 +196,7 @@ const OwnerStripeConnect = () => {
                 accountId={gym.stripe_connect_account_id}
                 onboardingComplete={gym.stripe_onboarding_complete}
                 isAdmin={false}
+                isGymOwner={true}
                 onStatusUpdate={handleStatusUpdate}
                 variant="default"
               />

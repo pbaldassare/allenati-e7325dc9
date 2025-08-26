@@ -15,6 +15,7 @@ interface StripeConnectActionsProps {
   accountId?: string | null;
   onboardingComplete?: boolean;
   isAdmin?: boolean;
+  isGymOwner?: boolean;
   onStatusUpdate?: () => void;
   variant?: 'default' | 'compact';
 }
@@ -24,6 +25,7 @@ export const StripeConnectActions: React.FC<StripeConnectActionsProps> = ({
   accountId,
   onboardingComplete = false,
   isAdmin = false,
+  isGymOwner = false,
   onStatusUpdate,
   variant = 'default'
 }) => {
@@ -155,7 +157,7 @@ export const StripeConnectActions: React.FC<StripeConnectActionsProps> = ({
   if (variant === 'compact') {
     return (
       <div className="flex items-center gap-2">
-        {!accountId && isAdmin && (
+        {!accountId && (isAdmin || isGymOwner) && (
           <Button
             size="sm"
             onClick={handleCreateAccount}
@@ -225,8 +227,8 @@ export const StripeConnectActions: React.FC<StripeConnectActionsProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Create Account (Admin only) */}
-      {!accountId && isAdmin && (
+      {/* Create Account */}
+      {!accountId && (isAdmin || isGymOwner) && (
         <Button
           onClick={handleCreateAccount}
           disabled={loading === 'create'}
