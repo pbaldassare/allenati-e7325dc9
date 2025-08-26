@@ -1,5 +1,8 @@
 project_id = "qyryykmpadguzxyiotur"
 
+[functions.send-welcome-email]
+verify_jwt = false
+
 [functions.create-gym-user]
 verify_jwt = true
 
