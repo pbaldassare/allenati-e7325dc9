@@ -16,30 +16,9 @@ import {
 } from '@/components/ui/sidebar';
 import {
   BarChart3,
-  Calendar,
-  GraduationCap,
   Users,
-  MapPin,
-  CalendarClock,
-  Settings,
-  Plus,
-  List,
   Building,
-  UserCheck,
-  ShieldCheck,
-  BookOpen,
-  CheckSquare,
-  Clock,
-  ShoppingCart,
-  CreditCard,
-  Package,
-  Wallet,
-  TrendingUp,
-  FileText,
-  Activity,
-  MessageSquare,
-  Bell,
-  Database,
+  GraduationCap,
   LogOut,
   FileCheck
 } from 'lucide-react';
@@ -48,25 +27,14 @@ const dashboardItems = [
   { title: "Dashboard", url: "/admin", icon: BarChart3 },
 ];
 
-const courseItems = [
-  { title: "Tutti i Corsi", url: "/admin/courses", icon: List },
-  { title: "Nuovo Corso", url: "/admin/courses/new", icon: Plus },
-];
-
 const userItems = [
   { title: "Lista Utenti", url: "/admin/users", icon: Users },
 ];
 
-const structureItems = [
+const gymItems = [
   { title: "Palestre", url: "/admin/gyms", icon: Building },
   { title: "Candidature Palestre", url: "/admin/gym-applications", icon: FileCheck },
-  { title: "Istruttori", url: "/admin/instructors", icon: Users },
-  { title: "Sale", url: "/admin/rooms", icon: MapPin },
-  { title: "Calendario", url: "/admin/schedule", icon: CalendarClock },
-];
-
-const communicationItems = [
-  { title: "Chat", url: "/admin/chat", icon: MessageSquare },
+  { title: "Istruttori", url: "/admin/instructors", icon: GraduationCap },
 ];
 
 export function AdminSidebar() {
@@ -125,24 +93,6 @@ export function AdminSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Gestione Corsi</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {courseItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavClassName(item.url)}>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
           <SidebarGroupLabel>Gestione Utenti</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -161,28 +111,10 @@ export function AdminSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Strutture</SidebarGroupLabel>
+          <SidebarGroupLabel>Gestione Palestre</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {structureItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavClassName(item.url)}>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Comunicazione</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {communicationItems.map((item) => (
+              {gymItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClassName(item.url)}>
