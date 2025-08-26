@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,7 @@ interface WelcomeEmailRequest {
   lastName?: string;
   creditsReceived?: number;
   gymName?: string;
+  userId?: string;
 }
 
 const supabase = createClient(
@@ -19,8 +21,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
-const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 function generateWelcomeEmailHTML(data: WelcomeEmailRequest): string {
   const { firstName = 'Nuovo', lastName = 'Utente', creditsReceived = 1, gymName } = data;
@@ -135,48 +136,30 @@ function generateWelcomeEmailHTML(data: WelcomeEmailRequest): string {
 </html>`;
 }
 
-async function sendOneSignalEmail(data: WelcomeEmailRequest): Promise<boolean> {
+async function sendResendEmail(data: WelcomeEmailRequest): Promise<boolean> {
   try {
-    console.log('Sending welcome email via OneSignal to:', data.userEmail);
+    console.log('Sending welcome email via Resend to:', data.userEmail);
     
     const emailHTML = generateWelcomeEmailHTML(data);
     
-    const oneSignalPayload = {
-      app_id: ONESIGNAL_APP_ID,
-      include_email_tokens: [data.userEmail],
-      email_subject: "🎉 Benvenuto nella nostra community fitness!",
-      email_body: emailHTML,
-      email_from_name: "Team Fitness",
-      email_from_address: "noreply@fitness.app"
-    };
-
-    console.log('OneSignal payload prepared:', {
-      app_id: ONESIGNAL_APP_ID,
-      email: data.userEmail,
-      subject: oneSignalPayload.email_subject
+    const emailResponse = await resend.emails.send({
+      from: "Allenati.me <noreply@allenati.me>",
+      to: [data.userEmail],
+      subject: "🎉 Benvenuto nella community Allenati.me!",
+      html: emailHTML,
     });
 
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
-      },
-      body: JSON.stringify(oneSignalPayload)
-    });
+    console.log('Resend response:', emailResponse);
 
-    const responseData = await response.json();
-    console.log('OneSignal response:', responseData);
-
-    if (response.ok) {
-      console.log('Welcome email sent successfully via OneSignal');
-      return true;
-    } else {
-      console.error('OneSignal API error:', responseData);
+    if (emailResponse.error) {
+      console.error('Resend API error:', emailResponse.error);
       return false;
+    } else {
+      console.log('Welcome email sent successfully via Resend');
+      return true;
     }
   } catch (error) {
-    console.error('Error sending welcome email via OneSignal:', error);
+    console.error('Error sending welcome email via Resend:', error);
     return false;
   }
 }
@@ -215,29 +198,33 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate OneSignal configuration
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-      console.error('OneSignal configuration missing');
+    // Validate Resend configuration
+    if (!Deno.env.get('RESEND_API_KEY')) {
+      console.error('Resend API key missing');
       return new Response(
-        JSON.stringify({ error: 'OneSignal configuration missing' }),
+        JSON.stringify({ error: 'Resend API key missing' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Send welcome email via OneSignal
-    const emailSent = await sendOneSignalEmail(requestData);
+    // Send welcome email via Resend
+    const emailSent = await sendResendEmail(requestData);
 
     // Log the result in Supabase
     try {
+      // Use userId if provided, otherwise use a system UUID
+      const targetId = requestData.userId || '00000000-0000-0000-0000-000000000000';
+      
       const { error: logError } = await supabase
         .from('admin_action_logs')
         .insert({
           action: 'welcome_email_sent',
           admin_id: '00000000-0000-0000-0000-000000000000', // System action
-          target_type: 'user_email',
-          target_id: requestData.userEmail,
+          target_type: 'user',
+          target_id: targetId,
           new_data: {
             email_sent: emailSent,
+            email_address: requestData.userEmail,
             user_data: requestData,
             timestamp: new Date().toISOString()
           }
