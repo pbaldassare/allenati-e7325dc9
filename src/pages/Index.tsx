@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -22,8 +22,15 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const navigate = useNavigate();
-  const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading } = useAuth();
+  const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading, isAdmin } = useAuth();
   const { isOpen, defaultMode, openLogin, openRegister, close } = useAuthModal();
+
+  // Redirect admin users to admin panel
+  useEffect(() => {
+    if (isAuthenticated && isAdmin && !loading) {
+      navigate("/admin");
+    }
+  }, [isAuthenticated, isAdmin, loading, navigate]);
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
