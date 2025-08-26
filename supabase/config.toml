@@ -5,3 +5,15 @@ verify_jwt = true
 
 [functions.owner-link-member]
 verify_jwt = true
+
+[functions.create-connect-account]
+verify_jwt = true
+
+[functions.get-connect-onboarding-link]
+verify_jwt = true
+
+[functions.get-connect-login-link]
+verify_jwt = true
+
+[functions.verify-connect-account]
+verify_jwt = true

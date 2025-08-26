@@ -19,9 +19,12 @@ import {
   Building2,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  CreditCard
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { StripeConnectStatus } from '@/components/ui/StripeConnectStatus';
+import { StripeConnectActions } from '@/components/ui/StripeConnectActions';
 
 interface GymDetail {
   id: string;
@@ -41,6 +44,11 @@ interface GymDetail {
   total_members: number;
   active_courses: number;
   total_instructors: number;
+  stripe_connect_account_id?: string;
+  stripe_onboarding_complete?: boolean;
+  stripe_charges_enabled?: boolean;
+  stripe_payouts_enabled?: boolean;
+  stripe_dashboard_url?: string;
 }
 
 const AdminGymDetail = () => {
@@ -61,7 +69,14 @@ const AdminGymDetail = () => {
       // Fetch gym basic info
       const { data: gymData, error: gymError } = await supabase
         .from('gyms')
-        .select('*')
+        .select(`
+          *,
+          stripe_connect_account_id,
+          stripe_onboarding_complete,
+          stripe_charges_enabled,
+          stripe_payouts_enabled,
+          stripe_dashboard_url
+        `)
         .eq('id', id)
         .single();
 
@@ -290,6 +305,39 @@ const AdminGymDetail = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Stripe Connect Section */}
+          <div>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Stripe Connect
+            </h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StripeConnectStatus
+                accountId={gym.stripe_connect_account_id}
+                onboardingComplete={gym.stripe_onboarding_complete}
+                chargesEnabled={gym.stripe_charges_enabled}
+                payoutsEnabled={gym.stripe_payouts_enabled}
+                dashboardUrl={gym.stripe_dashboard_url}
+                showDetails={true}
+              />
+              
+              <div>
+                <h4 className="font-medium mb-3">Azioni Amministratore</h4>
+                <StripeConnectActions
+                  gymId={gym.id}
+                  accountId={gym.stripe_connect_account_id}
+                  onboardingComplete={gym.stripe_onboarding_complete}
+                  isAdmin={true}
+                  onStatusUpdate={loadGymDetail}
+                  variant="default"
+                />
+              </div>
             </div>
           </div>
 
