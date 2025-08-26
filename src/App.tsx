@@ -27,6 +27,8 @@ import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminGyms from "./pages/admin/AdminGyms";
 import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
+import AdminGymDetail from "./pages/admin/AdminGymDetail";
+import AdminGymEdit from "./pages/admin/AdminGymEdit";
 
 // Admin User Management Pages
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -94,6 +96,8 @@ const App = () => (
                   
                   {/* Structure Management */}
                   <Route path="gyms" element={<AdminGyms />} />
+                  <Route path="gyms/:id" element={<AdminGymDetail />} />
+                  <Route path="gyms/:id/edit" element={<AdminGymEdit />} />
                   <Route path="gym-applications" element={<AdminGymApplications />} />
                   <Route path="instructors" element={<AdminInstructors />} />
                   <Route path="rooms" element={<AdminRooms />} />
