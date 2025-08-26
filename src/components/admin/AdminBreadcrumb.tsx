@@ -18,7 +18,6 @@ export const AdminBreadcrumb = () => {
     users: 'Utenti',
     gyms: 'Palestre',
     'gym-applications': 'Candidature Palestre',
-    instructors: 'Istruttori',
   };
 
   const generateBreadcrumbs = () => {

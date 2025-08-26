@@ -22,7 +22,7 @@ import AdminCoursesList from "./pages/admin/AdminCoursesList";
 import AdminCourseNew from "./pages/admin/AdminCourseNew";
 import AdminCourseDetail from "./pages/admin/AdminCourseDetail";
 import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
-import AdminInstructors from "./pages/admin/AdminInstructors";
+
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminGyms from "./pages/admin/AdminGyms";
@@ -99,7 +99,7 @@ const App = () => (
                   <Route path="gyms/:id" element={<AdminGymDetail />} />
                   <Route path="gyms/:id/edit" element={<AdminGymEdit />} />
                   <Route path="gym-applications" element={<AdminGymApplications />} />
-                  <Route path="instructors" element={<AdminInstructors />} />
+                  
                   <Route path="rooms" element={<AdminRooms />} />
                   <Route path="schedule" element={<AdminSchedule />} />
                   

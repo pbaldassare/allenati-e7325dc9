@@ -18,7 +18,6 @@ import {
   BarChart3,
   Users,
   Building,
-  GraduationCap,
   LogOut,
   FileCheck
 } from 'lucide-react';
@@ -34,7 +33,6 @@ const userItems = [
 const gymItems = [
   { title: "Palestre", url: "/admin/gyms", icon: Building },
   { title: "Candidature Palestre", url: "/admin/gym-applications", icon: FileCheck },
-  { title: "Istruttori", url: "/admin/instructors", icon: GraduationCap },
 ];
 
 export function AdminSidebar() {
