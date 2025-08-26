@@ -4,11 +4,43 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { useAppData } from '@/contexts/AppDataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Calendar, Clock, Users, MapPin, Filter } from 'lucide-react';
 
 const AdminSchedule = () => {
-  const { courses } = useAppData();
+  const [courses, setCourses] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          instructor:instructors!courses_instructor_id_fkey (
+            profiles:user_id (
+              first_name,
+              last_name
+            )
+          ),
+          course_categories (
+            name
+          )
+        `)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [viewMode, setViewMode] = useState('week');
   const [selectedRoom, setSelectedRoom] = useState('all');
 

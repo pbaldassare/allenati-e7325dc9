@@ -1,62 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Plus, Edit, Shield } from 'lucide-react';
+import { Edit, Download, Calendar, Mail, MapPin } from 'lucide-react';
 import RoleAssignmentDialog from '@/components/admin/RoleAssignmentDialog';
+import { AdminUserStats } from '@/components/admin/AdminUserStats';
+import { AdminUserFilters, UserFilters } from '@/components/admin/AdminUserFilters';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
+  user_id: string;
   first_name: string;
   last_name: string;
-  phone?: string;
+  email: string;
+  phone: string;
+  city: string;
   created_at: string;
-  role?: string;
   is_active: boolean;
+  role: string;
+  gym_name?: string;
 }
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<UserFilters>({
+    search: '',
+    role: '',
+    status: '',
+    gym: '',
+    city: ''
+  });
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    totalGyms: 0,
+    roleDistribution: {} as Record<string, number>,
+    gymDistribution: {} as Record<string, number>
+  });
+  const [gyms, setGyms] = useState<Array<{ id: string; name: string }>>([]);
+  const [cities, setCities] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
 
-  const loadUsers = async () => {
+  const loadData = async () => {
     try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Get user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
-        .eq('is_active', true);
-
-      if (rolesError) throw rolesError;
-
-      const usersWithRoles = profiles.map(profile => ({
-        ...profile,
-        role: roles.find(r => r.user_id === profile.user_id)?.role || 'basic_user'
-      }));
-
-      setUsers(usersWithRoles);
+      setLoading(true);
+      await Promise.all([loadUsers(), loadGyms()]);
     } catch (error) {
+      console.error('Error loading data:', error);
       toast({
         title: "Errore",
-        description: "Impossibile caricare gli utenti",
+        description: "Impossibile caricare i dati",
         variant: "destructive",
       });
     } finally {
@@ -64,29 +66,176 @@ const AdminUsers = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone?.includes(searchTerm)
-  );
+  const loadUsers = async () => {
+    // Get user profiles and roles separately to avoid complex joins
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (profilesError) throw profilesError;
+
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, role')
+      .eq('is_active', true);
+
+    if (rolesError) throw rolesError;
+
+    // Transform data
+    const transformedUsers = profiles?.map(profile => {
+      const userRole = roles?.find(role => role.user_id === profile.user_id);
+      
+      return {
+        id: profile.id,
+        user_id: profile.user_id,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        city: profile.city || '',
+        created_at: profile.created_at,
+        is_active: profile.is_active,
+        role: userRole?.role || 'basic_user',
+        gym_name: ''
+      };
+    }) || [];
+
+    setUsers(transformedUsers);
+    calculateStats(transformedUsers);
+    extractCities(transformedUsers);
+  };
+
+  const loadGyms = async () => {
+    const { data: gymsData, error } = await supabase
+      .from('gyms')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+    setGyms(gymsData || []);
+  };
+
+  const calculateStats = (usersData: User[]) => {
+    const totalUsers = usersData.length;
+    const activeUsers = usersData.filter(u => u.is_active).length;
+    const inactiveUsers = totalUsers - activeUsers;
+
+    // Role distribution
+    const roleDistribution = usersData.reduce((acc, user) => {
+      acc[user.role] = (acc[user.role] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Gym distribution
+    const gymDistribution = usersData.reduce((acc, user) => {
+      if (user.gym_name) {
+        acc[user.gym_name] = (acc[user.gym_name] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    setStats({
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      totalGyms: gyms.length,
+      roleDistribution,
+      gymDistribution
+    });
+  };
+
+  const extractCities = (usersData: User[]) => {
+    const uniqueCities = [...new Set(usersData.map(u => u.city).filter(Boolean))];
+    setCities(uniqueCities.sort());
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !filters.search || 
+      `${user.first_name} ${user.last_name}`.toLowerCase().includes(filters.search.toLowerCase()) ||
+      user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
+      user.phone.includes(filters.search);
+    
+    const matchesRole = !filters.role || user.role === filters.role;
+    const matchesStatus = !filters.status || 
+      (filters.status === 'active' && user.is_active) ||
+      (filters.status === 'inactive' && !user.is_active);
+    
+    const matchesGym = !filters.gym || user.gym_name?.includes(filters.gym);
+    const matchesCity = !filters.city || user.city === filters.city;
+
+    return matchesSearch && matchesRole && matchesStatus && matchesGym && matchesCity;
+  });
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      role: '',
+      status: '',
+      gym: '',
+      city: ''
+    });
+  };
+
+  const exportToCSV = () => {
+    const csvData = filteredUsers.map(user => ({
+      Nome: `${user.first_name} ${user.last_name}`,
+      Email: user.email,
+      Telefono: user.phone,
+      Città: user.city,
+      Ruolo: getRoleLabel(user.role),
+      Stato: user.is_active ? 'Attivo' : 'Inattivo',
+      Palestra: user.gym_name || 'Nessuna',
+      'Data Registrazione': new Date(user.created_at).toLocaleDateString('it-IT')
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `utenti_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export completato",
+      description: `${filteredUsers.length} utenti esportati con successo`,
+    });
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-destructive';
-      case 'gym_owner': return 'bg-secondary';
-      case 'instructor': return 'bg-accent';
-      default: return 'bg-muted';
+      case 'admin':
+        return 'bg-destructive';
+      case 'gym_owner':
+        return 'bg-primary';
+      case 'instructor':
+        return 'bg-warning';
+      default:
+        return 'bg-secondary';
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Caricamento utenti...</div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Amministratore';
+      case 'gym_owner':
+        return 'Proprietario';
+      case 'instructor':
+        return 'Istruttore';
+      default:
+        return 'Utente Base';
+    }
+  };
 
   return (
     <AdminLayout>
@@ -97,84 +246,117 @@ const AdminUsers = () => {
               Gestione Utenti
             </h1>
             <p className="text-muted-foreground">
-              Gestisci tutti gli utenti del sistema
+              Visualizza e gestisci gli utenti del sistema
             </p>
           </div>
-          <Button className="bg-gradient-primary hover:shadow-primary">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Utente
+          <Button onClick={exportToCSV} disabled={filteredUsers.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Esporta CSV ({filteredUsers.length})
           </Button>
         </div>
 
+        {/* Statistics Dashboard */}
+        {!loading && (
+          <AdminUserStats
+            totalUsers={stats.totalUsers}
+            activeUsers={stats.activeUsers}
+            inactiveUsers={stats.inactiveUsers}
+            totalGyms={stats.totalGyms}
+            roleDistribution={stats.roleDistribution}
+            gymDistribution={stats.gymDistribution}
+          />
+        )}
+
+        {/* Filters */}
+        <AdminUserFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          gyms={gyms}
+          cities={cities}
+          onClearFilters={clearFilters}
+        />
+
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Lista Utenti ({filteredUsers.length})
-            </CardTitle>
-            <CardDescription>
-              Visualizza e gestisci tutti gli utenti registrati
-            </CardDescription>
-            
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca per nome o telefono..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
+            <CardTitle>Utenti Registrati ({filteredUsers.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Telefono</TableHead>
-                  <TableHead>Ruolo</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead>Registrato</TableHead>
-                  <TableHead>Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Caricamento utenti...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      {user.first_name} {user.last_name}
-                    </TableCell>
-                    <TableCell>{user.phone || '-'}</TableCell>
-                    <TableCell>
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? "default" : "secondary"}>
-                        {user.is_active ? 'Attivo' : 'Inattivo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString('it-IT')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                         <Button size="sm" variant="outline">
-                           <Edit className="h-3 w-3" />
-                         </Button>
-                         <RoleAssignmentDialog
-                           userId={user.id}
-                           userName={`${user.first_name} ${user.last_name}`}
-                           currentRole={user.role}
-                           onRoleAssigned={loadUsers}
-                         />
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-medium">
+                        {user.first_name.charAt(0).toUpperCase()}{user.last_name.charAt(0).toUpperCase()}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{user.first_name} {user.last_name}</h4>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{user.email}</span>
+                          </div>
+                          {user.phone && (
+                            <span>{user.phone}</span>
+                          )}
+                          {user.city && (
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{user.city}</span>
+                            </div>
+                          )}
+                        </div>
+                        {user.gym_name && (
+                          <div className="text-xs text-primary">
+                            📍 {user.gym_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right space-y-1">
+                        <Badge className={getRoleColor(user.role)}>
+                          {getRoleLabel(user.role)}
+                        </Badge>
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                          <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-success' : 'bg-destructive'}`} />
+                          <span>{user.is_active ? 'Attivo' : 'Inattivo'}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(user.created_at).toLocaleDateString('it-IT')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <RoleAssignmentDialog 
+                          userId={user.user_id}
+                          userName={`${user.first_name} ${user.last_name}`}
+                          currentRole={user.role}
+                          onRoleAssigned={loadData}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+                {filteredUsers.length === 0 && !loading && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      {Object.values(filters).some(v => v) ? 
+                        'Nessun utente corrisponde ai filtri selezionati' : 
+                        'Nessun utente trovato'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -4,10 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { useAppData } from '@/contexts/AppDataContext';
 import { CourseParticipants } from '@/components/admin/CourseParticipants';
-import { CourseAnalytics } from '@/components/admin/CourseAnalytics';
 import { CourseScheduleDisplay } from '@/components/admin/CourseScheduleDisplay';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Edit,
   Users,
@@ -21,8 +20,50 @@ import {
 
 const AdminCourseDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { getCourseById } = useAppData();
-  const course = getCourseById(id!);
+  const [course, setCourse] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (id) {
+      loadCourse();
+    }
+  }, [id]);
+
+  const loadCourse = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          instructor:instructors!courses_instructor_id_fkey (
+            profiles:user_id (
+              first_name,
+              last_name
+            )
+          ),
+          course_categories (
+            name
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setCourse(data);
+    } catch (error) {
+      console.error('Error loading course:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Caricamento corso...</p>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -31,6 +72,10 @@ const AdminCourseDetail = () => {
       </div>
     );
   }
+
+  const instructorName = course.instructor?.profiles ? 
+    `${course.instructor.profiles.first_name} ${course.instructor.profiles.last_name}` : 
+    'Istruttore non assegnato';
 
   return (
     <div className="space-y-6">
@@ -47,7 +92,7 @@ const AdminCourseDetail = () => {
               {course.name}
             </h1>
             <p className="text-muted-foreground">
-              Istruttore: {course.instructor}
+              Istruttore: {instructorName}
             </p>
           </div>
         </div>
@@ -68,10 +113,10 @@ const AdminCourseDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {course.currentParticipants}/{course.maxParticipants}
+              0/{course.max_participants}
             </div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((course.currentParticipants / course.maxParticipants) * 100)}% occupazione
+              0% occupazione
             </p>
           </CardContent>
         </Card>
@@ -82,7 +127,7 @@ const AdminCourseDetail = () => {
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{course.price}</div>
+            <div className="text-2xl font-bold">€{course.price_per_session || 0}</div>
             <p className="text-xs text-muted-foreground">
               Per lezione
             </p>
@@ -95,7 +140,7 @@ const AdminCourseDetail = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{course.duration}</div>
+            <div className="text-2xl font-bold">{course.duration_minutes}</div>
             <p className="text-xs text-muted-foreground">
               Minuti per lezione
             </p>
@@ -109,7 +154,11 @@ const AdminCourseDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              <Badge variant="secondary">{course.level}</Badge>
+              <Badge variant="secondary">
+                {course.difficulty_level === 1 ? 'Principiante' : 
+                 course.difficulty_level === 2 ? 'Intermedio' : 
+                 course.difficulty_level === 3 ? 'Avanzato' : 'Non specificato'}
+              </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
               Difficoltà corso
@@ -133,22 +182,28 @@ const AdminCourseDetail = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium mb-1">Categoria</h4>
-                <Badge variant="outline">{course.category}</Badge>
+                <Badge variant="outline">{course.course_categories?.name || 'Senza categoria'}</Badge>
               </div>
               <div>
                 <h4 className="font-medium mb-1">Livello</h4>
-                <Badge variant="secondary">{course.level}</Badge>
+                <Badge variant="secondary">
+                  {course.difficulty_level === 1 ? 'Principiante' : 
+                   course.difficulty_level === 2 ? 'Intermedio' : 
+                   course.difficulty_level === 3 ? 'Avanzato' : 'Non specificato'}
+                </Badge>
               </div>
             </div>
 
-            <div>
-              <h4 className="font-medium mb-2">Benefici</h4>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                {course.benefits.map((benefit, index) => (
-                  <li key={index}>{benefit}</li>
-                ))}
-              </ul>
-            </div>
+            {course.benefits && (
+              <div>
+                <h4 className="font-medium mb-2">Benefici</h4>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  {course.benefits.map((benefit: string, index: number) => (
+                    <li key={index}>{benefit}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -157,19 +212,16 @@ const AdminCourseDetail = () => {
             <CardTitle>Programma Settimanale</CardTitle>
           </CardHeader>
           <CardContent>
-            <CourseScheduleDisplay schedule={course.schedule} />
+            <p className="text-sm text-muted-foreground">
+              Gestione orari corso tramite sezione dedicata
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Analytics and Participants */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <CourseAnalytics courseId={course.id} />
-        </div>
-        <div>
-          <CourseParticipants courseId={course.id} />
-        </div>
+      {/* Course Participants */}
+      <div>
+        <CourseParticipants courseId={course.id} />
       </div>
     </div>
   );

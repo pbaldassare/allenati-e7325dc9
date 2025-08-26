@@ -101,19 +101,11 @@ export interface Order {
 }
 
 interface AppDataContextType {
-  // Courses
-  courses: Course[];
-  getCourseById: (id: string) => Course | undefined;
-  bookCourse: (courseId: string, date: string, time: string) => Promise<boolean>;
-  cancelBooking: (bookingId: string) => boolean;
-  
   // Bookings
   bookings: Booking[];
   getUserBookings: (userId: string) => Booking[];
-  
-  // Subscriptions
-  subscriptions: Subscription[];
-  
+  bookCourse: (courseId: string, date: string, time: string) => Promise<boolean>;
+  cancelBooking: (bookingId: string) => boolean;
   
   // Notifications
   notifications: Notification[];
@@ -121,8 +113,7 @@ interface AppDataContextType {
   markNotificationAsRead: (notificationId: string) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
   
-  // Shop
-  products: Product[];
+  // Shop (localStorage only)
   cart: CartItem[];
   addToCart: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
@@ -130,99 +121,13 @@ interface AppDataContextType {
   clearCart: () => void;
   orders: Order[];
   createOrder: (shippingAddress: string) => string;
-  
-  // Analytics & Admin
-  getAnalytics: () => any;
-  getAllUsers: () => any[];
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 
-// Initialize fake data
-const initializeFakeData = () => {
-  // Courses - Empty array since we're using real data from Supabase
-  const FAKE_COURSES: Course[] = [];
-
-  // Subscriptions
-  const FAKE_SUBSCRIPTIONS: Subscription[] = [
-    {
-      id: '1',
-      name: 'Trial',
-      description: 'Prova la palestra per 30 giorni',
-      price: 0,
-      credits: 5,
-      duration: 30,
-      features: ['5 ingressi', 'Accesso base', 'App mobile'],
-      isPopular: false,
-      maxBookingsPerDay: 1,
-      accessLevel: ['basic']
-    },
-    {
-      id: '2',
-      name: 'Basic',
-      description: 'Piano mensile per principianti',
-      price: 39,
-      credits: 20,
-      duration: 30,
-      features: ['20 ingressi/mese', 'Tutti i corsi base', 'App mobile', 'Spogliatoi'],
-      isPopular: false,
-      maxBookingsPerDay: 2,
-      accessLevel: ['basic', 'intermediate']
-    },
-    {
-      id: '3',
-      name: 'Premium',
-      description: 'Piano completo con tutti i vantaggi',
-      price: 79,
-      credits: 50,
-      duration: 30,
-      features: ['Ingressi illimitati', 'Tutti i corsi', 'Personal trainer', 'Spa access', 'Priorità prenotazioni'],
-      isPopular: true,
-      maxBookingsPerDay: 5,
-      accessLevel: ['basic', 'intermediate', 'advanced']
-    }
-  ];
-
-
-  // Products
-  const FAKE_PRODUCTS: Product[] = [
-    {
-      id: '1',
-      name: 'Protein Whey Premium',
-      description: 'Proteine del siero di latte di alta qualità per il recupero muscolare',
-      price: 49.99,
-      originalPrice: 59.99,
-      category: 'Integratori',
-      brand: 'FitNutrition',
-      images: ['/api/placeholder/300/300'],
-      inStock: 25,
-      rating: 4.8,
-      reviews: 124,
-      tags: ['proteine', 'recupero', 'muscoli'],
-      isNew: false,
-      isFeatured: true
-    },
-    {
-      id: '2',
-      name: 'Tappetino Yoga Premium',
-      description: 'Tappetino antiscivolo per yoga e pilates, eco-friendly',
-      price: 34.99,
-      category: 'Accessori',
-      brand: 'YogaLife',
-      images: ['/api/placeholder/300/300'],
-      inStock: 15,
-      rating: 4.6,
-      reviews: 89,
-      tags: ['yoga', 'pilates', 'eco-friendly'],
-      isNew: true,
-      isFeatured: false
-    }
-  ];
-
+// Initialize minimal data for localStorage persistence only
+const initializeLocalData = () => {
   return {
-    courses: FAKE_COURSES,
-    subscriptions: FAKE_SUBSCRIPTIONS,
-    products: FAKE_PRODUCTS,
     bookings: JSON.parse(localStorage.getItem('app_bookings') || '[]'),
     notifications: JSON.parse(localStorage.getItem('app_notifications') || '[]'),
     cart: JSON.parse(localStorage.getItem('app_cart') || '[]'),
@@ -231,7 +136,7 @@ const initializeFakeData = () => {
 };
 
 export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [data, setData] = useState(() => initializeFakeData());
+  const [data, setData] = useState(() => initializeLocalData());
 
   // Save to localStorage when data changes
   useEffect(() => {
@@ -251,14 +156,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [data.orders]);
 
 
-  const getCourseById = (id: string) => {
-    return data.courses.find(course => course.id === id);
-  };
-
   const bookCourse = async (courseId: string, date: string, time: string): Promise<boolean> => {
-    const course = getCourseById(courseId);
-    if (!course) return false;
-
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -268,20 +166,15 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       courseId,
       date,
       time,
-      status: course.currentParticipants >= course.maxParticipants ? 'waitlist' : 'confirmed',
-      creditsUsed: course.requiredCredits,
+      status: 'confirmed',
+      creditsUsed: 1,
       pointsEarned: 10,
       createdAt: new Date().toISOString()
     };
 
     setData(prev => ({
       ...prev,
-      bookings: [...prev.bookings, booking],
-      courses: prev.courses.map(c => 
-        c.id === courseId && booking.status === 'confirmed'
-          ? { ...c, currentParticipants: c.currentParticipants + 1 }
-          : c
-      )
+      bookings: [...prev.bookings, booking]
     }));
 
     return true;
@@ -295,11 +188,6 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       ...prev,
       bookings: prev.bookings.map(b => 
         b.id === bookingId ? { ...b, status: 'cancelled' as const } : b
-      ),
-      courses: prev.courses.map(c => 
-        c.id === booking.courseId && booking.status === 'confirmed'
-          ? { ...c, currentParticipants: Math.max(0, c.currentParticipants - 1) }
-          : c
       )
     }));
 
@@ -392,8 +280,8 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       userId: currentUser.id || '1',
       items: [...data.cart],
       total: data.cart.reduce((sum, item) => {
-        const product = data.products.find(p => p.id === item.productId);
-        return sum + (product?.price || 0) * item.quantity;
+        // Simplified without products reference since we removed fake products
+        return sum + 10 * item.quantity; // Fixed price for simplicity
       }, 0),
       status: 'pending',
       shippingAddress,
@@ -410,60 +298,23 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     return orderId;
   };
 
-  const getAnalytics = () => {
-    return {
-      totalUsers: 150,
-      activeSubscriptions: 98,
-      totalBookings: data.bookings.length,
-      revenue: 15420,
-      popularCourses: data.courses.slice(0, 3),
-      recentActivity: data.bookings.slice(-10)
-    };
-  };
-
-  const getAllUsers = () => {
-    return [
-      {
-        id: '1',
-        name: 'Mario Rossi',
-        email: 'admin@fitapp.com',
-        subscription: 'Premium',
-        joinDate: '2023-01-15',
-        status: 'active'
-      },
-      {
-        id: '2',
-        name: 'Giulia Bianchi',
-        email: 'user@fitapp.com',
-        subscription: 'Basic',
-        joinDate: '2024-01-15',
-        status: 'active'
-      }
-    ];
-  };
 
   const value: AppDataContextType = {
-    courses: data.courses,
-    getCourseById,
-    bookCourse,
-    cancelBooking,
     bookings: data.bookings,
     getUserBookings,
-    subscriptions: data.subscriptions,
+    bookCourse,
+    cancelBooking,
     notifications: data.notifications,
     getUserNotifications,
     markNotificationAsRead,
     addNotification,
-    products: data.products,
     cart: data.cart,
     addToCart,
     removeFromCart,
     updateCartQuantity,
     clearCart,
     orders: data.orders,
-    createOrder,
-    getAnalytics,
-    getAllUsers
+    createOrder
   };
 
   return (
