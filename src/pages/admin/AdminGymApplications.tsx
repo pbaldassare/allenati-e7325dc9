@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X, Eye, Clock, UserCheck, UserX } from 'lucide-react';
+import { Check, X, Eye, Clock, UserCheck, UserX, MapPin, Phone, Mail, Globe, Building2, MessageSquare, Calendar, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 interface GymApplication {
   id: string;
@@ -208,11 +209,26 @@ export const AdminGymApplications = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="w-3 h-3 mr-1" />In attesa</Badge>;
+        return (
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 font-medium">
+            <Clock className="w-3 h-3 mr-1" />
+            In attesa
+          </Badge>
+        );
       case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><UserCheck className="w-3 h-3 mr-1" />Approvata</Badge>;
+        return (
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-medium">
+            <UserCheck className="w-3 h-3 mr-1" />
+            Approvata
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200"><UserX className="w-3 h-3 mr-1" />Rifiutata</Badge>;
+        return (
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-medium">
+            <UserX className="w-3 h-3 mr-1" />
+            Rifiutata
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -246,130 +262,206 @@ export const AdminGymApplications = () => {
 
       <div className="grid gap-6">
         {applications.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16">
               <div className="text-muted-foreground text-center">
-                <div className="text-4xl mb-4">📋</div>
-                <h3 className="text-lg font-medium">Nessuna candidatura trovata</h3>
-                <p className="text-sm mt-1">Non ci sono candidature da recensire al momento</p>
+                <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-semibold mb-2">Nessuna candidatura trovata</h3>
+                <p className="text-sm">Non ci sono candidature da recensire al momento</p>
               </div>
             </CardContent>
           </Card>
         ) : (
           applications.map((application) => (
-            <Card key={application.id}>
-              <CardHeader>
+            <Card key={application.id} className="overflow-hidden hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20">
+              <CardHeader className="bg-gradient-to-r from-background to-muted/30">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {application.gym_name}
-                      {getStatusBadge(application.status)}
-                    </CardTitle>
-                    <CardDescription>
-                      {application.profiles ? (
-                        <>
-                          Candidatura di {application.profiles.first_name} {application.profiles.last_name}
-                          {application.profiles.phone && ` • ${application.profiles.phone}`}
-                        </>
-                      ) : (
-                        <>
-                          Candidatura anonima
-                          {application.applicant_email && ` • ${application.applicant_email}`}
-                        </>
-                      )}
-                    </CardDescription>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {application.gym_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-bold">{application.gym_name}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-1">
+                          {application.profiles ? (
+                            <>
+                              <User className="w-4 h-4" />
+                              {application.profiles.first_name} {application.profiles.last_name}
+                              {application.profiles.phone && (
+                                <>
+                                  <span className="text-muted-foreground">•</span>
+                                  <Phone className="w-3 h-3" />
+                                  {application.profiles.phone}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-4 h-4" />
+                              {application.applicant_email || 'Candidatura anonima'}
+                            </>
+                          )}
+                        </CardDescription>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(application.created_at).toLocaleDateString('it-IT')}
+                  <div className="flex flex-col items-end gap-2">
+                    {getStatusBadge(application.status)}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(application.created_at).toLocaleDateString('it-IT', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium">Indirizzo</p>
-                    <p className="text-sm text-muted-foreground">
-                      {application.gym_address}, {application.gym_city}
-                      {application.gym_postal_code && ` ${application.gym_postal_code}`}
-                    </p>
+              
+              <CardContent className="p-6">
+                {/* Location and Contact Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-5 h-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="font-medium text-sm">Ubicazione</p>
+                        <p className="text-sm text-muted-foreground">
+                          {application.gym_address}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {application.gym_city}
+                          {application.gym_postal_code && `, ${application.gym_postal_code}`}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  {application.gym_phone && (
-                    <div>
-                      <p className="text-sm font-medium">Telefono</p>
-                      <p className="text-sm text-muted-foreground">{application.gym_phone}</p>
-                    </div>
-                  )}
-                  {application.gym_email && (
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{application.gym_email}</p>
-                    </div>
-                  )}
-                  {application.gym_website && (
-                    <div>
-                      <p className="text-sm font-medium">Sito Web</p>
-                      <p className="text-sm text-muted-foreground">{application.gym_website}</p>
-                    </div>
-                  )}
+
+                  <div className="space-y-4">
+                    {application.gym_phone && (
+                      <div className="flex items-center gap-3">
+                        <Phone className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="font-medium text-sm">Telefono</p>
+                          <p className="text-sm text-muted-foreground">{application.gym_phone}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {application.gym_email && (
+                      <div className="flex items-center gap-3">
+                        <Mail className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="font-medium text-sm">Email</p>
+                          <p className="text-sm text-muted-foreground">{application.gym_email}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {application.gym_website && (
+                      <div className="flex items-center gap-3">
+                        <Globe className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="font-medium text-sm">Sito Web</p>
+                          <a 
+                            href={application.gym_website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {application.gym_website}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {application.gym_description && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium">Descrizione</p>
-                    <p className="text-sm text-muted-foreground">{application.gym_description}</p>
-                  </div>
-                )}
+                {(application.gym_description || application.applicant_message) && (
+                  <>
+                    <Separator className="mb-6" />
+                    
+                    {application.gym_description && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Building2 className="w-4 h-4 text-primary" />
+                          <h4 className="font-medium">Descrizione Palestra</h4>
+                        </div>
+                        <div className="bg-muted/30 rounded-lg p-4">
+                          <p className="text-sm leading-relaxed">{application.gym_description}</p>
+                        </div>
+                      </div>
+                    )}
 
-                {application.applicant_message && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium">Messaggio del candidato</p>
-                    <p className="text-sm text-muted-foreground">{application.applicant_message}</p>
-                  </div>
+                    {application.applicant_message && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MessageSquare className="w-4 h-4 text-primary" />
+                          <h4 className="font-medium">Messaggio del Candidato</h4>
+                        </div>
+                        <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
+                          <p className="text-sm leading-relaxed">{application.applicant_message}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {application.status === 'pending' && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleApprove(application)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Check className="mr-2 h-4 w-4" />
-                      Approva
-                    </Button>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50">
-                          <X className="mr-2 h-4 w-4" />
-                          Rifiuta
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Rifiuta candidatura</DialogTitle>
-                          <DialogDescription>
-                            Indica il motivo del rifiuto della candidatura per "{application.gym_name}"
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <Textarea
-                            placeholder="Motivo del rifiuto..."
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                            rows={3}
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleReject(application.id)}
-                              disabled={!rejectionReason.trim()}
-                              variant="destructive"
-                            >
-                              Conferma Rifiuto
-                            </Button>
+                  <>
+                    <Separator className="mb-6" />
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleApprove(application)}
+                        className="bg-success hover:bg-success/90 text-white flex-1"
+                        size="lg"
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Approva Candidatura
+                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="border-destructive/20 text-destructive hover:bg-destructive/10 flex-1"
+                            size="lg"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Rifiuta
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Rifiuta candidatura</DialogTitle>
+                            <DialogDescription>
+                              Indica il motivo del rifiuto della candidatura per "{application.gym_name}"
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <Textarea
+                              placeholder="Motivo del rifiuto..."
+                              value={rejectionReason}
+                              onChange={(e) => setRejectionReason(e.target.value)}
+                              rows={3}
+                              className="resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleReject(application.id)}
+                                disabled={!rejectionReason.trim()}
+                                variant="destructive"
+                                className="flex-1"
+                              >
+                                Conferma Rifiuto
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
