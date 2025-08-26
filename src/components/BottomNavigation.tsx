@@ -11,20 +11,20 @@ interface BottomNavigationProps {
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
   const { isAdmin, isGymOwner, isInstructor } = useAuth();
   
-  const tabs = [
-    { id: "home", icon: Home, label: "Home" },
-    { id: "chat", icon: MessageSquare, label: "Chat" },
-    { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
-    // Add gym join button for regular users only
-    ...(!isAdmin && !isGymOwner && !isInstructor ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
-    ...(isAdmin
-      ? [{ id: "admin", icon: Settings, label: "Admin" }]
-      : isGymOwner
-      ? [{ id: "owner", icon: Settings, label: "Owner" }]
-      : isInstructor
-      ? [{ id: "instructor", icon: Settings, label: "Istruttore" }]
-      : [{ id: "profile", icon: User, label: "Profilo" }]),
-  ];
+  const tabs = isAdmin
+    ? [{ id: "admin", icon: Settings, label: "Admin" }]
+    : [
+        { id: "home", icon: Home, label: "Home" },
+        { id: "chat", icon: MessageSquare, label: "Chat" },
+        { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
+        // Add gym join button for regular users only
+        ...(!isGymOwner && !isInstructor ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
+        ...(isGymOwner
+          ? [{ id: "owner", icon: Settings, label: "Owner" }]
+          : isInstructor
+          ? [{ id: "instructor", icon: Settings, label: "Istruttore" }]
+          : [{ id: "profile", icon: User, label: "Profilo" }]),
+      ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-border">

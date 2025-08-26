@@ -15,12 +15,10 @@ export const AdminBreadcrumb = () => {
 
   const breadcrumbMap: { [key: string]: string } = {
     admin: 'Admin',
-    courses: 'Corsi',
-    new: 'Nuovo Corso',
-    edit: 'Modifica',
+    users: 'Utenti',
+    gyms: 'Palestre',
+    'gym-applications': 'Candidature Palestre',
     instructors: 'Istruttori',
-    rooms: 'Sale',
-    schedule: 'Calendario',
   };
 
   const generateBreadcrumbs = () => {
