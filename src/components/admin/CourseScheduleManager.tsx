@@ -5,19 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Clock, MapPin } from 'lucide-react';
-
-interface ScheduleItem {
-  dayOfWeek: number;
-  time: string;
-  roomId: string;
-  date?: string;
-  day?: string;
-}
-
-interface GymRoom {
-  id: string;
-  name: string;
-}
+import type { ScheduleItem, GymRoom } from '@/types/schedule';
 
 interface CourseScheduleManagerProps {
   schedule: ScheduleItem[];
@@ -41,13 +29,14 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   gymRooms,
 }) => {
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(
-    schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }]
+    schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }]
   );
 
   const addScheduleItem = () => {
     const newItem: ScheduleItem = {
       dayOfWeek: 1,
       time: '09:00',
+      end_time: '10:00',
       roomId: '',
       day: 'Lunedì'
     };
@@ -108,7 +97,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
         {scheduleItems.map((item, index) => (
           <Card key={index}>
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div>
                   <label className="text-sm font-medium">Giorno</label>
                   <Select
@@ -131,13 +120,26 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Orario</label>
+                  <label className="text-sm font-medium">Inizio</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="time"
                       value={item.time}
                       onChange={(e) => updateScheduleItem(index, 'time', e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Fine</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="time"
+                      value={item.end_time}
+                      onChange={(e) => updateScheduleItem(index, 'end_time', e.target.value)}
                       className="pl-10"
                     />
                   </div>
@@ -203,7 +205,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
               return (
                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {item.day} alle {item.time}
+                  {item.day} {item.time}-{item.end_time}
                   <MapPin className="h-3 w-3" />
                   {roomName}
                 </Badge>

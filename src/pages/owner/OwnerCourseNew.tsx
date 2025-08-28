@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGym } from '@/contexts/GymContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import type { ScheduleItem, GymRoom, CourseSession } from '@/types/schedule';
 
 interface CourseBasicData {
   id?: string;
@@ -33,23 +34,6 @@ interface CourseBasicData {
   end_date: Date;
 }
 
-interface ScheduleItem {
-  dayOfWeek: number;
-  time: string;
-  roomId: string;
-  day?: string;
-}
-
-interface CourseSession {
-  session_date: string;
-  start_time: string;
-  end_time: string;
-  room_id?: string;
-  room_name?: string;
-  max_participants: number;
-  available_spots: number;
-  status: 'scheduled' | 'cancelled' | 'completed';
-}
 
 interface ScheduleException {
   start_date: Date;
@@ -67,7 +51,7 @@ const OwnerCourseNew: React.FC = () => {
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [sessions, setSessions] = useState<CourseSession[]>([]);
   const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
-  const [gymRooms, setGymRooms] = useState<any[]>([]);
+  const [gymRooms, setGymRooms] = useState<GymRoom[]>([]);
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
@@ -133,7 +117,7 @@ const OwnerCourseNew: React.FC = () => {
           course_id: courseData.id,
           day_of_week: schedule.dayOfWeek,
           start_time: schedule.time,
-          end_time: schedule.time, // We'll need to calculate this
+          end_time: schedule.end_time,
           room_id: schedule.roomId || null,
           room_name: gymRooms.find(r => r.id === schedule.roomId)?.name || null,
         }));
@@ -327,7 +311,7 @@ const OwnerCourseNew: React.FC = () => {
                 schedules={schedules.map(s => ({
                   day_of_week: s.dayOfWeek,
                   start_time: s.time,
-                  end_time: s.time, // TODO: calculate proper end time
+                  end_time: s.end_time,
                   room_id: s.roomId,
                   room_name: gymRooms.find(r => r.id === s.roomId)?.name
                 }))}
