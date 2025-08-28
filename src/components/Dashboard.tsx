@@ -174,7 +174,7 @@ export const Dashboard = () => {
       }
 
       // Create booking
-      const { data, error } = await supabase
+      const { data: booking, error } = await supabase
         .from('bookings')
         .insert({
           user_id: user.id,
@@ -190,6 +190,47 @@ export const Dashboard = () => {
 
       if (error) throw error;
 
+      // Send booking confirmation email
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('user_id', user.id)
+          .single();
+
+        const { data: gym } = await supabase
+          .from('gyms')
+          .select('name, address, city')
+          .eq('id', selectedSession.courses?.gym_id)
+          .single();
+
+        const { data: instructor } = await supabase
+          .from('instructors')
+          .select('first_name, last_name')
+          .eq('id', selectedSession.courses?.instructor_id)
+          .single();
+
+        if (profile && gym && instructor) {
+          await supabase.functions.invoke('send-booking-confirmation', {
+            body: {
+              bookingId: booking.id,
+              userEmail: profile.email,
+              userName: `${profile.first_name} ${profile.last_name}`,
+              courseName: selectedSession.courses?.name || 'Corso',
+              scheduledDate: selectedSession.session_date,
+              scheduledTime: selectedSession.start_time,
+              gymName: gym.name,
+              gymAddress: `${gym.address}, ${gym.city}`,
+              instructorName: `${instructor.first_name} ${instructor.last_name}`,
+              creditsUsed: creditsRequired,
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending booking confirmation email:', emailError);
+        // Don't fail the booking if email fails
+      }
+
       // Deduct credits
       await supabase
         .from('credits_transactions')
@@ -199,7 +240,7 @@ export const Dashboard = () => {
           balance_after: currentCredits - creditsRequired,
           transaction_type: 'booking',
           description: `Prenotazione sessione: ${selectedSession.courses?.name}`,
-          reference_id: data.id
+          reference_id: booking.id
         });
 
       toast({

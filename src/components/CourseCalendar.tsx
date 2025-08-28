@@ -318,13 +318,54 @@ export const CourseCalendar = () => {
         bookingData.session_id = pendingBookingData.sessionId;
       }
 
-      const { data, error } = await supabase
+      const { data: booking, error } = await supabase
         .from('bookings')
         .insert(bookingData)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Send booking confirmation email
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('user_id', user.id)
+          .single();
+
+        const { data: gym } = await supabase
+          .from('gyms')
+          .select('name, address, city')
+          .eq('id', selectedCourse.gym_id)
+          .single();
+
+        const { data: instructor } = await supabase
+          .from('instructors')
+          .select('first_name, last_name')
+          .eq('id', selectedCourse.instructor_id)
+          .single();
+
+        if (profile && gym && instructor) {
+          await supabase.functions.invoke('send-booking-confirmation', {
+            body: {
+              bookingId: booking.id,
+              userEmail: profile.email,
+              userName: `${profile.first_name} ${profile.last_name}`,
+              courseName: selectedCourse.name,
+              scheduledDate: pendingBookingData.scheduledDate,
+              scheduledTime: pendingBookingData.scheduledTime,
+              gymName: gym.name,
+              gymAddress: `${gym.address}, ${gym.city}`,
+              instructorName: `${instructor.first_name} ${instructor.last_name}`,
+              creditsUsed: hasUnlimitedAccess ? 0 : creditsRequired,
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending booking confirmation email:', emailError);
+        // Don't fail the booking if email fails
+      }
 
       // Update session available spots
       if (pendingBookingData.sessionId) {
@@ -350,13 +391,13 @@ export const CourseCalendar = () => {
             balance_after: newBalance,
             transaction_type: 'booking',
             description: `Prenotazione ${selectedCourse?.name}`,
-            reference_id: data.id
+            reference_id: booking.id
           });
 
         if (transactionError) throw transactionError;
       }
 
-      setBookings(prev => [...prev, data]);
+      setBookings(prev => [...prev, booking]);
       toast({
         title: "Prenotazione confermata", 
         description: hasUnlimitedAccess 
