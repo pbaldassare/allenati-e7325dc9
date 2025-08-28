@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -15,6 +16,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -150,7 +152,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
             )}
           </Button>
 
-          <div className="text-center pt-4">
+          <div className="text-center pt-4 space-y-2">
+            <Button
+              variant="link"
+              className="p-0 h-auto text-primary text-base sm:text-sm"
+              onClick={() => setShowForgotPassword(true)}
+              disabled={isLoading}
+            >
+              Password dimenticata?
+            </Button>
+            
             <p className="text-lg sm:text-base text-foreground sm:text-muted-foreground">
               Non hai un account?{' '}
               <Button
@@ -172,6 +183,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
           </div>
         </div>
       </CardContent>
+      
+      <ForgotPasswordDialog 
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </Card>
   );
 };

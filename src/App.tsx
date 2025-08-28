@@ -61,6 +61,7 @@ import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
 import Gyms from "./pages/Gyms";
+import { ResetPassword } from "./pages/ResetPassword";
 
 // Instructor Pages
 import InstructorDashboard from "./pages/instructor/InstructorDashboard";
@@ -89,6 +90,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 
                 {/* Admin Routes with persistent sidebar */}
                 <Route path="/admin" element={<AdminLayout />}>
