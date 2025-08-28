@@ -18,6 +18,7 @@ interface SubscriptionPlan {
   unlimited_access: boolean;
   is_trial: boolean;
   features: string[];
+  gym_id: string | null;
 }
 
 interface CreditsPurchaseProps {
@@ -62,81 +63,28 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
 
     setPurchasing(plan.id);
     try {
-      // Get gym_id from the plan (assuming it's gym-specific)
-      const { data: planData } = await supabase
-        .from('subscription_plans')
-        .select('gym_id')
-        .eq('id', plan.id)
-        .single();
-
-      const gymId = planData?.gym_id;
-
-      // Cancel existing active subscriptions for this gym
-      if (gymId) {
-        await supabase
-          .from('user_subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('user_id', user.id)
-          .eq('gym_id', gymId)
-          .eq('status', 'active');
-      }
-
-      // Create new subscription
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
-
-      const { error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: user.id,
-          plan_id: plan.id,
-          gym_id: gymId,
-          status: 'active',
-          expires_at: expiresAt.toISOString()
+      if (plan.unlimited_access || plan.credits_included > 0) {
+        // This is a subscription plan
+        console.log('Creating subscription payment for plan:', plan.id);
+        
+        const { data, error } = await supabase.functions.invoke('create-subscription-payment', {
+          body: {
+            planId: plan.id,
+            gymId: plan.gym_id // Assuming gym_id is available in plan
+          }
         });
-
-      if (subscriptionError) throw subscriptionError;
-
-      // Add credits ONLY if it's a credit-based plan (not unlimited)
-      if (!plan.unlimited_access && plan.credits_included > 0) {
-        // Get current credits
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        const currentCredits = profile?.current_credits || 0;
-        const newBalance = currentCredits + plan.credits_included;
-
-        // Update user credits
-        await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', user.id);
-
-        // Create transaction
-        const { error: transactionError } = await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user.id,
-            gym_id: gymId,
-            amount: plan.credits_included,
-            balance_after: newBalance,
-            transaction_type: 'purchase',
-            description: `Acquisto ${plan.name}`,
-            reference_id: plan.id
+        
+        if (error) throw error;
+        
+        if (data?.url) {
+          window.open(data.url, '_blank');
+          
+          toast({
+            title: "Pagamento in corso",
+            description: "Ti abbiamo reindirizzato al pagamento. Torna qui dopo aver completato l'acquisto.",
           });
-
-        if (transactionError) throw transactionError;
+        }
       }
-
-      toast({
-        title: "Acquisto completato!",
-        description: plan.unlimited_access 
-          ? `Hai attivato ${plan.name} - Accesso illimitato per ${plan.duration_days} giorni`
-          : `Hai ricevuto ${plan.credits_included} crediti da ${plan.name}`
-      });
 
       onPurchaseComplete?.();
     } catch (error) {

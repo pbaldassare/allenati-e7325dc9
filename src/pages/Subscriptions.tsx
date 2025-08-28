@@ -123,77 +123,33 @@ export default function Subscriptions() {
     setChanging(plan.id);
 
     try {
-      // Disattiva abbonamenti attivi per questo utente e palestra
-      const { error: cancelError } = await supabase
-        .from('user_subscriptions')
-        .update({ status: 'cancelled' })
-        .eq('user_id', user.id)
-        .eq('gym_id', selectedGym.id)
-        .eq('status', 'active');
-
-      if (cancelError) {
-        console.error('Error cancelling existing subscriptions:', cancelError);
-        throw cancelError;
-      }
-
-      // Calcola date
-      const startsAt = new Date();
-      const expiresAt = new Date();
-      expiresAt.setDate(startsAt.getDate() + plan.duration_days);
-
-      // Crea nuovo abbonamento per la palestra
-      const { error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: user.id,
-          plan_id: plan.id,
-          gym_id: selectedGym.id,
-          status: 'active',
-          starts_at: startsAt.toISOString(),
-          expires_at: expiresAt.toISOString(),
-          auto_renew: true,
-        });
-
-      if (subscriptionError) throw subscriptionError;
-
-      // Aggiungi crediti se inclusi nel piano
-      if (plan.credits_included > 0) {
-        const { data: currentCreditsData } = await supabase
-          .from('gym_credits')
-          .select('credits')
-          .eq('user_id', user.id)
-          .eq('gym_id', selectedGym.id)
-          .single();
-
-        const currentCredits = currentCreditsData?.credits || 0;
-        const newBalance = currentCredits + plan.credits_included;
-
-        // Inserisci transazione per la palestra
-        await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user.id,
-            gym_id: selectedGym.id,
-            amount: plan.credits_included,
-            balance_after: newBalance,
-            transaction_type: 'subscription_purchase',
-            description: `Crediti da abbonamento ${plan.name} - ${selectedGym.name}`,
-          });
-      }
-
-      toast({
-        title: 'Abbonamento attivato!',
-        description: `Il tuo abbonamento "${plan.name}" è ora attivo.`,
+      console.log('Creating subscription payment for plan:', plan.id);
+      
+      const { data, error } = await supabase.functions.invoke('create-subscription-payment', {
+        body: {
+          planId: plan.id,
+          gymId: selectedGym.id
+        }
       });
-
-      // Forza refresh completo dei dati
-      console.log('Forcing data refresh after subscription change');
-      await loadData();
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        // Open Stripe checkout in new tab
+        window.open(data.url, '_blank');
+        
+        toast({
+          title: "Pagamento in corso",
+          description: "Ti abbiamo reindirizzato al pagamento. Torna qui dopo aver completato l'acquisto.",
+        });
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (error) {
-      console.error('Errore nella selezione del piano:', error);
+      console.error('Error creating subscription payment:', error);
       toast({
         title: 'Errore',
-        description: 'Impossibile attivare l\'abbonamento',
+        description: 'Si è verificato un errore durante la creazione del pagamento',
         variant: 'destructive',
       });
     } finally {
