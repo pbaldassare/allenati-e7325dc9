@@ -50,6 +50,7 @@ const courseSchema = z.object({
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
     time: z.string(),
+    end_time: z.string().optional(),
     roomId: z.string().min(1, 'La sala è obbligatoria'),
     date: z.string().optional(),
     day: z.string().optional()
@@ -702,6 +703,7 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
                       schedule={(field.value || []).map(item => ({
                         dayOfWeek: item.dayOfWeek || 1,
                         time: item.time || '09:00',
+                        end_time: item.end_time || '10:00',
                         roomId: item.roomId || '',
                         day: item.day,
                         date: item.date
