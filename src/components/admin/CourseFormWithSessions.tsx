@@ -191,10 +191,11 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
       schedule: course.schedules?.map((s: any) => ({
         dayOfWeek: s.day_of_week || 1,
         time: s.start_time || '09:00',
+        end_time: s.end_time || '10:00',
         roomId: s.room_id || '',
         day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week || 1],
         date: s.date
-      })) || [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
+      })) || [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }],
     } : {
       name: '',
       description: '',
@@ -212,7 +213,7 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       autoGenerateSessions: true,
-      schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
+      schedule: [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }],
     },
   });
 

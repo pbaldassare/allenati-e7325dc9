@@ -104,6 +104,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       schedule: course.schedule?.map(s => ({
         dayOfWeek: s.dayOfWeek,
         time: s.time,
+        end_time: (s as any).end_time || '10:00',
         roomId: s.roomId || '',
         day: s.day,
         date: s.date
@@ -122,7 +123,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       image: '',
       benefits: [],
       requirements: [''],
-      schedule: [{ dayOfWeek: 1, time: '09:00', roomId: '', day: 'Lunedì' }],
+      schedule: [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }],
     },
   });
 
