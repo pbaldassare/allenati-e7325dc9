@@ -60,6 +60,7 @@ import InstructorDashboard from "./pages/instructor/InstructorDashboard";
 import InstructorCourses from "./pages/instructor/InstructorCourses";
 import InstructorParticipants from "./pages/instructor/InstructorParticipants";
 import InstructorSchedule from "./pages/instructor/InstructorSchedule";
+import { PaymentVerification } from "./components/PaymentVerification";
 
 const queryClient = new QueryClient();
 
@@ -143,6 +144,7 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/i-miei-corsi" element={<BookingHistory />} />
                 <Route path="/subscriptions" element={<Subscriptions />} />
+                <Route path="/payment-verification" element={<PaymentVerification />} />
                 <Route path="/gyms" element={<Gyms />} />
                 <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />

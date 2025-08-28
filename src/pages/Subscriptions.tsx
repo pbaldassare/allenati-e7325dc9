@@ -49,6 +49,31 @@ export default function Subscriptions() {
     loadData();
   }, [user, selectedGym]);
 
+  // Auto-refresh data if user just returned from payment
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const cancelled = urlParams.get('cancelled');
+    
+    if (success === 'true') {
+      // Remove query parameters from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Reload data to show updated subscription
+      loadData();
+      toast({
+        title: "Pagamento completato!",
+        description: "Il tuo abbonamento è stato attivato con successo.",
+      });
+    } else if (cancelled === 'true') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      toast({
+        title: "Pagamento annullato",
+        description: "Il pagamento è stato annullato.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const loadData = async () => {
     if (!user || !selectedGym) return;
 

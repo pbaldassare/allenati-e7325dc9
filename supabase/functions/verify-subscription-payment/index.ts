@@ -121,7 +121,7 @@ serve(async (req) => {
 
         // Create new subscription
         const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + planData.duration_months);
+        expiresAt.setDate(expiresAt.getDate() + planData.duration_days);
 
         await supabaseClient
           .from("user_subscriptions")

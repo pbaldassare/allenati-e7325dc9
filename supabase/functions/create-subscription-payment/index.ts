@@ -112,7 +112,7 @@ serve(async (req) => {
         },
       ],
       mode: planData.duration_months > 0 ? "subscription" : "payment",
-      success_url: `${req.headers.get("origin")}/subscriptions?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${req.headers.get("origin")}/payment-verification?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/subscriptions?cancelled=true`,
       metadata: {
         user_id: user.id,
