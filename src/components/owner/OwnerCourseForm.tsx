@@ -67,7 +67,7 @@ const formSchema = z.object({
 
 interface OwnerCourseFormProps {
   mode: 'create' | 'edit';
-  course?: CourseFormData;
+  course?: CourseFormData & { id?: string };
 }
 
 interface Category {
@@ -253,7 +253,18 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
           description: 'Corso creato con successo',
         });
       } else {
-        // Edit mode logic would go here
+        // Edit mode - update existing course
+        if (!course?.id) {
+          throw new Error('Course ID is required for update');
+        }
+
+        const { error } = await supabase
+          .from('courses')
+          .update(courseData)
+          .eq('id', course.id);
+        
+        if (error) throw error;
+        
         toast({
           title: 'Successo',
           description: 'Corso aggiornato con successo',

@@ -51,6 +51,10 @@ import OwnerBookings from "./pages/owner/OwnerBookings";
 import OwnerReports from "./pages/owner/OwnerReports";
 import OwnerChat from "./pages/owner/OwnerChat";
 import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
+import OwnerCourseDetail from "./pages/owner/OwnerCourseDetail";
+import OwnerCourseSchedules from "./pages/owner/OwnerCourseSchedules";
+import OwnerCourseSessions from "./pages/owner/OwnerCourseSessions";
+import OwnerCourseExceptions from "./pages/owner/OwnerCourseExceptions";
 import OwnerStripeSetup from "./pages/owner/OwnerStripeSetup";
 import OwnerProfile from "./pages/owner/OwnerProfile";
 import MedicalCertificate from "./pages/MedicalCertificate";
@@ -126,7 +130,11 @@ const App = () => (
                   <Route path="rooms" element={<OwnerRooms />} />
                   <Route path="courses" element={<OwnerCoursesList />} />
                   <Route path="courses/new" element={<OwnerCourseNew />} />
+                  <Route path="courses/:id" element={<OwnerCourseDetail />} />
                   <Route path="courses/:id/edit" element={<OwnerCourseEdit />} />
+                  <Route path="courses/:id/schedules" element={<OwnerCourseSchedules />} />
+                  <Route path="courses/:id/sessions" element={<OwnerCourseSessions />} />
+                  <Route path="courses/:id/exceptions" element={<OwnerCourseExceptions />} />
                   <Route path="schedule" element={<OwnerSchedule />} />
                   <Route path="bookings" element={<OwnerBookings />} />
                   <Route path="subscriptions" element={<OwnerSubscriptions />} />

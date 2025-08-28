@@ -522,6 +522,10 @@ const OwnerCoursesList: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/owner/courses/${course.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Visualizza
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => navigate(`/owner/courses/${course.id}/edit`)}
                             >
