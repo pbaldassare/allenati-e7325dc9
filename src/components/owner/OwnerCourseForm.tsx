@@ -27,7 +27,7 @@ interface CourseFormData {
   instructor_id: string;
   max_participants: number;
   duration_minutes: number;
-  difficulty_level: string;
+  difficulty_level: number;
   price_per_session: number;
   credits_required: number;
   equipment_needed?: string;
@@ -53,7 +53,7 @@ const formSchema = z.object({
   instructor_id: z.string().min(1, 'Istruttore richiesto'),
   max_participants: z.number().min(1, 'Minimo 1 partecipante'),
   duration_minutes: z.number().min(15, 'Minimo 15 minuti'),
-  difficulty_level: z.enum(['beginner', 'intermediate', 'advanced']),
+  difficulty_level: z.number().min(1).max(3),
   price_per_session: z.number().min(0, 'Prezzo deve essere >= 0'),
   credits_required: z.number().min(0, 'Crediti devono essere >= 0'),
   equipment_needed: z.string().optional(),
@@ -82,7 +82,7 @@ interface Instructor {
   profiles: {
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 interface Room {
@@ -111,7 +111,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
       instructor_id: course?.instructor_id || '',
       max_participants: course?.max_participants || 10,
       duration_minutes: course?.duration_minutes || 60,
-      difficulty_level: course?.difficulty_level || 'beginner',
+      difficulty_level: course?.difficulty_level || 1,
       price_per_session: course?.price_per_session || 0,
       credits_required: course?.credits_required || 1,
       equipment_needed: course?.equipment_needed || '',
@@ -145,18 +145,33 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
 
       if (categoriesError) throw categoriesError;
 
-      // Load instructors for this gym
+      // Load instructors for this gym - using proper join with profiles
       const { data: instructorsData, error: instructorsError } = await supabase
         .from('instructors')
         .select(`
           id,
           user_id,
-          profiles!inner(first_name, last_name)
+          profiles!instructors_user_id_fkey(first_name, last_name)
         `)
         .eq('gym_id', selectedGym.id)
         .eq('is_active', true);
 
-      if (instructorsError) throw instructorsError;
+      if (instructorsError) {
+        console.error('Error loading instructors:', instructorsError);
+        // Fallback: try to get instructors without profiles join
+        const { data: fallbackInstructors } = await supabase
+          .from('instructors')
+          .select('id, user_id')
+          .eq('gym_id', selectedGym.id)
+          .eq('is_active', true);
+        
+        setInstructors((fallbackInstructors || []).map(inst => ({
+          ...inst,
+          profiles: null
+        })));
+      } else {
+        setInstructors(instructorsData || []);
+      }
 
       // Load rooms for this gym
       const { data: roomsData, error: roomsError } = await supabase
@@ -170,7 +185,6 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
 
       // Filter out any items with empty or null IDs
       setCategories((categoriesData || []).filter(cat => cat.id && cat.id.trim() !== ''));
-      setInstructors((instructorsData || []).filter(inst => inst.id && inst.id.trim() !== ''));
       setRooms((roomsData || []).filter(room => room.id && room.id.trim() !== ''));
       
     } catch (error) {
@@ -191,8 +205,21 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
     setLoading(true);
     try {
       const courseData = {
-        ...data,
+        name: data.name,
+        description: data.description,
+        category_id: data.category_id,
+        instructor_id: data.instructor_id,
         gym_id: selectedGym.id,
+        max_participants: data.max_participants,
+        duration_minutes: data.duration_minutes,
+        difficulty_level: data.difficulty_level,
+        price_per_session: data.price_per_session,
+        credits_required: data.credits_required,
+        equipment_needed: data.equipment_needed ? [data.equipment_needed] : null,
+        image_url: data.image_url || null,
+        deadline_hours: data.deadline_hours,
+        reserved_spots: data.reserved_spots,
+        is_active: data.is_active,
         start_date: format(data.start_date, 'yyyy-MM-dd'),
         end_date: format(data.end_date, 'yyyy-MM-dd'),
       };
@@ -334,7 +361,10 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
                         <SelectItem key={instructor.id} value={instructor.id}>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
-                            {instructor.profiles?.first_name} {instructor.profiles?.last_name}
+                            {instructor.profiles?.first_name && instructor.profiles?.last_name 
+                              ? `${instructor.profiles.first_name} ${instructor.profiles.last_name}`
+                              : `Istruttore ${instructor.id.slice(0, 8)}`
+                            }
                           </div>
                         </SelectItem>
                       ))}
@@ -402,16 +432,16 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Livello Difficoltà</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleziona livello" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="beginner">Principiante</SelectItem>
-                        <SelectItem value="intermediate">Intermedio</SelectItem>
-                        <SelectItem value="advanced">Avanzato</SelectItem>
+                        <SelectItem value="1">Principiante</SelectItem>
+                        <SelectItem value="2">Intermedio</SelectItem>
+                        <SelectItem value="3">Avanzato</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
