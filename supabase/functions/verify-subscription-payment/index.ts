@@ -46,11 +46,6 @@ serve(async (req) => {
 
     console.log("Verifying payment for session:", sessionId);
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
-    });
-
     // We need to find which gym's Stripe account this session belongs to
     // First, try to retrieve the session from admin logs
     const { data: logData } = await supabaseClient
@@ -66,21 +61,24 @@ serve(async (req) => {
 
     const gymId = logData.new_data.gym_id;
 
-    // Get gym's Stripe Connect account
+    // Get gym's Stripe credentials
     const { data: gymData, error: gymError } = await supabaseClient
       .from("gyms")
-      .select("stripe_connect_account_id, name")
+      .select("stripe_secret_key, name, stripe_credentials_configured")
       .eq("id", gymId)
       .single();
 
-    if (gymError || !gymData?.stripe_connect_account_id) {
-      throw new Error("Gym Stripe account not found");
+    if (gymError || !gymData?.stripe_secret_key || !gymData.stripe_credentials_configured) {
+      throw new Error("Gym Stripe credentials not found");
     }
 
-    // Retrieve session from the gym's Stripe account
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      stripeAccount: gymData.stripe_connect_account_id,
+    // Initialize Stripe with gym's secret key
+    const stripe = new Stripe(gymData.stripe_secret_key, {
+      apiVersion: "2023-10-16",
     });
+
+    // Retrieve session from the gym's Stripe account
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     console.log("Session status:", session.payment_status);
 

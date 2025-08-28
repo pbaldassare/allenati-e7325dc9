@@ -3,18 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
-import { StripeConnectStatus } from '@/components/ui/StripeConnectStatus';
-import { StripeConnectActions } from '@/components/ui/StripeConnectActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, ExternalLink } from 'lucide-react';
 
 interface GymStripeData {
   id: string;
-  stripe_connect_account_id: string | null;
-  stripe_onboarding_complete: boolean;
-  stripe_charges_enabled: boolean;
-  stripe_payouts_enabled: boolean;
+  stripe_credentials_configured: boolean;
 }
 
 const OwnerDashboard = () => {
@@ -49,10 +44,7 @@ const OwnerDashboard = () => {
             .from('gyms')
             .select(`
               id,
-              stripe_connect_account_id,
-              stripe_onboarding_complete,
-              stripe_charges_enabled,
-              stripe_payouts_enabled
+              stripe_credentials_configured
             `)
             .eq('id', membership.gym_id)
             .single();
@@ -105,18 +97,15 @@ const OwnerDashboard = () => {
         <p className="text-muted-foreground">Riepilogo rapido della tua palestra</p>
       </div>
 
-      {/* Stripe Connect Alert */}
-      {gymStripeData && !gymStripeData.stripe_onboarding_complete && (
+      {/* Stripe Configuration Alert */}
+      {gymStripeData && !gymStripeData.stripe_credentials_configured && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <div className="flex items-center justify-between w-full">
             <div>
-              <div className="font-medium">Configura Stripe Connect</div>
+              <div className="font-medium">Configura le credenziali Stripe</div>
               <AlertDescription className="mt-1">
-                {!gymStripeData.stripe_connect_account_id 
-                  ? "Contatta l'amministratore per creare l'account Stripe Connect."
-                  : "Completa la configurazione Stripe Connect per accettare pagamenti."
-                }
+                Inserisci le tue credenziali Stripe per iniziare ad accettare pagamenti per corsi e abbonamenti.
               </AlertDescription>
             </div>
             <Button 
@@ -151,7 +140,7 @@ const OwnerDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Stripe Connect Card */}
+        {/* Stripe Configuration Card */}
         {gymStripeData && (
           <Card>
             <CardHeader>
@@ -162,8 +151,8 @@ const OwnerDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-sm">
-                {gymStripeData.stripe_onboarding_complete 
-                  ? "Account configurato" 
+                {gymStripeData.stripe_credentials_configured 
+                  ? "Credenziali configurate" 
                   : "Configurazione richiesta"
                 }
               </div>

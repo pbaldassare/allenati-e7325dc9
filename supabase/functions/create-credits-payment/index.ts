@@ -49,7 +49,7 @@ serve(async (req) => {
     // Get gym details
     const { data: gymData, error: gymError } = await supabaseClient
       .from("gyms")
-      .select("stripe_connect_account_id, name")
+      .select("stripe_secret_key, stripe_publishable_key, name, stripe_credentials_configured")
       .eq("id", gymId)
       .single();
 
@@ -57,33 +57,32 @@ serve(async (req) => {
       throw new Error("Gym not found");
     }
 
-    if (!gymData.stripe_connect_account_id) {
-      throw new Error("Gym Stripe Connect account not configured");
+    if (!gymData.stripe_credentials_configured || !gymData.stripe_secret_key) {
+      throw new Error("Gym Stripe credentials not configured");
     }
 
     console.log("Gym details:", gymData);
 
     // Calculate total price
     const totalPrice = creditsAmount * pricePerCredit;
-    const applicationFeeAmount = Math.round(totalPrice * 100 * 0.02); // 2% platform commission in cents
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    // Initialize Stripe with gym's secret key
+    const stripe = new Stripe(gymData.stripe_secret_key, {
       apiVersion: "2023-10-16",
     });
 
     // Check if customer exists for this gym's Stripe account
-    const customers = await stripe.customers.list(
-      { email: user.email, limit: 1 },
-      { stripeAccount: gymData.stripe_connect_account_id }
-    );
+    const customers = await stripe.customers.list({
+      email: user.email, 
+      limit: 1 
+    });
 
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
     }
 
-    // Create checkout session
+    // Create checkout session (no application fees for independent accounts)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -103,18 +102,12 @@ serve(async (req) => {
       mode: "payment",
       success_url: `${req.headers.get("origin")}/shop?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/shop?cancelled=true`,
-      payment_intent_data: {
-        application_fee_amount: applicationFeeAmount,
-        on_behalf_of: gymData.stripe_connect_account_id,
-      },
       metadata: {
         user_id: user.id,
         gym_id: gymId,
         credits_amount: creditsAmount.toString(),
         price_per_credit: pricePerCredit.toString(),
       },
-    }, {
-      stripeAccount: gymData.stripe_connect_account_id,
     });
 
     console.log("Checkout session created:", session.id);
@@ -132,7 +125,6 @@ serve(async (req) => {
           gym_id: gymId,
           credits_amount: creditsAmount,
           total_price: totalPrice,
-          application_fee: applicationFeeAmount / 100,
         },
       });
 

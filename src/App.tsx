@@ -48,7 +48,7 @@ import OwnerBookings from "./pages/owner/OwnerBookings";
 import OwnerReports from "./pages/owner/OwnerReports";
 import OwnerChat from "./pages/owner/OwnerChat";
 import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
-import OwnerStripeConnect from "./pages/owner/OwnerStripeConnect";
+import OwnerStripeSetup from "./pages/owner/OwnerStripeSetup";
 import OwnerProfile from "./pages/owner/OwnerProfile";
 import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
@@ -124,7 +124,7 @@ const App = () => (
                   <Route path="bookings" element={<OwnerBookings />} />
                   <Route path="subscriptions" element={<OwnerSubscriptions />} />
                   <Route path="subscription-plans" element={<OwnerSubscriptionPlans />} />
-                  <Route path="stripe" element={<OwnerStripeConnect />} />
+                  <Route path="stripe" element={<OwnerStripeSetup />} />
                   <Route path="chat" element={<OwnerChat />} />
                   <Route path="reports" element={<OwnerReports />} />
                   <Route path="profile" element={<OwnerProfile />} />

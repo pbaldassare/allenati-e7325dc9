@@ -928,11 +928,9 @@ export type Database = {
           owner_email: string | null
           phone: string | null
           postal_code: string | null
-          stripe_charges_enabled: boolean | null
-          stripe_connect_account_id: string | null
-          stripe_dashboard_url: string | null
-          stripe_onboarding_complete: boolean | null
-          stripe_payouts_enabled: boolean | null
+          stripe_credentials_configured: boolean | null
+          stripe_publishable_key: string | null
+          stripe_secret_key: string | null
           updated_at: string
           website: string | null
         }
@@ -950,11 +948,9 @@ export type Database = {
           owner_email?: string | null
           phone?: string | null
           postal_code?: string | null
-          stripe_charges_enabled?: boolean | null
-          stripe_connect_account_id?: string | null
-          stripe_dashboard_url?: string | null
-          stripe_onboarding_complete?: boolean | null
-          stripe_payouts_enabled?: boolean | null
+          stripe_credentials_configured?: boolean | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -972,11 +968,9 @@ export type Database = {
           owner_email?: string | null
           phone?: string | null
           postal_code?: string | null
-          stripe_charges_enabled?: boolean | null
-          stripe_connect_account_id?: string | null
-          stripe_dashboard_url?: string | null
-          stripe_onboarding_complete?: boolean | null
-          stripe_payouts_enabled?: boolean | null
+          stripe_credentials_configured?: boolean | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
           updated_at?: string
           website?: string | null
         }

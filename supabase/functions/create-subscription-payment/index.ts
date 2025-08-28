@@ -49,7 +49,7 @@ serve(async (req) => {
     // Get gym and subscription plan details
     const { data: gymData, error: gymError } = await supabaseClient
       .from("gyms")
-      .select("stripe_connect_account_id, name")
+      .select("stripe_secret_key, stripe_publishable_key, name, stripe_credentials_configured")
       .eq("id", gymId)
       .single();
 
@@ -57,8 +57,8 @@ serve(async (req) => {
       throw new Error("Gym not found");
     }
 
-    if (!gymData.stripe_connect_account_id) {
-      throw new Error("Gym Stripe Connect account not configured");
+    if (!gymData.stripe_credentials_configured || !gymData.stripe_secret_key) {
+      throw new Error("Gym Stripe credentials not configured");
     }
 
     const { data: planData, error: planError } = await supabaseClient
@@ -74,26 +74,23 @@ serve(async (req) => {
 
     console.log("Plan details:", planData);
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    // Initialize Stripe with gym's secret key
+    const stripe = new Stripe(gymData.stripe_secret_key, {
       apiVersion: "2023-10-16",
     });
 
     // Check if customer exists for this gym's Stripe account
-    const customers = await stripe.customers.list(
-      { email: user.email, limit: 1 },
-      { stripeAccount: gymData.stripe_connect_account_id }
-    );
+    const customers = await stripe.customers.list({
+      email: user.email, 
+      limit: 1 
+    });
 
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
     }
 
-    // Calculate application fee (2% platform commission)
-    const applicationFeeAmount = Math.round(planData.price * 100 * 0.02); // 2% in cents
-
-    // Create checkout session
+    // Create checkout session (no application fees for independent accounts)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -117,21 +114,11 @@ serve(async (req) => {
       mode: planData.duration_months > 0 ? "subscription" : "payment",
       success_url: `${req.headers.get("origin")}/subscriptions?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/subscriptions?cancelled=true`,
-      payment_intent_data: planData.duration_months === 0 ? {
-        application_fee_amount: applicationFeeAmount,
-        on_behalf_of: gymData.stripe_connect_account_id,
-      } : undefined,
-      subscription_data: planData.duration_months > 0 ? {
-        application_fee_percent: 2,
-        on_behalf_of: gymData.stripe_connect_account_id,
-      } : undefined,
       metadata: {
         user_id: user.id,
         plan_id: planId,
         gym_id: gymId,
       },
-    }, {
-      stripeAccount: gymData.stripe_connect_account_id,
     });
 
     console.log("Checkout session created:", session.id);
@@ -148,7 +135,6 @@ serve(async (req) => {
           session_id: session.id,
           gym_id: gymId,
           amount: planData.price,
-          application_fee: applicationFeeAmount / 100,
         },
       });
 
