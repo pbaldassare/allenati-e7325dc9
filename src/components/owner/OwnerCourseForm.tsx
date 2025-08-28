@@ -145,32 +145,49 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
 
       if (categoriesError) throw categoriesError;
 
-      // Load instructors for this gym - using proper join with profiles
+      // Load instructors for this gym - using simple query first then fetch profiles separately
       const { data: instructorsData, error: instructorsError } = await supabase
         .from('instructors')
-        .select(`
-          id,
-          user_id,
-          profiles!instructors_user_id_fkey(first_name, last_name)
-        `)
+        .select('id, user_id')
         .eq('gym_id', selectedGym.id)
         .eq('is_active', true);
 
       if (instructorsError) {
         console.error('Error loading instructors:', instructorsError);
-        // Fallback: try to get instructors without profiles join
-        const { data: fallbackInstructors } = await supabase
-          .from('instructors')
-          .select('id, user_id')
-          .eq('gym_id', selectedGym.id)
-          .eq('is_active', true);
+        setInstructors([]);
+      } else if (instructorsData && instructorsData.length > 0) {
+        // Get user IDs from instructors
+        const userIds = instructorsData.map(inst => inst.user_id);
         
-        setInstructors((fallbackInstructors || []).map(inst => ({
-          ...inst,
-          profiles: null
-        })));
+        // Fetch profiles separately
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Error loading profiles:', profilesError);
+          // Set instructors without profiles
+          setInstructors(instructorsData.map(inst => ({
+            ...inst,
+            profiles: null
+          })));
+        } else {
+          // Map profiles to instructors
+          const instructorsWithProfiles = instructorsData.map(inst => {
+            const profile = profilesData?.find(p => p.user_id === inst.user_id);
+            return {
+              ...inst,
+              profiles: profile ? {
+                first_name: profile.first_name || '',
+                last_name: profile.last_name || ''
+              } : null
+            };
+          });
+          setInstructors(instructorsWithProfiles);
+        }
       } else {
-        setInstructors(instructorsData || []);
+        setInstructors([]);
       }
 
       // Load rooms for this gym
