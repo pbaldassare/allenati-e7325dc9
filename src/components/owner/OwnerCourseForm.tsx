@@ -68,6 +68,7 @@ const formSchema = z.object({
 interface OwnerCourseFormProps {
   mode: 'create' | 'edit';
   course?: CourseFormData & { id?: string };
+  onCourseCreated?: (courseData: CourseFormData & { id: string }) => void;
 }
 
 interface Category {
@@ -90,7 +91,7 @@ interface Room {
   name: string;
 }
 
-export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }) => {
+export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, onCourseCreated }) => {
   const { selectedGym } = useGym();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -242,11 +243,38 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course }
       };
 
       if (mode === 'create') {
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
           .from('courses')
-          .insert(courseData);
+          .insert(courseData)
+          .select()
+          .single();
         
         if (error) throw error;
+        
+        // Call the callback if provided
+        if (onCourseCreated && insertedData) {
+          onCourseCreated({
+            id: insertedData.id,
+            name: data.name,
+            description: data.description,
+            category_id: data.category_id,
+            instructor_id: data.instructor_id,
+            max_participants: data.max_participants,
+            duration_minutes: data.duration_minutes,
+            difficulty_level: data.difficulty_level,
+            price_per_session: data.price_per_session,
+            credits_required: data.credits_required,
+            equipment_needed: data.equipment_needed,
+            image_url: data.image_url,
+            deadline_hours: data.deadline_hours,
+            reserved_spots: data.reserved_spots,
+            is_active: data.is_active,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            schedules: []
+          });
+          return; // Don't navigate automatically
+        }
         
         toast({
           title: 'Successo',
