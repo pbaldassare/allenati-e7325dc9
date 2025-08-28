@@ -59,10 +59,11 @@ const OwnerDashboard = () => {
           .from('user_gym_memberships')
           .select('id', { count: 'exact', head: true });
 
-        // Get courses for this gym
+        // Get courses for this gym only
         const { data: courses } = await supabase
           .from('courses')
-          .select('id');
+          .select('id')
+          .eq('gym_id', membership?.gym_id);
 
         let bookingsCnt: number | null = 0;
         if (courses && courses.length > 0) {
