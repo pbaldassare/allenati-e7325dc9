@@ -22,6 +22,9 @@ import AdminCoursesList from "./pages/admin/AdminCoursesList";
 import AdminCourseNew from "./pages/admin/AdminCourseNew";
 import AdminCourseDetail from "./pages/admin/AdminCourseDetail";
 import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
+import AdminCourseSchedules from "./pages/admin/AdminCourseSchedules";
+import AdminCourseSessions from "./pages/admin/AdminCourseSessions";
+import AdminCourseExceptions from "./pages/admin/AdminCourseExceptions";
 
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
@@ -92,6 +95,9 @@ const App = () => (
                   <Route path="courses/new" element={<AdminCourseNew />} />
                   <Route path="courses/:id" element={<AdminCourseDetail />} />
                   <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
+                  <Route path="courses/:id/schedules" element={<AdminCourseSchedules />} />
+                  <Route path="courses/:id/sessions" element={<AdminCourseSessions />} />
+                  <Route path="courses/:id/exceptions" element={<AdminCourseExceptions />} />
                   
                   {/* User Management */}
                   <Route path="users" element={<AdminUsers />} />

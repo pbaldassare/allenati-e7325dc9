@@ -209,11 +209,34 @@ const AdminCourseDetail = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Programma Settimanale</CardTitle>
+            <CardTitle>Gestione Corso</CardTitle>
+            <CardDescription>
+              Accedi alle diverse sezioni di gestione del corso
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Gestione orari corso tramite sezione dedicata
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/admin/courses/${course.id}/schedules`}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Orari
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/admin/courses/${course.id}/sessions`}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Sessioni
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/admin/courses/${course.id}/exceptions`}>
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Eccezioni
+                </Link>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Gestisci separatamente orari settimanali, sessioni generate ed eccezioni del corso
             </p>
           </CardContent>
         </Card>
