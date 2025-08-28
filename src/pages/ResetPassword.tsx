@@ -18,18 +18,35 @@ export const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have the necessary parameters
+    // Check if we have the necessary parameters for password reset
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
+    const type = searchParams.get('type');
     
-    if (!accessToken || !refreshToken) {
+    if (!accessToken || !refreshToken || type !== 'recovery') {
       toast({
         title: "Link non valido",
         description: "Il link per il reset della password non è valido o è scaduto",
         variant: "destructive"
       });
       navigate('/auth');
+      return;
     }
+
+    // Set the session with the tokens from the URL for password reset
+    supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    }).then(({ error }) => {
+      if (error) {
+        toast({
+          title: "Errore di autenticazione",
+          description: "Non è possibile autenticare la sessione per il reset password",
+          variant: "destructive"
+        });
+        navigate('/auth');
+      }
+    });
   }, [searchParams, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

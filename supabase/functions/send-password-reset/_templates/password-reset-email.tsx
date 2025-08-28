@@ -9,6 +9,7 @@ import {
   Section,
   Text,
   Img,
+  Hr,
 } from "npm:@react-email/components@0.0.22";
 import * as React from "npm:react@18.3.1";
 
@@ -23,7 +24,7 @@ export const PasswordResetEmail = ({
 }: PasswordResetEmailProps) => (
   <Html>
     <Head />
-    <Preview>Reset della tua password su Allenati Sport</Preview>
+    <Preview>🔐 Reset Password Allenati Sport - Azione richiesta</Preview>
     <Body style={main}>
       <Container style={container}>
         {/* Header with logo */}
@@ -37,40 +38,46 @@ export const PasswordResetEmail = ({
 
         {/* Main content */}
         <Section style={content}>
-          <Heading style={h1}>Reset della Password</Heading>
+          <Heading style={h1}>🔐 Reset della Password</Heading>
           
           <Text style={text}>
-            Ciao,
+            <strong>Ciao!</strong>
           </Text>
           
           <Text style={text}>
-            Abbiamo ricevuto una richiesta per resettare la password del tuo account Allenati Sport ({email}).
+            Abbiamo ricevuto una richiesta per reimpostare la password del tuo account su <strong>Allenati Sport</strong> associato all'indirizzo email: <strong>{email}</strong>
           </Text>
           
           <Text style={text}>
-            Per procedere con il reset della password, clicca sul pulsante qui sotto:
+            Per motivi di sicurezza, questo link è valido solo per <strong>60 minuti</strong>. Se non hai richiesto tu questa operazione, puoi tranquillamente ignorare questa email.
           </Text>
           
           <Section style={buttonSection}>
             <Link href={resetLink} style={button}>
-              Reimposta Password
+              🔓 Reimposta la tua Password
             </Link>
           </Section>
           
           <Text style={text}>
-            Se il pulsante non funziona, puoi copiare e incollare questo link nel tuo browser:
+            <strong>Problemi con il pulsante?</strong> Copia e incolla questo link nel tuo browser:
           </Text>
           
           <Text style={linkText}>
             {resetLink}
           </Text>
           
+          <Hr style={hr} />
+          
           <Text style={warningText}>
-            ⚠️ Questo link è valido per 24 ore e può essere utilizzato una sola volta.
+            🛡️ <strong>Sicurezza:</strong> Questo link scadrà automaticamente tra 60 minuti e può essere utilizzato una sola volta.
           </Text>
           
           <Text style={text}>
-            Se non hai richiesto tu questo reset password, puoi ignorare questa email in tutta sicurezza.
+            ❓ <strong>Non hai richiesto tu questo reset?</strong> Puoi tranquillamente ignorare questa email. La tua password rimarrà invariata.
+          </Text>
+          
+          <Text style={text}>
+            💬 <strong>Hai bisogno di aiuto?</strong> Contatta il supporto della tua palestra o scrivi al nostro team di assistenza.
           </Text>
         </Section>
 
@@ -143,39 +150,47 @@ const buttonSection = {
 };
 
 const button = {
-  backgroundColor: "#667eea",
+  backgroundColor: "#10B981",
   borderRadius: "8px",
   color: "#ffffff",
   display: "inline-block",
   fontSize: "16px",
-  fontWeight: "bold",
+  fontWeight: "600",
   padding: "16px 32px",
   textDecoration: "none",
   textAlign: "center" as const,
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+  boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
 };
 
 const linkText = {
-  color: "#667eea",
+  color: "#10B981",
   fontSize: "14px",
   lineHeight: "20px",
   margin: "16px 0",
   wordBreak: "break-all" as const,
-  backgroundColor: "#f8f9fa",
+  backgroundColor: "#f0fdf4",
   padding: "12px",
-  borderRadius: "4px",
+  borderRadius: "6px",
+  border: "1px solid #bbf7d0",
+  fontFamily: "monospace",
 };
 
 const warningText = {
-  color: "#dc2626",
+  color: "#1f2937",
   fontSize: "14px",
   lineHeight: "20px",
   margin: "24px 0",
   fontWeight: "500",
-  backgroundColor: "#fef2f2",
+  backgroundColor: "#fef3c7",
   padding: "12px",
-  borderRadius: "4px",
-  border: "1px solid #fecaca",
+  borderRadius: "6px",
+  border: "1px solid #fbbf24",
+};
+
+const hr = {
+  borderColor: "#e5e7eb",
+  margin: "24px 0",
 };
 
 const footer = {
