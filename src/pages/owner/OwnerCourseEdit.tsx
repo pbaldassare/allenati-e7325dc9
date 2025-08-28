@@ -2,17 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { OwnerCourseForm } from '@/components/owner/OwnerCourseForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings, Calendar, Clock, Ban } from 'lucide-react';
 import { SupabaseCourse } from '@/types/course';
+import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
+import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
+import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
+import { useToast } from '@/hooks/use-toast';
 
 const OwnerCourseEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [course, setCourse] = useState<SupabaseCourse | null>(null);
+  const { toast } = useToast();
+  const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gymRooms, setGymRooms] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [exceptions, setExceptions] = useState<any[]>([]);
 
   const handleBack = () => {
     // Smart navigation for owner pages
@@ -31,11 +40,12 @@ const OwnerCourseEdit = () => {
         setLoading(true);
         
         // First, get the course data
-        const { data: courseData, error: courseError } = await supabase
+        const courseResult = await supabase
           .from('courses')
           .select(`
             *,
             course_schedules (
+              id,
               day_of_week,
               start_time,
               end_time,
@@ -53,9 +63,35 @@ const OwnerCourseEdit = () => {
           .eq('id', id)
           .single();
 
-        if (courseError) throw courseError;
+        if (courseResult.error) throw courseResult.error;
+        
+        // Then load related data using the course's gym_id
+        const [roomsResult, sessionsResult, exceptionsResult] = await Promise.all([
+          // Gym rooms
+          supabase
+            .from('gym_rooms')
+            .select('id, name, description, color')
+            .eq('gym_id', courseResult.data.gym_id)
+            .eq('is_active', true),
+          
+          // Course sessions
+          supabase
+            .from('course_sessions')
+            .select('*')
+            .eq('course_id', id)
+            .order('session_date', { ascending: true }),
+          
+          // Course exceptions
+          supabase
+            .from('course_schedule_exceptions')
+            .select('*')
+            .eq('course_id', id)
+            .order('start_date', { ascending: true })
+        ]);
 
-        // Then get the instructor's profile data if instructor exists
+        const courseData = courseResult.data;
+
+        // Get instructor profile if exists
         let instructorProfile = null;
         if (courseData.instructors?.user_id) {
           const { data: profileData, error: profileError } = await supabase
@@ -69,27 +105,10 @@ const OwnerCourseEdit = () => {
           }
         }
         
-        // Map database fields to form-expected format
+        // Map course data
         const mappedCourse = {
           ...courseData,
-          // Keep original field names for consistency
-          max_participants: courseData.max_participants,
-          duration_minutes: courseData.duration_minutes,
-          difficulty_level: courseData.difficulty_level,
-          price_per_session: courseData.price_per_session,
-          credits_required: courseData.credits_required,
-          equipment_needed: courseData.equipment_needed,
-          image_url: courseData.image_url,
-          deadline_hours: courseData.deadline_hours,
-          reserved_spots: courseData.reserved_spots,
-          is_active: courseData.is_active,
-          category_id: courseData.category_id,
-          instructor_id: courseData.instructor_id,
-          gym_id: courseData.gym_id,
-          start_date: courseData.start_date,
-          end_date: courseData.end_date,
           schedules: courseData.course_schedules || [],
-          // Add instructor profile data
           instructors: courseData.instructors ? {
             ...courseData.instructors,
             profiles: instructorProfile
@@ -97,6 +116,14 @@ const OwnerCourseEdit = () => {
         };
         
         setCourse(mappedCourse);
+        setGymRooms(roomsResult.data || []);
+        setSessions(sessionsResult.data || []);
+        setExceptions((exceptionsResult.data || []).map(exc => ({
+          ...exc,
+          start_date: new Date(exc.start_date),
+          end_date: new Date(exc.end_date)
+        })));
+        
       } catch (err) {
         console.error('Error loading course:', err);
         setError('Errore nel caricamento del corso');
@@ -131,8 +158,107 @@ const OwnerCourseEdit = () => {
     );
   }
 
+  // Handle schedule changes
+  const handleScheduleChange = async (newSchedules: any[]) => {
+    if (!id) return;
+    
+    try {
+      // Delete existing schedules
+      await supabase
+        .from('course_schedules')
+        .delete()
+        .eq('course_id', id);
+      
+      // Insert new schedules
+      if (newSchedules.length > 0) {
+        const schedulesToInsert = newSchedules.map(schedule => ({
+          course_id: id,
+          day_of_week: schedule.dayOfWeek,
+          start_time: schedule.time,
+          end_time: addHoursToTime(schedule.time, course?.duration_minutes || 60),
+          room_id: schedule.roomId,
+          room_name: gymRooms.find(r => r.id === schedule.roomId)?.name
+        }));
+        
+        await supabase
+          .from('course_schedules')
+          .insert(schedulesToInsert);
+      }
+      
+      toast({
+        title: "Successo",
+        description: "Orari aggiornati con successo",
+      });
+    } catch (error) {
+      console.error('Error updating schedules:', error);
+      toast({
+        title: "Errore",
+        description: "Errore nell'aggiornamento degli orari",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle sessions changes
+  const handleSessionsChange = async (newSessions: any[]) => {
+    setSessions(newSessions);
+    toast({
+      title: "Sessioni aggiornate",
+      description: `${newSessions.length} sessioni configurate`,
+    });
+  };
+
+  // Handle exceptions changes
+  const handleExceptionsChange = async (newExceptions: any[]) => {
+    if (!id) return;
+    
+    try {
+      // Delete existing exceptions
+      await supabase
+        .from('course_schedule_exceptions')
+        .delete()
+        .eq('course_id', id);
+      
+      // Insert new exceptions
+      if (newExceptions.length > 0) {
+        const exceptionsToInsert = newExceptions.map(exception => ({
+          course_id: id,
+          start_date: exception.start_date.toISOString().split('T')[0],
+          end_date: exception.end_date.toISOString().split('T')[0],
+          reason: exception.reason
+        }));
+        
+        await supabase
+          .from('course_schedule_exceptions')
+          .insert(exceptionsToInsert);
+      }
+      
+      setExceptions(newExceptions);
+      toast({
+        title: "Successo",
+        description: "Eccezioni aggiornate con successo",
+      });
+    } catch (error) {
+      console.error('Error updating exceptions:', error);
+      toast({
+        title: "Errore",
+        description: "Errore nell'aggiornamento delle eccezioni",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Helper function to add hours to time
+  const addHoursToTime = (time: string, minutes: number) => {
+    const [hours, mins] = time.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMins = totalMinutes % 60;
+    return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -143,22 +269,112 @@ const OwnerCourseEdit = () => {
             Modifica Corso
           </h1>
           <p className="text-muted-foreground">
-            Modifica i dettagli del corso "{course.name}"
+            Gestione completa del corso "{course.name}"
           </p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informazioni Corso</CardTitle>
-          <CardDescription>
-            Modifica i dettagli del corso esistente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <OwnerCourseForm mode="edit" course={course as any} />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="info" className="space-y-6">
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="info" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Informazioni
+          </TabsTrigger>
+          <TabsTrigger value="schedules" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Orari
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Sessioni
+          </TabsTrigger>
+          <TabsTrigger value="exceptions" className="flex items-center gap-2">
+            <Ban className="h-4 w-4" />
+            Eccezioni
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informazioni Corso</CardTitle>
+              <CardDescription>
+                Modifica i dettagli di base del corso
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OwnerCourseForm mode="edit" course={course as any} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="schedules">
+          <Card>
+            <CardHeader>
+              <CardTitle>Orari Settimanali</CardTitle>
+              <CardDescription>
+                Configura gli orari ricorrenti del corso
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CourseScheduleManager
+                schedule={course?.schedules?.map(s => ({
+                  dayOfWeek: s.day_of_week,
+                  time: s.start_time,
+                  roomId: s.room_id || '',
+                  day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week]
+                })) || []}
+                onChange={handleScheduleChange}
+                gymRooms={gymRooms}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestione Sessioni</CardTitle>
+              <CardDescription>
+                Genera e gestisci le sessioni individuali del corso
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CourseSessionManager
+                courseId={id}
+                startDate={course?.start_date ? new Date(course.start_date) : undefined}
+                endDate={course?.end_date ? new Date(course.end_date) : undefined}
+                schedules={course?.schedules?.map(s => ({
+                  day_of_week: s.day_of_week,
+                  start_time: s.start_time,
+                  end_time: s.end_time,
+                  room_id: s.room_id,
+                  room_name: s.room_name
+                })) || []}
+                maxParticipants={course?.max_participants || 20}
+                onSessionsChange={handleSessionsChange}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="exceptions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Periodi di Esclusione</CardTitle>
+              <CardDescription>
+                Configura i periodi in cui il corso non si tiene (vacanze, chiusure, ecc.)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CourseScheduleExceptions
+                exceptions={exceptions}
+                onChange={handleExceptionsChange}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
