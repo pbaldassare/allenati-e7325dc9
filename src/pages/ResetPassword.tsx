@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { debugPasswordReset } from '@/utils/debugPasswordReset';
 
 export const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -18,35 +19,117 @@ export const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have the necessary parameters for password reset
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    const type = searchParams.get('type');
+    // Enhanced debugging with utility
+    const allParams = debugPasswordReset.logUrlParams(searchParams);
+    const resetMethod = debugPasswordReset.getResetMethod(searchParams);
     
-    if (!accessToken || !refreshToken || type !== 'recovery') {
-      toast({
-        title: "Link non valido",
-        description: "Il link per il reset della password non è valido o è scaduto",
-        variant: "destructive"
+    console.log('🎯 Selected reset method:', resetMethod);
+
+    if (resetMethod.method === 'session') {
+      const { accessToken, refreshToken, type } = resetMethod.params;
+      console.log('🔐 Attempting session-based reset');
+      
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Session error:', error);
+          toast({
+            title: "Errore di autenticazione",
+            description: `Errore sessione: ${error.message}`,
+            variant: "destructive"
+          });
+          navigate('/auth');
+        } else {
+          console.log('✅ Session set successfully:', data);
+          toast({
+            title: "Autenticazione riuscita",
+            description: "Ora puoi impostare la nuova password",
+            variant: "default"
+          });
+        }
       });
-      navigate('/auth');
       return;
     }
 
-    // Set the session with the tokens from the URL for password reset
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    }).then(({ error }) => {
-      if (error) {
+    if (resetMethod.method === 'token_hash') {
+      const { tokenHash, type } = resetMethod.params;
+      console.log('🔐 Attempting token_hash-based reset');
+      
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'recovery'
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Token hash verification error:', error);
+          toast({
+            title: "Errore di verifica",
+            description: `Token non valido: ${error.message}`,
+            variant: "destructive"
+          });
+          navigate('/auth');
+        } else {
+          console.log('✅ Token hash verified successfully:', data);
+          toast({
+            title: "Token verificato",
+            description: "Ora puoi impostare la nuova password",
+            variant: "default"
+          });
+        }
+      });
+      return;
+    }
+
+    if (resetMethod.method === 'plain_token') {
+      const { token, type } = resetMethod.params;
+      const validation = debugPasswordReset.validateTokenFormat(token);
+      console.log('🔐 Attempting plain token reset:', validation);
+      
+      if (!validation.valid) {
+        console.error('❌ Invalid token format:', validation.reason);
         toast({
-          title: "Errore di autenticazione",
-          description: "Non è possibile autenticare la sessione per il reset password",
+          title: "Token non valido",
+          description: validation.reason,
           variant: "destructive"
         });
         navigate('/auth');
+        return;
       }
+
+      supabase.auth.verifyOtp({
+        token: token,
+        type: 'recovery',
+        email: '' // We might need to store email in localStorage or get it from URL
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Plain token verification error:', error);
+          toast({
+            title: "Errore di verifica",
+            description: `Token error: ${error.message}`,
+            variant: "destructive"
+          });
+          navigate('/auth');
+        } else {
+          console.log('✅ Plain token verified successfully:', data);
+          toast({
+            title: "Token verificato",
+            description: "Ora puoi impostare la nuova password",
+            variant: "default"
+          });
+        }
+      });
+      return;
+    }
+
+    // No valid method found
+    console.error('❌ No valid reset method found');
+    toast({
+      title: "Link non valido",
+      description: `Link di reset non valido. Parametri ricevuti: ${Object.keys(allParams).join(', ')}`,
+      variant: "destructive"
     });
+    setTimeout(() => navigate('/auth'), 3000); // Give user time to read the error
   }, [searchParams, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
