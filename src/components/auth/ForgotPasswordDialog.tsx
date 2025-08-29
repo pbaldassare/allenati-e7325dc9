@@ -33,10 +33,9 @@ export const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({ isOp
     try {
       console.log('Requesting password reset for email:', email);
       
-      // Use Supabase's built-in resetPasswordForEmail with better configuration
+      // Use Supabase's built-in resetPasswordForEmail
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken: undefined // Disable captcha for now
+        redirectTo: `${window.location.origin}/reset-password`
       });
       
       if (error) {
@@ -47,26 +46,12 @@ export const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({ isOp
           variant: "destructive"
         });
       } else {
-        console.log('Password reset email sent successfully');
-        
-        // Also try to call our custom edge function for better email template
-        try {
-          await supabase.functions.invoke('send-password-reset', {
-            body: {
-              email: email,
-              token: 'placeholder', // We don't have the real token here
-              redirectTo: `${window.location.origin}/reset-password`
-            }
-          });
-          console.log('Custom email template sent');
-        } catch (customError) {
-          console.warn('Custom email template failed:', customError);
-          // Don't show error to user since the main email was sent
-        }
+        console.log('Password reset email sent successfully to:', email);
+        console.log('Redirect URL configured as:', `${window.location.origin}/reset-password`);
         
         toast({
           title: "Email inviata",
-          description: "Controlla la tua email per le istruzioni di reset password"
+          description: "Controlla la tua email per le istruzioni di reset password. Il link ti porterà alla pagina di reset."
         });
         onClose();
         setEmail('');

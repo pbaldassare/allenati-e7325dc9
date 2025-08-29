@@ -26,6 +26,8 @@ export const ResetPassword = () => {
     const resetMethod = debugPasswordReset.getResetMethod(searchParams);
     
     console.log('🎯 Selected reset method:', resetMethod);
+    console.log('🌐 Current URL:', window.location.href);
+    console.log('🔗 Origin:', window.location.origin);
 
     // Set timeout to ensure fields are unlocked if auth takes too long
     const authTimeout = setTimeout(() => {
