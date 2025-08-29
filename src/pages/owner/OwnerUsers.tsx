@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText } from 'lucide-react';
+import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 
@@ -416,8 +415,22 @@ const OwnerUsers = () => {
                         <TableRow key={m.user_id}>
                           <TableCell className="font-medium">{m.first_name} {m.last_name}</TableCell>
                           <TableCell className="text-muted-foreground">{m.email || 'N/D'}</TableCell>
-                          <TableCell className="text-muted-foreground">{m.phone || 'N/D'}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">{m.fiscal_code || 'N/D'}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {m.phone ? (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4" />
+                                {m.phone}
+                              </div>
+                            ) : 'N/D'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {m.fiscal_code ? (
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                {m.fiscal_code}
+                              </div>
+                            ) : 'N/D'}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={roleInfo.variant} className="flex items-center gap-1 w-fit">
                               <RoleIcon className="h-3 w-3" />
@@ -445,72 +458,98 @@ const OwnerUsers = () => {
                                 Scadenza: {expiryLabel}
                               </Badge>
                               {m.medical_file_path && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => viewCertificate(m.medical_file_path!)}
-                                >
-                                  Vedi
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => viewCertificate(m.medical_file_path)}
+                                      className="h-6 px-2"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Visualizza certificato</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
-                              {m.user_id === authUserId && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => setUploadDialogOpen(true)}
-                                >
-                                  Carica certificato
-                                </Button>
-                              )}
+                              <Button variant="ghost" size="sm" className="h-6 px-2">
+                                <Plus className="h-3 w-3" />
+                              </Button>
                             </div>
                           </TableCell>
                           <TableCell>
-                            {isAdminOrOwner ? (
-                              <Badge variant="outline" className="text-muted-foreground">
-                                Non modificabile
-                              </Badge>
-                            ) : m.is_instructor ? (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    disabled={demoting === m.user_id}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <UserMinus className="h-4 w-4 mr-2" />
-                                    {demoting === m.user_id ? 'Rimozione...' : 'Rimuovi Istruttore'}
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Rimuovere ruolo di istruttore?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Stai per rimuovere {m.first_name} {m.last_name} dal ruolo di istruttore.
-                                      Perderà tutti i privilegi di istruttore e tornerà ad essere un membro normale.
-                                      Questa azione è reversibile.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => demoteInstructor(m.user_id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            <div className="flex items-center gap-1">
+                              {isAdminOrOwner ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center text-muted-foreground">
+                                      <Shield className="h-4 w-4" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Non puoi modificare admin o proprietari</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : m.is_instructor ? (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={demoting === m.user_id}
                                     >
-                                      Rimuovi Istruttore
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handlePromoteClick(m.user_id)}
-                                disabled={promoting === m.user_id}
-                              >
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                {promoting === m.user_id ? 'Promozione...' : 'Promuovi Istruttore'}
-                              </Button>
-                            )}
+                                      {demoting === m.user_id ? (
+                                        <>
+                                          <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                          ...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserMinus className="h-3 w-3 mr-1" />
+                                          Rimuovi Istruttore
+                                        </>
+                                      )}
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Rimuovere Istruttore</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Sei sicuro di voler rimuovere {m.first_name} {m.last_name} dal ruolo di istruttore?
+                                        Diventerà un membro normale della palestra.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => demoteInstructor(m.user_id)}>
+                                        Conferma Rimozione
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePromoteClick(m.user_id)}
+                                  disabled={promoting === m.user_id}
+                                >
+                                  {promoting === m.user_id ? (
+                                    <>
+                                      <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                      ...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="h-3 w-3 mr-1" />
+                                      Promuovi Istruttore
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -523,24 +562,21 @@ const OwnerUsers = () => {
         </CardContent>
       </Card>
 
-      {/* Promotion Dialog */}
+      {/* Promote Dialog */}
       <Dialog open={promoteDialogOpen} onOpenChange={setPromoteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Promuovi a Istruttore</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Stai per promuovere questo utente al ruolo di istruttore. Avrà accesso a funzionalità avanzate come la gestione dei corsi.
-            </p>
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio dell'istruttore (opzionale)</Label>
+              <Label htmlFor="bio">Biografia dell'istruttore (opzionale)</Label>
               <Textarea
                 id="bio"
-                placeholder="Descrizione delle specializzazioni e esperienze dell'istruttore..."
+                placeholder="Scrivi una breve biografia per l'istruttore..."
                 value={instructorBio}
                 onChange={(e) => setInstructorBio(e.target.value)}
-                className="min-h-20"
+                rows={3}
               />
             </div>
           </div>
@@ -549,18 +585,11 @@ const OwnerUsers = () => {
               Annulla
             </Button>
             <Button onClick={promoteToInstructor} disabled={promoting !== null}>
-              {promoting ? 'Promozione...' : 'Promuovi a Istruttore'}
+              {promoting ? 'Promozione...' : 'Promuovi'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Upload medical certificate dialog for current user */}
-      <MedicalCertificateUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        onUploaded={reloadMembers}
-      />
     </div>
   );
 };

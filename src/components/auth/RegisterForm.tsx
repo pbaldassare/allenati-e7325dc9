@@ -100,27 +100,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
       return;
     }
 
-    if (!formData.phone) {
+    if (!formData.phone.trim()) {
       setError('Il numero di telefono è obbligatorio');
       return;
     }
 
-    if (!formData.fiscalCode) {
+    if (!formData.fiscalCode.trim()) {
       setError('Il codice fiscale è obbligatorio');
       return;
     }
 
-    // Validazione formato telefono italiano
-    const phoneRegex = /^(\+39\s?)?[3][0-9]{2,3}\s?[0-9]{3,4}\s?[0-9]{3,4}$/;
-    if (!phoneRegex.test(formData.phone)) {
-      setError('Inserisci un numero di telefono italiano valido (es: +39 333 123 4567)');
+    // Validazione formato codice fiscale (16 caratteri alfanumerici)
+    const fiscalCodeRegex = /^[A-Z0-9]{16}$/i;
+    if (!fiscalCodeRegex.test(formData.fiscalCode.trim())) {
+      setError('Il codice fiscale deve essere di 16 caratteri alfanumerici');
       return;
     }
 
-    // Validazione formato codice fiscale italiano
-    const fiscalCodeRegex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
-    if (!fiscalCodeRegex.test(formData.fiscalCode.toUpperCase())) {
-      setError('Inserisci un codice fiscale valido (16 caratteri alfanumerici)');
+    // Validazione formato telefono italiano
+    const phoneRegex = /^(\+39|0039|\+390)?[\s\-]?3[0-9]{2}[\s\-]?[0-9]{3}[\s\-]?[0-9]{3,4}$/;
+    if (!phoneRegex.test(formData.phone.trim().replace(/\s/g, ''))) {
+      setError('Inserisci un numero di telefono italiano valido (es: +39 333 123 4567)');
       return;
     }
 
@@ -329,8 +329,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   value={formData.fiscalCode}
                   onChange={(e) => setFormData({ ...formData, fiscalCode: e.target.value.toUpperCase() })}
                   required
-                  maxLength={16}
-                  className="h-14 sm:h-12 text-base uppercase"
+                   maxLength={16}
+                   className="h-14 sm:h-12 text-base font-mono"
                 />
               </div>
 
