@@ -381,20 +381,24 @@ export const CourseCalendar = () => {
 
       // Consume credits if not unlimited subscription
       if (!hasUnlimitedAccess) {
-        const newBalance = currentCredits - creditsRequired;
+        // Get user's gym ID for credit deduction
+        const { data: userGym } = await supabase
+          .rpc('get_user_gym_id', { _user_id: user.id });
         
-        const { error: transactionError } = await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user.id,
-            amount: -creditsRequired,
-            balance_after: newBalance,
-            transaction_type: 'booking',
-            description: `Prenotazione ${selectedCourse?.name}`,
-            reference_id: booking.id
-          });
-
-        if (transactionError) throw transactionError;
+        if (userGym) {
+          const { deductCredits } = await import('@/lib/creditRefundHelpers');
+          const result = await deductCredits(
+            user.id,
+            userGym,
+            creditsRequired,
+            `Prenotazione ${selectedCourse?.name}`,
+            booking.id
+          );
+          
+          if (!result.success) {
+            throw new Error(result.message);
+          }
+        }
       }
 
       setBookings(prev => [...prev, booking]);

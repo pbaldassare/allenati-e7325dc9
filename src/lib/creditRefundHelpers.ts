@@ -157,6 +157,71 @@ export const processRefund = async (
 };
 
 /**
+ * Deduct credits from user for a booking
+ */
+export const deductCredits = async (
+  userId: string,
+  gymId: string,
+  amount: number,
+  description: string,
+  referenceId: string
+): Promise<{ success: boolean; message: string; newBalance: number }> => {
+  try {
+    // Get current gym credits
+    const { data: gymCreditsData, error: gymCreditsError } = await supabase
+      .from('gym_credits')
+      .select('credits')
+      .eq('user_id', userId)
+      .eq('gym_id', gymId)
+      .single();
+
+    if (gymCreditsError && gymCreditsError.code !== 'PGRST116') {
+      throw gymCreditsError;
+    }
+
+    const currentCredits = gymCreditsData?.credits || 0;
+    
+    if (currentCredits < amount) {
+      return {
+        success: false,
+        message: `Crediti insufficienti. Necessari: ${amount}, Disponibili: ${currentCredits}`,
+        newBalance: currentCredits
+      };
+    }
+
+    const newBalance = currentCredits - amount;
+
+    // Create transaction record
+    const { error: transactionError } = await supabase
+      .from('credits_transactions')
+      .insert({
+        user_id: userId,
+        gym_id: gymId,
+        amount: -amount,
+        balance_after: newBalance,
+        transaction_type: 'booking',
+        description,
+        reference_id: referenceId
+      });
+
+    if (transactionError) throw transactionError;
+
+    return {
+      success: true,
+      message: `${amount} crediti utilizzati con successo`,
+      newBalance
+    };
+  } catch (error) {
+    console.error('Error deducting credits:', error);
+    return {
+      success: false,
+      message: 'Errore durante la sottrazione crediti',
+      newBalance: 0
+    };
+  }
+};
+
+/**
  * Get user role from user_roles table
  */
 export const getUserRole = async (userId: string): Promise<'user' | 'instructor' | 'owner' | 'admin'> => {

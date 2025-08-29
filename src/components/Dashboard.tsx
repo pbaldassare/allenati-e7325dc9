@@ -231,17 +231,39 @@ export const Dashboard = () => {
         // Don't fail the booking if email fails
       }
 
-      // Deduct credits
-      await supabase
-        .from('credits_transactions')
-        .insert({
-          user_id: user.id,
-          amount: -creditsRequired,
-          balance_after: currentCredits - creditsRequired,
-          transaction_type: 'booking',
-          description: `Prenotazione sessione: ${selectedSession.courses?.name}`,
-          reference_id: booking.id
-        });
+      // Check for unlimited subscription first
+      const { data: subscription } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          subscription_plans!inner(unlimited_access)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      const hasUnlimitedAccess = subscription?.subscription_plans?.unlimited_access;
+
+      // Deduct credits only if no unlimited subscription
+      if (!hasUnlimitedAccess) {
+        // Get user's gym ID for credit deduction
+        const gymId = userGyms[0]?.id;
+        if (gymId) {
+          const { deductCredits } = await import('@/lib/creditRefundHelpers');
+          const result = await deductCredits(
+            user.id,
+            gymId,
+            creditsRequired,
+            `Prenotazione sessione: ${selectedSession.courses?.name}`,
+            booking.id
+          );
+          
+          if (!result.success) {
+            throw new Error(result.message);
+          }
+        }
+      }
 
       toast({
         title: "Prenotazione confermata",
