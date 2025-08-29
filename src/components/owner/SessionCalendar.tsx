@@ -114,7 +114,7 @@ const SessionCalendar: React.FC = () => {
         courseName: session.courses.name,
         course_description: session.courses.description,
         date: session.session_date,
-        time: `${session.start_time} - ${session.end_time}`,
+        time: `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`,
         start_time: session.start_time,
         end_time: session.end_time,
         room: session.room_name || 'Non specificata',

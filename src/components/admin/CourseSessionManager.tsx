@@ -214,7 +214,7 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
                       {format(new Date(session.session_date), 'dd/MM/yyyy')}
                     </Badge>
                     <span className="text-sm">
-                      {session.start_time} - {session.end_time}
+                      {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
                     </span>
                     {session.room_name && (
                       <Badge variant="secondary">{session.room_name}</Badge>
@@ -272,7 +272,7 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
                       {format(new Date(session.session_date), 'dd/MM/yyyy')}
                     </Badge>
                     <span className="text-sm font-medium">
-                      {session.start_time} - {session.end_time}
+                      {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
                     </span>
                     {session.room_name && (
                       <Badge variant="secondary">{session.room_name}</Badge>
