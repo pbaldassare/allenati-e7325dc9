@@ -24,14 +24,14 @@ export const PasswordResetEmail = ({
 }: PasswordResetEmailProps) => (
   <Html>
     <Head />
-    <Preview>🔐 Reset Password Allenati Sport - Azione richiesta</Preview>
+    <Preview>🔐 Reset Password Allenati.me - Azione richiesta</Preview>
     <Body style={main}>
       <Container style={container}>
         {/* Header with logo */}
         <Section style={header}>
           <Img
             src="https://qyryykmpadguzxyiotur.supabase.co/storage/v1/object/public/avatars/f1aff50e-632e-46e0-b09f-145c702dc0be.png"
-            alt="Allenati Sport"
+            alt="Allenati.me"
             style={logo}
           />
         </Section>
@@ -45,7 +45,7 @@ export const PasswordResetEmail = ({
           </Text>
           
           <Text style={text}>
-            Abbiamo ricevuto una richiesta per reimpostare la password del tuo account su <strong>Allenati Sport</strong> associato all'indirizzo email: <strong>{email}</strong>
+            Abbiamo ricevuto una richiesta per reimpostare la password del tuo account su <strong>Allenati.me</strong> associato all'indirizzo email: <strong>{email}</strong>
           </Text>
           
           <Text style={text}>
@@ -85,7 +85,7 @@ export const PasswordResetEmail = ({
         <Section style={footer}>
           <Text style={footerText}>
             Cordiali saluti,<br />
-            Il team di Allenati Sport
+            Il team di Allenati.me
           </Text>
           
           <Text style={footerNote}>

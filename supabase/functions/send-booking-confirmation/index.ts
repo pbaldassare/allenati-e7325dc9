@@ -74,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({
-      from: "Allenati Sport <noreply@allenati.sport>",
+      from: "Allenati.me <noreply@allenati.me>",
       to: [userEmail],
       subject: `✅ Prenotazione confermata: ${courseName}`,
       html,

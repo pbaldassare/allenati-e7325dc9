@@ -66,7 +66,7 @@ export const BookingConfirmationEmail = ({
               src="https://qyryykmpadguzxyiotur.supabase.co/storage/v1/object/public/avatars/allenati-sport-logo.png"
               width="120"
               height="40"
-              alt="Allenati Sport"
+              alt="Allenati.me"
               style={logo}
             />
           </Section>
@@ -174,7 +174,7 @@ export const BookingConfirmationEmail = ({
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              Grazie per aver scelto <strong>Allenati Sport</strong>!
+              Grazie per aver scelto <strong>Allenati.me</strong>!
             </Text>
             <Text style={footerText}>
               Buon allenamento! 💪

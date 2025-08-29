@@ -39,9 +39,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send the email using Resend
     const emailResponse = await resend.emails.send({
-      from: "Allenati Sport <noreply@allenati.me>",
+      from: "Allenati.me <noreply@allenati.me>",
       to: [email],
-      subject: "Reset della Password - Allenati Sport",
+      subject: "Reset della Password - Allenati.me",
       html: emailHtml,
     });
 
