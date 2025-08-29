@@ -13,6 +13,7 @@ interface BookingConfirmDialogProps {
   course: {
     id?: string;
     name?: string;
+    description?: string;
     instructor_id?: string;
     max_participants?: number;
     credits_required?: number;
@@ -166,6 +167,9 @@ export const BookingConfirmDialog = ({
         <div className="space-y-3">
           <div className="bg-muted/20 border border-border rounded-lg p-3 space-y-3">
             <h3 className="font-semibold text-foreground text-base">{course?.name}</h3>
+            {course?.description && (
+              <p className="text-sm text-muted-foreground">{course.description}</p>
+            )}
             
             <div className="space-y-2 text-sm">
               <div className="flex items-center text-foreground">

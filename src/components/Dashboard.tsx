@@ -104,7 +104,13 @@ export const Dashboard = () => {
           .select(`
             *,
             courses!inner(
-              *,
+              id,
+              name,
+              description,
+              credits_required,
+              difficulty_level,
+              instructor_id,
+              gym_id,
               course_categories(name, color_hex, icon_name),
               instructors!courses_instructor_id_fkey(first_name, last_name),
               gyms(name)
@@ -552,7 +558,7 @@ export const Dashboard = () => {
           )}
           
           {filteredAvailableSessions.length > 0 ? (
-            filteredAvailableSessions.slice(0, 12).map((session) => {
+            filteredAvailableSessions.map((session) => {
               const instructorName = getInstructorName(session);
               const instructorAvatar = getInstructorAvatar(session);
               const progress = getSessionProgress(session);
@@ -580,28 +586,24 @@ export const Dashboard = () => {
                              </AvatarFallback>
                           </Avatar>
                            
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-base sm:text-sm text-foreground">{session.courses?.name}</h3>
-                            <p className="text-sm sm:text-xs text-muted-foreground truncate">{session.courses?.description || 'Nessuna descrizione'}</p>
-                          </div>
+                           <div className="flex-1 min-w-0">
+                             <h3 className="font-semibold text-base sm:text-sm text-foreground">{session.courses?.name}</h3>
+                             <p className="text-sm sm:text-xs text-muted-foreground">{instructorName}</p>
+                           </div>
                         </div>
                         
-                        {/* Details section - Mobile: Below header, Desktop: Same row */}
-                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 text-sm sm:text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
-                            <span>{new Date(session.session_date).toLocaleDateString('it-IT')}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
-                            <span>{session.start_time}</span>
-                          </div>
-                    <CourseParticipantCount
-                      sessionId={session.id}
-                      maxParticipants={session.max_participants}
-                      className="text-sm sm:text-xs"
-                    />
-                        </div>
+                         {/* Details section - Mobile: Below header, Desktop: Same row */}
+                         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 text-sm sm:text-xs text-muted-foreground">
+                           <div className="flex items-center gap-1">
+                             <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
+                             <span>{session.start_time}</span>
+                           </div>
+                           <CourseParticipantCount
+                             sessionId={session.id}
+                             maxParticipants={session.max_participants}
+                             className="text-sm sm:text-xs"
+                           />
+                         </div>
                         
                         {/* Action button - Mobile: Full width, Desktop: Compact */}
                         <div className="flex justify-center sm:justify-end mt-2 sm:mt-0">
