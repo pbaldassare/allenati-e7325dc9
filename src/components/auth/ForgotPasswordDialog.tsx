@@ -33,33 +33,35 @@ export const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({ isOp
     try {
       console.log('Requesting password reset for email:', email);
       
-      // Use Supabase's built-in resetPasswordForEmail
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      // Use our custom edge function for password reset
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: {
+          email: email
+        }
       });
       
       if (error) {
         console.error('Password reset error:', error);
         toast({
           title: "Errore",
-          description: error.message,
+          description: error.message || "Errore durante l'invio dell'email",
           variant: "destructive"
         });
       } else {
-        console.log('Password reset email sent successfully to:', email);
-        console.log('Redirect URL configured as:', `${window.location.origin}/reset-password`);
+        console.log('Password reset email sent successfully:', data);
         
         toast({
           title: "Email inviata",
-          description: "Controlla la tua email per le istruzioni di reset password. Il link ti porterà alla pagina di reset."
+          description: "Se un account con questa email esiste, riceverai le istruzioni per il reset della password."
         });
         onClose();
         setEmail('');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unexpected error:', error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'invio dell'email",
+        description: "Si è verificato un errore imprevisto",
         variant: "destructive"
       });
     } finally {

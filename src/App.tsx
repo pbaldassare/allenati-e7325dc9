@@ -61,7 +61,7 @@ import MedicalCertificate from "./pages/MedicalCertificate";
 import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
 import Gyms from "./pages/Gyms";
-import { ResetPassword } from "./pages/ResetPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Instructor Pages
 import InstructorDashboard from "./pages/instructor/InstructorDashboard";

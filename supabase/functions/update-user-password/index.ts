@@ -1,0 +1,115 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Create Supabase client for admin operations
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface UpdatePasswordRequest {
+  user_id: string;
+  new_password: string;
+  token: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { user_id, new_password, token }: UpdatePasswordRequest = await req.json();
+
+    console.log("Processing password update for user:", user_id);
+
+    // Validate the token one more time
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('password_reset_tokens')
+      .select('user_id, expires_at, used_at')
+      .eq('token', token)
+      .eq('user_id', user_id)
+      .single();
+
+    if (tokenError || !tokenData) {
+      console.error('Token validation failed:', tokenError);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Check if token is expired
+    if (new Date(tokenData.expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: "Token expired" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Check if token has already been used
+    if (tokenData.used_at) {
+      return new Response(
+        JSON.stringify({ error: "Token already used" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Update user password using admin API
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      user_id,
+      { password: new_password }
+    );
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update password" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Password updated successfully for user:", user_id);
+
+    return new Response(
+      JSON.stringify({ message: "Password updated successfully" }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
+  } catch (error: any) {
+    console.error("Error in update-user-password function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+};
+
+serve(handler);
