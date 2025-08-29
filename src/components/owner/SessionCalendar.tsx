@@ -203,17 +203,24 @@ const SessionCalendar: React.FC = () => {
     });
 
     return (
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-7 gap-4 h-[600px]">
         {weekDays.map((day) => {
           const daySessions = getSessionsForDay(day);
           
           return (
-            <div key={day.toISOString()} className="min-h-[200px] flex flex-col">
-              <h3 className="font-medium text-center py-2 border-b text-sm">
-                {format(day, 'EEE dd', { locale: it })}
-              </h3>
+            <div key={day.toISOString()} className="flex flex-col border border-border rounded-lg bg-card">
+              <div className="p-2 border-b border-border bg-muted/50 sticky top-0">
+                <h3 className="font-medium text-center text-sm">
+                  {format(day, 'EEE dd', { locale: it })}
+                </h3>
+                {daySessions.length > 0 && (
+                  <div className="text-xs text-center text-muted-foreground mt-1">
+                    {daySessions.length} sessioni
+                  </div>
+                )}
+              </div>
               
-              <div className="flex-1 pt-3">
+              <div className="flex-1 p-2 overflow-y-auto">
                 {daySessions.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4">
                     Nessuna sessione
@@ -238,7 +245,7 @@ const SessionCalendar: React.FC = () => {
                         onSessionUpdate={fetchSessions}
                       >
                         <Card 
-                          className={`p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[80px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                          className={`p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
                         >
                           <div>
                             <div className="text-xs font-medium line-clamp-2 mb-1">{session.courseName}</div>
