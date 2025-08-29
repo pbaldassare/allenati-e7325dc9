@@ -149,7 +149,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             phone: formData.phone,
             fiscal_code: formData.fiscalCode.toUpperCase(),
             selected_gym_id: formData.gymId,
-            belt: formData.belt || null,
+            belt: formData.belt === 'none' || !formData.belt ? null : formData.belt,
             ...(isMinor
               ? {
                   is_minor: true,
