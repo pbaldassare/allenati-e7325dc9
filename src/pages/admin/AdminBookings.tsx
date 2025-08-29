@@ -68,12 +68,27 @@ const AdminBookings = () => {
         updateData.checked_in_at = new Date().toISOString();
       }
 
+      // If cancelling, add cancellation timestamp
+      if (newStatus === 'cancelled') {
+        updateData.cancelled_at = new Date().toISOString();
+        updateData.cancellation_reason = 'Cancellata dall\'amministratore';
+      }
+
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // Process refund if cancelling (admins can always refund)
+      if (newStatus === 'cancelled') {
+        const booking = bookings.find(b => b.id === bookingId);
+        if (booking) {
+          const { processRefund } = await import('@/lib/creditRefundHelpers');
+          await processRefund(booking, '', 'admin', 'Cancellata dall\'amministratore');
+        }
+      }
 
       setBookings(prev => prev.map(booking => 
         booking.id === bookingId 
@@ -83,7 +98,9 @@ const AdminBookings = () => {
 
       toast({
         title: "Successo",
-        description: "Status prenotazione aggiornato con successo",
+        description: newStatus === 'cancelled' 
+          ? "Prenotazione cancellata e crediti rimborsati"
+          : "Status prenotazione aggiornato con successo",
       });
     } catch (error) {
       toast({

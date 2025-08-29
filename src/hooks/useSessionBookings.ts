@@ -155,13 +155,6 @@ export const useSessionBookings = () => {
     }
 
     try {
-      // Check if within cancellation deadline
-      const course = booking.courses;
-      const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
-      const deadlineTime = new Date(bookingDateTime.getTime() - ((course?.deadline_hours || 24) * 60 * 60 * 1000));
-      const now = new Date();
-      const isWithinDeadline = now <= deadlineTime;
-
       // Update booking status
       const { error: bookingError } = await supabase
         .from('bookings')
@@ -189,32 +182,18 @@ export const useSessionBookings = () => {
         if (sessionError) console.error('Error updating session spots:', sessionError);
       }
 
-      // If within deadline and credits were used, refund them
-      if (isWithinDeadline && booking.credits_used > 0) {
-        // Get current user credits
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', user!.id)
-          .single();
+      // Process refund using new helper
+      const { processRefund } = await import('@/lib/creditRefundHelpers');
+      const refundResult = await processRefund(booking, user!.id, 'user', 'Cancellato dall\'utente');
 
-        if (profileError) throw profileError;
-
-        const newBalance = (profileData.current_credits || 0) + booking.credits_used;
-
-        // Log transaction for refund
-        const { error: transactionError } = await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user!.id,
-            amount: booking.credits_used,
-            balance_after: newBalance,
-            transaction_type: 'refund',
-            description: `Rimborso per cancellazione prenotazione: ${course?.name}`,
-            reference_id: booking.id
-          });
-
-        if (transactionError) throw transactionError;
+      // Check if refund was denied due to deadline policy
+      if (!refundResult.success && refundResult.message.includes('deadline')) {
+        toast({
+          title: "Impossibile cancellare",
+          description: `Non è possibile cancellare la prenotazione. Il termine per la cancellazione gratuita è scaduto.`,
+          variant: "destructive"
+        });
+        return false;
       }
 
       // Remove from local state
@@ -222,7 +201,7 @@ export const useSessionBookings = () => {
 
       toast({
         title: "Prenotazione cancellata",
-        description: isWithinDeadline 
+        description: refundResult.success && refundResult.message.includes('credits refunded')
           ? "La prenotazione è stata cancellata e i crediti sono stati rimborsati"
           : "La prenotazione è stata cancellata"
       });

@@ -95,6 +95,13 @@ export const useInstructorBookings = () => {
 
   const cancelBooking = async (bookingId: string, reason?: string) => {
     try {
+      // Get booking details first
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) {
+        throw new Error('Prenotazione non trovata');
+      }
+
+      // Update booking status
       const { error } = await supabase
         .from('bookings')
         .update({
@@ -106,9 +113,15 @@ export const useInstructorBookings = () => {
 
       if (error) throw error;
 
+      // Process refund (instructors can always refund)
+      const { processRefund } = await import('@/lib/creditRefundHelpers');
+      const refundResult = await processRefund(booking, user?.id || '', 'instructor', reason);
+
       toast({
         title: "Prenotazione cancellata",
-        description: "La prenotazione è stata cancellata con successo."
+        description: refundResult.success 
+          ? "La prenotazione è stata cancellata e i crediti sono stati rimborsati."
+          : "La prenotazione è stata cancellata con successo."
       });
 
       // Refresh bookings

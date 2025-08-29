@@ -604,35 +604,57 @@ export const Dashboard = () => {
                    </Card>
                );
              })
-           ) : (
-             <div className="text-center py-12">
-               <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                 <Zap className="h-10 w-10 text-primary" />
-               </div>
-               <h3 className="font-bold text-xl mb-3 bg-gradient-primary bg-clip-text text-transparent">
-                 Nessuna sessione disponibile
-               </h3>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                  <Zap className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="font-bold text-xl mb-3 bg-gradient-primary bg-clip-text text-transparent">
+                  Nessuna sessione disponibile
+                </h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Al momento non ci sono sessioni disponibili nelle tue palestre. Controlla più tardi o esplora altre opzioni.
+                  {(() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const selectedDateStr = selectedDate?.toISOString().split('T')[0];
+                    
+                    // If viewing past dates, show specific message
+                    if (selectedDateStr && selectedDateStr < today) {
+                      return "Non ci sono sessioni per questa data passata.";
+                    }
+                    
+                    return "Al momento non ci sono sessioni disponibili nelle tue palestre. Controlla più tardi o esplora altre opzioni.";
+                  })()}
                 </p>
-               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                 <Button
-                   onClick={() => navigate('/gyms')}
-                   className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-                 >
-                   <Building2 className="h-4 w-4 mr-2" />
-                   Esplora Palestre
-                 </Button>
-                 <Button
-                   onClick={() => window.location.reload()}
-                   variant="outline"
-                   className="border-primary/20 text-primary hover:bg-primary/5"
-                 >
-                   Aggiorna
-                 </Button>
-               </div>
-             </div>
-           )}
+                {(() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const selectedDateStr = selectedDate?.toISOString().split('T')[0];
+                  
+                  // Don't show buttons for past dates
+                  if (selectedDateStr && selectedDateStr < today) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        onClick={() => navigate('/gyms')}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                      >
+                        <Building2 className="h-4 w-4 mr-2" />
+                        Esplora Palestre
+                      </Button>
+                      <Button
+                        onClick={() => window.location.reload()}
+                        variant="outline"
+                        className="border-primary/20 text-primary hover:bg-primary/5"
+                      >
+                        Aggiorna
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
          </CardContent>
        </Card>
 

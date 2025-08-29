@@ -107,13 +107,6 @@ export const useBookings = () => {
 
       console.log('Found booking to cancel:', booking);
 
-      // Check if within cancellation deadline
-      const course = booking.courses;
-      const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
-      const deadlineTime = new Date(bookingDateTime.getTime() - ((course?.deadline_hours || 24) * 60 * 60 * 1000));
-      const now = new Date();
-      const isWithinDeadline = now <= deadlineTime;
-
       // Update booking status
       const { error: bookingError } = await supabase
         .from('bookings')
@@ -126,46 +119,13 @@ export const useBookings = () => {
 
       if (bookingError) throw bookingError;
 
-      // If within deadline and credits were used, refund them
-      if (isWithinDeadline && booking.credits_used > 0) {
-        // Get current user credits
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        const newBalance = (profileData.current_credits || 0) + booking.credits_used;
-
-        // Update credits
-        const { error: creditsError } = await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', user.id);
-
-        if (creditsError) throw creditsError;
-
-        // Log transaction
-        const { error: transactionError } = await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user.id,
-            gym_id: course?.gym_id,
-            amount: booking.credits_used,
-            balance_after: newBalance,
-            transaction_type: 'refund',
-            description: `Rimborso per cancellazione prenotazione: ${course?.name}`,
-            reference_id: bookingId
-          });
-
-        if (transactionError) throw transactionError;
-      }
+      // Process refund using new helper
+      const { processRefund } = await import('@/lib/creditRefundHelpers');
+      const refundResult = await processRefund(booking, user.id, 'user', 'Cancellato dall\'utente');
 
       toast({
         title: "Prenotazione cancellata",
-        description: isWithinDeadline 
+        description: refundResult.success && refundResult.message.includes('credits refunded')
           ? "La prenotazione è stata cancellata e i crediti sono stati rimborsati"
           : "La prenotazione è stata cancellata"
       });

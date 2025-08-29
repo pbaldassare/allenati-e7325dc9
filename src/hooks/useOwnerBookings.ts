@@ -121,7 +121,7 @@ export const useOwnerBookings = () => {
         .select(`
           *,
           profiles (current_credits),
-          courses (name, deadline_hours)
+          courses (name, deadline_hours, gym_id)
         `)
         .eq('id', bookingId)
         .single();
@@ -132,10 +132,7 @@ export const useOwnerBookings = () => {
         return;
       }
 
-      // Gym owners can always cancel bookings regardless of deadline
-      const shouldRefund = true; // Always refund for owner cancellations
-
-      // Start transaction
+      // Update booking status
       const { error: updateError } = await supabase
         .from('bookings')
         .update({
@@ -151,45 +148,15 @@ export const useOwnerBookings = () => {
         return;
       }
 
-      // Refund credits if applicable
-      if (shouldRefund && booking.credits_used > 0) {
-        const currentCredits = (booking as any).profiles?.current_credits || 0;
-        const newBalance = currentCredits + booking.credits_used;
-
-        // Update user credits
-        const { error: creditError } = await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', booking.user_id);
-
-        if (creditError) {
-          console.error('Error updating credits:', creditError);
-          toast.error('Errore nel rimborso crediti');
-          return;
-        }
-
-        // Log credit transaction
-        const { error: transactionError } = await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: booking.user_id,
-            amount: booking.credits_used,
-            balance_after: newBalance,
-            transaction_type: 'refund',
-            description: `Rimborso per cancellazione prenotazione - ${booking.courses?.name || 'Corso'}`,
-            reference_id: bookingId
-          });
-
-        if (transactionError) {
-          console.error('Error logging transaction:', transactionError);
-        }
-      }
+      // Process refund using new helper (owners can always refund)
+      const { processRefund } = await import('@/lib/creditRefundHelpers');
+      const refundResult = await processRefund(booking, user.id, 'owner', reason);
 
       // Refresh bookings
       await fetchOwnerBookings();
       
       toast.success(
-        shouldRefund 
+        refundResult.success && refundResult.message.includes('credits refunded')
           ? 'Prenotazione cancellata e crediti rimborsati'
           : 'Prenotazione cancellata'
       );

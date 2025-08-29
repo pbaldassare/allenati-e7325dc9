@@ -1,0 +1,185 @@
+import { supabase } from '@/integrations/supabase/client';
+import { hasActiveUnlimitedSubscription } from '@/lib/subscriptionHelpers';
+
+export interface RefundEligibilityResult {
+  shouldRefund: boolean;
+  reason: string;
+}
+
+/**
+ * Check if a booking cancellation should result in credit refund
+ */
+export const checkRefundEligibility = async (
+  booking: any,
+  userRole: 'user' | 'instructor' | 'owner' | 'admin'
+): Promise<RefundEligibilityResult> => {
+  // Staff (instructor, owner, admin) can always refund
+  if (userRole !== 'user') {
+    return {
+      shouldRefund: true,
+      reason: 'Staff cancellation - always eligible for refund'
+    };
+  }
+
+  // For users, check deadline
+  const course = booking.courses || booking.course;
+  const bookingDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+  const deadlineTime = new Date(bookingDateTime.getTime() - ((course?.deadline_hours || 24) * 60 * 60 * 1000));
+  const now = new Date();
+  const isWithinDeadline = now <= deadlineTime;
+
+  if (!isWithinDeadline) {
+    return {
+      shouldRefund: false,
+      reason: 'User cancellation past deadline'
+    };
+  }
+
+  return {
+    shouldRefund: true,
+    reason: 'User cancellation within deadline'
+  };
+};
+
+/**
+ * Check if user had unlimited subscription when booking was made
+ */
+export const hadUnlimitedSubscriptionAtBooking = async (
+  userId: string,
+  gymId: string,
+  bookingCreatedAt: string
+): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select(`
+        subscription_plans!inner(unlimited_access)
+      `)
+      .eq('user_id', userId)
+      .eq('gym_id', gymId)
+      .eq('status', 'active')
+      .eq('subscription_plans.unlimited_access', true)
+      .lte('starts_at', bookingCreatedAt)
+      .gte('expires_at', bookingCreatedAt)
+      .single();
+
+    return !!data;
+  } catch (error) {
+    console.error('Error checking subscription at booking time:', error);
+    return false;
+  }
+};
+
+/**
+ * Process credit refund for a cancelled booking
+ */
+export const processRefund = async (
+  booking: any,
+  userId: string,
+  userRole: 'user' | 'instructor' | 'owner' | 'admin',
+  cancellationReason?: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Check if refund is eligible
+    const eligibility = await checkRefundEligibility(booking, userRole);
+    
+    if (!eligibility.shouldRefund) {
+      return {
+        success: true,
+        message: 'Booking cancelled - no refund due to policy'
+      };
+    }
+
+    // Don't refund if no credits were used (e.g., unlimited subscription)
+    if (!booking.credits_used || booking.credits_used <= 0) {
+      return {
+        success: true,
+        message: 'Booking cancelled - no credits to refund'
+      };
+    }
+
+    // Check if user had unlimited subscription at booking time
+    const course = booking.courses || booking.course;
+    const hadUnlimited = await hadUnlimitedSubscriptionAtBooking(
+      booking.user_id,
+      course?.gym_id,
+      booking.created_at
+    );
+
+    if (hadUnlimited) {
+      return {
+        success: true,
+        message: 'Booking cancelled - user had unlimited access, no credits to refund'
+      };
+    }
+
+    // Get current gym credits for the specific gym
+    const { data: gymCreditsData, error: gymCreditsError } = await supabase
+      .from('gym_credits')
+      .select('credits')
+      .eq('user_id', booking.user_id)
+      .eq('gym_id', course?.gym_id)
+      .single();
+
+    if (gymCreditsError && gymCreditsError.code !== 'PGRST116') {
+      throw gymCreditsError;
+    }
+
+    const currentCredits = gymCreditsData?.credits || 0;
+    const newBalance = currentCredits + booking.credits_used;
+
+    // Log refund transaction
+    const { error: transactionError } = await supabase
+      .from('credits_transactions')
+      .insert({
+        user_id: booking.user_id,
+        gym_id: course?.gym_id,
+        amount: booking.credits_used,
+        balance_after: newBalance,
+        transaction_type: 'refund',
+        description: `Rimborso per cancellazione: ${course?.name || 'corso'} ${cancellationReason ? `(${cancellationReason})` : ''}`,
+        reference_id: booking.id
+      });
+
+    if (transactionError) throw transactionError;
+
+    return {
+      success: true,
+      message: `Booking cancelled - ${booking.credits_used} credits refunded`
+    };
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    return {
+      success: false,
+      message: 'Error processing refund'
+    };
+  }
+};
+
+/**
+ * Get user role from user_roles table
+ */
+export const getUserRole = async (userId: string): Promise<'user' | 'instructor' | 'owner' | 'admin'> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('role', { ascending: true }); // admin, gym_owner, instructor, basic_user
+
+    if (error || !data || data.length === 0) {
+      return 'user';
+    }
+
+    // Return highest privilege role
+    const roles = data.map(r => r.role);
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('gym_owner')) return 'owner';
+    if (roles.includes('instructor')) return 'instructor';
+    return 'user';
+  } catch (error) {
+    console.error('Error getting user role:', error);
+    return 'user';
+  }
+};
