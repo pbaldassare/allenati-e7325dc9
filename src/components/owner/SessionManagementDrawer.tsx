@@ -15,11 +15,14 @@ import {
   MapPin, 
   UserMinus,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
+import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 
 interface SessionData {
   id: string;
@@ -76,6 +79,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancellingSession, setCancellingSession] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -221,6 +226,97 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     }
   };
 
+  const cancelSession = async (reason?: string) => {
+    if (!user?.id) return;
+
+    setCancellingSession(true);
+    try {
+      // Get user role for refund processing
+      const userRole = await getUserRole(user.id);
+
+      // Update session status to cancelled
+      const { error: sessionError } = await supabase
+        .from('course_sessions')
+        .update({ 
+          status: 'cancelled',
+          notes: reason ? `Cancellata: ${reason}` : 'Sessione cancellata'
+        })
+        .eq('id', session.id);
+
+      if (sessionError) throw sessionError;
+
+      // Get all confirmed bookings for this session
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          courses(id, name, gym_id, deadline_hours)
+        `)
+        .eq('session_id', session.id)
+        .eq('status', 'confirmed');
+
+      if (bookingsError) throw bookingsError;
+
+      let refundedCount = 0;
+      let refundErrors = 0;
+
+      // Process each booking cancellation and refund
+      for (const booking of bookings || []) {
+        try {
+          // Update booking status
+          const { error: updateError } = await supabase
+            .from('bookings')
+            .update({
+              status: 'cancelled',
+              cancelled_at: new Date().toISOString(),
+              cancellation_reason: reason ? `Sessione cancellata: ${reason}` : 'Sessione cancellata'
+            })
+            .eq('id', booking.id);
+
+          if (updateError) throw updateError;
+
+          // Process refund
+          const refundResult = await processRefund(booking, user.id, userRole, reason);
+          if (refundResult.success) {
+            refundedCount++;
+          } else {
+            refundErrors++;
+            console.error('Refund failed for booking:', booking.id, refundResult.message);
+          }
+        } catch (error) {
+          console.error('Error processing booking cancellation:', booking.id, error);
+          refundErrors++;
+        }
+      }
+
+      // Show success message
+      const totalBookings = bookings?.length || 0;
+      if (totalBookings > 0) {
+        const refundMessage = refundedCount > 0 
+          ? ` ${refundedCount} partecipanti rimborsati.`
+          : '';
+        const errorMessage = refundErrors > 0 
+          ? ` ${refundErrors} errori nei rimborsi.`
+          : '';
+        
+        toast.success(`Sessione cancellata con successo.${refundMessage}${errorMessage}`);
+      } else {
+        toast.success('Sessione cancellata con successo.');
+      }
+
+      // Close dialogs and refresh
+      setCancelDialogOpen(false);
+      setOpen(false);
+      onSessionUpdate?.();
+
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      toast.error('Errore durante la cancellazione della sessione');
+    } finally {
+      setCancellingSession(false);
+    }
+  };
+
   const formatDateTime = (date: string, startTime: string, endTime: string) => {
     const sessionDate = new Date(date);
     const today = new Date();
@@ -264,16 +360,27 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <div className="flex items-center gap-2">
-                <Badge variant={isFull ? "destructive" : isAlmostFull ? "secondary" : "default"}>
-                  {participants.length}/{session.max_participants} posti
-                </Badge>
-                {isFull && <AlertCircle className="h-4 w-4 text-destructive" />}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <Badge variant={isFull ? "destructive" : isAlmostFull ? "secondary" : "default"}>
+                    {participants.length}/{session.max_participants} posti
+                  </Badge>
+                  {isFull && <AlertCircle className="h-4 w-4 text-destructive" />}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {occupancyRate.toFixed(0)}% occupato
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {occupancyRate.toFixed(0)}% occupato
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCancelDialogOpen(true)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Cancella
+              </Button>
             </div>
           </DrawerTitle>
         </DrawerHeader>
@@ -418,6 +525,22 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
         </div>
       </DrawerContent>
+
+      <CancelSessionDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        session={{
+          id: session.id,
+          course_name: session.course_name,
+          session_date: session.session_date,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          room_name: session.room_name,
+          participant_count: participants.length
+        }}
+        onConfirm={cancelSession}
+        isLoading={cancellingSession}
+      />
     </Drawer>
   );
 };
