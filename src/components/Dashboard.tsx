@@ -665,34 +665,6 @@ export const Dashboard = () => {
                     return "Al momento non ci sono sessioni disponibili nelle tue palestre. Controlla più tardi o esplora altre opzioni.";
                   })()}
                 </p>
-                {(() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  const selectedDateStr = selectedDate?.toISOString().split('T')[0];
-                  
-                  // Don't show buttons for past dates
-                  if (selectedDateStr && selectedDateStr < today) {
-                    return null;
-                  }
-                  
-                  return (
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button
-                        onClick={() => navigate('/gyms')}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-                      >
-                        <Building2 className="h-4 w-4 mr-2" />
-                        Esplora Palestre
-                      </Button>
-                      <Button
-                        onClick={() => window.location.reload()}
-                        variant="outline"
-                        className="border-primary/20 text-primary hover:bg-primary/5"
-                      >
-                        Aggiorna
-                      </Button>
-                    </div>
-                  );
-                })()}
               </div>
             )}
          </CardContent>
