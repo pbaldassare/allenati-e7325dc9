@@ -10,6 +10,7 @@ import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
+import { RepairCoursesButton } from '@/components/RepairCoursesButton';
 
 interface CourseItem {
   id: string;
@@ -413,9 +414,12 @@ const OwnerCoursesList: React.FC = () => {
             Gestisci tutti i corsi della palestra
           </p>
         </div>
-        <Button onClick={() => navigate("/owner/courses/new")}>
-          Nuovo Corso
-        </Button>
+        <div className="flex gap-2">
+          <RepairCoursesButton />
+          <Button onClick={() => navigate("/owner/courses/new")}>
+            Nuovo Corso
+          </Button>
+        </div>
       </div>
 
       {/* Search */}

@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { SupabaseCourse } from '@/types/course';
 import { X, Plus, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 import { supabase } from '@/integrations/supabase/client';
 
 const courseSchema = z.object({
@@ -248,6 +249,9 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
           .single();
 
         if (courseError) throw courseError;
+        
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(courseData.id);
 
         // Create course schedules
         if (data.schedule && data.schedule.length > 0) {
@@ -321,6 +325,9 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
           .eq('id', course?.id);
 
         if (courseError) throw courseError;
+
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(course.id);
 
         // Update schedules
         if (course?.id) {

@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 
 interface CourseFormData {
   name: string;
@@ -292,6 +293,9 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
           .eq('id', course.id);
         
         if (error) throw error;
+        
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(course.id);
         
         toast({
           title: 'Successo',
