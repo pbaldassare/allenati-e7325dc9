@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar, Clock } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
+import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
 
 interface SubscriptionStats {
   total: number;
@@ -47,6 +48,7 @@ const OwnerSubscriptions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
+  const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
@@ -217,13 +219,22 @@ const OwnerSubscriptions: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Gestione Abbonamenti
-        </h1>
-        <p className="text-muted-foreground">
-          Monitora e gestisci gli abbonamenti dei membri della palestra
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Gestione Abbonamenti
+          </h1>
+          <p className="text-muted-foreground">
+            Monitora e gestisci gli abbonamenti dei membri della palestra
+          </p>
+        </div>
+        <Button 
+          onClick={() => setManualActivationDialogOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Attiva Abbonamento Manuale
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -529,6 +540,13 @@ const OwnerSubscriptions: React.FC = () => {
           onExtended={handleExtensionCompleted}
         />
       )}
+
+      {/* Manual Activation Dialog */}
+      <ManualSubscriptionActivationDialog
+        isOpen={manualActivationDialogOpen}
+        onClose={() => setManualActivationDialogOpen(false)}
+        onActivated={loadSubscriptionData}
+      />
     </div>
   );
 };
