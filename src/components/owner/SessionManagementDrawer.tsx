@@ -28,6 +28,7 @@ interface SessionData {
   id: string;
   course_id: string;
   course_name: string;
+  course_description?: string;
   session_date: string;
   start_time: string;
   end_time: string;
@@ -347,7 +348,12 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           <DrawerTitle className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">{session.course_name}</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              {session.course_description && (
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {session.course_description}
+                </p>
+              )}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   {formatDateTime(session.session_date, session.start_time, session.end_time)}

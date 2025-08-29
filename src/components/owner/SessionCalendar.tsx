@@ -14,6 +14,7 @@ interface SessionData {
   id: string;
   course_id: string;
   courseName: string;
+  course_description?: string;
   date: string;
   time: string;
   start_time: string;
@@ -60,8 +61,8 @@ const SessionCalendar: React.FC = () => {
       let startDate: Date, endDate: Date;
       
       if (viewMode === 'week') {
-        startDate = startOfWeek(currentWeek, { locale: it });
-        endDate = endOfWeek(currentWeek, { locale: it });
+        startDate = startOfWeek(currentWeek, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentWeek, { weekStartsOn: 1 });
       } else {
         startDate = startOfMonth(currentMonth);
         endDate = endOfMonth(currentMonth);
@@ -73,6 +74,7 @@ const SessionCalendar: React.FC = () => {
           *,
           courses!inner (
             name,
+            description,
             gym_id,
             instructor_id,
             credits_required
@@ -110,6 +112,7 @@ const SessionCalendar: React.FC = () => {
         id: session.id,
         course_id: session.course_id,
         courseName: session.courses.name,
+        course_description: session.courses.description,
         date: session.session_date,
         time: `${session.start_time} - ${session.end_time}`,
         start_time: session.start_time,
@@ -154,8 +157,8 @@ const SessionCalendar: React.FC = () => {
   };
 
   const getWeekRangeText = () => {
-    const weekStart = startOfWeek(currentWeek, { locale: it });
-    const weekEnd = endOfWeek(currentWeek, { locale: it });
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
     return `${format(weekStart, 'dd MMM', { locale: it })} - ${format(weekEnd, 'dd MMM yyyy', { locale: it })}`;
   };
 
@@ -198,8 +201,8 @@ const SessionCalendar: React.FC = () => {
 
   const renderWeekView = () => {
     const weekDays = eachDayOfInterval({
-      start: startOfWeek(currentWeek, { locale: it }),
-      end: endOfWeek(currentWeek, { locale: it })
+      start: startOfWeek(currentWeek, { weekStartsOn: 1 }),
+      end: endOfWeek(currentWeek, { weekStartsOn: 1 })
     });
 
     return (
@@ -228,12 +231,13 @@ const SessionCalendar: React.FC = () => {
                 ) : (
                   <div className="space-y-1 md:space-y-2">
                     {daySessions.map((session) => (
-                      <SessionManagementDrawer
+                        <SessionManagementDrawer
                         key={session.id}
                         session={{
                           id: session.id,
                           course_id: session.course_id,
                           course_name: session.courseName,
+                          course_description: session.course_description,
                           session_date: session.date,
                           start_time: session.start_time,
                           end_time: session.end_time,
@@ -245,14 +249,11 @@ const SessionCalendar: React.FC = () => {
                         onSessionUpdate={fetchSessions}
                       >
                         <Card 
-                          className={`p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[40px] md:min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                          className={`p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[32px] md:min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
                         >
                           <div className="space-y-0.5">
                             <div className="text-xs font-medium line-clamp-2 leading-tight">{session.courseName}</div>
                             <div className="text-xs text-muted-foreground leading-tight">{session.time}</div>
-                            {session.room !== 'Non specificata' && (
-                              <div className="text-xs text-muted-foreground truncate hidden md:block">{session.room}</div>
-                            )}
                           </div>
                           <div className="mt-0.5">
                             <div className="text-xs text-muted-foreground">
@@ -275,13 +276,13 @@ const SessionCalendar: React.FC = () => {
   const renderMonthView = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart, { locale: it });
-    const calendarEnd = endOfWeek(monthEnd, { locale: it });
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
     
     const weeks = eachWeekOfInterval({
       start: calendarStart,
       end: calendarEnd
-    }, { locale: it });
+    }, { weekStartsOn: 1 });
 
     return (
       <div className="space-y-2">
@@ -298,7 +299,7 @@ const SessionCalendar: React.FC = () => {
         {weeks.map((weekStart) => {
           const weekDays = eachDayOfInterval({
             start: weekStart,
-            end: endOfWeek(weekStart, { locale: it })
+            end: endOfWeek(weekStart, { weekStartsOn: 1 })
           });
           
           return (
@@ -333,6 +334,7 @@ const SessionCalendar: React.FC = () => {
                               id: session.id,
                               course_id: session.course_id,
                               course_name: session.courseName,
+                              course_description: session.course_description,
                               session_date: session.date,
                               start_time: session.start_time,
                               end_time: session.end_time,
