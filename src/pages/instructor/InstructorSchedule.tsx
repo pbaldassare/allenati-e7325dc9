@@ -7,8 +7,8 @@ import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { Calendar, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SessionManagementDrawer } from '@/components/owner/SessionManagementDrawer';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, isToday, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale/it';
 
 const InstructorSchedule = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
@@ -24,8 +24,8 @@ const InstructorSchedule = () => {
     if (!courses.length) return;
     
     try {
-      const weekStart = startOfWeek(currentWeek, { locale: it });
-      const weekEnd = endOfWeek(currentWeek, { locale: it });
+      const weekStart = startOfWeek(currentWeek);
+      const weekEnd = endOfWeek(currentWeek);
       
       const courseIds = courses.map(c => c.id);
       

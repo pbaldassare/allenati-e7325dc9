@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
-import { it } from "date-fns/locale";
+import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
+import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { CourseParticipantCount } from "@/components/CourseParticipantCount";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
@@ -61,8 +61,8 @@ const SessionCalendar: React.FC = () => {
       let startDate: Date, endDate: Date;
       
       if (viewMode === 'week') {
-        startDate = startOfWeek(currentWeek, { weekStartsOn: 1 });
-        endDate = endOfWeek(currentWeek, { weekStartsOn: 1 });
+        startDate = startOfWeek(currentWeek);
+        endDate = endOfWeek(currentWeek);
       } else {
         startDate = startOfMonth(currentMonth);
         endDate = endOfMonth(currentMonth);
@@ -157,8 +157,8 @@ const SessionCalendar: React.FC = () => {
   };
 
   const getWeekRangeText = () => {
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekStart = startOfWeek(currentWeek);
+    const weekEnd = endOfWeek(currentWeek);
     return `${format(weekStart, 'dd MMM', { locale: it })} - ${format(weekEnd, 'dd MMM yyyy', { locale: it })}`;
   };
 
@@ -201,8 +201,8 @@ const SessionCalendar: React.FC = () => {
 
   const renderWeekView = () => {
     const weekDays = eachDayOfInterval({
-      start: startOfWeek(currentWeek, { weekStartsOn: 1 }),
-      end: endOfWeek(currentWeek, { weekStartsOn: 1 })
+      start: startOfWeek(currentWeek),
+      end: endOfWeek(currentWeek)
     });
 
     return (
@@ -276,13 +276,13 @@ const SessionCalendar: React.FC = () => {
   const renderMonthView = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
     
     const weeks = eachWeekOfInterval({
       start: calendarStart,
       end: calendarEnd
-    }, { weekStartsOn: 1 });
+    });
 
     return (
       <div className="space-y-2">
@@ -299,7 +299,7 @@ const SessionCalendar: React.FC = () => {
         {weeks.map((weekStart) => {
           const weekDays = eachDayOfInterval({
             start: weekStart,
-            end: endOfWeek(weekStart, { weekStartsOn: 1 })
+            end: endOfWeek(weekStart)
           });
           
           return (

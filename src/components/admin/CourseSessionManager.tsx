@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addWeeks, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

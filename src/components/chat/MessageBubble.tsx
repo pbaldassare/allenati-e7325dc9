@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale/it';
 
 interface Message {
   id: string;

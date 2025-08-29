@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { it } from "date-fns/locale/it";
 import { CalendarIcon, FileIcon, UploadIcon } from "lucide-react";
 import MedicalCertificateUploadDialog from "./MedicalCertificateUploadDialog";
 
