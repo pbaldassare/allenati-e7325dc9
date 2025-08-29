@@ -37,6 +37,7 @@ interface CourseSessionManagerProps {
   maxParticipants: number;
   onSessionsChange: (sessions: CourseSession[]) => void;
   autoGenerate?: boolean;
+  initialSessions?: CourseSession[];
 }
 
 const getDayName = (dayOfWeek: number): string => {
@@ -51,11 +52,13 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
   schedules,
   maxParticipants,
   onSessionsChange,
-  autoGenerate = true
+  autoGenerate = true,
+  initialSessions = []
 }) => {
-  const [sessions, setSessions] = useState<CourseSession[]>([]);
+  const [sessions, setSessions] = useState<CourseSession[]>(initialSessions);
   const [generatedSessions, setGeneratedSessions] = useState<CourseSession[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Generate sessions automatically based on schedules and date range
   const generateSessions = () => {
@@ -90,14 +93,19 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
   };
 
   // Apply generated sessions
-  const applyGeneratedSessions = () => {
-    setSessions(generatedSessions);
-    onSessionsChange(generatedSessions);
-    setShowPreview(false);
+  const applyGeneratedSessions = async () => {
+    setSaving(true);
+    try {
+      setSessions(generatedSessions);
+      await onSessionsChange(generatedSessions);
+      setShowPreview(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Add manual session
-  const addManualSession = () => {
+  const addManualSession = async () => {
     const newSession: CourseSession = {
       session_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '10:00',
@@ -109,23 +117,23 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
     
     const updatedSessions = [...sessions, newSession];
     setSessions(updatedSessions);
-    onSessionsChange(updatedSessions);
+    await onSessionsChange(updatedSessions);
   };
 
   // Remove session
-  const removeSession = (index: number) => {
+  const removeSession = async (index: number) => {
     const updatedSessions = sessions.filter((_, i) => i !== index);
     setSessions(updatedSessions);
-    onSessionsChange(updatedSessions);
+    await onSessionsChange(updatedSessions);
   };
 
   // Update session
-  const updateSession = (index: number, updates: Partial<CourseSession>) => {
+  const updateSession = async (index: number, updates: Partial<CourseSession>) => {
     const updatedSessions = sessions.map((session, i) => 
       i === index ? { ...session, ...updates } : session
     );
     setSessions(updatedSessions);
-    onSessionsChange(updatedSessions);
+    await onSessionsChange(updatedSessions);
   };
 
   // Auto generate when dependencies change
@@ -221,10 +229,10 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
               )}
             </div>
             <div className="flex gap-2">
-              <Button onClick={applyGeneratedSessions} className="flex-1">
-                Conferma e Applica ({generatedSessions.length} sessioni)
+              <Button onClick={applyGeneratedSessions} className="flex-1" disabled={saving}>
+                {saving ? 'Salvataggio...' : `Conferma e Salva (${generatedSessions.length} sessioni)`}
               </Button>
-              <Button onClick={() => setShowPreview(false)} variant="outline">
+              <Button onClick={() => setShowPreview(false)} variant="outline" disabled={saving}>
                 Annulla
               </Button>
             </div>

@@ -201,11 +201,47 @@ const OwnerCourseEdit = () => {
 
   // Handle sessions changes
   const handleSessionsChange = async (newSessions: any[]) => {
-    setSessions(newSessions);
-    toast({
-      title: "Sessioni aggiornate",
-      description: `${newSessions.length} sessioni configurate`,
-    });
+    if (!id) return;
+    
+    try {
+      // Delete existing sessions
+      await supabase
+        .from('course_sessions')
+        .delete()
+        .eq('course_id', id);
+
+      // Insert new sessions
+      if (newSessions.length > 0) {
+        const { error } = await supabase
+          .from('course_sessions')
+          .insert(newSessions.map(session => ({
+            course_id: id,
+            session_date: session.session_date,
+            start_time: session.start_time,
+            end_time: session.end_time,
+            room_id: session.room_id,
+            room_name: session.room_name,
+            max_participants: session.max_participants,
+            available_spots: session.available_spots,
+            status: session.status
+          })));
+
+        if (error) throw error;
+      }
+
+      setSessions(newSessions);
+      toast({
+        title: "Sessioni salvate",
+        description: `${newSessions.length} sessioni salvate nel database`,
+      });
+    } catch (error) {
+      console.error('Error saving sessions:', error);
+      toast({
+        title: "Errore",
+        description: "Errore durante il salvataggio delle sessioni",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle exceptions changes
@@ -353,6 +389,7 @@ const OwnerCourseEdit = () => {
                 })) || []}
                 maxParticipants={course?.max_participants || 20}
                 onSessionsChange={handleSessionsChange}
+                initialSessions={sessions}
               />
             </CardContent>
           </Card>
