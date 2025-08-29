@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
+import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
 
 interface MemberProfile {
   user_id: string;
@@ -306,6 +307,13 @@ const OwnerUsers = () => {
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Calculate statistics
+  const totalMembers = members.length;
+  const activeMembers = members.filter(m => m.membership_status === 'active').length;
+  const inactiveMembers = totalMembers - activeMembers;
+  const instructors = members.filter(m => m.is_instructor).length;
+  const normalUsers = totalMembers - instructors;
+
   const normalizedQuery = query.trim().toLowerCase();
   const filteredByStatus = showInactive ? members : members.filter((m) => m.membership_status === 'active');
   const listToShow = normalizedQuery
@@ -320,6 +328,14 @@ const OwnerUsers = () => {
         </h1>
         <p className="text-muted-foreground">Gestisci i membri della tua palestra</p>
       </div>
+
+      <OwnerUserStats
+        totalMembers={totalMembers}
+        activeMembers={activeMembers}
+        inactiveMembers={inactiveMembers}
+        normalUsers={normalUsers}
+        instructors={instructors}
+      />
 
       <Card>
         <CardHeader>
