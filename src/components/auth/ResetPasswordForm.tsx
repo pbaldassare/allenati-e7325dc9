@@ -92,16 +92,7 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps) 
         return;
       }
 
-      // Get user by email to sign them in
-      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
-        email: tokenData.email,
-        password: 'temp' // This will fail but we just need the user object
-      });
-
-      if (signInError) {
-        // Expected error, but we have the user_id from token validation
-        console.log('Expected sign-in error for password update flow');
-      }
+      // Use user_id from token validation (no need for native auth call)
 
       // Update password using admin endpoint - we need to create a function for this
       const { error: updateError } = await supabase.functions.invoke('update-user-password', {
