@@ -69,7 +69,13 @@ const OwnerUsers = () => {
           return;
         }
 
+        // Debug: verifica permessi utente
+        console.log('DEBUG - Current user ID:', userId);
+        const { data: debugInfo } = await (supabase as any).rpc('debug_user_permissions', { _user_id: userId });
+        console.log('DEBUG - User permissions:', debugInfo);
+
         const { data: gymId, error: gymErr } = await (supabase as any).rpc('get_user_gym_id', { _user_id: userId });
+        console.log('DEBUG - Gym ID result:', gymId, 'Error:', gymErr);
         if (gymErr) throw gymErr;
         if (!gymId) {
           setMembers([]);

@@ -1809,6 +1809,10 @@ export type Database = {
         Args: { _created_by: string; _gym_id: string }
         Returns: string
       }
+      debug_user_permissions: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       demote_instructor_to_user: {
         Args: { target_user_id: string }
         Returns: boolean

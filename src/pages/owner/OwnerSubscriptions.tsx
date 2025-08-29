@@ -60,7 +60,13 @@ const OwnerSubscriptions: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Debug: verifica permessi utente
+      console.log('DEBUG - Current user ID:', user.id);
+      const { data: debugInfo } = await supabase.rpc('debug_user_permissions', { _user_id: user.id });
+      console.log('DEBUG - User permissions:', debugInfo);
+
       const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
+      console.log('DEBUG - Gym ID result:', gymId);
       if (!gymId) return;
 
       // First get gym member user IDs
