@@ -15,6 +15,8 @@ export const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -25,6 +27,13 @@ export const ResetPassword = () => {
     
     console.log('🎯 Selected reset method:', resetMethod);
 
+    // Set timeout to ensure fields are unlocked if auth takes too long
+    const authTimeout = setTimeout(() => {
+      console.log('⏰ Auth timeout - unlocking fields');
+      setIsAuthenticating(false);
+      setIsAuthenticated(true);
+    }, 5000);
+
     if (resetMethod.method === 'session') {
       const { accessToken, refreshToken, type } = resetMethod.params;
       console.log('🔐 Attempting session-based reset');
@@ -33,6 +42,9 @@ export const ResetPassword = () => {
         access_token: accessToken,
         refresh_token: refreshToken,
       }).then(({ data, error }) => {
+        clearTimeout(authTimeout);
+        setIsAuthenticating(false);
+        
         if (error) {
           console.error('❌ Session error:', error);
           toast({
@@ -43,6 +55,7 @@ export const ResetPassword = () => {
           navigate('/auth');
         } else {
           console.log('✅ Session set successfully:', data);
+          setIsAuthenticated(true);
           toast({
             title: "Autenticazione riuscita",
             description: "Ora puoi impostare la nuova password",
@@ -61,6 +74,9 @@ export const ResetPassword = () => {
         token_hash: tokenHash,
         type: 'recovery'
       }).then(({ data, error }) => {
+        clearTimeout(authTimeout);
+        setIsAuthenticating(false);
+        
         if (error) {
           console.error('❌ Token hash verification error:', error);
           toast({
@@ -71,6 +87,7 @@ export const ResetPassword = () => {
           navigate('/auth');
         } else {
           console.log('✅ Token hash verified successfully:', data);
+          setIsAuthenticated(true);
           toast({
             title: "Token verificato",
             description: "Ora puoi impostare la nuova password",
@@ -87,6 +104,8 @@ export const ResetPassword = () => {
       console.log('🔐 Attempting plain token reset:', validation);
       
       if (!validation.valid) {
+        clearTimeout(authTimeout);
+        setIsAuthenticating(false);
         console.error('❌ Invalid token format:', validation.reason);
         toast({
           title: "Token non valido",
@@ -102,6 +121,9 @@ export const ResetPassword = () => {
         type: 'recovery',
         email: '' // We might need to store email in localStorage or get it from URL
       }).then(({ data, error }) => {
+        clearTimeout(authTimeout);
+        setIsAuthenticating(false);
+        
         if (error) {
           console.error('❌ Plain token verification error:', error);
           toast({
@@ -112,6 +134,7 @@ export const ResetPassword = () => {
           navigate('/auth');
         } else {
           console.log('✅ Plain token verified successfully:', data);
+          setIsAuthenticated(true);
           toast({
             title: "Token verificato",
             description: "Ora puoi impostare la nuova password",
@@ -123,6 +146,8 @@ export const ResetPassword = () => {
     }
 
     // No valid method found
+    clearTimeout(authTimeout);
+    setIsAuthenticating(false);
     console.error('❌ No valid reset method found');
     toast({
       title: "Link non valido",
@@ -215,82 +240,89 @@ export const ResetPassword = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-lg sm:text-base">Nuova Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  className="pr-10 h-14 sm:h-12 text-base"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+          {isAuthenticating ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Verifica del token in corso...</p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-lg sm:text-base">Conferma Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  className="pr-10 h-14 sm:h-12 text-base"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-lg sm:text-base">Nuova Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading || isAuthenticating}
+                    required
+                    className="pr-10 h-14 sm:h-12 text-base"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading || isAuthenticating}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-primary hover:opacity-90"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Aggiornamento...
-                </>
-              ) : (
-                'Aggiorna Password'
-              )}
-            </Button>
-          </form>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-lg sm:text-base">Conferma Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading || isAuthenticating}
+                    required
+                    className="pr-10 h-14 sm:h-12 text-base"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading || isAuthenticating}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-primary hover:opacity-90"
+                disabled={isLoading || isAuthenticating || !isAuthenticated}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Aggiornamento...
+                  </>
+                ) : (
+                  'Aggiorna Password'
+                )}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
