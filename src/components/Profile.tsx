@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { CreditsBalance } from "@/components/credits/CreditsBalance";
 import { useState } from "react";
 import { CreditsPurchase } from "@/components/credits/CreditsPurchase";
 import { CreditsHistory } from "@/components/credits/CreditsHistory";
+import { useUserStats } from "@/hooks/useUserStats";
 
 interface ProfileProps {
   onTabChange?: (tab: string) => void;
@@ -21,6 +23,7 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
   const navigate = useNavigate();
   const [showCreditsPurchase, setShowCreditsPurchase] = useState(false);
   const [creditsKey, setCreditsKey] = useState(0);
+  const { stats, loading: statsLoading } = useUserStats(user?.id);
   
   const handleLogout = async () => {
     try {
@@ -37,14 +40,6 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
       });
     }
   };
-
-  const recentClasses = [
-    { name: "BJJ Morning", time: "10:00 - 11:00", date: "February 5", instructor: "Marco" },
-    { name: "BJJ Intermediate", time: "19:00 - 20:15", date: "February 2", instructor: "Andrea" },
-    { name: "Yoga", time: "10:00 - 11:00", date: "February 1", instructor: "Sofia" },
-    { name: "BJJ Basic", time: "10:00 - 11:00", date: "January 31", instructor: "Luca" },
-    { name: "Wrestling", time: "19:00 - 20:00", date: "January 30", instructor: "Marco" },
-  ];
 
   const userInitials = user?.first_name?.[0] + user?.last_name?.[0] || 'U';
   const userName = `${user?.first_name || 'Utente'} ${user?.last_name || ''}`.trim();
@@ -108,20 +103,26 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Card className="shadow-card text-center transition-all duration-300">
           <CardContent className="p-3 sm:p-4">
-            <p className="text-2xl sm:text-3xl font-mono font-bold text-primary">1</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Week</p>
+            <p className="text-2xl sm:text-3xl font-mono font-bold text-primary">
+              {statsLoading ? '...' : stats.weekClasses}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Settimana</p>
           </CardContent>
         </Card>
         <Card className="shadow-card text-center transition-all duration-300">
           <CardContent className="p-3 sm:p-4">
-            <p className="text-2xl sm:text-3xl font-mono font-bold text-secondary">3</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Month</p>
+            <p className="text-2xl sm:text-3xl font-mono font-bold text-secondary">
+              {statsLoading ? '...' : stats.monthClasses}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Mese</p>
           </CardContent>
         </Card>
         <Card className="shadow-card text-center transition-all duration-300">
           <CardContent className="p-3 sm:p-4">
-            <p className="text-2xl sm:text-3xl font-mono font-bold text-accent">22</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Year</p>
+            <p className="text-2xl sm:text-3xl font-mono font-bold text-accent">
+              {statsLoading ? '...' : stats.yearClasses}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Anno</p>
           </CardContent>
         </Card>
       </div>
@@ -131,11 +132,16 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-center gap-2 text-sm sm:text-base text-foreground">
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-            <span>Questo studente ha partecipato a <span className="font-mono font-semibold text-primary">903</span> classi in totale</span>
+            <span>
+              Questo studente ha partecipato a{' '}
+              <span className="font-mono font-semibold text-primary">
+                {statsLoading ? '...' : stats.totalClasses}
+              </span>
+              {' '}classi in totale
+            </span>
           </div>
         </CardContent>
       </Card>
-
 
       {/* Profile Actions */}
       <div className="space-y-2 sm:space-y-3">
