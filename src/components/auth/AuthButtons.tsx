@@ -16,7 +16,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({ onLogin, onRegister })
         className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 animate-scale-in"
       >
         <UserPlus className="w-4 h-4 mr-2" />
-        Registrati Gratis
+        Registrati
       </Button>
       <Button
         onClick={onLogin}
