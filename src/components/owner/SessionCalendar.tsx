@@ -203,30 +203,30 @@ const SessionCalendar: React.FC = () => {
     });
 
     return (
-      <div className="grid grid-cols-7 gap-4 h-[600px]">
+      <div className="grid grid-cols-7 gap-4 md:gap-4 gap-1 h-[600px]">
         {weekDays.map((day) => {
           const daySessions = getSessionsForDay(day);
           
           return (
             <div key={day.toISOString()} className="flex flex-col border border-border rounded-lg bg-card">
-              <div className="p-2 border-b border-border bg-muted/50 sticky top-0">
-                <h3 className="font-medium text-center text-sm">
+              <div className="p-1 md:p-2 border-b border-border bg-muted/50 sticky top-0">
+                <h3 className="font-medium text-center text-xs md:text-sm">
                   {format(day, 'EEE dd', { locale: it })}
                 </h3>
                 {daySessions.length > 0 && (
-                  <div className="text-xs text-center text-muted-foreground mt-1">
+                  <div className="text-xs text-center text-muted-foreground mt-1 hidden md:block">
                     {daySessions.length} sessioni
                   </div>
                 )}
               </div>
               
-              <div className="flex-1 p-2 overflow-y-auto">
+              <div className="flex-1 p-1 md:p-2 overflow-y-auto">
                 {daySessions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
+                  <p className="text-xs text-muted-foreground text-center py-2 md:py-4">
                     Nessuna sessione
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1 md:space-y-2">
                     {daySessions.map((session) => (
                       <SessionManagementDrawer
                         key={session.id}
@@ -245,13 +245,13 @@ const SessionCalendar: React.FC = () => {
                         onSessionUpdate={fetchSessions}
                       >
                         <Card 
-                          className={`p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                          className={`p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[50px] md:min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
                         >
                           <div>
                             <div className="text-xs font-medium line-clamp-2 mb-1">{session.courseName}</div>
                             <div className="text-xs text-muted-foreground">{session.time}</div>
                             {session.room !== 'Non specificata' && (
-                              <div className="text-xs text-muted-foreground truncate">{session.room}</div>
+                              <div className="text-xs text-muted-foreground truncate hidden md:block">{session.room}</div>
                             )}
                           </div>
                           <div className="mt-1">
