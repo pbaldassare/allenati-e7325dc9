@@ -203,58 +203,63 @@ const SessionCalendar: React.FC = () => {
     });
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+      <div className="grid grid-cols-7 gap-4">
         {weekDays.map((day) => {
           const daySessions = getSessionsForDay(day);
           
           return (
-            <div key={day.toISOString()} className="space-y-3">
-              <h3 className="font-medium text-center py-2 border-b">
+            <div key={day.toISOString()} className="min-h-[200px] flex flex-col">
+              <h3 className="font-medium text-center py-2 border-b text-sm">
                 {format(day, 'EEE dd', { locale: it })}
               </h3>
               
-              {daySessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nessuna sessione
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {daySessions.map((session) => (
-                    <SessionManagementDrawer
-                      key={session.id}
-                      session={{
-                        id: session.id,
-                        course_id: session.course_id,
-                        course_name: session.courseName,
-                        session_date: session.date,
-                        start_time: session.start_time,
-                        end_time: session.end_time,
-                        room_name: session.room,
-                        max_participants: session.maxParticipants,
-                        available_spots: session.maxParticipants - session.participants,
-                        participant_count: session.participants
-                      }}
-                      onSessionUpdate={fetchSessions}
-                    >
-                      <Card 
-                        className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+              <div className="flex-1 pt-3">
+                {daySessions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    Nessuna sessione
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {daySessions.map((session) => (
+                      <SessionManagementDrawer
+                        key={session.id}
+                        session={{
+                          id: session.id,
+                          course_id: session.course_id,
+                          course_name: session.courseName,
+                          session_date: session.date,
+                          start_time: session.start_time,
+                          end_time: session.end_time,
+                          room_name: session.room,
+                          max_participants: session.maxParticipants,
+                          available_spots: session.maxParticipants - session.participants,
+                          participant_count: session.participants
+                        }}
+                        onSessionUpdate={fetchSessions}
                       >
-                        <div className="text-sm font-medium">{session.courseName}</div>
-                        <div className="text-xs text-muted-foreground">{session.time}</div>
-                        <div className="text-xs text-muted-foreground">{session.room}</div>
-                        <div className="text-xs text-muted-foreground">{session.instructor}</div>
-                         <div className="mt-1">
-                          <CourseParticipantCount 
-                            sessionId={session.id}
-                            maxParticipants={session.maxParticipants}
-                            className="text-xs"
-                          />
-                        </div>
-                      </Card>
-                    </SessionManagementDrawer>
-                  ))}
-                </div>
-              )}
+                        <Card 
+                          className={`p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[80px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                        >
+                          <div>
+                            <div className="text-xs font-medium line-clamp-2 mb-1">{session.courseName}</div>
+                            <div className="text-xs text-muted-foreground">{session.time}</div>
+                            {session.room !== 'Non specificata' && (
+                              <div className="text-xs text-muted-foreground truncate">{session.room}</div>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            <CourseParticipantCount 
+                              sessionId={session.id}
+                              maxParticipants={session.maxParticipants}
+                              className="text-xs"
+                            />
+                          </div>
+                        </Card>
+                      </SessionManagementDrawer>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

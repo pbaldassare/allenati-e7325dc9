@@ -383,10 +383,12 @@ const OwnerCoursesList: React.FC = () => {
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     
     const sortedSchedules = schedules.sort((a, b) => a.day_of_week - b.day_of_week);
+    const displaySchedules = sortedSchedules.slice(0, 2);
+    const remainingCount = sortedSchedules.length - 2;
     
     return (
       <div className="space-y-1">
-        {sortedSchedules.map((schedule, index) => (
+        {displaySchedules.map((schedule, index) => (
           <div key={index} className="text-sm">
             <span className="font-medium">{dayNames[schedule.day_of_week]}</span>
             <span className="text-muted-foreground ml-2">
@@ -399,6 +401,11 @@ const OwnerCoursesList: React.FC = () => {
             )}
           </div>
         ))}
+        {remainingCount > 0 && (
+          <div className="text-xs text-muted-foreground font-medium">
+            +{remainingCount} altri orari
+          </div>
+        )}
       </div>
     );
   };
