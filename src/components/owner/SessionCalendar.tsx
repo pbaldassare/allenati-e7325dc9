@@ -203,7 +203,7 @@ const SessionCalendar: React.FC = () => {
     });
 
     return (
-      <div className="grid grid-cols-7 gap-4 md:gap-4 gap-1 h-[600px]">
+      <div className="grid grid-cols-7 gap-1 md:gap-4 min-h-[600px]">
         {weekDays.map((day) => {
           const daySessions = getSessionsForDay(day);
           
@@ -245,21 +245,19 @@ const SessionCalendar: React.FC = () => {
                         onSessionUpdate={fetchSessions}
                       >
                         <Card 
-                          className={`p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[50px] md:min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
+                          className={`p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[40px] md:min-h-[70px] flex flex-col justify-between ${getOccupancyColor(session.participants, session.maxParticipants)}`}
                         >
-                          <div>
-                            <div className="text-xs font-medium line-clamp-2 mb-1">{session.courseName}</div>
-                            <div className="text-xs text-muted-foreground">{session.time}</div>
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-medium line-clamp-2 leading-tight">{session.courseName}</div>
+                            <div className="text-xs text-muted-foreground leading-tight">{session.time}</div>
                             {session.room !== 'Non specificata' && (
                               <div className="text-xs text-muted-foreground truncate hidden md:block">{session.room}</div>
                             )}
                           </div>
-                          <div className="mt-1">
-                            <CourseParticipantCount 
-                              sessionId={session.id}
-                              maxParticipants={session.maxParticipants}
-                              className="text-xs"
-                            />
+                          <div className="mt-0.5">
+                            <div className="text-xs text-muted-foreground">
+                              {session.participants}/{session.maxParticipants}
+                            </div>
                           </div>
                         </Card>
                       </SessionManagementDrawer>
