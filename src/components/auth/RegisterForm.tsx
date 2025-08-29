@@ -32,6 +32,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     password: '',
     confirmPassword: '',
     phone: '',
+    fiscalCode: '',
     gymId: '',
     belt: '',
     guardianFirstName: '',
@@ -99,6 +100,30 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
       return;
     }
 
+    if (!formData.phone) {
+      setError('Il numero di telefono è obbligatorio');
+      return;
+    }
+
+    if (!formData.fiscalCode) {
+      setError('Il codice fiscale è obbligatorio');
+      return;
+    }
+
+    // Validazione formato telefono italiano
+    const phoneRegex = /^(\+39\s?)?[3][0-9]{2,3}\s?[0-9]{3,4}\s?[0-9]{3,4}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      setError('Inserisci un numero di telefono italiano valido (es: +39 333 123 4567)');
+      return;
+    }
+
+    // Validazione formato codice fiscale italiano
+    const fiscalCodeRegex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
+    if (!fiscalCodeRegex.test(formData.fiscalCode.toUpperCase())) {
+      setError('Inserisci un codice fiscale valido (16 caratteri alfanumerici)');
+      return;
+    }
+
     if (!formData.gymId) {
       setError('Devi selezionare una palestra');
       return;
@@ -122,6 +147,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
+            fiscal_code: formData.fiscalCode.toUpperCase(),
             selected_gym_id: formData.gymId,
             belt: formData.belt || null,
             ...(isMinor
@@ -153,6 +179,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         password: '',
         confirmPassword: '',
         phone: '',
+        fiscalCode: '',
         gymId: '',
         belt: '',
         guardianFirstName: '',
@@ -281,14 +308,29 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-lg sm:text-base">Telefono</Label>
+                <Label htmlFor="phone" className="text-lg sm:text-base">Telefono *</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+39 123 456 7890"
+                  placeholder="+39 333 123 4567"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
                   className="h-14 sm:h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fiscalCode" className="text-lg sm:text-base">Codice Fiscale *</Label>
+                <Input
+                  id="fiscalCode"
+                  type="text"
+                  placeholder="RSSMRA85M01H501Z"
+                  value={formData.fiscalCode}
+                  onChange={(e) => setFormData({ ...formData, fiscalCode: e.target.value.toUpperCase() })}
+                  required
+                  maxLength={16}
+                  className="h-14 sm:h-12 text-base uppercase"
                 />
               </div>
 
