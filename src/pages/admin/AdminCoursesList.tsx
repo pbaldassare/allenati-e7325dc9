@@ -270,10 +270,12 @@ const AdminCoursesList = () => {
                   {selectedCourses.length} corsi selezionati
                 </span>
                 <div className="flex gap-2">
+                  {/* TEMPORARILY DISABLED - Duplicate functionality
                   <Button variant="outline" size="sm">
                     <Copy className="mr-2 h-4 w-4" />
                     Duplica
                   </Button>
+                  */}
                   <Button variant="outline" size="sm">
                     <Download className="mr-2 h-4 w-4" />
                     Esporta
@@ -383,10 +385,12 @@ const AdminCoursesList = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      {/* TEMPORARILY DISABLED - Duplicate functionality
                       <DropdownMenuItem>
                         <Copy className="mr-2 h-4 w-4" />
                         Duplica
                       </DropdownMenuItem>
+                      */}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         className="text-destructive"

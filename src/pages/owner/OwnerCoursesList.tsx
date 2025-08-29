@@ -262,6 +262,8 @@ const OwnerCoursesList: React.FC = () => {
     load();
   }, [toast]);
 
+  // TEMPORARILY DISABLED - Duplicate functionality
+  /*
   const duplicateCourse = async (courseId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -321,6 +323,7 @@ const OwnerCoursesList: React.FC = () => {
       });
     }
   };
+  */
 
   const toggleCourseStatus = async (course: CourseItem) => {
     try {
@@ -532,12 +535,14 @@ const OwnerCoursesList: React.FC = () => {
                               <Edit className="mr-2 h-4 w-4" />
                               Modifica
                             </DropdownMenuItem>
+                            {/* TEMPORARILY DISABLED - Duplicate functionality
                             <DropdownMenuItem
                               onClick={() => duplicateCourse(course.id)}
                             >
                               <Copy className="mr-2 h-4 w-4" />
                               Duplica
                             </DropdownMenuItem>
+                            */}
                             <DropdownMenuItem
                               onClick={() => toggleCourseStatus(course)}
                               disabled={togglingStatus === course.id}
