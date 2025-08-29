@@ -22,7 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const Dashboard = () => {
   const { user } = useAuth();
-  const { userGyms } = useGym();
+  const { userGyms, selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { bookings, isSessionBooked, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
@@ -43,12 +43,11 @@ export const Dashboard = () => {
   const [creditsLoading, setCreditsLoading] = useState(true);
 
   const loadUserCreditsAndSubscription = async () => {
-    if (!user || userGyms.length === 0) return;
+    if (!user || !selectedGym) return;
     
     setCreditsLoading(true);
     try {
-      // For now, use the first gym - later we can enhance this with selectedGym from GymContext
-      const gymId = userGyms[0]?.id;
+      const gymId = selectedGym.id;
       if (!gymId) return;
 
       // Carica crediti per la palestra selezionata
@@ -136,7 +135,7 @@ export const Dashboard = () => {
 
     loadAvailableSessions();
     loadUserCreditsAndSubscription();
-  }, [user, userGyms, toast]);
+  }, [user, userGyms, selectedGym, toast]);
 
   const openBookingDialog = (session: any) => {
     setSelectedSession(session);
@@ -248,7 +247,7 @@ export const Dashboard = () => {
       // Deduct credits only if no unlimited subscription
       if (!hasUnlimitedAccess) {
         // Get user's gym ID for credit deduction
-        const gymId = userGyms[0]?.id;
+        const gymId = selectedGym?.id;
         if (gymId) {
           const { deductCredits } = await import('@/lib/creditRefundHelpers');
           const result = await deductCredits(
