@@ -86,30 +86,42 @@ export default function ManualSubscriptionActivationDialog({
 
       if (plansError) throw plansError;
 
-      // Load gym members
+      // Load gym members - first get memberships
       const { data: membershipsData, error: membershipsError } = await supabase
         .from('user_gym_memberships')
-        .select(`
-          user_id,
-          profiles!inner(
-            user_id,
-            first_name,
-            last_name,
-            email,
-            profile_picture_url
-          )
-        `)
+        .select('user_id')
         .eq('gym_id', gymId)
         .eq('status', 'active');
 
-      if (membershipsError) throw membershipsError;
+      if (membershipsError) {
+        console.error('Error loading memberships:', membershipsError);
+        throw membershipsError;
+      }
 
-      const membersData = membershipsData?.map((membership: any) => ({
-        user_id: membership.profiles.user_id,
-        first_name: membership.profiles.first_name,
-        last_name: membership.profiles.last_name,
-        email: membership.profiles.email,
-        profile_picture_url: membership.profiles.profile_picture_url
+      if (!membershipsData || membershipsData.length === 0) {
+        setMembers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Then get profiles for those users
+      const userIds = membershipsData.map(m => m.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, profile_picture_url')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
+      }
+
+      const membersData = profilesData?.map((profile: any) => ({
+        user_id: profile.user_id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        profile_picture_url: profile.profile_picture_url
       })) || [];
 
       setPlans(plansData || []);
