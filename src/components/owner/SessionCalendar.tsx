@@ -177,6 +177,11 @@ const SessionCalendar: React.FC = () => {
     return getSessionsForDate(date).length;
   };
 
+  const getDayBookingCount = (date: Date) => {
+    const daySessions = getSessionsForDate(date);
+    return daySessions.reduce((sum, session) => sum + session.participants, 0);
+  };
+
   const getDayOccupancyColor = (date: Date) => {
     const daySessions = getSessionsForDate(date);
     if (daySessions.length === 0) return '';
@@ -218,7 +223,7 @@ const SessionCalendar: React.FC = () => {
                 </h3>
                 {daySessions.length > 0 && (
                   <div className="text-xs text-center text-muted-foreground mt-1 hidden md:block">
-                    {daySessions.length} sessioni
+                    {daySessions.length} sessioni, {getDayBookingCount(day)} prenotazioni
                   </div>
                 )}
               </div>
@@ -325,7 +330,7 @@ const SessionCalendar: React.FC = () => {
                     {daySessionCount > 0 && (
                       <div className="space-y-1">
                         <Badge variant="secondary" className="text-xs h-4 px-1">
-                          {daySessionCount} sessioni
+                          {daySessionCount} sessioni, {getDayBookingCount(day)} prenotazioni
                         </Badge>
                         {daySessions.slice(0, 2).map((session, idx) => (
                           <SessionManagementDrawer
