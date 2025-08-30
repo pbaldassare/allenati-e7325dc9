@@ -111,51 +111,132 @@ export const useOwnerRevenue = () => {
 
         const memberIds = gymMembers?.map(m => m.user_id) || [];
 
-        // Get weekly revenue from payments
+        // Get weekly revenue from payments (filter by subscription plans gym_id)
         const { data: weeklyPayments } = await supabase
+          .from('payments')
+          .select(`
+            amount,
+            user_subscriptions!inner(
+              subscription_plans!inner(
+                gym_id
+              )
+            )
+          `)
+          .eq('status', 'completed')
+          .eq('reference_type', 'subscription')
+          .eq('user_subscriptions.subscription_plans.gym_id', gymId)
+          .gte('created_at', startOfWeek.toISOString())
+          .lte('created_at', endOfWeek.toISOString());
+
+        // Get weekly one-time payments
+        const { data: weeklyOneTimePayments } = await supabase
           .from('payments')
           .select('amount')
           .eq('status', 'completed')
+          .neq('reference_type', 'subscription')
           .in('user_id', memberIds)
           .gte('created_at', startOfWeek.toISOString())
           .lte('created_at', endOfWeek.toISOString());
 
-        const weeklyRevenue = weeklyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        // Get weekly recurring value from active subscriptions
+        const { data: weeklyActiveSubscriptions } = await supabase
+          .from('user_subscriptions')
+          .select(`
+            subscription_plans!inner(
+              price,
+              duration_months,
+              gym_id
+            )
+          `)
+          .eq('subscription_plans.gym_id', gymId)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString());
+
+        const weeklySubscriptionPayments = weeklyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const weeklyOneTimePaymentsAmount = weeklyOneTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        
+        // Calculate weekly recurring value (1/4 of monthly value for active subscriptions)
+        const weeklyRecurringValue = weeklyActiveSubscriptions?.reduce((sum, sub: any) => {
+          const price = Number(sub.subscription_plans?.price || 0);
+          const durationMonths = Number(sub.subscription_plans?.duration_months || 1);
+          const monthlyValue = price / durationMonths;
+          return sum + (monthlyValue / 4);
+        }, 0) || 0;
+
+        const weeklyRevenue = weeklySubscriptionPayments + weeklyOneTimePaymentsAmount + weeklyRecurringValue;
 
         // Get last week's revenue for trend
         const { data: lastWeekPayments } = await supabase
           .from('payments')
+          .select(`
+            amount,
+            user_subscriptions!inner(
+              subscription_plans!inner(
+                gym_id
+              )
+            )
+          `)
+          .eq('status', 'completed')
+          .eq('reference_type', 'subscription')
+          .eq('user_subscriptions.subscription_plans.gym_id', gymId)
+          .gte('created_at', startOfLastWeek.toISOString())
+          .lte('created_at', endOfLastWeek.toISOString());
+
+        const { data: lastWeekOneTimePayments } = await supabase
+          .from('payments')
           .select('amount')
           .eq('status', 'completed')
+          .neq('reference_type', 'subscription')
           .in('user_id', memberIds)
           .gte('created_at', startOfLastWeek.toISOString())
           .lte('created_at', endOfLastWeek.toISOString());
 
-        const lastWeekRevenue = lastWeekPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const lastWeekSubscriptionPayments = lastWeekPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const lastWeekOneTimePaymentsAmount = lastWeekOneTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const lastWeekRevenue = lastWeekSubscriptionPayments + lastWeekOneTimePaymentsAmount + weeklyRecurringValue;
+        
         const weeklyTrend = lastWeekRevenue > 0 ? ((weeklyRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 : 0;
 
-        // Get monthly revenue from payments
+        // Get monthly revenue from payments (filter by gym)
         const { data: monthlyPayments } = await supabase
+          .from('payments')
+          .select(`
+            amount,
+            reference_type,
+            user_subscriptions!inner(
+              subscription_plans!inner(
+                gym_id
+              )
+            )
+          `)
+          .eq('status', 'completed')
+          .eq('reference_type', 'subscription')
+          .eq('user_subscriptions.subscription_plans.gym_id', gymId)
+          .gte('created_at', startOfMonth.toISOString());
+
+        // Get monthly one-time payments
+        const { data: monthlyOneTimePayments } = await supabase
           .from('payments')
           .select('amount, reference_type')
           .eq('status', 'completed')
+          .neq('reference_type', 'subscription')
           .in('user_id', memberIds)
           .gte('created_at', startOfMonth.toISOString());
 
-        const monthlyRevenue = monthlyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        // Calculate monthly recurring value from active subscriptions
+        const monthlyRecurringValue = weeklyActiveSubscriptions?.reduce((sum, sub: any) => {
+          const price = Number(sub.subscription_plans?.price || 0);
+          const durationMonths = Number(sub.subscription_plans?.duration_months || 1);
+          return sum + (price / durationMonths);
+        }, 0) || 0;
 
-        // Calculate revenue breakdown
-        let monthlySubscriptionRevenue = 0;
-        let monthlyOneTimeRevenue = 0;
+        const monthlySubscriptionPayments = monthlyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const monthlyOneTimePaymentsAmount = monthlyOneTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const monthlyRevenue = monthlySubscriptionPayments + monthlyOneTimePaymentsAmount + monthlyRecurringValue;
 
-        monthlyPayments?.forEach((payment) => {
-          const amount = Number(payment.amount || 0);
-          if (payment.reference_type === 'subscription') {
-            monthlySubscriptionRevenue += amount;
-          } else {
-            monthlyOneTimeRevenue += amount;
-          }
-        });
+        // Calculate revenue breakdown including recurring value
+        const monthlySubscriptionRevenue = monthlySubscriptionPayments + monthlyRecurringValue;
+        const monthlyOneTimeRevenue = monthlyOneTimePaymentsAmount;
 
         // Get new subscriptions this month
         const { data: newSubscriptions } = await supabase
@@ -173,28 +254,69 @@ export const useOwnerRevenue = () => {
           .eq('status', 'active')
           .gt('expires_at', new Date().toISOString());
 
-        // Get total revenue (all time)
-        const { data: allTimePayments } = await supabase
+        // Get total revenue (all time) - payments + current active subscription value
+        const { data: allTimeSubscriptionPayments } = await supabase
+          .from('payments')
+          .select(`
+            amount,
+            user_subscriptions!inner(
+              subscription_plans!inner(
+                gym_id
+              )
+            )
+          `)
+          .eq('status', 'completed')
+          .eq('reference_type', 'subscription')
+          .eq('user_subscriptions.subscription_plans.gym_id', gymId);
+
+        const { data: allTimeOneTimePayments } = await supabase
           .from('payments')
           .select('amount')
           .eq('status', 'completed')
+          .neq('reference_type', 'subscription')
           .in('user_id', memberIds);
 
-        const totalRevenue = allTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        // Calculate total value of all active subscriptions (current value)
+        const totalActiveSubscriptionValue = weeklyActiveSubscriptions?.reduce((sum, sub: any) => {
+          return sum + Number(sub.subscription_plans?.price || 0);
+        }, 0) || 0;
+
+        const totalSubscriptionPayments = allTimeSubscriptionPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const totalOneTimePayments = allTimeOneTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const totalRevenue = totalSubscriptionPayments + totalOneTimePayments + totalActiveSubscriptionValue;
 
         // Get previous month revenue for trend
         const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-        const { data: previousMonthPayments } = await supabase
+        const { data: previousMonthSubscriptionPayments } = await supabase
+          .from('payments')
+          .select(`
+            amount,
+            user_subscriptions!inner(
+              subscription_plans!inner(
+                gym_id
+              )
+            )
+          `)
+          .eq('status', 'completed')
+          .eq('reference_type', 'subscription')
+          .eq('user_subscriptions.subscription_plans.gym_id', gymId)
+          .gte('created_at', startOfPreviousMonth.toISOString())
+          .lte('created_at', endOfPreviousMonth.toISOString());
+
+        const { data: previousMonthOneTimePayments } = await supabase
           .from('payments')
           .select('amount')
           .eq('status', 'completed')
+          .neq('reference_type', 'subscription')
           .in('user_id', memberIds)
           .gte('created_at', startOfPreviousMonth.toISOString())
           .lte('created_at', endOfPreviousMonth.toISOString());
 
-        const previousMonthRevenue = previousMonthPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const previousMonthSubscriptionPaymentsAmount = previousMonthSubscriptionPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const previousMonthOneTimePaymentsAmount = previousMonthOneTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const previousMonthRevenue = previousMonthSubscriptionPaymentsAmount + previousMonthOneTimePaymentsAmount + monthlyRecurringValue;
         const monthlyTrend = previousMonthRevenue > 0 ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0;
 
         // Get normal users count (excluding instructors and owners)
