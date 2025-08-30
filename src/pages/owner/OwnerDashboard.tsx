@@ -20,7 +20,7 @@ const OwnerDashboard = () => {
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
   const [gymStripeData, setGymStripeData] = useState<GymStripeData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { revenueStats, creditStats, loading: revenueLoading } = useOwnerRevenue();
+  const { revenueStats, subscriptionStats, loading: revenueLoading } = useOwnerRevenue();
 
   useEffect(() => {
     document.title = 'Dashboard Proprietario | Gym Manager';
@@ -173,92 +173,83 @@ const OwnerDashboard = () => {
         )}
       </div>
 
-      {/* Revenue and Credit Statistics */}
+      {/* Revenue Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Weekly Revenue */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Coins className="h-4 w-4" />
+              <TrendingUp className="h-4 w-4" />
               Ricavi Settimana
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {revenueLoading ? '—' : `${revenueStats.weeklyEstimatedCredits} crediti`}
+              {revenueLoading ? '—' : `€${revenueStats.weeklyRevenue.toFixed(2)}`}
             </div>
-            {!revenueLoading && revenueStats.weeklyTrend !== 0 && (
-              <div className={`flex items-center gap-1 text-sm ${
-                revenueStats.weeklyTrend > 0 ? 'text-green-600' : 'text-red-600'
+            {!revenueLoading && (
+              <div className={`text-sm flex items-center gap-1 ${
+                revenueStats.weeklyTrend >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {revenueStats.weeklyTrend > 0 ? 
-                  <TrendingUp className="h-3 w-3" /> : 
-                  <TrendingDown className="h-3 w-3" />
-                }
+                {revenueStats.weeklyTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {Math.abs(revenueStats.weeklyTrend).toFixed(1)}% vs settimana scorsa
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Monthly Credits Used */}
+        {/* Monthly Revenue */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Crediti Mese
+              Ricavi Mese
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-lg font-semibold text-green-600">
-                +{revenueLoading ? '—' : creditStats.monthlyCreditsAdded} aggiunti
-              </div>
-              <div className="text-lg font-semibold text-red-600">
-                -{revenueLoading ? '—' : creditStats.monthlyCreditsUsed} utilizzati
-              </div>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : `€${revenueStats.monthlyRevenue.toFixed(2)}`}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {revenueLoading ? '—' : subscriptionStats.totalActiveSubscriptions} abbonamenti attivi
             </div>
           </CardContent>
         </Card>
 
-        {/* Transaction Breakdown */}
+        {/* New Subscriptions */}
         <Card>
           <CardHeader>
-            <CardTitle>Breakdown Transazioni</CardTitle>
+            <CardTitle>Nuovi Abbonamenti</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : subscriptionStats.newSubscriptionsThisMonth}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              questo mese
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Breakdown Ricavi</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span>Manuali:</span>
-                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.manual}</span>
+                <span>Abbonamenti:</span>
+                <span className="font-medium">€{revenueLoading ? '—' : subscriptionStats.monthlySubscriptionRevenue.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Prenotazioni:</span>
-                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.automatic}</span>
+                <span>Pagamenti singoli:</span>
+                <span className="font-medium">€{revenueLoading ? '—' : subscriptionStats.monthlyOneTimeRevenue.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Acquisti:</span>
-                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.purchases}</span>
+              <div className="flex justify-between border-t pt-1">
+                <span className="font-semibold">Totale:</span>
+                <span className="font-semibold">€{revenueLoading ? '—' : subscriptionStats.revenueBreakdown.total.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Rimborsi:</span>
-                <span className="font-medium text-red-600">{revenueLoading ? '—' : creditStats.transactionBreakdown.refunds}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Monthly Revenue Total */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Totale Mese</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {revenueLoading ? '—' : `${revenueStats.monthlyEstimatedCredits} crediti`}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {revenueLoading ? '—' : creditStats.totalTransactions} transazioni
             </div>
           </CardContent>
         </Card>

@@ -3,41 +3,39 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface RevenueStats {
-  weeklyEstimatedCredits: number;
-  monthlyEstimatedCredits: number;
+  weeklyRevenue: number;
+  monthlyRevenue: number;
   weeklyTrend: number;
 }
 
-interface CreditTransactionStats {
-  monthlyCreditsAdded: number;
-  monthlyCreditsUsed: number;
-  monthlyRefunds: number;
-  totalTransactions: number;
-  transactionBreakdown: {
-    manual: number;
-    automatic: number;
-    purchases: number;
-    refunds: number;
+interface SubscriptionStats {
+  newSubscriptionsThisMonth: number;
+  totalActiveSubscriptions: number;
+  monthlySubscriptionRevenue: number;
+  monthlyOneTimeRevenue: number;
+  revenueBreakdown: {
+    subscriptions: number;
+    oneTime: number;
+    total: number;
   };
 }
 
 export const useOwnerRevenue = () => {
   const { user } = useAuth();
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({
-    weeklyEstimatedCredits: 0,
-    monthlyEstimatedCredits: 0,
+    weeklyRevenue: 0,
+    monthlyRevenue: 0,
     weeklyTrend: 0,
   });
-  const [creditStats, setCreditStats] = useState<CreditTransactionStats>({
-    monthlyCreditsAdded: 0,
-    monthlyCreditsUsed: 0,
-    monthlyRefunds: 0,
-    totalTransactions: 0,
-    transactionBreakdown: {
-      manual: 0,
-      automatic: 0,
-      purchases: 0,
-      refunds: 0,
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats>({
+    newSubscriptionsThisMonth: 0,
+    totalActiveSubscriptions: 0,
+    monthlySubscriptionRevenue: 0,
+    monthlyOneTimeRevenue: 0,
+    revenueBreakdown: {
+      subscriptions: 0,
+      oneTime: 0,
+      total: 0,
     },
   });
   const [loading, setLoading] = useState(true);
@@ -73,104 +71,93 @@ export const useOwnerRevenue = () => {
 
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Get weekly estimated revenue (current week)
-        const { data: weeklyBookings } = await supabase
-          .from('bookings')
-          .select(`
-            credits_used,
-            courses!inner(gym_id)
-          `)
-          .eq('status', 'confirmed')
-          .eq('courses.gym_id', gymId)
-          .gte('scheduled_date', startOfWeek.toISOString().split('T')[0])
-          .lte('scheduled_date', endOfWeek.toISOString().split('T')[0]);
-
-        const weeklyCredits = weeklyBookings?.reduce((sum, booking) => sum + (booking.credits_used || 0), 0) || 0;
-
-        // Get last week's estimated revenue for trend
-        const { data: lastWeekBookings } = await supabase
-          .from('bookings')
-          .select(`
-            credits_used,
-            courses!inner(gym_id)
-          `)
-          .eq('status', 'confirmed')
-          .eq('courses.gym_id', gymId)
-          .gte('scheduled_date', startOfLastWeek.toISOString().split('T')[0])
-          .lte('scheduled_date', endOfLastWeek.toISOString().split('T')[0]);
-
-        const lastWeekCredits = lastWeekBookings?.reduce((sum, booking) => sum + (booking.credits_used || 0), 0) || 0;
-        const weeklyTrend = lastWeekCredits > 0 ? ((weeklyCredits - lastWeekCredits) / lastWeekCredits) * 100 : 0;
-
-        // Get monthly estimated revenue
-        const { data: monthlyBookings } = await supabase
-          .from('bookings')
-          .select(`
-            credits_used,
-            courses!inner(gym_id)
-          `)
-          .eq('status', 'confirmed')
-          .eq('courses.gym_id', gymId)
-          .gte('scheduled_date', startOfMonth.toISOString().split('T')[0]);
-
-        const monthlyCredits = monthlyBookings?.reduce((sum, booking) => sum + (booking.credits_used || 0), 0) || 0;
-
-        // Get credit transactions for this month
-        const { data: transactions } = await supabase
-          .from('credits_transactions')
-          .select('*')
+        // Get gym members for revenue calculations
+        const { data: gymMembers } = await supabase
+          .from('user_gym_memberships')
+          .select('user_id')
           .eq('gym_id', gymId)
+          .eq('status', 'active');
+
+        const memberIds = gymMembers?.map(m => m.user_id) || [];
+
+        // Get weekly revenue from payments
+        const { data: weeklyPayments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'completed')
+          .in('user_id', memberIds)
+          .gte('created_at', startOfWeek.toISOString())
+          .lte('created_at', endOfWeek.toISOString());
+
+        const weeklyRevenue = weeklyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+
+        // Get last week's revenue for trend
+        const { data: lastWeekPayments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'completed')
+          .in('user_id', memberIds)
+          .gte('created_at', startOfLastWeek.toISOString())
+          .lte('created_at', endOfLastWeek.toISOString());
+
+        const lastWeekRevenue = lastWeekPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const weeklyTrend = lastWeekRevenue > 0 ? ((weeklyRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 : 0;
+
+        // Get monthly revenue from payments
+        const { data: monthlyPayments } = await supabase
+          .from('payments')
+          .select('amount, reference_type')
+          .eq('status', 'completed')
+          .in('user_id', memberIds)
           .gte('created_at', startOfMonth.toISOString());
 
-        let monthlyCreditsAdded = 0;
-        let monthlyCreditsUsed = 0;
-        let monthlyRefunds = 0;
-        const breakdown = {
-          manual: 0,
-          automatic: 0,
-          purchases: 0,
-          refunds: 0,
-        };
+        const monthlyRevenue = monthlyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
 
-        transactions?.forEach((transaction) => {
-          if (transaction.amount > 0) {
-            monthlyCreditsAdded += transaction.amount;
+        // Calculate revenue breakdown
+        let monthlySubscriptionRevenue = 0;
+        let monthlyOneTimeRevenue = 0;
+
+        monthlyPayments?.forEach((payment) => {
+          const amount = Number(payment.amount || 0);
+          if (payment.reference_type === 'subscription') {
+            monthlySubscriptionRevenue += amount;
           } else {
-            monthlyCreditsUsed += Math.abs(transaction.amount);
-          }
-
-          // Categorize transactions
-          switch (transaction.transaction_type) {
-            case 'manual_credit':
-            case 'admin_grant':
-              breakdown.manual += Math.abs(transaction.amount);
-              break;
-            case 'booking':
-              breakdown.automatic += Math.abs(transaction.amount);
-              break;
-            case 'one_time_purchase':
-            case 'subscription_credits':
-              breakdown.purchases += Math.abs(transaction.amount);
-              break;
-            case 'refund':
-              monthlyRefunds += Math.abs(transaction.amount);
-              breakdown.refunds += Math.abs(transaction.amount);
-              break;
+            monthlyOneTimeRevenue += amount;
           }
         });
 
+        // Get new subscriptions this month
+        const { data: newSubscriptions } = await supabase
+          .from('user_subscriptions')
+          .select('id')
+          .eq('gym_id', gymId)
+          .eq('status', 'active')
+          .gte('starts_at', startOfMonth.toISOString());
+
+        // Get total active subscriptions
+        const { data: activeSubscriptions } = await supabase
+          .from('user_subscriptions')
+          .select('id')
+          .eq('gym_id', gymId)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString());
+
         setRevenueStats({
-          weeklyEstimatedCredits: weeklyCredits,
-          monthlyEstimatedCredits: monthlyCredits,
+          weeklyRevenue,
+          monthlyRevenue,
           weeklyTrend,
         });
 
-        setCreditStats({
-          monthlyCreditsAdded,
-          monthlyCreditsUsed,
-          monthlyRefunds,
-          totalTransactions: transactions?.length || 0,
-          transactionBreakdown: breakdown,
+        setSubscriptionStats({
+          newSubscriptionsThisMonth: newSubscriptions?.length || 0,
+          totalActiveSubscriptions: activeSubscriptions?.length || 0,
+          monthlySubscriptionRevenue,
+          monthlyOneTimeRevenue,
+          revenueBreakdown: {
+            subscriptions: monthlySubscriptionRevenue,
+            oneTime: monthlyOneTimeRevenue,
+            total: monthlyRevenue,
+          },
         });
       } catch (error) {
         console.error('Error fetching revenue stats:', error);
@@ -184,7 +171,7 @@ export const useOwnerRevenue = () => {
 
   return {
     revenueStats,
-    creditStats,
+    subscriptionStats,
     loading,
   };
 };
