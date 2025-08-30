@@ -144,7 +144,7 @@ export const useOwnerRevenue = () => {
           .select(`
             subscription_plans!inner(
               price,
-              duration_months,
+              duration_days,
               gym_id
             )
           `)
@@ -158,8 +158,8 @@ export const useOwnerRevenue = () => {
         // Calculate weekly recurring value (1/4 of monthly value for active subscriptions)
         const weeklyRecurringValue = weeklyActiveSubscriptions?.reduce((sum, sub: any) => {
           const price = Number(sub.subscription_plans?.price || 0);
-          const durationMonths = Number(sub.subscription_plans?.duration_months || 1);
-          const monthlyValue = price / durationMonths;
+          const durationDays = Number(sub.subscription_plans?.duration_days || 30);
+          const monthlyValue = price / (durationDays / 30);
           return sum + (monthlyValue / 4);
         }, 0) || 0;
 
@@ -226,8 +226,8 @@ export const useOwnerRevenue = () => {
         // Calculate monthly recurring value from active subscriptions
         const monthlyRecurringValue = weeklyActiveSubscriptions?.reduce((sum, sub: any) => {
           const price = Number(sub.subscription_plans?.price || 0);
-          const durationMonths = Number(sub.subscription_plans?.duration_months || 1);
-          return sum + (price / durationMonths);
+          const durationDays = Number(sub.subscription_plans?.duration_days || 30);
+          return sum + (price / (durationDays / 30));
         }, 0) || 0;
 
         const monthlySubscriptionPayments = monthlyPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
