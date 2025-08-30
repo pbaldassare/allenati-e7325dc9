@@ -15,7 +15,49 @@ const OwnerBookings: React.FC = () => {
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [cancellationReason, setCancellationReason] = useState('');
+
+  // Helper functions for date filtering
+  const getStartOfWeek = (date = new Date()) => {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday as first day
+    start.setDate(diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+
+  const getEndOfWeek = (date = new Date()) => {
+    const end = new Date(getStartOfWeek(date));
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  };
+
+  const getStartOfNextWeek = () => {
+    const start = new Date(getStartOfWeek());
+    start.setDate(start.getDate() + 7);
+    return start;
+  };
+
+  const getEndOfNextWeek = () => {
+    const end = new Date(getEndOfWeek());
+    end.setDate(end.getDate() + 7);
+    return end;
+  };
+
+  const getStartOfMonth = (date = new Date()) => {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+
+  const getEndOfMonth = (date = new Date()) => {
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  };
 
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
@@ -32,8 +74,25 @@ const OwnerBookings: React.FC = () => {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
+    if (dateFilter !== 'all') {
+      filtered = filtered.filter(booking => {
+        const scheduledDate = new Date(booking.scheduled_date);
+        
+        switch (dateFilter) {
+          case 'thisWeek':
+            return scheduledDate >= getStartOfWeek() && scheduledDate <= getEndOfWeek();
+          case 'nextWeek':
+            return scheduledDate >= getStartOfNextWeek() && scheduledDate <= getEndOfNextWeek();
+          case 'thisMonth':
+            return scheduledDate >= getStartOfMonth() && scheduledDate <= getEndOfMonth();
+          default:
+            return true;
+        }
+      });
+    }
+
     return filtered;
-  }, [bookings, searchTerm, statusFilter]);
+  }, [bookings, searchTerm, statusFilter, dateFilter]);
 
   const handleCancelBooking = async (bookingId: string) => {
     await cancelOwnerBooking(bookingId, cancellationReason || undefined);
@@ -61,10 +120,10 @@ const OwnerBookings: React.FC = () => {
   };
 
   const stats = {
-    total: bookings.length,
-    confirmed: bookings.filter(b => b.status === 'confirmed').length,
-    completed: bookings.filter(b => b.status === 'completed').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    total: filteredBookings.length,
+    confirmed: filteredBookings.filter(b => b.status === 'confirmed').length,
+    completed: filteredBookings.filter(b => b.status === 'completed').length,
+    cancelled: filteredBookings.filter(b => b.status === 'cancelled').length,
   };
 
   if (loading) {
@@ -127,6 +186,17 @@ const OwnerBookings: React.FC = () => {
             className="pl-9"
           />
         </div>
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Periodo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="thisWeek">Questa settimana</SelectItem>
+            <SelectItem value="nextWeek">Settimana prossima</SelectItem>
+            <SelectItem value="thisMonth">Questo mese</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Stato" />
@@ -148,7 +218,7 @@ const OwnerBookings: React.FC = () => {
         <CardContent>
           {filteredBookings.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              {searchTerm || statusFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
+              {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
             </p>
           ) : (
             <Table>
