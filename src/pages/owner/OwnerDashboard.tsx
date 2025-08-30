@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, ExternalLink } from 'lucide-react';
+import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity } from 'lucide-react';
+import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 
 interface GymStripeData {
   id: string;
@@ -19,6 +20,7 @@ const OwnerDashboard = () => {
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
   const [gymStripeData, setGymStripeData] = useState<GymStripeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { revenueStats, creditStats, loading: revenueLoading } = useOwnerRevenue();
 
   useEffect(() => {
     document.title = 'Dashboard Proprietario | Gym Manager';
@@ -169,6 +171,97 @@ const OwnerDashboard = () => {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* Revenue and Credit Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Weekly Revenue */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Coins className="h-4 w-4" />
+              Ricavi Settimana
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : `${revenueStats.weeklyEstimatedCredits} crediti`}
+            </div>
+            {!revenueLoading && revenueStats.weeklyTrend !== 0 && (
+              <div className={`flex items-center gap-1 text-sm ${
+                revenueStats.weeklyTrend > 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {revenueStats.weeklyTrend > 0 ? 
+                  <TrendingUp className="h-3 w-3" /> : 
+                  <TrendingDown className="h-3 w-3" />
+                }
+                {Math.abs(revenueStats.weeklyTrend).toFixed(1)}% vs settimana scorsa
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Monthly Credits Used */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Crediti Mese
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold text-green-600">
+                +{revenueLoading ? '—' : creditStats.monthlyCreditsAdded} aggiunti
+              </div>
+              <div className="text-lg font-semibold text-red-600">
+                -{revenueLoading ? '—' : creditStats.monthlyCreditsUsed} utilizzati
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Transaction Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Breakdown Transazioni</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Manuali:</span>
+                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.manual}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Prenotazioni:</span>
+                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.automatic}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Acquisti:</span>
+                <span className="font-medium">{revenueLoading ? '—' : creditStats.transactionBreakdown.purchases}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Rimborsi:</span>
+                <span className="font-medium text-red-600">{revenueLoading ? '—' : creditStats.transactionBreakdown.refunds}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Monthly Revenue Total */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Totale Mese</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : `${revenueStats.monthlyEstimatedCredits} crediti`}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {revenueLoading ? '—' : creditStats.totalTransactions} transazioni
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
