@@ -20,6 +20,26 @@ interface SubscriptionStats {
   };
 }
 
+interface TotalRevenueStats {
+  totalRevenue: number;
+  previousMonthRevenue: number;
+  monthlyTrend: number;
+}
+
+interface SubscriptionCoverage {
+  totalNormalUsers: number;
+  usersWithSubscriptions: number;
+  coveragePercentage: number;
+}
+
+interface SubscriptionTypeBreakdown {
+  [key: string]: {
+    count: number;
+    revenue: number;
+    name: string;
+  };
+}
+
 export const useOwnerRevenue = () => {
   const { user } = useAuth();
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({
@@ -38,6 +58,17 @@ export const useOwnerRevenue = () => {
       total: 0,
     },
   });
+  const [totalRevenueStats, setTotalRevenueStats] = useState<TotalRevenueStats>({
+    totalRevenue: 0,
+    previousMonthRevenue: 0,
+    monthlyTrend: 0,
+  });
+  const [subscriptionCoverage, setSubscriptionCoverage] = useState<SubscriptionCoverage>({
+    totalNormalUsers: 0,
+    usersWithSubscriptions: 0,
+    coveragePercentage: 0,
+  });
+  const [subscriptionTypeBreakdown, setSubscriptionTypeBreakdown] = useState<SubscriptionTypeBreakdown>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -142,6 +173,79 @@ export const useOwnerRevenue = () => {
           .eq('status', 'active')
           .gt('expires_at', new Date().toISOString());
 
+        // Get total revenue (all time)
+        const { data: allTimePayments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'completed')
+          .in('user_id', memberIds);
+
+        const totalRevenue = allTimePayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+
+        // Get previous month revenue for trend
+        const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const { data: previousMonthPayments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'completed')
+          .in('user_id', memberIds)
+          .gte('created_at', startOfPreviousMonth.toISOString())
+          .lte('created_at', endOfPreviousMonth.toISOString());
+
+        const previousMonthRevenue = previousMonthPayments?.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) || 0;
+        const monthlyTrend = previousMonthRevenue > 0 ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0;
+
+        // Get normal users count (excluding instructors and owners)
+        const { data: normalUsers } = await supabase
+          .from('user_gym_memberships')
+          .select('user_id')
+          .eq('gym_id', gymId)
+          .eq('status', 'active')
+          .eq('membership_type', 'member');
+
+        // Get users with active subscriptions
+        const { data: usersWithSubs } = await supabase
+          .from('user_subscriptions')
+          .select('user_id')
+          .eq('gym_id', gymId)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString());
+
+        const totalNormalUsers = normalUsers?.length || 0;
+        const usersWithSubscriptions = new Set(usersWithSubs?.map(sub => sub.user_id) || []).size;
+        const coveragePercentage = totalNormalUsers > 0 ? (usersWithSubscriptions / totalNormalUsers) * 100 : 0;
+
+        // Get subscription type breakdown
+        const { data: subscriptionPlans } = await supabase
+          .from('user_subscriptions')
+          .select(`
+            subscription_plans!inner(
+              name,
+              price
+            )
+          `)
+          .eq('gym_id', gymId)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString());
+
+        const typeBreakdown: SubscriptionTypeBreakdown = {};
+        subscriptionPlans?.forEach((sub: any) => {
+          const planName = sub.subscription_plans?.name || 'Unknown';
+          const planPrice = Number(sub.subscription_plans?.price || 0);
+          
+          if (!typeBreakdown[planName]) {
+            typeBreakdown[planName] = {
+              count: 0,
+              revenue: 0,
+              name: planName,
+            };
+          }
+          typeBreakdown[planName].count += 1;
+          typeBreakdown[planName].revenue += planPrice;
+        });
+
         setRevenueStats({
           weeklyRevenue,
           monthlyRevenue,
@@ -159,6 +263,20 @@ export const useOwnerRevenue = () => {
             total: monthlyRevenue,
           },
         });
+
+        setTotalRevenueStats({
+          totalRevenue,
+          previousMonthRevenue,
+          monthlyTrend,
+        });
+
+        setSubscriptionCoverage({
+          totalNormalUsers,
+          usersWithSubscriptions,
+          coveragePercentage,
+        });
+
+        setSubscriptionTypeBreakdown(typeBreakdown);
       } catch (error) {
         console.error('Error fetching revenue stats:', error);
       } finally {
@@ -172,6 +290,9 @@ export const useOwnerRevenue = () => {
   return {
     revenueStats,
     subscriptionStats,
+    totalRevenueStats,
+    subscriptionCoverage,
+    subscriptionTypeBreakdown,
     loading,
   };
 };

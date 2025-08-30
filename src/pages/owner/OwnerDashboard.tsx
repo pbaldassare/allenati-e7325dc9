@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity } from 'lucide-react';
+import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 
 interface GymStripeData {
@@ -20,7 +21,14 @@ const OwnerDashboard = () => {
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
   const [gymStripeData, setGymStripeData] = useState<GymStripeData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { revenueStats, subscriptionStats, loading: revenueLoading } = useOwnerRevenue();
+  const { 
+    revenueStats, 
+    subscriptionStats, 
+    totalRevenueStats,
+    subscriptionCoverage,
+    subscriptionTypeBreakdown,
+    loading: revenueLoading 
+  } = useOwnerRevenue();
 
   useEffect(() => {
     document.title = 'Dashboard Proprietario | Gym Manager';
@@ -173,26 +181,26 @@ const OwnerDashboard = () => {
         )}
       </div>
 
-      {/* Revenue Statistics */}
+      {/* New Revenue and Subscription Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Weekly Revenue */}
+        {/* Total Revenue */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Ricavi Settimana
+              <DollarSign className="h-4 w-4" />
+              Ricavi Totali
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {revenueLoading ? '—' : `€${revenueStats.weeklyRevenue.toFixed(2)}`}
+              {revenueLoading ? '—' : `€${totalRevenueStats.totalRevenue.toFixed(2)}`}
             </div>
             {!revenueLoading && (
               <div className={`text-sm flex items-center gap-1 ${
-                revenueStats.weeklyTrend >= 0 ? 'text-green-600' : 'text-red-600'
+                totalRevenueStats.monthlyTrend >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {revenueStats.weeklyTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {Math.abs(revenueStats.weeklyTrend).toFixed(1)}% vs settimana scorsa
+                {totalRevenueStats.monthlyTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {Math.abs(totalRevenueStats.monthlyTrend).toFixed(1)}% vs mese scorso
               </div>
             )}
           </CardContent>
@@ -213,6 +221,84 @@ const OwnerDashboard = () => {
             <div className="text-sm text-muted-foreground">
               {revenueLoading ? '—' : subscriptionStats.totalActiveSubscriptions} abbonamenti attivi
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Coverage */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Copertura Abbonamenti
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : `${subscriptionCoverage.coveragePercentage.toFixed(1)}%`}
+            </div>
+            <div className="text-sm text-muted-foreground mb-2">
+              {revenueLoading ? '—' : `${subscriptionCoverage.usersWithSubscriptions} di ${subscriptionCoverage.totalNormalUsers} utenti`}
+            </div>
+            {!revenueLoading && (
+              <Progress value={subscriptionCoverage.coveragePercentage} className="h-2" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Subscription Types */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              Tipi Abbonamenti
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenueLoading ? (
+              <div className="text-sm text-muted-foreground">Caricamento...</div>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(subscriptionTypeBreakdown).length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Nessun abbonamento attivo</div>
+                ) : (
+                  Object.entries(subscriptionTypeBreakdown)
+                    .sort((a, b) => b[1].count - a[1].count)
+                    .slice(0, 3)
+                    .map(([type, data]) => (
+                      <div key={type} className="flex justify-between text-sm">
+                        <span className="truncate">{data.name}</span>
+                        <span className="font-medium">{data.count}</span>
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Revenue Breakdown Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Weekly Revenue */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Ricavi Settimana
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {revenueLoading ? '—' : `€${revenueStats.weeklyRevenue.toFixed(2)}`}
+            </div>
+            {!revenueLoading && (
+              <div className={`text-sm flex items-center gap-1 ${
+                revenueStats.weeklyTrend >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {revenueStats.weeklyTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {Math.abs(revenueStats.weeklyTrend).toFixed(1)}% vs settimana scorsa
+              </div>
+            )}
           </CardContent>
         </Card>
 
