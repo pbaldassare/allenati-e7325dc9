@@ -15,7 +15,7 @@ const OwnerBookings: React.FC = () => {
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('thisWeek');
   const [cancellationReason, setCancellationReason] = useState('');
 
   // Helper functions for date filtering
