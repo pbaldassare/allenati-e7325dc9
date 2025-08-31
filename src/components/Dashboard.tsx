@@ -427,9 +427,10 @@ export const Dashboard = () => {
 
       {/* Summary Stats - Moved to top */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-card cursor-pointer" onClick={() => navigate('/i-miei-corsi')}>
+        <Card className="bg-gradient-primary border-none shadow-primary cursor-pointer text-white hover:shadow-glow transition-all duration-300" onClick={() => navigate('/i-miei-corsi')}>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary">
+            <Calendar className="h-5 w-5 mx-auto mb-1 text-white/80" />
+            <div className="text-2xl font-bold text-white">
               {(() => {
                 const now = new Date();
                 const today = now.toISOString().split('T')[0];
@@ -449,18 +450,18 @@ export const Dashboard = () => {
                 }).length;
               })()}
             </div>
-            <p className="text-xs text-muted-foreground">Prossime Sessioni</p>
+            <p className="text-xs text-white/80">Prossime Sessioni</p>
           </CardContent>
         </Card>
         <Card 
-          className={`cursor-pointer transition-all duration-300 border-2 shadow-card ${
+          className={`cursor-pointer transition-all duration-300 border-none shadow-card hover:shadow-glow ${
             creditsLoading 
-              ? 'bg-gradient-to-br from-muted/10 to-muted/5 border-muted/20' 
+              ? 'bg-gradient-to-br from-muted/10 to-muted/5' 
               : userSubscription?.plan?.unlimited_access
-                ? 'bg-gradient-to-br from-green-500/10 to-green-400/5 border-green-500/20 hover:border-green-500/40'
+                ? 'bg-gradient-success text-white'
                 : userCredits > 0
-                  ? 'bg-gradient-to-br from-blue-500/10 to-blue-400/5 border-blue-500/20 hover:border-blue-500/40'
-                  : 'bg-gradient-to-br from-orange-500/10 to-orange-400/5 border-orange-500/20 hover:border-orange-500/40'
+                  ? 'bg-gradient-warm text-white'
+                  : 'bg-gradient-energy text-white'
           }`}
           onClick={() => navigate('/subscriptions')}
         >
@@ -472,27 +473,21 @@ export const Dashboard = () => {
               </>
             ) : userSubscription?.plan?.unlimited_access ? (
               <>
-                <div className="flex items-center justify-center space-x-2 text-green-600">
-                  <Infinity className="w-6 h-6" />
-                  <span className="text-2xl font-bold">Illimitato</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Abbonamento Attivo</p>
+                <Infinity className="h-5 w-5 mx-auto mb-1 text-white/80" />
+                <div className="text-2xl font-bold text-white">Illimitato</div>
+                <p className="text-xs text-white/80">Abbonamento Attivo</p>
               </>
             ) : userCredits > 0 ? (
               <>
-                <div className="flex items-center justify-center space-x-2 text-blue-600">
-                  <Coins className="w-6 h-6" />
-                  <span className="text-2xl font-bold">{userCredits}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Crediti Disponibili</p>
+                <Coins className="h-5 w-5 mx-auto mb-1 text-white/80" />
+                <div className="text-2xl font-bold text-white">{userCredits}</div>
+                <p className="text-xs text-white/80">Crediti Disponibili</p>
               </>
             ) : (
               <>
-                <div className="flex items-center justify-center space-x-2 text-orange-600">
-                  <ShoppingCart className="w-6 h-6" />
-                  <span className="text-lg font-bold">Acquista</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Crediti o Abbonamento</p>
+                <ShoppingCart className="h-5 w-5 mx-auto mb-1 text-white/80" />
+                <div className="text-lg font-bold text-white">Acquista</div>
+                <p className="text-xs text-white/80">Crediti o Abbonamento</p>
               </>
             )}
           </CardContent>
@@ -624,20 +619,27 @@ export const Dashboard = () => {
                         
                         {/* Action button - Mobile: Full width, Desktop: Compact */}
                         <div className="flex justify-center sm:justify-end mt-2 sm:mt-0">
-                          {isAlreadyBooked ? (
-                            <Badge variant="secondary" className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1">
-                              Prenotato
-                            </Badge>
-                          ) : (
-                            <Button
-                              onClick={() => openBookingDialog(session)}
-                              disabled={isLoading || isFull}
-                              size="sm"
-                              className="w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium"
-                            >
-                              {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
-                            </Button>
-                          )}
+                           {isAlreadyBooked ? (
+                             <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none">
+                               ✓ Prenotato
+                             </Badge>
+                           ) : (
+                             <Button
+                               onClick={() => openBookingDialog(session)}
+                               disabled={isLoading || isFull}
+                               size="sm"
+                               className={cn(
+                                 "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
+                                 isFull 
+                                   ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                   : isAlmostFull
+                                     ? "bg-gradient-warm text-white hover:opacity-90 border-none"
+                                     : "bg-gradient-primary text-white hover:opacity-90 border-none"
+                               )}
+                             >
+                               {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                             </Button>
+                           )}
                         </div>
                       </div>
                     </CardContent>

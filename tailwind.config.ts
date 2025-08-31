@@ -69,6 +69,22 @@ export default {
 				warning: {
 					DEFAULT: 'hsl(var(--warning))',
 					foreground: 'hsl(var(--warning-foreground))'
+				},
+				energy: {
+					DEFAULT: 'hsl(var(--energy))',
+					foreground: 'hsl(var(--energy-foreground))'
+				},
+				premium: {
+					DEFAULT: 'hsl(var(--premium))',
+					foreground: 'hsl(var(--premium-foreground))'
+				},
+				social: {
+					DEFAULT: 'hsl(var(--social))',
+					foreground: 'hsl(var(--social-foreground))'
+				},
+				available: {
+					DEFAULT: 'hsl(var(--available))',
+					foreground: 'hsl(var(--available-foreground))'
 				}
 			},
 			backgroundImage: {
@@ -76,7 +92,10 @@ export default {
 				'gradient-secondary': 'var(--gradient-secondary)',
 				'gradient-accent': 'var(--gradient-accent)',
 				'gradient-success': 'var(--gradient-success)',
-				'gradient-warm': 'var(--gradient-warm)'
+				'gradient-warm': 'var(--gradient-warm)',
+				'gradient-premium': 'var(--gradient-premium)',
+				'gradient-social': 'var(--gradient-social)',
+				'gradient-energy': 'var(--gradient-energy)'
 			},
 			boxShadow: {
 				'primary': 'var(--shadow-primary)',

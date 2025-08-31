@@ -30,8 +30,8 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
       ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-border">
-      <div className="flex items-center justify-around px-4 py-4 max-w-md mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-primary/10 shadow-card">
+      <div className="flex items-center justify-around px-6 py-3 max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -43,22 +43,25 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
               size="sm"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center gap-2 h-auto p-4 transition-colors rounded-xl min-h-[60px]",
+                "flex flex-col items-center gap-1 h-auto p-3 transition-all duration-300 rounded-2xl min-h-[60px] relative",
                 isActive
-                  ? "text-primary bg-primary/10 border border-primary/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "text-white bg-gradient-primary shadow-primary border-none transform scale-105"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10 hover:scale-105"
               )}
             >
               <Icon 
                 className={cn(
-                  "h-6 w-6 transition-colors",
-                  isActive && "text-primary"
+                  "h-5 w-5 transition-all duration-200",
+                  isActive && "text-white scale-110"
                 )} 
               />
               <span className={cn(
-                "text-sm font-medium",
-                isActive ? "text-primary" : "text-muted-foreground"
+                "text-xs font-medium transition-colors",
+                isActive ? "text-white" : "text-muted-foreground"
               )}>{tab.label}</span>
+              {isActive && (
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse" />
+              )}
             </Button>
           );
         })}
