@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
 import {
   SidebarContent,
   SidebarGroup,
@@ -27,6 +29,7 @@ import {
   Settings,
   ShoppingBag,
   User,
+  HelpCircle,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -34,6 +37,8 @@ export const OwnerSidebar: React.FC = () => {
   const currentPath = location.pathname;
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const isMobile = useIsMobile();
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -61,55 +66,72 @@ export const OwnerSidebar: React.FC = () => {
     currentPath === path || (path !== "/owner" && currentPath.startsWith(path));
 
   return (
-    <SidebarContent>
-      <SidebarGroup>
-        <SidebarGroupLabel>Area Proprietario</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {items.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                  <NavLink to={item.url} end>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    <span>{item.title}</span>
+    <>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Area Proprietario</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <NavLink to={item.url} end>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={currentPath === '/shop'}>
+                  <NavLink to="/shop">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    <span>Shop</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupLabel>Account</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={currentPath === '/shop'}>
-                <NavLink to="/shop">
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  <span>Shop</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={currentPath === '/owner/settings'}>
-                <NavLink to="/owner/settings">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profilo</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Esci</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    </SidebarContent>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={currentPath === '/owner/settings'}>
+                  <NavLink to="/owner/settings">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profilo</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {isMobile && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setShowHowItWorksModal(true)}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Come funziona</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Esci</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      
+      {isMobile && (
+        <HowItWorksModal 
+          isOpen={showHowItWorksModal} 
+          onClose={() => setShowHowItWorksModal(false)} 
+        />
+      )}
+    </>
   );
 };
 

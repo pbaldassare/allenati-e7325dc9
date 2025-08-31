@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
 import { RepairCoursesButton } from '@/components/RepairCoursesButton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CourseItem {
   id: string;
@@ -40,6 +41,7 @@ interface CourseItem {
 
 const OwnerCoursesList: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<CourseItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -463,7 +465,117 @@ const OwnerCoursesList: React.FC = () => {
                 </Button>
               )}
             </div>
+          ) : isMobile ? (
+            // Mobile Card Layout
+            <div className="space-y-4">
+              {filteredCourses.map((course) => (
+                <Card key={course.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{course.name}</CardTitle>
+                        {course.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {course.description}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={course.is_active ? "default" : "secondary"}>
+                        {course.is_active ? "Attivo" : "Disattivo"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="font-medium">Istruttore:</span>
+                        <div className="text-muted-foreground">
+                          {course.instructor?.user ? (
+                            `${course.instructor.user.first_name} ${course.instructor.user.last_name}`
+                          ) : (
+                            "Non assegnato"
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Categoria:</span>
+                        <div className="text-muted-foreground">
+                          {course.category ? (
+                            <Badge variant="outline" className="mt-1">{course.category.name}</Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Livello:</span>
+                        <div className="mt-1">
+                          {getDifficultyBadge(course.difficulty_level)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Crediti:</span>
+                        <div className="mt-1">
+                          <Badge variant="secondary">{course.credits_required}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <span className="font-medium text-sm">Programma:</span>
+                      <div className="mt-1">
+                        {getScheduleDisplay(course.schedules)}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <span className="font-medium text-sm">Partecipanti:</span>
+                      <div className="mt-1">
+                        <CourseParticipantOverview 
+                          courseId={course.id} 
+                          maxParticipants={course.max_participants}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigate(`/owner/courses/${course.id}`)}
+                        className="flex-1"
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Visualizza
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigate(`/owner/courses/${course.id}/edit`)}
+                        className="flex-1"
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Modifica
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={course.is_active ? "destructive" : "default"}
+                        onClick={() => toggleCourseStatus(course)}
+                        disabled={togglingStatus === course.id}
+                      >
+                        {course.is_active ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : (
+            // Desktop Table Layout
             <Table>
               <TableHeader>
                 <TableRow>
@@ -546,14 +658,6 @@ const OwnerCoursesList: React.FC = () => {
                               <Edit className="mr-2 h-4 w-4" />
                               Modifica
                             </DropdownMenuItem>
-                            {/* TEMPORARILY DISABLED - Duplicate functionality
-                            <DropdownMenuItem
-                              onClick={() => duplicateCourse(course.id)}
-                            >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplica
-                            </DropdownMenuItem>
-                            */}
                             <DropdownMenuItem
                               onClick={() => toggleCourseStatus(course)}
                               disabled={togglingStatus === course.id}

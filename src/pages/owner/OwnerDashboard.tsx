@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface GymStripeData {
   id: string;
@@ -17,6 +18,7 @@ interface GymStripeData {
 const OwnerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [membersCount, setMembersCount] = useState<number | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
   const [gymStripeData, setGymStripeData] = useState<GymStripeData | null>(null);
@@ -132,7 +134,7 @@ const OwnerDashboard = () => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
         <Card>
           <CardHeader>
             <CardTitle>Iscritti attivi</CardTitle>
@@ -182,7 +184,7 @@ const OwnerDashboard = () => {
       </div>
 
       {/* New Revenue and Subscription Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
         {/* Total Revenue */}
         <Card>
           <CardHeader>
@@ -278,7 +280,7 @@ const OwnerDashboard = () => {
       </div>
 
       {/* Revenue Breakdown Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
         {/* Weekly Revenue */}
         <Card>
           <CardHeader>

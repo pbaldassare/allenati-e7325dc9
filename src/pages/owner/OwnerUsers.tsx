@@ -15,6 +15,7 @@ import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, Cred
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MemberProfile {
   user_id: string;
@@ -36,6 +37,7 @@ interface MemberProfile {
 }
 
 const OwnerUsers = () => {
+  const isMobile = useIsMobile();
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
@@ -395,8 +397,140 @@ const OwnerUsers = () => {
           </div>
           
           <TooltipProvider>
-            <div className="overflow-x-auto">
-              <Table>
+            {isMobile ? (
+              // Mobile Card Layout
+              <div className="space-y-4">
+                {loading ? (
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-muted-foreground">Caricamento...</p>
+                    </CardContent>
+                  </Card>
+                ) : listToShow.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-muted-foreground">
+                        {members.length === 0
+                          ? 'Nessun membro nella palestra.'
+                          : 'Nessun risultato per la ricerca.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  listToShow.map((m) => {
+                    const roleInfo = getHighestRole(m.user_roles);
+                    const RoleIcon = roleInfo.icon;
+                    const isAdminOrOwner = m.user_roles.includes('admin') || m.user_roles.includes('gym_owner');
+                    const expiryLabel = m.medical_expiry_date
+                      ? new Date(m.medical_expiry_date).toLocaleDateString('it-IT')
+                      : 'N/D';
+                    
+                    return (
+                      <Card key={m.user_id} className="overflow-hidden">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{m.first_name} {m.last_name}</CardTitle>
+                              <p className="text-sm text-muted-foreground">{m.email || 'N/D'}</p>
+                            </div>
+                            <Badge variant={m.membership_status === 'active' ? 'default' : 'secondary'}>
+                              {m.membership_status === 'active' ? 'Attivo' : 'Inattivo'}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="font-medium">Telefono:</span>
+                              <div className="text-muted-foreground">
+                                {m.phone || 'N/D'}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Codice Fiscale:</span>
+                              <div className="text-muted-foreground">
+                                {m.fiscal_code || 'N/D'}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Ruolo:</span>
+                              <div className="mt-1">
+                                <Badge variant={roleInfo.variant} className="flex items-center gap-1 w-fit">
+                                  <RoleIcon className="h-3 w-3" />
+                                  {roleInfo.label}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Cintura:</span>
+                              <div className="text-muted-foreground">
+                                {m.belt || 'N/D'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-sm">Certificato:</span>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">{expiryLabel}</span>
+                              {m.medical_file_path && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => viewCertificate(m.medical_file_path)}
+                                >
+                                  <FileText className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-2">
+                            {!isAdminOrOwner && !m.is_instructor && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handlePromoteClick(m.user_id)}
+                                disabled={promoting === m.user_id}
+                                className="flex-1"
+                              >
+                                <UserCheck className="mr-2 h-3 w-3" />
+                                {promoting === m.user_id ? 'Promuovendo...' : 'Promuovi'}
+                              </Button>
+                            )}
+                            {m.is_instructor && !isAdminOrOwner && (
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => demoteInstructor(m.user_id)}
+                                disabled={demoting === m.user_id}
+                                className="flex-1"
+                              >
+                                <UserMinus className="mr-2 h-3 w-3" />
+                                {demoting === m.user_id ? 'Retrocedendo...' : 'Retrocedi'}
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setAuthUserId(m.user_id);
+                                setUploadDialogOpen(true);
+                              }}
+                            >
+                              <FileText className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              // Desktop Table Layout
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
@@ -577,9 +711,10 @@ const OwnerUsers = () => {
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TooltipProvider>
         </CardContent>
       </Card>
