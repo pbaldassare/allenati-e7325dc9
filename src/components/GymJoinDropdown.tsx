@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, Send, Loader2, Plus } from 'lucide-react';
+import { Search, MapPin, Send, Loader2, Plus, Sparkles, Zap } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Gym {
@@ -146,8 +146,11 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
 
   if (availableGyms.length === 0 && !loading) {
     return (
-      <div className="text-center py-4 text-muted-foreground text-sm">
-        Tutte le palestre disponibili sono già nel tuo account
+      <div className="text-center py-6 px-4 bg-gradient-subtle rounded-lg border border-primary/20">
+        <Sparkles className="w-8 h-8 mx-auto text-primary mb-2 animate-pulse" />
+        <p className="text-sm font-medium bg-gradient-text bg-clip-text text-transparent">
+          Tutte le palestre disponibili sono già nel tuo account
+        </p>
       </div>
     );
   }
@@ -156,12 +159,12 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
     <div className={`space-y-3 ${isMobile ? 'p-4' : ''}`}>
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
         <Input
           placeholder="Cerca palestra per nome o città..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-10"
+          className="pl-10 h-10 border-primary/20 focus:border-primary focus:ring-primary/20 bg-gradient-subtle"
         />
       </div>
 
@@ -172,7 +175,7 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
         open={isOpen}
         onOpenChange={setIsOpen}
       >
-        <SelectTrigger className="h-10">
+        <SelectTrigger className="h-10 border-primary/20 focus:border-primary bg-gradient-subtle">
           <SelectValue placeholder="Seleziona una palestra" />
         </SelectTrigger>
         <SelectContent className="max-h-60 z-[150]">
@@ -210,7 +213,7 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
       <Button
         onClick={requestJoinGym}
         disabled={!selectedGymId || requesting}
-        className="w-full h-10"
+        className="w-full h-10 bg-gradient-accent hover:bg-gradient-accent/90 text-white shadow-glow transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:scale-100"
         size="sm"
       >
         {requesting ? (
@@ -222,6 +225,7 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
           <>
             <Send className="w-4 h-4 mr-2" />
             Richiedi Accesso
+            <Zap className="w-3 h-3 ml-1 animate-pulse" />
           </>
         )}
       </Button>

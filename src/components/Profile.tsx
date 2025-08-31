@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard, ShoppingBag } from "lucide-react";
+import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard, ShoppingBag, Sparkles, Zap } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -51,12 +51,17 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
           <ThemeToggle />
         </div>
-        <Avatar className="w-20 sm:w-24 h-20 sm:h-24 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20">
-          <AvatarImage src={user?.profile_picture_url || undefined} alt="Foto profilo" />
-          <AvatarFallback className="text-lg sm:text-xl font-space font-bold">{userInitials}</AvatarFallback>
-        </Avatar>
-        <h1 className="text-xl sm:text-2xl font-space font-bold">{userName}</h1>
-        <Badge className="mt-2 bg-gradient-accent text-white font-medium text-xs sm:text-sm px-3 py-1">
+        <div className="relative">
+          <Avatar className="w-20 sm:w-24 h-20 sm:h-24 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20 shadow-glow transition-all duration-300 hover:scale-110">
+            <AvatarImage src={user?.profile_picture_url || undefined} alt="Foto profilo" />
+            <AvatarFallback className="text-lg sm:text-xl font-space font-bold bg-gradient-primary text-white">{userInitials}</AvatarFallback>
+          </Avatar>
+          <Sparkles className="absolute top-0 right-1/2 translate-x-12 w-4 h-4 text-secondary animate-pulse" />
+        </div>
+        <h1 className="text-xl sm:text-2xl font-space font-bold bg-gradient-text bg-clip-text text-transparent">
+          {userName}
+        </h1>
+        <Badge className="mt-2 bg-gradient-accent text-white font-medium text-xs sm:text-sm px-3 py-1 shadow-glow animate-pulse">
           <Award className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
           {user?.role === 'admin' ? 'Admin' : 
            user?.role === 'gym_owner' ? 'Proprietario' :
@@ -101,44 +106,52 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
 
       {/* Activity Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <Card className="shadow-card text-center transition-all duration-300">
-          <CardContent className="p-3 sm:p-4">
+        <Card className="shadow-glow text-center transition-all duration-300 hover:scale-105 bg-gradient-primary/5 border-primary/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-primary opacity-5" />
+          <CardContent className="p-3 sm:p-4 relative z-10">
             <p className="text-2xl sm:text-3xl font-mono font-bold text-primary">
               {statsLoading ? '...' : stats.weekClasses}
             </p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Settimana</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">Settimana</p>
+            <Zap className="w-3 h-3 absolute top-2 right-2 text-primary animate-pulse" />
           </CardContent>
         </Card>
-        <Card className="shadow-card text-center transition-all duration-300">
-          <CardContent className="p-3 sm:p-4">
+        <Card className="shadow-glow text-center transition-all duration-300 hover:scale-105 bg-gradient-secondary/5 border-secondary/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-secondary opacity-5" />
+          <CardContent className="p-3 sm:p-4 relative z-10">
             <p className="text-2xl sm:text-3xl font-mono font-bold text-secondary">
               {statsLoading ? '...' : stats.monthClasses}
             </p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Mese</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">Mese</p>
+            <Star className="w-3 h-3 absolute top-2 right-2 text-secondary animate-pulse" />
           </CardContent>
         </Card>
-        <Card className="shadow-card text-center transition-all duration-300">
-          <CardContent className="p-3 sm:p-4">
+        <Card className="shadow-glow text-center transition-all duration-300 hover:scale-105 bg-gradient-accent/5 border-accent/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-accent opacity-5" />
+          <CardContent className="p-3 sm:p-4 relative z-10">
             <p className="text-2xl sm:text-3xl font-mono font-bold text-accent">
               {statsLoading ? '...' : stats.yearClasses}
             </p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Anno</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">Anno</p>
+            <Sparkles className="w-3 h-3 absolute top-2 right-2 text-accent animate-pulse" />
           </CardContent>
         </Card>
       </div>
 
       {/* Overall Stats */}
-      <Card className="shadow-card">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-sm sm:text-base text-foreground">
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+      <Card className="shadow-glow bg-gradient-subtle border-primary/20 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-primary opacity-5" />
+        <CardContent className="p-3 sm:p-4 relative z-10">
+          <div className="flex items-center gap-3 text-sm sm:text-base text-foreground">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-primary" />
             <span>
               Questo studente ha partecipato a{' '}
-              <span className="font-mono font-semibold text-primary">
+              <span className="font-mono font-bold text-xl bg-gradient-text bg-clip-text text-transparent">
                 {statsLoading ? '...' : stats.totalClasses}
               </span>
               {' '}classi in totale
             </span>
+            <Sparkles className="w-4 h-4 text-secondary animate-pulse ml-auto" />
           </div>
         </CardContent>
       </Card>
@@ -147,56 +160,59 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
       <div className="space-y-2 sm:space-y-3">
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-primary hover:text-white hover:border-primary hover:shadow-glow group"
           onClick={() => navigate('/impostazioni')}
         >
-          <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:rotate-90 transition-transform" />
           Impostazioni
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-secondary hover:text-white hover:border-secondary hover:shadow-glow group"
           onClick={() => onTabChange?.("leaderboard")}
         >
-          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
           Classifica
+          <Star className="w-3 h-3 ml-auto group-hover:animate-pulse" />
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-accent hover:text-white hover:border-accent hover:shadow-glow group"
           onClick={() => navigate('/subscriptions')}
         >
-          <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
           Gestisci Crediti e Abbonamenti
+          <Sparkles className="w-3 h-3 ml-auto group-hover:animate-pulse" />
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-primary hover:text-white hover:border-primary hover:shadow-glow group"
           onClick={() => navigate('/certificato-medico')}
         >
-          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
           Certificato Medico
         </Button>
         
         <Button 
           onClick={handleLogout}
           variant="destructive" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:shadow-glow group"
         >
-          <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
           Esci
         </Button>
         
         <Button 
           variant="outline" 
-          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px]"
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-accent hover:text-white hover:border-accent hover:shadow-glow group"
           onClick={() => navigate('/shop')}
         >
-          <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-3" />
+          <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
           Shop
+          <Zap className="w-3 h-3 ml-auto group-hover:animate-pulse" />
         </Button>
       </div>
     </div>

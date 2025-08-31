@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X, Sparkles, Zap, Star, Trophy, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -598,9 +598,14 @@ export const CourseCalendar = () => {
   if (loading) {
     return (
       <div className="pb-20 px-4 space-y-6">
-        <div className="pt-8 pb-4">
-          <h1 className="text-3xl font-bold text-foreground">Calendario Corsi</h1>
-          <p className="text-muted-foreground mt-1">Caricamento...</p>
+        <div className="pt-8 pb-4 text-center">
+          <div className="relative inline-block">
+            <h1 className="text-3xl font-bold bg-gradient-text bg-clip-text text-transparent">
+              Calendario Corsi
+            </h1>
+            <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-secondary animate-pulse" />
+          </div>
+          <p className="text-muted-foreground mt-2 animate-pulse">Caricamento...</p>
         </div>
       </div>
     );
@@ -609,25 +614,35 @@ export const CourseCalendar = () => {
   return (
     <div className="pb-20 px-4 space-y-6">
       {/* Header */}
-      <div className="pt-8 pb-4">
-        <div className="flex items-center justify-between">
+      <div className="pt-8 pb-4 relative">
+        <div className="absolute inset-0 bg-gradient-primary opacity-5 rounded-2xl" />
+        <div className="flex items-center justify-between relative z-10 p-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Calendario Corsi</h1>
-            <p className="text-muted-foreground mt-1">Prenota i tuoi corsi preferiti</p>
+            <div className="relative inline-block">
+              <h1 className="text-3xl font-bold bg-gradient-text bg-clip-text text-transparent">
+                Calendario Corsi
+              </h1>
+              <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-secondary animate-pulse" />
+            </div>
+            <p className="text-muted-foreground mt-1 font-medium">Prenota i tuoi corsi preferiti</p>
           </div>
           
           {/* Filters Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="relative">
-                <Filter className="h-4 w-4 mr-2" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="relative hover:bg-gradient-primary hover:text-white hover:border-primary transition-all duration-300 group"
+              >
+                <Filter className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
                 Filtri
                 {hasActiveFilters && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full animate-pulse" />
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-background border shadow-lg">
+            <DropdownMenuContent className="w-56 bg-background border shadow-glow">
               {/* Filtri content */}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -635,38 +650,58 @@ export const CourseCalendar = () => {
       </div>
 
       {/* Week Navigation */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 p-4 bg-gradient-subtle rounded-2xl border border-primary/20">
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => setCurrentWeek(prev => prev - 1)}
+          className="hover:bg-gradient-secondary hover:text-white hover:border-secondary transition-all duration-300 group"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
         </Button>
         <div className="text-center">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-bold bg-gradient-text bg-clip-text text-transparent">
             {currentWeek === 0 ? 'Settimana corrente' : 
              currentWeek > 0 ? `Settimana +${currentWeek}` : 
              `Settimana ${currentWeek}`}
           </h2>
-          <p className="text-sm text-muted-foreground">{getWeekDates(currentWeek).formatRange}</p>
+          <p className="text-sm text-muted-foreground font-medium">{getWeekDates(currentWeek).formatRange}</p>
         </div>
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => setCurrentWeek(prev => prev + 1)}
+          className="hover:bg-gradient-accent hover:text-white hover:border-accent transition-all duration-300 group"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
         </Button>
       </div>
 
       {/* Calendar Days */}
       <div className="space-y-6">
-        {weekDays.map((day) => (
+        {weekDays.map((day, index) => {
+          const dayColors = [
+            'border-red-400', 'border-orange-400', 'border-yellow-400', 
+            'border-green-400', 'border-blue-400', 'border-purple-400', 'border-pink-400'
+          ];
+          const dayGradients = [
+            'bg-gradient-to-r from-red-500/10 to-orange-500/10',
+            'bg-gradient-to-r from-orange-500/10 to-yellow-500/10',
+            'bg-gradient-to-r from-yellow-500/10 to-green-500/10',
+            'bg-gradient-to-r from-green-500/10 to-blue-500/10',
+            'bg-gradient-to-r from-blue-500/10 to-purple-500/10',
+            'bg-gradient-to-r from-purple-500/10 to-pink-500/10',
+            'bg-gradient-to-r from-pink-500/10 to-red-500/10'
+          ];
+          
+          return (
           <div key={day} className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground border-l-4 border-primary pl-3">
-              {day}
-            </h3>
+            <div className={`flex items-center gap-3 p-3 rounded-xl ${dayGradients[index]} border-l-4 ${dayColors[index]}`}>
+              <h3 className="text-lg font-bold bg-gradient-text bg-clip-text text-transparent">
+                {day}
+              </h3>
+              <Star className="w-4 h-4 text-primary animate-pulse" />
+            </div>
             
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
@@ -676,43 +711,82 @@ export const CourseCalendar = () => {
                     `${course.instructors.profiles.first_name || ''} ${course.instructors.profiles.last_name || ''}`.trim() || course.instructors.profiles.email?.split('@')[0] : 
                     'Istruttore';
                   
+                  const categoryColors = {
+                    'Functional Training': 'bg-gradient-to-br from-blue-500 to-purple-600',
+                    'Cardio': 'bg-gradient-to-br from-red-500 to-orange-600',
+                    'Strength Training': 'bg-gradient-to-br from-green-500 to-teal-600',
+                    'Pilates': 'bg-gradient-to-br from-purple-500 to-pink-600',
+                    'Yoga': 'bg-gradient-to-br from-green-400 to-blue-500',
+                    'CrossFit': 'bg-gradient-to-br from-orange-500 to-red-600',
+                    'BJJ': 'bg-gradient-to-br from-gray-600 to-blue-800',
+                    'MMA': 'bg-gradient-to-br from-red-600 to-black',
+                    'Boxing': 'bg-gradient-to-br from-yellow-500 to-red-600',
+                    'Wrestling': 'bg-gradient-to-br from-blue-600 to-purple-700',
+                    'Muay Thai': 'bg-gradient-to-br from-orange-600 to-red-700'
+                  };
+                  
+                  const categoryColor = categoryColors[course.course_categories?.name as keyof typeof categoryColors] || 'bg-gradient-primary';
+                  const availableRatio = (course.session_available_spots || 0) / (course.session_max_participants || course.max_participants || 1);
+                  const capacityColor = availableRatio > 0.5 ? 'text-green-500' : availableRatio > 0.2 ? 'text-yellow-500' : 'text-red-500';
+                  
                   return (
-                    <Card key={course.sessionKey} className="shadow-card hover:shadow-lg transition-all duration-300">
-                      <CardContent className="p-4">
+                    <Card key={course.sessionKey} className="shadow-glow hover:shadow-primary hover:scale-[1.02] transition-all duration-300 border-primary/20 overflow-hidden group">
+                      <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-5 transition-opacity" />
+                      <CardContent className="p-4 relative z-10">
                         <div className="flex items-center gap-4">
                           {/* Icon */}
-                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-primary">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${categoryColor} shadow-glow relative`}>
                             <IconComponent className="h-6 w-6 text-white" />
+                            <div className="absolute -top-1 -right-1">
+                              <Sparkles className="w-3 h-3 text-white animate-pulse" />
+                            </div>
                           </div>
                           
                           {/* Course Info */}
                           <div className="flex-1">
-                             <div className="flex items-center gap-2 mb-1">
-                               <h4 className="font-semibold text-foreground">{course.name}</h4>
-                               <Badge variant="secondary" className="text-xs font-mono">
+                             <div className="flex items-center gap-2 mb-1 flex-wrap">
+                               <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{course.name}</h4>
+                               <Badge className="text-xs font-mono bg-gradient-primary text-white shadow-sm">
+                                 <Clock className="w-3 h-3 mr-1" />
                                  {course.session_start_time?.slice(0, 5)} - {course.session_end_time?.slice(0, 5)}
                                </Badge>
                                {course.difficulty_level && (
-                                 <Badge variant="outline" className="text-xs">Livello {course.difficulty_level}</Badge>
+                                 <Badge 
+                                   className={`text-xs font-medium ${
+                                     course.difficulty_level === 'Principiante' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                                     course.difficulty_level === 'Intermedio' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                                     'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                   }`}
+                                 >
+                                   {course.difficulty_level === 'Principiante' && <Sparkles className="w-3 h-3 mr-1" />}
+                                   {course.difficulty_level === 'Intermedio' && <Star className="w-3 h-3 mr-1" />}
+                                   {course.difficulty_level === 'Avanzato' && <Trophy className="w-3 h-3 mr-1" />}
+                                   {course.difficulty_level}
+                                 </Badge>
                                )}
                                {course.course_categories?.name && (
-                                 <Badge variant="outline" className="text-xs">{course.course_categories.name}</Badge>
+                                 <Badge variant="outline" className="text-xs border-primary/30 text-primary font-medium">
+                                   <Activity className="w-3 h-3 mr-1" />
+                                   {course.course_categories.name}
+                                 </Badge>
                                )}
                              </div>
                              
-                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                               <div className="flex items-center gap-1">
+                             <div className="flex items-center gap-4 text-sm">
+                               <div className="flex items-center gap-1 text-primary">
                                  <Clock className="h-4 w-4" />
-                                 <span>{course.duration_minutes} min</span>
+                                 <span className="font-medium">{course.duration_minutes} min</span>
                                </div>
-                               <div className="flex items-center gap-1">
+                               <div className={`flex items-center gap-1 ${capacityColor} font-medium`}>
                                  <Users className="h-4 w-4" />
-                                 <span>{course.session_available_spots || 0}/{course.session_max_participants || course.max_participants} disponibili</span>
+                                 <span>{course.session_available_spots || 0}/{course.session_max_participants || course.max_participants}</span>
+                                 {availableRatio > 0.8 && <Sparkles className="w-3 h-3 animate-pulse" />}
+                                 {availableRatio <= 0.2 && <Zap className="w-3 h-3 animate-pulse" />}
                                </div>
                                {course.session_room_name && (
-                                 <div className="flex items-center gap-1">
+                                 <div className="flex items-center gap-1 text-accent">
                                    <MapPin className="h-4 w-4" />
-                                   <span>{course.session_room_name}</span>
+                                   <span className="font-medium">{course.session_room_name}</span>
                                  </div>
                                )}
                              </div>
@@ -722,15 +796,21 @@ export const CourseCalendar = () => {
                             </p>
                           </div>
                           
-                           {/* Status and Action */}
-                           <div className="flex flex-col items-end gap-2">
-                             {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
-                               <Badge className="bg-primary text-primary-foreground">Prenotato</Badge>
-                             ) : (
-                               <Badge className="bg-success text-success-foreground">Disponibile</Badge>
-                             )}
-                             {getActionButton(course)}
-                           </div>
+                            {/* Status and Action */}
+                            <div className="flex flex-col items-end gap-2">
+                              {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
+                                <Badge className="bg-gradient-accent text-white animate-pulse shadow-glow">
+                                  <Star className="w-3 h-3 mr-1" />
+                                  Prenotato
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-gradient-secondary text-white">
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Disponibile
+                                </Badge>
+                              )}
+                              {getActionButton(course)}
+                            </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -738,16 +818,21 @@ export const CourseCalendar = () => {
                 })}
               </div>
             ) : (
-              <Card className="shadow-card">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">
+              <Card className="shadow-card bg-gradient-subtle border-primary/20 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-primary opacity-5" />
+                <CardContent className="p-8 text-center relative z-10">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Calendar className="w-8 h-8 text-primary animate-pulse" />
+                    <Sparkles className="w-4 h-4 text-secondary animate-pulse" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">
                     {hasActiveFilters ? 'Nessun corso corrispondente ai filtri' : 'Nessun corso programmato'}
                   </p>
                 </CardContent>
               </Card>
             )}
           </div>
-        ))}
+        )})}
       </div>
 
       <BookingConfirmDialog

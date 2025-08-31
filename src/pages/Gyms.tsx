@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Plus, CreditCard, ArrowLeft } from 'lucide-react';
+import { Building2, Plus, CreditCard, ArrowLeft, Sparkles, Zap, Star } from 'lucide-react';
 import { GymJoinDropdown } from '@/components/GymJoinDropdown';
 import CreditsSubscriptionCard from '@/components/CreditsSubscriptionCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,12 +58,18 @@ export default function Gyms() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="my-gyms" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2 bg-gradient-subtle p-1">
+            <TabsTrigger 
+              value="my-gyms" 
+              className="flex items-center gap-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card transition-all duration-300"
+            >
               <Building2 className="h-4 w-4" />
               Le Mie Palestre
             </TabsTrigger>
-            <TabsTrigger value="find-gyms" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="find-gyms" 
+              className="flex items-center gap-2 data-[state=active]:bg-gradient-accent data-[state=active]:text-white data-[state=active]:shadow-card transition-all duration-300"
+            >
               <Plus className="h-4 w-4" />
               Trova Palestre
             </TabsTrigger>
@@ -85,16 +91,22 @@ export default function Gyms() {
                 ))}
               </div>
             ) : userGyms.length === 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nessuna palestra trovata</h3>
-                  <p className="text-muted-foreground mb-4">
+              <Card className="text-center py-12 bg-gradient-subtle border-primary/20 overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-primary opacity-5" />
+                <CardContent className="relative z-10">
+                  <div className="relative inline-block mb-4">
+                    <Building2 className="h-12 w-12 text-primary mx-auto animate-float" />
+                    <Sparkles className="h-4 w-4 text-secondary absolute -top-1 -right-1 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold bg-gradient-text bg-clip-text text-transparent mb-2">
+                    Nessuna palestra trovata
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
                     Non sei ancora iscritto a nessuna palestra.
                   </p>
                   <Button 
                     onClick={() => setActiveTab('find-gyms')}
-                    className="gap-2"
+                    className="gap-2 bg-gradient-accent hover:bg-gradient-accent/90 text-white shadow-glow transition-all duration-300 hover:scale-105"
                   >
                     <Plus className="h-4 w-4" />
                     Cerca Palestre
@@ -106,9 +118,15 @@ export default function Gyms() {
                 {/* Active Gym Card with Credits/Subscription */}
                 {selectedGym && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="text-xs">Palestra Attiva</Badge>
-                      <h3 className="font-medium">{selectedGym.name}</h3>
+                    <div className="flex items-center gap-3 p-3 bg-gradient-primary/10 rounded-xl border border-primary/20">
+                      <Badge className="text-xs bg-gradient-accent text-white animate-pulse">
+                        <Star className="w-3 h-3 mr-1" />
+                        Palestra Attiva
+                      </Badge>
+                      <h3 className="font-bold bg-gradient-text bg-clip-text text-transparent">
+                        {selectedGym.name}
+                      </h3>
+                      <Zap className="w-4 h-4 text-secondary ml-auto animate-pulse" />
                     </div>
                     <CreditsSubscriptionCard />
                   </div>
@@ -121,21 +139,24 @@ export default function Gyms() {
                     {userGyms.map((gym) => (
                       <Card 
                         key={gym.id} 
-                        className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        className={`cursor-pointer transition-all duration-300 hover:shadow-glow hover:scale-[1.02] group ${
                           selectedGym?.id === gym.id 
-                            ? 'ring-2 ring-primary ring-offset-2 bg-primary/5' 
-                            : 'hover:border-primary/50'
+                            ? 'ring-2 ring-primary/30 bg-gradient-primary/5 shadow-primary border-primary' 
+                            : 'hover:border-primary/40 hover:bg-gradient-subtle'
                         }`}
                         onClick={() => setSelectedGym(gym)}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Building2 className="h-4 w-4" />
+                            <CardTitle className="text-base flex items-center gap-2 font-bold group-hover:text-primary transition-colors">
+                              <Building2 className="h-4 w-4 text-primary" />
                               {gym.name}
                             </CardTitle>
                             {selectedGym?.id === gym.id && (
-                              <Badge variant="default" className="text-xs">Attiva</Badge>
+                              <Badge className="text-xs bg-gradient-accent text-white animate-pulse">
+                                <Star className="w-3 h-3 mr-1" />
+                                Attiva
+                              </Badge>
                             )}
                           </div>
                           {gym.description && (
@@ -143,18 +164,25 @@ export default function Gyms() {
                           )}
                         </CardHeader>
                         <CardContent>
-                          {selectedGym?.id !== gym.id && (
+                          {selectedGym?.id !== gym.id ? (
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="w-full"
+                              className="w-full hover:bg-gradient-primary hover:text-white hover:border-primary transition-all duration-300 group"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedGym(gym);
                               }}
                             >
+                              <Sparkles className="w-3 h-3 mr-2 group-hover:animate-pulse" />
                               Seleziona Palestra
                             </Button>
+                          ) : (
+                            <div className="text-center p-2 bg-gradient-accent/10 rounded-lg">
+                              <span className="text-xs font-medium text-primary">
+                                🎯 Palestra attiva
+                              </span>
+                            </div>
                           )}
                         </CardContent>
                       </Card>
@@ -167,17 +195,18 @@ export default function Gyms() {
 
           {/* Find Gyms Tab */}
           <TabsContent value="find-gyms" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
+            <Card className="bg-gradient-subtle border-accent/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-accent opacity-5" />
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-2 font-bold bg-gradient-text bg-clip-text text-transparent">
+                  <Plus className="h-5 w-5 text-accent" />
                   Cerca Nuove Palestre
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Trova e richiedi l'accesso a nuove palestre nella tua zona
                 </p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative z-10">
                 <GymJoinDropdown 
                   onRequestSent={() => {
                     // Optional: Show success message or refresh data
