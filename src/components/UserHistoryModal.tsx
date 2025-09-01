@@ -236,7 +236,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             </TableCell>
                             <TableCell>
                               {sub.plan.unlimited_access ? 
-                                'Illimitato' : 
+                                sub.plan.name : 
                                 `${sub.plan.credits_included} crediti`
                               }
                             </TableCell>

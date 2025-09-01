@@ -83,7 +83,7 @@ export default function CreditsSubscriptionCard() {
       return (
         <div className="flex items-center space-x-1">
           <Infinity className="w-4 h-4 text-primary" />
-          <span>Illimitato</span>
+          <span>{subscription.plan.name}</span>
         </div>
       );
     }

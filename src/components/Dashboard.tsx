@@ -474,7 +474,7 @@ export const Dashboard = () => {
             ) : userSubscription?.plan?.unlimited_access ? (
               <>
                 <Infinity className="h-5 w-5 mx-auto mb-1 text-white/80" />
-                <div className="text-2xl font-bold text-white">Illimitato</div>
+                <div className="text-2xl font-bold text-white">{userSubscription.plan.name}</div>
                 <p className="text-xs text-white/80">Abbonamento Attivo</p>
               </>
             ) : userCredits > 0 ? (
