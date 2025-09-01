@@ -407,22 +407,49 @@ export const Dashboard = () => {
     <div className="pb-20 px-4 space-y-4">
       {/* Modern Header */}
       <div className="pt-6 pb-4">
-        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-          Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋
-        </h1>
-        <p className="text-muted-foreground text-base md:text-lg font-medium">
-          Benvenuto nella tua palestra
-        </p>
-        
-        <Button
-          onClick={() => setShowHowItWorksModal(true)}
-          variant="outline"
-          size="sm"
-          className="mt-3 text-primary border-primary/20 hover:bg-primary/5"
-        >
-          <HelpCircle className="w-4 h-4 mr-2" />
-          Come funziona l'app
-        </Button>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+              Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋
+            </h1>
+            <p className="text-muted-foreground text-base md:text-lg font-medium">
+              Benvenuto nella tua palestra
+            </p>
+            
+            <Button
+              onClick={() => setShowHowItWorksModal(true)}
+              variant="outline"
+              size="sm"
+              className="mt-3 text-primary border-primary/20 hover:bg-primary/5"
+            >
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Come funziona l'app
+            </Button>
+          </div>
+          
+          {/* Gym Info */}
+          {selectedGym && (
+            <div className="flex items-center gap-2 ml-4">
+              <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm border rounded-lg px-3 py-2 shadow-sm">
+                {selectedGym.logo_url ? (
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={selectedGym.logo_url} alt={selectedGym.name} />
+                    <AvatarFallback className="text-xs">
+                      <Building2 className="h-3 w-3" />
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Building2 className="h-3 w-3 text-primary" />
+                  </div>
+                )}
+                <span className="text-sm font-medium text-foreground truncate max-w-[120px] md:max-w-[200px]">
+                  {selectedGym.name}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary Stats - Moved to top */}
