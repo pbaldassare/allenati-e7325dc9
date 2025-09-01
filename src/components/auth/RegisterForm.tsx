@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, Building2 } from 'lucide-react';
+import { Loader2, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GymApplicationForm } from '@/components/GymApplicationForm';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const [showGymApplication, setShowGymApplication] = useState(false);
   const [isMinor, setIsMinor] = useState(false);
   const [isGuardianModalOpen, setIsGuardianModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phonePrefix, setPhonePrefix] = useState('+39');
   const { register } = useAuth();
   const { toast } = useToast();
 
@@ -197,6 +200,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         setError('La password deve essere di almeno 6 caratteri');
       } else if (err.message?.includes('Invalid email')) {
         setError('Formato email non valido');
+      } else if (err.message?.includes('duplicate key value') && err.message?.includes('fiscal_code')) {
+        setError('Questo codice fiscale è già registrato nel sistema');
       } else {
         setError(err.message || 'Errore durante la registrazione');
       }
@@ -309,15 +314,38 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-lg sm:text-base">Telefono *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+39 333 123 4567"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                  className="h-14 sm:h-12 text-base"
-                />
+                <div className="flex gap-2">
+                  <Select
+                    value={phonePrefix}
+                    onValueChange={setPhonePrefix}
+                  >
+                    <SelectTrigger className="w-24 h-14 sm:h-12 text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="+39">🇮🇹 +39</SelectItem>
+                      <SelectItem value="+33">🇫🇷 +33</SelectItem>
+                      <SelectItem value="+49">🇩🇪 +49</SelectItem>
+                      <SelectItem value="+34">🇪🇸 +34</SelectItem>
+                      <SelectItem value="+44">🇬🇧 +44</SelectItem>
+                      <SelectItem value="+1">🇺🇸 +1</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder={phonePrefix === '+39' ? '333 123 4567' : phonePrefix === '+1' ? '555 123 4567' : '123 456 789'}
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Auto-add prefix if not present
+                      const fullPhone = value.startsWith(phonePrefix) ? value : `${phonePrefix} ${value}`;
+                      setFormData({ ...formData, phone: fullPhone });
+                    }}
+                    required
+                    className="flex-1 h-14 sm:h-12 text-base"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -464,30 +492,48 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   </div>
                 </div>
 
-                <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="password" className="text-lg sm:text-base">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Minimo 6 caratteri"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  className="h-14 sm:h-12 text-base"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Minimo 6 caratteri"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    className="h-14 sm:h-12 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-lg sm:text-base">Conferma Password *</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Ripeti la password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                  className="h-14 sm:h-12 text-base"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Ripeti la password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                    className="h-14 sm:h-12 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               <Button 
