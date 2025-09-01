@@ -243,7 +243,7 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
                 >
                   <div className="font-medium">{preset.name}</div>
                   <div className="text-muted-foreground text-xs">
-                    {preset.unlimited_access ? 'Illimitato' : `${preset.credits_included} crediti`} - {preset.duration_days}gg
+                    {preset.unlimited_access ? preset.name : `${preset.credits_included} crediti`} - {preset.duration_days}gg
                   </div>
                 </Button>
               ))}

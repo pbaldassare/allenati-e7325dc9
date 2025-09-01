@@ -347,7 +347,7 @@ const OwnerSubscriptions: React.FC = () => {
                           <div className="font-medium">{sub.plan.name}</div>
                           <div className="text-sm text-muted-foreground">
                             {sub.plan.unlimited_access ? 
-                              'Illimitato' : 
+                              sub.plan.name : 
                               `${sub.plan.credits_included} crediti`
                             }
                           </div>

@@ -194,7 +194,7 @@ const OwnerSubscriptionPlans: React.FC = () => {
                     <TableCell>{plan.duration_days} giorni</TableCell>
                     <TableCell>
                       {plan.unlimited_access ? (
-                        <Badge>Illimitato</Badge>
+                        <Badge>{plan.name}</Badge>
                       ) : (
                         <Badge variant="secondary">{plan.credits_included} crediti</Badge>
                       )}
