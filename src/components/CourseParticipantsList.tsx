@@ -26,6 +26,7 @@ interface Participant {
     email: string;
     profile_picture_url?: string;
     current_credits: number;
+    belt?: string;
   };
   subscription?: {
     plan_name: string;
@@ -147,7 +148,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
       // Fetch profiles for all users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
+        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits, belt')
         .in('user_id', userIds);
 
       if (profilesError) throw profilesError;
@@ -298,6 +299,24 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     return <Badge variant="secondary">{participant.subscription.plan_name}</Badge>;
   };
 
+  const getBeltBadge = (belt?: string) => {
+    if (!belt) return null;
+    
+    const beltColors: Record<string, string> = {
+      'Bianca': 'bg-white text-black border border-gray-300',
+      'Blu': 'bg-blue-500 text-white',
+      'Viola': 'bg-purple-500 text-white',
+      'Marrone': 'bg-amber-800 text-white',
+      'Nera': 'bg-black text-white'
+    };
+    
+    return (
+      <Badge className={beltColors[belt] || 'bg-gray-500 text-white'}>
+        Cintura {belt}
+      </Badge>
+    );
+  };
+
   const availableSpots = maxParticipants - reservedSpots - participants.length;
   const canManageParticipants = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
 
@@ -385,6 +404,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                               <h4 className="font-medium">
                                 {participant.user.first_name} {participant.user.last_name}
                               </h4>
+                              {getBeltBadge(participant.user.belt)}
                               {isStaff && getSubscriptionBadge(participant)}
                             </div>
                             {isStaff && (

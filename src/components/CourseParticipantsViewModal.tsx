@@ -19,6 +19,7 @@ interface Participant {
     last_name: string;
     email: string;
     profile_picture_url?: string;
+    belt?: string;
   };
   subscription?: {
     plan_name: string;
@@ -110,7 +111,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
       // Fetch profiles for all users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, profile_picture_url')
+        .select('user_id, first_name, last_name, email, profile_picture_url, belt')
         .in('user_id', userIds);
 
       if (profilesError) throw profilesError;
@@ -170,6 +171,24 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     }
 
     return <Badge variant="secondary">{participant.subscription.plan_name}</Badge>;
+  };
+
+  const getBeltBadge = (belt?: string) => {
+    if (!belt) return null;
+    
+    const beltColors: Record<string, string> = {
+      'Bianca': 'bg-white text-black border border-gray-300',
+      'Blu': 'bg-blue-500 text-white',
+      'Viola': 'bg-purple-500 text-white',
+      'Marrone': 'bg-amber-800 text-white',
+      'Nera': 'bg-black text-white'
+    };
+    
+    return (
+      <Badge className={beltColors[belt] || 'bg-gray-500 text-white'}>
+        Cintura {belt}
+      </Badge>
+    );
   };
 
   return (
@@ -238,6 +257,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
                               <h4 className="font-medium">
                                 {participant.user.first_name} {participant.user.last_name}
                               </h4>
+                              {getBeltBadge(participant.user.belt)}
                               {isStaff && getSubscriptionBadge(participant)}
                             </div>
                             {isStaff && (
