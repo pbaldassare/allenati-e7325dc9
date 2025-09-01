@@ -59,11 +59,6 @@ export const WelcomeModal = ({ isOpen, onClose, userName }: WelcomeModalProps) =
             </div>
           </div>
 
-          <div className="bg-muted/50 p-3 rounded-lg">
-            <p className="text-xs text-muted-foreground text-center">
-              Per ora tutti i piani sono gratuiti. Potrai scegliere quello che preferisci e cambiarlo quando vuoi!
-            </p>
-          </div>
 
           <Button 
             onClick={onClose} 

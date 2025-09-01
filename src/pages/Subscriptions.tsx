@@ -249,17 +249,6 @@ export default function Subscriptions() {
           </TabsList>
 
           <TabsContent value="plans" className="space-y-6">
-            {/* Nota periodo gratuito */}
-            <Card className="border-success/20 bg-success/5">
-              <CardContent className="p-4 text-center">
-                <div className="flex items-center justify-center space-x-2 text-success">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">
-                    Periodo di lancio gratuito - Tutti i piani a 0€!
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Griglia piani */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">

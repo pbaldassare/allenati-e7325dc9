@@ -273,10 +273,6 @@ export const UserSubscriptionSelector: React.FC = () => {
         })}
       </div>
 
-      <div className="text-center text-sm text-muted-foreground">
-        <p>Tutti i piani sono attualmente gratuiti durante il periodo di lancio.</p>
-        <p>Puoi cambiare o annullare il tuo abbonamento in qualsiasi momento.</p>
-      </div>
     </div>
   );
 };
