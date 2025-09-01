@@ -366,6 +366,8 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                   participant.scheduled_time
                 );
 
+                const isStaff = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
+
                 return (
                   <Card key={participant.id}>
                     <CardContent className="p-4">
@@ -383,36 +385,42 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
                               <h4 className="font-medium">
                                 {participant.user.first_name} {participant.user.last_name}
                               </h4>
-                              {getSubscriptionBadge(participant)}
+                              {isStaff && getSubscriptionBadge(participant)}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {participant.user.email}
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {date} alle {time}
-                              </span>
-                              <span>
-                                Crediti: {participant.user.current_credits}
-                              </span>
-                            </div>
+                            {isStaff && (
+                              <>
+                                <div className="text-sm text-muted-foreground">
+                                  {participant.user.email}
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {date} alle {time}
+                                  </span>
+                                  <span>
+                                    Crediti: {participant.user.current_credits}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {participant.status}
-                          </Badge>
-                           {canManageParticipants && (
-                            <UnsubscribeConfirmDialog
-                              participant={participant}
-                              courseId={participant.course_id}
-                              courseName={courseName}
-                              onUnsubscribeSuccess={loadParticipants}
-                            />
-                          )}
-                        </div>
+                        {isStaff && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {participant.status}
+                            </Badge>
+                             {canManageParticipants && (
+                              <UnsubscribeConfirmDialog
+                                participant={participant}
+                                courseId={participant.course_id}
+                                courseName={courseName}
+                                onUnsubscribeSuccess={loadParticipants}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

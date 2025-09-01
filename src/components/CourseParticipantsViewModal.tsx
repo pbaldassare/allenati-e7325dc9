@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Search, Calendar, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Participant {
   id: string;
@@ -36,17 +37,28 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
   isOpen, 
   onClose 
 }) => {
+  const { user } = useAuth();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [courseName, setCourseName] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && sessionId) {
       loadParticipants();
     }
   }, [isOpen, sessionId]);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!user) return;
+      const { data } = await supabase.rpc('get_user_role', { _user_id: user.id });
+      setUserRole(data || '');
+    };
+    checkUserRole();
+  }, [user]);
 
   useEffect(() => {
     if (!searchTerm) {
@@ -207,6 +219,8 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
                   participant.scheduled_time
                 );
 
+                const isStaff = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
+
                 return (
                   <Card key={participant.id}>
                     <CardContent className="p-4">
@@ -224,21 +238,27 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
                               <h4 className="font-medium">
                                 {participant.user.first_name} {participant.user.last_name}
                               </h4>
-                              {getSubscriptionBadge(participant)}
+                              {isStaff && getSubscriptionBadge(participant)}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {participant.user.email}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Calendar className="h-3 w-3" />
-                              {date} alle {time}
-                            </div>
+                            {isStaff && (
+                              <>
+                                <div className="text-sm text-muted-foreground">
+                                  {participant.user.email}
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {date} alle {time}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
 
-                        <Badge variant="outline">
-                          {participant.status}
-                        </Badge>
+                        {isStaff && (
+                          <Badge variant="outline">
+                            {participant.status}
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
