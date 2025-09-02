@@ -39,10 +39,13 @@ const SessionCalendarMobile: React.FC = () => {
     setLoading(true);
     
     try {
-      // Get user's gym ID
+      // Get user's gym ID (for gym owners)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // First try to get gym from user_gym_memberships, then from user roles
+      let gymId = null;
+      
       const { data: membership } = await supabase
         .from('user_gym_memberships')
         .select('gym_id')
@@ -50,7 +53,33 @@ const SessionCalendarMobile: React.FC = () => {
         .eq('status', 'active')
         .single();
 
-      if (!membership) return;
+      if (membership) {
+        gymId = membership.gym_id;
+      } else {
+        // If no membership, check if user is a gym owner by checking their roles
+        const { data: userRole } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('role', 'gym_owner')
+          .eq('is_active', true)
+          .single();
+
+        if (userRole) {
+          // Get the gym for this owner
+          const { data: ownerGym } = await supabase
+            .from('gyms')
+            .select('id')
+            .eq('owner_email', user.email)
+            .single();
+          
+          if (ownerGym) {
+            gymId = ownerGym.id;
+          }
+        }
+      }
+
+      if (!gymId) return;
 
       const dayStart = startOfDay(currentDate);
       const dayEnd = new Date(dayStart);
@@ -68,7 +97,7 @@ const SessionCalendarMobile: React.FC = () => {
             credits_required
           )
         `)
-        .eq('courses.gym_id', membership.gym_id)
+        .eq('courses.gym_id', gymId)
         .eq('session_date', format(dayStart, 'yyyy-MM-dd'))
         .eq('status', 'scheduled')
         .order('start_time');
