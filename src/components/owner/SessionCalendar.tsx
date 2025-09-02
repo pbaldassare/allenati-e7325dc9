@@ -54,16 +54,42 @@ const SessionCalendar: React.FC = () => {
     try {
       // Get user's gym ID
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
 
+      // First try to get gym from user_gym_memberships, then from ownership
+      let gymId = null;
+      
       const { data: membership } = await supabase
         .from('user_gym_memberships')
         .select('gym_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
-      if (!membership) return;
+      if (membership) {
+        gymId = membership.gym_id;
+      } else {
+        // Check if user is a gym owner
+        const { data: ownerGym } = await supabase
+          .from('gyms')
+          .select('id')
+          .eq('owner_email', user.email)
+          .maybeSingle();
+        
+        if (ownerGym) {
+          gymId = ownerGym.id;
+        }
+      }
+
+      if (!gymId) {
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
 
       // Get date range based on view mode
       let startDate: Date, endDate: Date;
@@ -88,7 +114,7 @@ const SessionCalendar: React.FC = () => {
             credits_required
           )
         `)
-        .eq('courses.gym_id', membership.gym_id)
+        .eq('courses.gym_id', gymId)
         .gte('session_date', format(startDate, 'yyyy-MM-dd'))
         .lte('session_date', format(endDate, 'yyyy-MM-dd'))
         .eq('status', 'scheduled')
@@ -97,6 +123,8 @@ const SessionCalendar: React.FC = () => {
 
       if (error) {
         console.error('Error fetching sessions:', error);
+        setSessions([]);
+        setLoading(false);
         return;
       }
 
