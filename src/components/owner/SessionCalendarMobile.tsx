@@ -42,8 +42,11 @@ const SessionCalendarMobile: React.FC = () => {
       // Get user's gym ID (for gym owners)
       const { data: { user } } = await supabase.auth.getUser();
       console.log('SessionCalendarMobile - User:', user);
+      
       if (!user) {
         console.log('SessionCalendarMobile - No user found');
+        setSessions([]);
+        setLoading(false);
         return;
       }
 
@@ -93,6 +96,8 @@ const SessionCalendarMobile: React.FC = () => {
 
       if (!gymId) {
         console.log('SessionCalendarMobile - No gym ID found');
+        setSessions([]);
+        setLoading(false);
         return;
       }
 
@@ -119,6 +124,8 @@ const SessionCalendarMobile: React.FC = () => {
 
       if (error) {
         console.error('Error fetching sessions:', error);
+        setSessions([]);
+        setLoading(false);
         return;
       }
 
@@ -158,6 +165,7 @@ const SessionCalendarMobile: React.FC = () => {
       setSessions(transformedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
