@@ -32,6 +32,13 @@ const Index = () => {
     }
   }, [isAuthenticated, isAdmin, loading, navigate]);
 
+  // Redirect gym owners to owner dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'gym_owner' && !loading) {
+      navigate("/owner");
+    }
+  }, [isAuthenticated, user?.role, loading, navigate]);
+
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
     if (tab === "shop") {
