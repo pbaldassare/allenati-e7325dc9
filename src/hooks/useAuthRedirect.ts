@@ -32,6 +32,21 @@ export const useAuthRedirect = () => {
       return;
     }
 
+    // Se l'utente è autenticato e si trova sulla homepage, redirect basato sul ruolo
+    if (isAuthenticated && currentPath === '/') {
+      if (user?.role === 'admin') {
+        navigate('/admin', { replace: true });
+        return;
+      } else if (user?.role === 'gym_owner') {
+        navigate('/owner', { replace: true });
+        return;
+      } else if (user?.role === 'instructor') {
+        navigate('/instructor', { replace: true });
+        return;
+      }
+      // Gli utenti normali rimangono sulla homepage
+    }
+
     // Se l'utente non è autenticato e non si trova su una pagina pubblica limitata
     const unauthenticatedPublicPaths = ['/auth', '/'];
     if (!isAuthenticated && !unauthenticatedPublicPaths.includes(currentPath)) {

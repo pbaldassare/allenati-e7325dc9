@@ -14,6 +14,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthModal } from "@/hooks/useAuthModal";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
@@ -24,20 +25,10 @@ const Index = () => {
   const navigate = useNavigate();
   const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading, isAdmin } = useAuth();
   const { isOpen, defaultMode, openLogin, openRegister, close } = useAuthModal();
+  
+  // Gestisce i redirect automatici basati sul ruolo
+  useAuthRedirect();
 
-  // Redirect admin users to admin panel
-  useEffect(() => {
-    if (isAuthenticated && isAdmin && !loading) {
-      navigate("/admin");
-    }
-  }, [isAuthenticated, isAdmin, loading, navigate]);
-
-  // Redirect gym owners to owner dashboard
-  useEffect(() => {
-    if (isAuthenticated && user?.role === 'gym_owner' && !loading) {
-      navigate("/owner");
-    }
-  }, [isAuthenticated, user?.role, loading, navigate]);
 
   const handleTabChange = (tab: string) => {
     // Handle navigation for external routes
