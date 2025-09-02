@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
+import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
+import { MedicalCertificateStatusBadge } from './MedicalCertificateStatusBadge';
 
 interface SessionData {
   id: string;
@@ -50,6 +52,20 @@ interface Participant {
   };
   status: string;
   credits_used: number;
+  subscription?: {
+    id: string;
+    expires_at: string;
+    status: string;
+    subscription_plans: {
+      name: string;
+      unlimited_access: boolean;
+    };
+  } | null;
+  medical_certificate?: {
+    id: string;
+    expiry_date: string;
+    status: string;
+  } | null;
 }
 
 interface User {
@@ -125,7 +141,48 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
       if (error) throw error;
 
-      const participantsList = bookings?.map(booking => ({
+      if (!bookings || bookings.length === 0) {
+        setParticipants([]);
+        return;
+      }
+
+      // Get user IDs for additional queries
+      const userIds = bookings.map(b => b.user_id);
+
+      // Get subscriptions for these users
+      const { data: subscriptions } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          user_id,
+          id,
+          expires_at,
+          status,
+          subscription_plans!inner(
+            name,
+            unlimited_access
+          )
+        `)
+        .in('user_id', userIds)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString());
+
+      // Get medical certificates for these users
+      const { data: certificates } = await supabase
+        .from('medical_certificates')
+        .select('user_id, id, expiry_date, status')
+        .in('user_id', userIds)
+        .eq('status', 'approved')
+        .gt('expiry_date', new Date().toISOString());
+
+      // Create maps for quick lookup
+      const subscriptionMap = new Map(
+        subscriptions?.map(sub => [sub.user_id, sub]) || []
+      );
+      const certificateMap = new Map(
+        certificates?.map(cert => [cert.user_id, cert]) || []
+      );
+
+      const participantsList = bookings.map(booking => ({
         id: booking.id,
         user_id: booking.user_id,
         status: booking.status,
@@ -136,8 +193,10 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           email: booking.profiles.email || '',
           profile_picture_url: booking.profiles.profile_picture_url,
           current_credits: booking.profiles.current_credits || 0
-        }
-      })) || [];
+        },
+        subscription: subscriptionMap.get(booking.user_id) || null,
+        medical_certificate: certificateMap.get(booking.user_id) || null
+      }));
 
       setParticipants(participantsList);
     } catch (error) {
@@ -499,13 +558,20 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                             <p className="text-xs text-muted-foreground">
                               {participant.user.email}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {participant.user.current_credits} crediti
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {participant.status}
-                              </Badge>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {participant.user.current_credits} crediti
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {participant.status}
+                                </Badge>
+                              </div>
+                              
+                              <div className="flex flex-col gap-1">
+                                <SubscriptionStatusBadge subscription={participant.subscription} />
+                                <MedicalCertificateStatusBadge certificate={participant.medical_certificate} />
+                              </div>
                             </div>
                           </div>
                         </div>

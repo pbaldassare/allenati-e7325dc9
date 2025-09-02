@@ -9,6 +9,8 @@ import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { CourseParticipantCount } from "@/components/CourseParticipantCount";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
+import SessionCalendarMobile from "./SessionCalendarMobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SessionData {
   id: string;
@@ -30,11 +32,17 @@ interface SessionData {
 type ViewMode = 'week' | 'month';
 
 const SessionCalendar: React.FC = () => {
+  const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+
+  // Return mobile version if on mobile
+  if (isMobile) {
+    return <SessionCalendarMobile />;
+  }
 
   useEffect(() => {
     fetchSessions();
