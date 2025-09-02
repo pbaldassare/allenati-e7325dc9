@@ -11,7 +11,14 @@ export const useAuthRedirect = () => {
   const location = useLocation();
 
   useEffect(() => {
+    // Wait for auth to be fully loaded AND user data to be complete
     if (loading) return;
+    
+    // If user is authenticated but we don't have complete user data yet, wait
+    if (isAuthenticated && (!user || user.role === undefined)) {
+      console.log('AuthRedirect: User authenticated but role not loaded yet, waiting...');
+      return;
+    }
 
     const currentPath = location.pathname;
     
