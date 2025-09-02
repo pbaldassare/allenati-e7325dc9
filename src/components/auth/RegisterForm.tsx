@@ -34,7 +34,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     phone: '',
     fiscalCode: '',
     gymId: '',
-    belt: '',
+    belt: 'Bianca',
     guardianFirstName: '',
     guardianLastName: '',
     guardianPhone: '',
@@ -152,7 +152,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             phone: formData.phone,
             fiscal_code: formData.fiscalCode.toUpperCase(),
             selected_gym_id: formData.gymId,
-            belt: formData.belt === 'none' || !formData.belt ? null : formData.belt,
+            belt: formData.belt || 'Bianca',
             ...(isMinor
               ? {
                   is_minor: true,
@@ -184,7 +184,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         phone: '',
         fiscalCode: '',
         gymId: '',
-        belt: '',
+        belt: 'Bianca',
         guardianFirstName: '',
         guardianLastName: '',
         guardianPhone: '',
@@ -369,10 +369,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   onValueChange={(value) => setFormData({ ...formData, belt: value })}
                 >
                   <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
-                    <SelectValue placeholder="Seleziona la tua cintura (opzionale)" />
+                    <SelectValue placeholder="Cintura selezionata" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nessuna cintura</SelectItem>
                     <SelectItem value="Bianca">🥋 Bianca</SelectItem>
                     <SelectItem value="Blu">🥋 Blu</SelectItem>
                     <SelectItem value="Viola">🥋 Viola</SelectItem>
