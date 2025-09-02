@@ -39,14 +39,16 @@ const SessionCalendar: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
 
+  useEffect(() => {
+    if (!isMobile) {
+      fetchSessions();
+    }
+  }, [currentWeek, currentMonth, viewMode, isMobile]);
+
   // Return mobile version if on mobile
   if (isMobile) {
     return <SessionCalendarMobile />;
   }
-
-  useEffect(() => {
-    fetchSessions();
-  }, [currentWeek, currentMonth, viewMode]);
 
   const fetchSessions = async () => {
     setLoading(true);
