@@ -41,45 +41,60 @@ const SessionCalendarMobile: React.FC = () => {
     try {
       // Get user's gym ID (for gym owners)
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      console.log('SessionCalendarMobile - User:', user);
+      if (!user) {
+        console.log('SessionCalendarMobile - No user found');
+        return;
+      }
 
       // First try to get gym from user_gym_memberships, then from user roles
       let gymId = null;
       
-      const { data: membership } = await supabase
+      const { data: membership, error: membershipError } = await supabase
         .from('user_gym_memberships')
         .select('gym_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
+
+      console.log('SessionCalendarMobile - Membership:', membership, membershipError);
 
       if (membership) {
         gymId = membership.gym_id;
+        console.log('SessionCalendarMobile - Gym ID from membership:', gymId);
       } else {
         // If no membership, check if user is a gym owner by checking their roles
-        const { data: userRole } = await supabase
+        const { data: userRole, error: roleError } = await supabase
           .from('user_roles')
           .select('*')
           .eq('user_id', user.id)
           .eq('role', 'gym_owner')
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
+
+        console.log('SessionCalendarMobile - User role:', userRole, roleError);
 
         if (userRole) {
           // Get the gym for this owner
-          const { data: ownerGym } = await supabase
+          const { data: ownerGym, error: gymError } = await supabase
             .from('gyms')
             .select('id')
             .eq('owner_email', user.email)
-            .single();
+            .maybeSingle();
+          
+          console.log('SessionCalendarMobile - Owner gym:', ownerGym, gymError);
           
           if (ownerGym) {
             gymId = ownerGym.id;
+            console.log('SessionCalendarMobile - Gym ID from ownership:', gymId);
           }
         }
       }
 
-      if (!gymId) return;
+      if (!gymId) {
+        console.log('SessionCalendarMobile - No gym ID found');
+        return;
+      }
 
       const dayStart = startOfDay(currentDate);
       const dayEnd = new Date(dayStart);
