@@ -11,11 +11,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard } from 'lucide-react';
+import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
 import { useIsMobile } from '@/hooks/use-mobile';
+import UserDetailsModal from '@/components/owner/UserDetailsModal';
 
 interface MemberProfile {
   user_id: string;
@@ -55,6 +56,10 @@ const OwnerUsers = () => {
   // New: auth user id and upload dialog state
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  
+  // User details modal state
+  const [userDetailsModalOpen, setUserDetailsModalOpen] = useState(false);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Utenti Palestra | Gym Manager';
@@ -486,16 +491,26 @@ const OwnerUsers = () => {
                           </div>
                           
                           <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedUserForDetails(m.user_id);
+                                setUserDetailsModalOpen(true);
+                              }}
+                              className="flex-1"
+                            >
+                              <Eye className="mr-2 h-3 w-3" />
+                              Dettagli
+                            </Button>
                             {!isAdminOrOwner && !m.is_instructor && (
                               <Button 
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handlePromoteClick(m.user_id)}
                                 disabled={promoting === m.user_id}
-                                className="flex-1"
                               >
-                                <UserCheck className="mr-2 h-3 w-3" />
-                                {promoting === m.user_id ? 'Promuovendo...' : 'Promuovi'}
+                                <UserCheck className="h-3 w-3" />
                               </Button>
                             )}
                             {m.is_instructor && !isAdminOrOwner && (
@@ -504,10 +519,8 @@ const OwnerUsers = () => {
                                 variant="destructive"
                                 onClick={() => demoteInstructor(m.user_id)}
                                 disabled={demoting === m.user_id}
-                                className="flex-1"
                               >
-                                <UserMinus className="mr-2 h-3 w-3" />
-                                {demoting === m.user_id ? 'Retrocedendo...' : 'Retrocedi'}
+                                <UserMinus className="h-3 w-3" />
                               </Button>
                             )}
                             <Button
@@ -637,6 +650,17 @@ const OwnerUsers = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUserForDetails(m.user_id);
+                                  setUserDetailsModalOpen(true);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Dettagli
+                              </Button>
                               {isAdminOrOwner ? (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -747,6 +771,16 @@ const OwnerUsers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        isOpen={userDetailsModalOpen}
+        onClose={() => {
+          setUserDetailsModalOpen(false);
+          setSelectedUserForDetails(null);
+        }}
+        userId={selectedUserForDetails}
+      />
     </div>
   );
 };
