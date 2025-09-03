@@ -9,12 +9,20 @@ import { SessionManagementDrawer } from '@/components/owner/SessionManagementDra
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, isToday, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale/it';
+import { useIsMobile } from '@/hooks/use-mobile';
+import InstructorScheduleMobile from '@/components/instructor/InstructorScheduleMobile';
 
 const InstructorSchedule = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [courseSessions, setCourseSessions] = useState<any[]>([]);
+  const isMobile = useIsMobile();
+
+  // If mobile, render the mobile component
+  if (isMobile) {
+    return <InstructorScheduleMobile />;
+  }
 
   useEffect(() => {
     fetchSessions();
