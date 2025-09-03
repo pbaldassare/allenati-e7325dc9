@@ -43,11 +43,18 @@ export const useInstructorCourses = () => {
       
       if (hasOwnerPrivileges) {
         // For super instructors, get user's gym ID and fetch ALL courses from that gym
-        const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
+        const { data: membership, error: membershipError } = await supabase
+          .from('user_gym_memberships')
+          .select('gym_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single();
         
-        if (!gymId) {
+        if (membershipError || !membership) {
           throw new Error('Palestra non trovata');
         }
+        
+        const gymId = membership.gym_id;
 
         // Get all courses from the gym
         const { data: allCoursesData, error: coursesError } = await supabase
