@@ -111,7 +111,7 @@ serve(async (req) => {
     // Get gym details
     const { data: gym, error: gymError } = await supabaseClient
       .from('gyms')
-      .select('name, address, city, postal_code, phone, email, logo_url')
+      .select('name, address, city, postal_code, phone, email, logo_url, business_name, partita_iva, codice_fiscale')
       .eq('id', subscription.gym_id)
       .maybeSingle();
 
@@ -148,10 +148,11 @@ serve(async (req) => {
     
     let yPosition = 20;
     
-    // Header - Gym name
+    // Header - Gym name (use business name if available)
     doc.setFontSize(20);
     doc.setTextColor(...primaryColor);
-    doc.text(gym.name, 105, yPosition, { align: 'center' });
+    const displayName = gym.business_name || gym.name;
+    doc.text(displayName, 105, yPosition, { align: 'center' });
     yPosition += 8;
     
     // Gym address
@@ -161,12 +162,21 @@ serve(async (req) => {
     doc.text(gymAddress, 105, yPosition, { align: 'center' });
     yPosition += 5;
     
-    // Gym contacts
+    // Gym contacts and fiscal data
     if (gym.phone || gym.email) {
       const contacts = `${gym.phone ? `Tel: ${gym.phone}` : ''}${gym.phone && gym.email ? ' | ' : ''}${gym.email ? `Email: ${gym.email}` : ''}`;
       doc.text(contacts, 105, yPosition, { align: 'center' });
+      yPosition += 5;
     }
-    yPosition += 15;
+    
+    // Add fiscal information if available
+    if (gym.partita_iva || gym.codice_fiscale) {
+      const fiscalData = `${gym.partita_iva ? `P.IVA: ${gym.partita_iva}` : ''}${gym.partita_iva && gym.codice_fiscale ? ' | ' : ''}${gym.codice_fiscale ? `C.F.: ${gym.codice_fiscale}` : ''}`;
+      doc.text(fiscalData, 105, yPosition, { align: 'center' });
+      yPosition += 5;
+    }
+    
+    yPosition += 10;
     
     // Horizontal line under header
     doc.setDrawColor(...textColor);

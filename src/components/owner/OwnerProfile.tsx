@@ -26,6 +26,11 @@ const profileSchema = z.object({
   gymEmail: z.string().email('Email non valida').optional().or(z.literal('')),
   gymWebsite: z.string().url('URL non valido').optional().or(z.literal('')),
   
+  // Dati Fiscali
+  businessName: z.string().optional(),
+  partitaIva: z.string().optional(),
+  codiceFiscale: z.string().optional(),
+  
   // Dati Proprietario
   firstName: z.string().min(1, 'Nome richiesto'),
   lastName: z.string().min(1, 'Cognome richiesto'),
@@ -72,7 +77,7 @@ export const OwnerProfile: React.FC = () => {
           .from('gyms')
           .select('*')
           .eq('id', selectedGym.id)
-          .single();
+          .maybeSingle();
 
         if (gymError) throw gymError;
 
@@ -95,6 +100,9 @@ export const OwnerProfile: React.FC = () => {
           gymPhone: gymData.phone || '',
           gymEmail: gymData.email || '',
           gymWebsite: gymData.website || '',
+          businessName: gymData.business_name || '',
+          partitaIva: gymData.partita_iva || '',
+          codiceFiscale: gymData.codice_fiscale || '',
           firstName: profileData.first_name || '',
           lastName: profileData.last_name || '',
           phone: profileData.phone || '',
@@ -189,6 +197,9 @@ export const OwnerProfile: React.FC = () => {
           phone: data.gymPhone,
           email: data.gymEmail || null,
           website: data.gymWebsite || null,
+          business_name: data.businessName || null,
+          partita_iva: data.partitaIva || null,
+          codice_fiscale: data.codiceFiscale || null,
         })
         .eq('id', selectedGym.id);
 
@@ -430,6 +441,73 @@ export const OwnerProfile: React.FC = () => {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Fiscal Data Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="w-5 h-5" />
+                Dati Fiscali
+              </CardTitle>
+              <CardDescription>
+                Informazioni fiscali per la generazione delle ricevute (opzionali)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Denominazione Sociale</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field}
+                        placeholder="Denominazione ufficiale della palestra"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="partitaIva"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Partita IVA</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field}
+                          placeholder="IT01234567890"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="codiceFiscale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field}
+                          placeholder="RSSMRA85M01H501Z"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 

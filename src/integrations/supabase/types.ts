@@ -916,7 +916,9 @@ export type Database = {
       gyms: {
         Row: {
           address: string
+          business_name: string | null
           city: string
+          codice_fiscale: string | null
           created_at: string
           description: string | null
           email: string | null
@@ -926,6 +928,7 @@ export type Database = {
           name: string
           opening_hours: Json | null
           owner_email: string | null
+          partita_iva: string | null
           phone: string | null
           postal_code: string | null
           stripe_credentials_configured: boolean | null
@@ -936,7 +939,9 @@ export type Database = {
         }
         Insert: {
           address: string
+          business_name?: string | null
           city: string
+          codice_fiscale?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
@@ -946,6 +951,7 @@ export type Database = {
           name: string
           opening_hours?: Json | null
           owner_email?: string | null
+          partita_iva?: string | null
           phone?: string | null
           postal_code?: string | null
           stripe_credentials_configured?: boolean | null
@@ -956,7 +962,9 @@ export type Database = {
         }
         Update: {
           address?: string
+          business_name?: string | null
           city?: string
+          codice_fiscale?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
@@ -966,6 +974,7 @@ export type Database = {
           name?: string
           opening_hours?: Json | null
           owner_email?: string | null
+          partita_iva?: string | null
           phone?: string | null
           postal_code?: string | null
           stripe_credentials_configured?: boolean | null
