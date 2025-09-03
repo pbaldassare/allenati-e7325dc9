@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
 
@@ -50,6 +52,8 @@ const OwnerSubscriptions: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
   const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
@@ -249,6 +253,120 @@ const OwnerSubscriptions: React.FC = () => {
     }
   };
 
+  const handleUpdateSubscriptionStatus = async (subscriptionId: string, newStatus: 'active' | 'cancelled' | 'expired' | 'trial', actionLabel: string) => {
+    try {
+      setUpdatingStatus(subscriptionId);
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({ status: newStatus })
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+
+      // Aggiornamento ottimistico
+      setSubscriptions(prevSubscriptions => 
+        prevSubscriptions.map(sub => 
+          sub.id === subscriptionId 
+            ? { ...sub, status: newStatus }
+            : sub
+        )
+      );
+
+      // Ricalcola statistiche
+      setTimeout(() => {
+        loadSubscriptionData();
+      }, 500);
+
+      toast({
+        title: "Abbonamento aggiornato",
+        description: `L'abbonamento è stato ${actionLabel} con successo.`,
+      });
+
+    } catch (error) {
+      console.error('Error updating subscription status:', error);
+      toast({
+        title: "Errore",
+        description: "Errore nell'aggiornamento dell'abbonamento. Riprova più tardi.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const getStatusActionButton = (subscription: UserSubscription) => {
+    const isUpdating = updatingStatus === subscription.id;
+    
+    if (subscription.status === 'active') {
+      return (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isUpdating}
+              className="flex items-center space-x-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <Pause className="w-3 h-3" />
+              <span>{isUpdating ? 'Disattivando...' : 'Disattiva'}</span>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Disattivare abbonamento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Questa azione disattiverà l'abbonamento di {subscription.user.first_name} {subscription.user.last_name}. 
+                L'utente non potrà più accedere ai servizi dell'abbonamento.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'cancelled', 'disattivato')}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Disattiva
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      );
+    }
+    
+    if (subscription.status === 'cancelled') {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'active', 'riattivato')}
+          disabled={isUpdating}
+          className="flex items-center space-x-1 border-success text-success hover:bg-success hover:text-success-foreground"
+        >
+          <Play className="w-3 h-3" />
+          <span>{isUpdating ? 'Attivando...' : 'Attiva'}</span>
+        </Button>
+      );
+    }
+    
+    if (subscription.status === 'expired') {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'active', 'riattivato')}
+          disabled={isUpdating}
+          className="flex items-center space-x-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+        >
+          <RotateCcw className="w-3 h-3" />
+          <span>{isUpdating ? 'Riattivando...' : 'Riattiva'}</span>
+        </Button>
+      );
+    }
+    
+    return null;
+  };
+
   if (loading) {
     return <div className="text-center py-8">Caricamento abbonamenti...</div>;
   }
@@ -392,38 +510,34 @@ const OwnerSubscriptions: React.FC = () => {
                       <TableCell>
                         {new Date(sub.expires_at).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {canExtendSubscription(sub) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExtendClick(sub)}
-                              className="flex items-center space-x-1"
-                            >
-                              <Clock className="w-3 h-3" />
-                              <span>Estendi</span>
-                            </Button>
-                          )}
-                          {(sub.status === 'active' || sub.status === 'expired') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadReceipt(sub)}
-                              disabled={generatingReceipt === sub.id}
-                              className="flex items-center space-x-1"
-                            >
-                              <Download className="w-3 h-3" />
-                              <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
-                            </Button>
-                          )}
-                          {!canExtendSubscription(sub) && sub.status !== 'active' && sub.status !== 'expired' && (
-                            <span className="text-xs text-muted-foreground">
-                              Nessuna azione
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex items-center space-x-2">
+                           {getStatusActionButton(sub)}
+                           {canExtendSubscription(sub) && (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleExtendClick(sub)}
+                               className="flex items-center space-x-1"
+                             >
+                               <Clock className="w-3 h-3" />
+                               <span>Estendi</span>
+                             </Button>
+                           )}
+                           {(sub.status === 'active' || sub.status === 'expired') && (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleDownloadReceipt(sub)}
+                               disabled={generatingReceipt === sub.id}
+                               className="flex items-center space-x-1"
+                             >
+                               <Download className="w-3 h-3" />
+                               <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
+                             </Button>
+                           )}
+                         </div>
+                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
