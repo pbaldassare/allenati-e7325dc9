@@ -151,14 +151,20 @@ serve(async (req) => {
     // Add gym logo if available
     if (gym.logo_url) {
       try {
-        // Note: In production, you'd need to fetch and convert the logo properly
-        // For now, we'll leave space for the logo and add text placeholder
-        doc.setFontSize(8);
-        doc.setTextColor(...lightGray);
-        doc.text('[LOGO]', 20, yPosition);
-        yPosition += 5;
+        // Fetch and add logo to PDF
+        const logoResponse = await fetch(gym.logo_url);
+        if (logoResponse.ok) {
+          const logoArrayBuffer = await logoResponse.arrayBuffer();
+          const logoBase64 = btoa(String.fromCharCode(...new Uint8Array(logoArrayBuffer)));
+          const logoDataUrl = `data:image/jpeg;base64,${logoBase64}`;
+          
+          // Add logo (30x30 size, adjust as needed)
+          doc.addImage(logoDataUrl, 'JPEG', 20, yPosition - 5, 30, 30);
+          yPosition += 30;
+        }
       } catch (logoError) {
         console.warn('Logo loading failed:', logoError);
+        // Continue without logo if it fails
       }
     }
     
@@ -265,8 +271,8 @@ serve(async (req) => {
     doc.text('Dettagli Abbonamento', 20, yPosition);
     yPosition += 8;
     
-    // Calculate section height
-    let subscriptionHeight = 36;
+    // Calculate section height (reduced since we removed "Tipo")
+    let subscriptionHeight = 30;
     if (plan.credits_included && !plan.unlimited_access) subscriptionHeight += 6;
     
     // Section background
@@ -294,10 +300,6 @@ serve(async (req) => {
     doc.text(`dal ${startDate} al ${endDate}`, 90, yPosition);
     yPosition += 6;
     
-    doc.text('Tipo:', 25, yPosition);
-    const accessType = plan.unlimited_access ? 'Accesso Illimitato' : `${plan.credits_included || 0} Crediti`;
-    doc.text(accessType, 90, yPosition);
-    yPosition += 6;
     
     if (plan.credits_included && !plan.unlimited_access) {
       doc.text('Crediti inclusi:', 25, yPosition);
@@ -316,7 +318,7 @@ serve(async (req) => {
     
     doc.setFontSize(16);
     doc.setTextColor(...greenColor);
-    const amount = `€ ${plan.price ? parseFloat(plan.price).toFixed(2) : '0.00'}`;
+    const amount = `Euro ${plan.price ? parseFloat(plan.price).toFixed(2) : '0.00'}`;
     doc.text('Importo:', 25, yPosition + 8);
     doc.text(amount, 90, yPosition + 8);
     yPosition += 25;
@@ -327,39 +329,6 @@ serve(async (req) => {
     doc.text(`Grazie per aver scelto ${gym.name}!`, 105, yPosition, { align: 'center' });
     yPosition += 15;
     
-    // Legal disclaimer
-    doc.setFontSize(8);
-    doc.setTextColor(...textColor);
-    doc.text('DISCLAIMER LEGALE', 105, yPosition, { align: 'center' });
-    yPosition += 5;
-    
-    doc.setFontSize(7);
-    doc.setTextColor(...lightGray);
-    const disclaimerLines = [
-      'Questo documento costituisce ricevuta fiscale valida ai sensi del D.P.R. 26 ottobre 1972, n. 633.',
-      'La presente ricevuta è emessa in esenzione IVA ex art. 10, c. 1, n. 18) del D.P.R. 633/72.',
-      'Per reclami o contestazioni contattare la struttura entro 8 giorni dalla data di emissione.'
-    ];
-    
-    disclaimerLines.forEach(line => {
-      doc.text(line, 105, yPosition, { align: 'center', maxWidth: 160 });
-      yPosition += 4;
-    });
-    
-    yPosition += 10;
-    
-    // Footer line
-    doc.setDrawColor(...lightGray);
-    doc.setLineWidth(0.3);
-    doc.line(20, yPosition, 190, yPosition);
-    yPosition += 8;
-    
-    // Footer text
-    doc.setFontSize(8);
-    doc.setTextColor(...lightGray);
-    doc.text('Ricevuta generata automaticamente dal sistema di gestione palestra', 105, yPosition, { align: 'center' });
-    yPosition += 4;
-    doc.text('Per qualsiasi chiarimento, contattare la palestra ai recapiti sopra indicati', 105, yPosition, { align: 'center' });
     
     // Generate PDF as ArrayBuffer
     const pdfBuffer = doc.output('arraybuffer');
