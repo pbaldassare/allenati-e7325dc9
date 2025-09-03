@@ -3,13 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Instructor {
   id: string;
   user_id: string;
   bio: string | null;
   is_active: boolean;
+  has_owner_privileges: boolean;
   created_at: string;
   specializations: string[] | null;
   certifications: string[] | null;
@@ -27,6 +32,37 @@ const OwnerInstructors: React.FC = () => {
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const handlePrivilegeToggle = async (userId: string, currentPrivileges: boolean) => {
+    try {
+      const functionName = currentPrivileges ? 'demote_super_instructor' : 'promote_instructor_to_super';
+      const { error } = await supabase.rpc(functionName, {
+        _user_id: userId,
+      });
+
+      if (error) {
+        console.error('Error updating instructor privileges:', error);
+        toast.error('Errore nell\'aggiornamento dei privilegi');
+        return;
+      }
+
+      // Update local state
+      setInstructors(prev => prev.map(instructor => 
+        instructor.user_id === userId 
+          ? { ...instructor, has_owner_privileges: !currentPrivileges }
+          : instructor
+      ));
+
+      toast.success(
+        currentPrivileges 
+          ? 'Privilegi da proprietario rimossi' 
+          : 'Privilegi da proprietario assegnati'
+      );
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('Errore imprevisto');
+    }
+  };
+
   useEffect(() => {
     document.title = "Istruttori | Area Proprietario";
   }, []);
@@ -39,7 +75,7 @@ const OwnerInstructors: React.FC = () => {
         const { data: instData, error: instError } = await (supabase as any)
           .from("instructors")
           .select(
-            `id, user_id, bio, is_active, created_at, specializations, certifications, experience_years, hourly_rate`
+            `id, user_id, bio, is_active, has_owner_privileges, created_at, specializations, certifications, experience_years, hourly_rate`
           )
           .eq("is_active", true)
           .order("created_at", { ascending: false });
@@ -176,6 +212,7 @@ const OwnerInstructors: React.FC = () => {
                   <TableHead>Telefono</TableHead>
                   <TableHead>Esperienza</TableHead>
                   <TableHead>Specializzazioni</TableHead>
+                  <TableHead>Privilegi</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead>Dal</TableHead>
                 </TableRow>
@@ -235,6 +272,25 @@ const OwnerInstructors: React.FC = () => {
                       ) : (
                         <span className="text-muted-foreground">Nessuna</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={instructor.has_owner_privileges}
+                          onCheckedChange={() => handlePrivilegeToggle(instructor.user_id, instructor.has_owner_privileges)}
+                          id={`privileges-${instructor.id}`}
+                        />
+                        <Label htmlFor={`privileges-${instructor.id}`} className="text-sm">
+                          {instructor.has_owner_privileges ? (
+                            <div className="flex items-center gap-1 text-amber-600">
+                              <Crown className="w-3 h-3" />
+                              Super
+                            </div>
+                          ) : (
+                            "Standard"
+                          )}
+                        </Label>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={instructor.is_active ? "default" : "secondary"}>

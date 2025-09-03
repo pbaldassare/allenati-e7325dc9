@@ -24,6 +24,7 @@ interface User {
   gym_id?: string;
   gym_name?: string;
   current_credits: number;
+  has_owner_privileges?: boolean;
 }
 
 interface AuthContextType {
@@ -38,6 +39,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isGymOwner: boolean;
   isInstructor: boolean;
+  hasOwnerPrivileges: boolean;
   loading: boolean;
   showWelcomeModal: boolean;
   setShowWelcomeModal: (show: boolean) => void;
@@ -90,17 +92,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Get gym data if user is instructor or gym_owner
       let gymId: string | undefined;
       let gymName: string | undefined;
+      let hasOwnerPrivileges = false;
 
       if (role === 'instructor') {
         const { data: instructorData } = await supabase
           .from('instructors')
-          .select('gym_id, gyms(name)')
+          .select('gym_id, has_owner_privileges, gyms(name)')
           .eq('user_id', userId)
           .single();
 
         if (instructorData) {
           gymId = instructorData.gym_id;
           gymName = instructorData.gyms?.name;
+          hasOwnerPrivileges = instructorData.has_owner_privileges || false;
         }
       } else if (role === 'gym_owner') {
         const { data: gymData } = await supabase
@@ -137,6 +141,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gym_id: gymId,
         gym_name: gymName,
         current_credits: profile.current_credits || 0,
+        has_owner_privileges: hasOwnerPrivileges,
       };
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -310,6 +315,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAdmin: user?.role === 'admin',
     isGymOwner: user?.role === 'gym_owner',
     isInstructor: user?.role === 'instructor',
+    hasOwnerPrivileges: user?.has_owner_privileges || false,
     loading,
     showWelcomeModal,
     setShowWelcomeModal,

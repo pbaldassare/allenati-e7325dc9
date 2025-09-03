@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, BookOpen, Users, Calendar, BarChart3, ShoppingBag, User, LogOut } from "lucide-react";
+import { Home, BookOpen, Users, Calendar, BarChart3, ShoppingBag, User, LogOut, Settings, Crown } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,19 +16,35 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
-  { title: "Dashboard", url: "/instructor", icon: Home },
-  { title: "I Miei Corsi", url: "/instructor/courses", icon: BookOpen },
-  { title: "Partecipanti", url: "/instructor/participants", icon: Users },
-  { title: "Calendario", url: "/instructor/schedule", icon: Calendar },
-  { title: "Statistiche", url: "/instructor/reports", icon: BarChart3 },
-];
+const getItems = (hasOwnerPrivileges: boolean) => {
+  const baseItems = [
+    { title: "Dashboard", url: "/instructor", icon: Home },
+    { title: "I Miei Corsi", url: "/instructor/courses", icon: BookOpen },
+    { title: "Partecipanti", url: "/instructor/participants", icon: Users },
+    { title: "Calendario", url: "/instructor/schedule", icon: Calendar },
+    { title: "Statistiche", url: "/instructor/reports", icon: BarChart3 },
+  ];
+
+  if (hasOwnerPrivileges) {
+    return [
+      ...baseItems,
+      { title: "Gestione Corsi", url: "/owner/courses", icon: BookOpen },
+      { title: "Utenti", url: "/owner/users", icon: Users },
+      { title: "Prenotazioni", url: "/owner/bookings", icon: Calendar },
+      { title: "Abbonamenti", url: "/owner/subscriptions", icon: Settings },
+      { title: "Reports", url: "/owner/reports", icon: BarChart3 },
+    ];
+  }
+
+  return baseItems;
+};
 
 export function InstructorSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, hasOwnerPrivileges } = useAuth();
   const currentPath = location.pathname;
+  const items = getItems(hasOwnerPrivileges);
 
   const handleLogout = async () => {
     try {
@@ -47,7 +63,16 @@ export function InstructorSidebar() {
   return (
     <SidebarContent>
       <SidebarGroup>
-          <SidebarGroupLabel>Area Istruttore</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            {hasOwnerPrivileges ? (
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-amber-500" />
+                Area Super Istruttore
+              </div>
+            ) : (
+              "Area Istruttore"
+            )}
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
