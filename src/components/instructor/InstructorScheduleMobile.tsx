@@ -30,19 +30,27 @@ interface SessionData {
 const InstructorScheduleMobile: React.FC = () => {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const { user, hasOwnerPrivileges } = useAuth();
+
+  console.log('=== INSTRUCTOR SCHEDULE MOBILE ===');
+  console.log('User:', user?.id);
+  console.log('Has owner privileges:', hasOwnerPrivileges);
+  console.log('Current date:', format(currentDate, 'yyyy-MM-dd'));
 
   useEffect(() => {
     fetchSessions();
   }, [currentDate, user, hasOwnerPrivileges]);
 
   const fetchSessions = async () => {
+    console.log('🔄 fetchSessions called');
     setLoading(true);
+    setError(null);
     
     try {
       if (!user) {
-        console.log('No user found');
+        console.log('❌ No user found');
         setSessions([]);
         setLoading(false);
         return;
@@ -188,7 +196,8 @@ const InstructorScheduleMobile: React.FC = () => {
 
       setSessions(transformedSessions);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error('❌ Error fetching sessions:', error);
+      setError(`Errore nel caricamento: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       setSessions([]);
     } finally {
       setLoading(false);
@@ -227,7 +236,28 @@ const InstructorScheduleMobile: React.FC = () => {
   if (loading) {
     return (
       <Card className="p-6">
-        <div className="text-center">Caricamento sessioni...</div>
+        <div className="text-center space-y-2">
+          <div>🔄 Caricamento calendario mobile...</div>
+          <div className="text-xs text-muted-foreground">
+            User: {user?.id} | Privileges: {hasOwnerPrivileges ? 'Owner' : 'Regular'}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="p-6">
+        <div className="text-center space-y-4">
+          <div className="text-destructive">❌ {error}</div>
+          <Button onClick={fetchSessions} variant="outline" size="sm">
+            Riprova
+          </Button>
+          <div className="text-xs text-muted-foreground">
+            Debug: User {user?.id} | Privileges: {hasOwnerPrivileges ? 'Owner' : 'Regular'}
+          </div>
+        </div>
       </Card>
     );
   }
@@ -253,6 +283,9 @@ const InstructorScheduleMobile: React.FC = () => {
           <p className="text-sm text-muted-foreground mt-1">
             {sessions.length} {sessions.length === 1 ? 'sessione' : 'sessioni'} programmate
           </p>
+          <div className="text-xs text-muted-foreground mt-2">
+            🔍 {hasOwnerPrivileges ? 'Super Istruttore' : 'Istruttore'} | {user?.id?.slice(0,8)}...
+          </div>
         </div>
         
         <Button 
