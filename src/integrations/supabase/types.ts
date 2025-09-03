@@ -993,6 +993,7 @@ export type Database = {
           experience_years: number | null
           first_name: string | null
           gym_id: string | null
+          has_owner_privileges: boolean
           hourly_rate: number | null
           id: string
           is_active: boolean
@@ -1008,6 +1009,7 @@ export type Database = {
           experience_years?: number | null
           first_name?: string | null
           gym_id?: string | null
+          has_owner_privileges?: boolean
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
@@ -1023,6 +1025,7 @@ export type Database = {
           experience_years?: number | null
           first_name?: string | null
           gym_id?: string | null
+          has_owner_privileges?: boolean
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
@@ -1860,6 +1863,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      demote_super_instructor: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       generate_course_sessions: {
         Args: { _course_id: string; _end_date: string; _start_date: string }
         Returns: number
@@ -1899,6 +1906,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      instructor_has_owner_privileges: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_backoffice_user: {
         Args: { _user_id: string }
         Returns: boolean
@@ -1906,6 +1917,10 @@ export type Database = {
       manual_enroll_user: {
         Args: { _enrolled_by: string; _session_id: string; _user_id: string }
         Returns: string
+      }
+      promote_instructor_to_super: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       promote_user_to_instructor: {
         Args: { bio?: string; target_user_id: string }
