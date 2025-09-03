@@ -13,16 +13,17 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import InstructorScheduleMobile from '@/components/instructor/InstructorScheduleMobile';
 
 const InstructorSchedule = () => {
-  const { courses, loading: coursesLoading } = useInstructorCourses();
-  const { bookings, loading: bookingsLoading } = useInstructorBookings();
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [courseSessions, setCourseSessions] = useState<any[]>([]);
   const isMobile = useIsMobile();
-
+  
   // If mobile, render the mobile component
   if (isMobile) {
     return <InstructorScheduleMobile />;
   }
+
+  const { courses, loading: coursesLoading } = useInstructorCourses();
+  const { bookings, loading: bookingsLoading } = useInstructorBookings();
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [courseSessions, setCourseSessions] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSessions();
