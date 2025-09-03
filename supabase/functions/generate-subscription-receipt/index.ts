@@ -89,10 +89,10 @@ serve(async (req) => {
 
     console.log('Found plan:', plan.name);
 
-    // Get user profile details
+    // Get user profile details including residence
     const { data: user, error: userError } = await supabaseClient
       .from('profiles')
-      .select('first_name, last_name, fiscal_code, email')
+      .select('first_name, last_name, fiscal_code, email, address, city, postal_code')
       .eq('user_id', subscription.user_id)
       .maybeSingle();
 
@@ -147,6 +147,20 @@ serve(async (req) => {
     const greenColor = [39, 174, 96]; // #27AE60
     
     let yPosition = 20;
+    
+    // Add gym logo if available
+    if (gym.logo_url) {
+      try {
+        // Note: In production, you'd need to fetch and convert the logo properly
+        // For now, we'll leave space for the logo and add text placeholder
+        doc.setFontSize(8);
+        doc.setTextColor(...lightGray);
+        doc.text('[LOGO]', 20, yPosition);
+        yPosition += 5;
+      } catch (logoError) {
+        console.warn('Logo loading failed:', logoError);
+      }
+    }
     
     // Header - Gym name (use business name if available)
     doc.setFontSize(20);
@@ -204,9 +218,13 @@ serve(async (req) => {
     doc.text('Dati Cliente', 20, yPosition);
     yPosition += 8;
     
+    // Calculate customer section height based on available data
+    let customerSectionHeight = 18; // Base height for name and email
+    if (user.fiscal_code) customerSectionHeight += 6;
+    if (user.address && user.city) customerSectionHeight += 6;
+    
     // Section background
     doc.setFillColor(248, 249, 250);
-    const customerSectionHeight = user.fiscal_code ? 25 : 18;
     doc.rect(20, yPosition - 3, 170, customerSectionHeight, 'F');
     
     // Left border accent
@@ -228,6 +246,14 @@ serve(async (req) => {
     if (user.fiscal_code) {
       doc.text('Codice Fiscale:', 25, yPosition);
       doc.text(user.fiscal_code, 90, yPosition);
+      yPosition += 6;
+    }
+    
+    // Add residence if available
+    if (user.address && user.city) {
+      doc.text('Residenza:', 25, yPosition);
+      const residence = `${user.address}, ${user.city}${user.postal_code ? ` ${user.postal_code}` : ''}`;
+      doc.text(residence, 90, yPosition);
       yPosition += 6;
     }
     
@@ -299,13 +325,34 @@ serve(async (req) => {
     doc.setFontSize(12);
     doc.setTextColor(...primaryColor);
     doc.text(`Grazie per aver scelto ${gym.name}!`, 105, yPosition, { align: 'center' });
-    yPosition += 20;
+    yPosition += 15;
+    
+    // Legal disclaimer
+    doc.setFontSize(8);
+    doc.setTextColor(...textColor);
+    doc.text('DISCLAIMER LEGALE', 105, yPosition, { align: 'center' });
+    yPosition += 5;
+    
+    doc.setFontSize(7);
+    doc.setTextColor(...lightGray);
+    const disclaimerLines = [
+      'Questo documento costituisce ricevuta fiscale valida ai sensi del D.P.R. 26 ottobre 1972, n. 633.',
+      'La presente ricevuta è emessa in esenzione IVA ex art. 10, c. 1, n. 18) del D.P.R. 633/72.',
+      'Per reclami o contestazioni contattare la struttura entro 8 giorni dalla data di emissione.'
+    ];
+    
+    disclaimerLines.forEach(line => {
+      doc.text(line, 105, yPosition, { align: 'center', maxWidth: 160 });
+      yPosition += 4;
+    });
+    
+    yPosition += 10;
     
     // Footer line
     doc.setDrawColor(...lightGray);
     doc.setLineWidth(0.3);
     doc.line(20, yPosition, 190, yPosition);
-    yPosition += 10;
+    yPosition += 8;
     
     // Footer text
     doc.setFontSize(8);
