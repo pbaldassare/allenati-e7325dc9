@@ -4,10 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { BookOpen, Users, Calendar, TrendingUp } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const InstructorDashboard = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
+  const { hasOwnerPrivileges } = useAuth();
 
   const stats = {
     totalCourses: courses.length,
@@ -54,10 +56,13 @@ const InstructorDashboard = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Dashboard Istruttore
+          {hasOwnerPrivileges ? 'Dashboard Super Istruttore' : 'Dashboard Istruttore'}
         </h1>
         <p className="text-muted-foreground">
-          Panoramica delle tue attività e corsi
+          {hasOwnerPrivileges 
+            ? 'Panoramica completa della palestra'
+            : 'Panoramica delle tue attività e corsi'
+          }
         </p>
       </div>
 
@@ -65,13 +70,15 @@ const InstructorDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Corsi Attivi</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {hasOwnerPrivileges ? 'Corsi Totali' : 'Corsi Attivi'}
+            </CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCourses}</div>
             <p className="text-xs text-muted-foreground">
-              corsi assegnati
+              {hasOwnerPrivileges ? 'corsi nella palestra' : 'corsi assegnati'}
             </p>
           </CardContent>
         </Card>
@@ -84,7 +91,7 @@ const InstructorDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalParticipants}</div>
             <p className="text-xs text-muted-foreground">
-              iscritti totali
+              {hasOwnerPrivileges ? 'iscritti palestra' : 'iscritti totali'}
             </p>
           </CardContent>
         </Card>
@@ -119,12 +126,14 @@ const InstructorDashboard = () => {
       {/* Courses Overview */}
       <Card>
         <CardHeader>
-          <CardTitle>I Miei Corsi</CardTitle>
+          <CardTitle>
+            {hasOwnerPrivileges ? 'Tutti i Corsi della Palestra' : 'I Miei Corsi'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {courses.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
-              Nessun corso assegnato
+              {hasOwnerPrivileges ? 'Nessun corso presente' : 'Nessun corso assegnato'}
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

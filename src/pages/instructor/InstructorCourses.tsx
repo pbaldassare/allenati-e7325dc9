@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
-import { BookOpen, Users, Clock, Calendar } from 'lucide-react';
+import { BookOpen, Users, Clock, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const InstructorCourses = () => {
   const { courses, loading, error } = useInstructorCourses();
+  const { hasOwnerPrivileges } = useAuth();
 
   const getDayName = (dayOfWeek: number) => {
     const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
@@ -18,7 +20,7 @@ const InstructorCourses = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          I Miei Corsi
+          {hasOwnerPrivileges ? 'Tutti i Corsi della Palestra' : 'I Miei Corsi'}
         </h1>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -42,7 +44,7 @@ const InstructorCourses = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          I Miei Corsi
+          {hasOwnerPrivileges ? 'Tutti i Corsi della Palestra' : 'I Miei Corsi'}
         </h1>
         <Card>
           <CardContent className="pt-6">
@@ -58,10 +60,13 @@ const InstructorCourses = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            I Miei Corsi
+            {hasOwnerPrivileges ? 'Tutti i Corsi della Palestra' : 'I Miei Corsi'}
           </h1>
           <p className="text-muted-foreground">
-            Gestisci i corsi che ti sono stati assegnati
+            {hasOwnerPrivileges 
+              ? 'Visualizza e gestisci tutti i corsi della palestra' 
+              : 'Gestisci i corsi che ti sono stati assegnati'
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -77,9 +82,14 @@ const InstructorCourses = () => {
           <CardContent className="pt-6">
             <div className="text-center space-y-2">
               <BookOpen className="w-12 h-12 mx-auto text-muted-foreground" />
-              <h3 className="text-lg font-semibold">Nessun corso assegnato</h3>
+              <h3 className="text-lg font-semibold">
+                {hasOwnerPrivileges ? 'Nessun corso presente' : 'Nessun corso assegnato'}
+              </h3>
               <p className="text-muted-foreground">
-                Non hai ancora corsi assegnati. Contatta l'amministratore per ricevere i tuoi corsi.
+                {hasOwnerPrivileges 
+                  ? 'Non ci sono ancora corsi attivi in questa palestra.'
+                  : 'Non hai ancora corsi assegnati. Contatta l\'amministratore per ricevere i tuoi corsi.'
+                }
               </p>
             </div>
           </CardContent>
@@ -140,6 +150,15 @@ const InstructorCourses = () => {
                       Partecipanti
                     </Link>
                   </Button>
+                  {hasOwnerPrivileges && (
+                    <>
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/owner/courses/${course.id}/edit`}>
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

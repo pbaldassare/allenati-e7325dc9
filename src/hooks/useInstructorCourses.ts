@@ -31,7 +31,7 @@ export const useInstructorCourses = () => {
   const [courses, setCourses] = useState<InstructorCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, hasOwnerPrivileges } = useAuth();
 
   const fetchInstructorCourses = async () => {
     if (!user?.id) return;
@@ -39,44 +39,84 @@ export const useInstructorCourses = () => {
     try {
       setLoading(true);
       
-      // Get instructor record first
-      const { data: instructor, error: instructorError } = await supabase
-        .from('instructors')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
+      let coursesData;
+      
+      if (hasOwnerPrivileges) {
+        // For super instructors, get user's gym ID and fetch ALL courses from that gym
+        const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
+        
+        if (!gymId) {
+          throw new Error('Palestra non trovata');
+        }
 
-      if (instructorError || !instructor) {
-        throw new Error('Istruttore non trovato');
-      }
-
-      // Get courses assigned to this instructor
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select(`
-          id,
-          name,
-          description,
-          max_participants,
-          duration_minutes,
-          credits_required,
-          is_active,
-          category:course_categories(name, color_hex),
-          gym:gyms(name),
-          schedules:course_schedules(
+        // Get all courses from the gym
+        const { data: allCoursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select(`
             id,
-            day_of_week,
-            start_time,
-            end_time,
-            room_name
-          )
-        `)
-        .eq('instructor_id', instructor.id)
-        .eq('is_active', true)
-        .order('name');
+            name,
+            description,
+            max_participants,
+            duration_minutes,
+            credits_required,
+            is_active,
+            category:course_categories(name, color_hex),
+            gym:gyms(name),
+            schedules:course_schedules(
+              id,
+              day_of_week,
+              start_time,
+              end_time,
+              room_name
+            )
+          `)
+          .eq('gym_id', gymId)
+          .eq('is_active', true)
+          .order('name');
 
-      if (coursesError) throw coursesError;
+        if (coursesError) throw coursesError;
+        coursesData = allCoursesData;
+      } else {
+        // Regular instructor - get only their assigned courses
+        const { data: instructor, error: instructorError } = await supabase
+          .from('instructors')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single();
+
+        if (instructorError || !instructor) {
+          throw new Error('Istruttore non trovato');
+        }
+
+        // Get courses assigned to this instructor
+        const { data: instructorCoursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select(`
+            id,
+            name,
+            description,
+            max_participants,
+            duration_minutes,
+            credits_required,
+            is_active,
+            category:course_categories(name, color_hex),
+            gym:gyms(name),
+            schedules:course_schedules(
+              id,
+              day_of_week,
+              start_time,
+              end_time,
+              room_name
+            )
+          `)
+          .eq('instructor_id', instructor.id)
+          .eq('is_active', true)
+          .order('name');
+
+        if (coursesError) throw coursesError;
+        coursesData = instructorCoursesData;
+      }
 
       // Get current bookings count for each course
       const coursesWithBookings = await Promise.all(

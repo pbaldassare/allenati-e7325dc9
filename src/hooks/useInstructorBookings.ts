@@ -29,7 +29,7 @@ export const useInstructorBookings = () => {
   const [bookings, setBookings] = useState<InstructorBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, hasOwnerPrivileges } = useAuth();
   const { toast } = useToast();
 
   const fetchInstructorBookings = async () => {
@@ -38,51 +38,98 @@ export const useInstructorBookings = () => {
     try {
       setLoading(true);
       
-      // Get instructor record first
-      const { data: instructor, error: instructorError } = await supabase
-        .from('instructors')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
+      let bookingsData;
+      
+      if (hasOwnerPrivileges) {
+        // For super instructors, get ALL bookings from their gym
+        const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
+        
+        if (!gymId) {
+          throw new Error('Palestra non trovata');
+        }
 
-      if (instructorError || !instructor) {
-        throw new Error('Istruttore non trovato');
-      }
-
-      // Get bookings for instructor's courses
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          scheduled_date,
-          scheduled_time,
-          status,
-          credits_used,
-          created_at,
-          user:profiles!bookings_user_id_fkey(
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
-          course:courses(
+        // Get all bookings for courses in the gym
+        const { data: allBookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select(`
             id,
-            name,
-            gym:gyms(name)
+            scheduled_date,
+            scheduled_time,
+            status,
+            credits_used,
+            created_at,
+            user:profiles!bookings_user_id_fkey(
+              first_name,
+              last_name,
+              email,
+              phone
+            ),
+            course:courses(
+              id,
+              name,
+              gym:gyms(name)
+            )
+          `)
+          .in('course_id', 
+            await supabase
+              .from('courses')
+              .select('id')
+              .eq('gym_id', gymId)
+              .then(({ data }) => data?.map(c => c.id) || [])
           )
-        `)
-        .in('course_id', 
-          await supabase
-            .from('courses')
-            .select('id')
-            .eq('instructor_id', instructor.id)
-            .then(({ data }) => data?.map(c => c.id) || [])
-        )
-        .order('scheduled_date', { ascending: false })
-        .order('scheduled_time', { ascending: false });
+          .order('scheduled_date', { ascending: false })
+          .order('scheduled_time', { ascending: false });
 
-      if (bookingsError) throw bookingsError;
+        if (bookingsError) throw bookingsError;
+        bookingsData = allBookingsData;
+      } else {
+        // Regular instructor - get only their course bookings
+        const { data: instructor, error: instructorError } = await supabase
+          .from('instructors')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single();
+
+        if (instructorError || !instructor) {
+          throw new Error('Istruttore non trovato');
+        }
+
+        // Get bookings for instructor's courses
+        const { data: instructorBookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            scheduled_date,
+            scheduled_time,
+            status,
+            credits_used,
+            created_at,
+            user:profiles!bookings_user_id_fkey(
+              first_name,
+              last_name,
+              email,
+              phone
+            ),
+            course:courses(
+              id,
+              name,
+              gym:gyms(name)
+            )
+          `)
+          .in('course_id', 
+            await supabase
+              .from('courses')
+              .select('id')
+              .eq('instructor_id', instructor.id)
+              .then(({ data }) => data?.map(c => c.id) || [])
+          )
+          .order('scheduled_date', { ascending: false })
+          .order('scheduled_time', { ascending: false });
+
+        if (bookingsError) throw bookingsError;
+        bookingsData = instructorBookingsData;
+      }
 
       setBookings((bookingsData as any) || []);
     } catch (err) {
