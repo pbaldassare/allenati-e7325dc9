@@ -42,53 +42,109 @@ const InstructorScheduleMobile: React.FC = () => {
     
     try {
       if (!user) {
+        console.log('No user found');
         setSessions([]);
         setLoading(false);
         return;
       }
 
-      let query = supabase
-        .from('course_sessions')
-        .select(`
-          *,
-          courses!inner (
-            name,
-            description,
-            gym_id,
-            instructor_id,
-            credits_required
-          )
-        `)
-        .eq('session_date', format(currentDate, 'yyyy-MM-dd'))
-        .eq('status', 'scheduled')
-        .order('start_time');
+      console.log('Fetching sessions for user:', user.id, 'hasOwnerPrivileges:', hasOwnerPrivileges);
+
+      let courseIds: string[] = [];
 
       if (hasOwnerPrivileges) {
-        // Super instructor - get all gym sessions
-        const { data: membership } = await supabase
+        // Super instructor - get all gym courses
+        const { data: membership, error: membershipError } = await supabase
           .from('user_gym_memberships')
           .select('gym_id')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .maybeSingle();
 
+        if (membershipError) {
+          console.error('Error fetching membership:', membershipError);
+          setSessions([]);
+          setLoading(false);
+          return;
+        }
+
         if (membership) {
-          query = query.eq('courses.gym_id', membership.gym_id);
+          console.log('Found gym membership:', membership.gym_id);
+          const { data: courses, error: coursesError } = await supabase
+            .from('courses')
+            .select('id')
+            .eq('gym_id', membership.gym_id)
+            .eq('is_active', true);
+
+          if (coursesError) {
+            console.error('Error fetching courses:', coursesError);
+            setSessions([]);
+            setLoading(false);
+            return;
+          }
+
+          courseIds = courses?.map(c => c.id) || [];
+          console.log('Found courses for gym:', courseIds.length);
         }
       } else {
-        // Regular instructor - get only their sessions
-        const { data: instructor } = await supabase
+        // Regular instructor - get only their courses
+        const { data: instructor, error: instructorError } = await supabase
           .from('instructors')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        if (instructorError) {
+          console.error('Error fetching instructor:', instructorError);
+          setSessions([]);
+          setLoading(false);
+          return;
+        }
+
         if (instructor) {
-          query = query.eq('courses.instructor_id', instructor.id);
+          console.log('Found instructor:', instructor.id);
+          const { data: courses, error: coursesError } = await supabase
+            .from('courses')
+            .select('id')
+            .eq('instructor_id', instructor.id)
+            .eq('is_active', true);
+
+          if (coursesError) {
+            console.error('Error fetching instructor courses:', coursesError);
+            setSessions([]);
+            setLoading(false);
+            return;
+          }
+
+          courseIds = courses?.map(c => c.id) || [];
+          console.log('Found instructor courses:', courseIds.length);
         }
       }
 
-      const { data: sessionsData, error } = await query;
+      if (courseIds.length === 0) {
+        console.log('No courses found, setting empty sessions');
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
+
+      // Now fetch sessions for these courses
+      const { data: sessionsData, error } = await supabase
+        .from('course_sessions')
+        .select(`
+          *,
+          courses!inner (
+            name,
+            description,
+            credits_required
+          )
+        `)
+        .in('course_id', courseIds)
+        .eq('session_date', format(currentDate, 'yyyy-MM-dd'))
+        .eq('status', 'scheduled')
+        .order('start_time');
+
+      console.log('Sessions query result:', { sessionsData, error });
 
       if (error) {
         console.error('Error fetching sessions:', error);
