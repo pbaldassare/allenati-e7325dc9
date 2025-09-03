@@ -28,57 +28,61 @@ serve(async (req) => {
 
     console.log('Generating receipt for subscription:', subscriptionId);
 
-    // Get subscription details with all related data
+    // Get subscription details first
     const { data: subscription, error: subError } = await supabaseClient
       .from('user_subscriptions')
-      .select(`
-        *,
-        subscription_plans!inner(
-          name,
-          price,
-          duration_days,
-          credits_included,
-          unlimited_access
-        ),
-        profiles!inner(
-          first_name,
-          last_name,
-          fiscal_code,
-          email
-        )
-      `)
+      .select('*')
       .eq('id', subscriptionId)
       .single();
 
     if (subError || !subscription) {
+      console.error('Subscription query error:', subError);
       throw new Error('Abbonamento non trovato');
     }
 
-    // Get gym details from user's gym membership
-    const { data: gymMembership } = await supabaseClient
-      .from('user_gym_memberships')
-      .select(`
-        gyms!inner(
-          name,
-          address,
-          city,
-          postal_code,
-          phone,
-          email,
-          logo_url
-        )
-      `)
-      .eq('user_id', subscription.user_id)
-      .eq('status', 'active')
+    console.log('Found subscription:', subscription.id, 'for user:', subscription.user_id);
+
+    // Get subscription plan details
+    const { data: plan, error: planError } = await supabaseClient
+      .from('subscription_plans')
+      .select('name, price, duration_days, credits_included, unlimited_access')
+      .eq('id', subscription.plan_id)
       .single();
 
-    if (!gymMembership?.gyms) {
+    if (planError || !plan) {
+      console.error('Plan query error:', planError);
+      throw new Error('Piano abbonamento non trovato');
+    }
+
+    console.log('Found plan:', plan.name);
+
+    // Get user profile details
+    const { data: user, error: userError } = await supabaseClient
+      .from('profiles')
+      .select('first_name, last_name, fiscal_code, email')
+      .eq('user_id', subscription.user_id)
+      .single();
+
+    if (userError || !user) {
+      console.error('User query error:', userError);
+      throw new Error('Dati utente non trovati');
+    }
+
+    console.log('Found user:', user.first_name, user.last_name);
+
+    // Get gym details
+    const { data: gym, error: gymError } = await supabaseClient
+      .from('gyms')
+      .select('name, address, city, postal_code, phone, email, logo_url')
+      .eq('id', subscription.gym_id)
+      .single();
+
+    if (gymError || !gym) {
+      console.error('Gym query error:', gymError);
       throw new Error('Dati palestra non trovati');
     }
 
-    const gym = gymMembership.gyms;
-    const plan = subscription.subscription_plans;
-    const user = subscription.profiles;
+    console.log('Found gym:', gym.name);
 
     // Generate receipt number (timestamp-based for uniqueness)
     const receiptNumber = `RIC-${Date.now()}`;
