@@ -14,8 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Camera, User, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, Camera, User, AlertTriangle, Download, Calendar, FileText, Clock } from 'lucide-react';
 import DeleteAccountDialog from '@/components/dialogs/DeleteAccountDialog';
+import { Badge } from '@/components/ui/badge';
 
 const profileSchema = z.object({
   first_name: z.string().min(1, 'Nome è obbligatorio').max(50, 'Nome troppo lungo'),
@@ -47,6 +48,9 @@ export default function UserSettings() {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+  const [downloadingReceipts, setDownloadingReceipts] = useState<{ [key: string]: boolean }>({});
 
   // Redirect unauthenticated users to login
   useEffect(() => {
@@ -113,8 +117,50 @@ export default function UserSettings() {
         belt: user.belt || ''
       });
       setAvatarUrl(user.profile_picture_url);
+      fetchUserSubscriptions();
     }
   }, [user, form]);
+
+  // Fetch user subscriptions
+  const fetchUserSubscriptions = async () => {
+    if (!user) return;
+    
+    setLoadingSubscriptions(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          status,
+          starts_at,
+          expires_at,
+          created_at,
+          subscription_plans!inner(
+            name,
+            price,
+            unlimited_access,
+            credits_included
+          ),
+          gyms!inner(
+            name
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSubscriptions(data || []);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      toast({
+        title: 'Errore',
+        description: 'Errore durante il caricamento degli abbonamenti.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingSubscriptions(false);
+    }
+  };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -187,6 +233,53 @@ export default function UserSettings() {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Download subscription receipt
+  const downloadReceipt = async (subscriptionId: string) => {
+    setDownloadingReceipts(prev => ({ ...prev, [subscriptionId]: true }));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subscription-receipt', {
+        body: { subscriptionId }
+      });
+
+      if (error) throw error;
+
+      // Convert base64 to blob and download
+      const pdfData = data.pdf;
+      const byteCharacters = atob(pdfData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ricevuta-abbonamento-${subscriptionId.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Successo',
+        description: 'Ricevuta scaricata con successo!'
+      });
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast({
+        title: 'Errore',
+        description: 'Errore durante il download della ricevuta.',
+        variant: 'destructive'
+      });
+    } finally {
+      setDownloadingReceipts(prev => ({ ...prev, [subscriptionId]: false }));
     }
   };
 
@@ -622,6 +715,95 @@ export default function UserSettings() {
                 </div>
               </form>
             </Form>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Receipts */}
+        <Card>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Ricevute Abbonamenti
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Scarica le ricevute dei tuoi abbonamenti passati e presenti.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {loadingSubscriptions ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="ml-2 text-sm text-muted-foreground">Caricamento abbonamenti...</span>
+              </div>
+            ) : subscriptions.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  Non hai ancora sottoscritto nessun abbonamento.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {subscriptions.map((subscription) => {
+                  const isActive = subscription.status === 'active' && 
+                    new Date(subscription.expires_at) > new Date();
+                  const isExpired = new Date(subscription.expires_at) <= new Date();
+                  const downloadingThisReceipt = downloadingReceipts[subscription.id];
+
+                  return (
+                    <div
+                      key={subscription.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-card"
+                    >
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-sm sm:text-base">
+                            {subscription.subscription_plans.name}
+                          </h4>
+                          <Badge variant={isActive ? 'default' : isExpired ? 'secondary' : 'outline'}>
+                            {isActive ? 'Attivo' : isExpired ? 'Scaduto' : subscription.status}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {new Date(subscription.starts_at).toLocaleDateString('it-IT')} - {new Date(subscription.expires_at).toLocaleDateString('it-IT')}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            Sottoscritto il {new Date(subscription.created_at).toLocaleDateString('it-IT')}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {subscription.gyms.name} • €{subscription.subscription_plans.price}
+                        </p>
+                      </div>
+                      <div className="mt-3 sm:mt-0 sm:ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadReceipt(subscription.id)}
+                          disabled={downloadingThisReceipt}
+                          className="w-full sm:w-auto min-h-[44px]"
+                        >
+                          {downloadingThisReceipt ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Generando...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Scarica Ricevuta
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
