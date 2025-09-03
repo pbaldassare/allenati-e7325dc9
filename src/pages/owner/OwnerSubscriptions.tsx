@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
@@ -49,6 +49,7 @@ const OwnerSubscriptions: React.FC = () => {
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
   const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
+  const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
@@ -219,6 +220,35 @@ const OwnerSubscriptions: React.FC = () => {
     }, 1000);
   };
 
+  const handleDownloadReceipt = async (subscription: UserSubscription) => {
+    try {
+      setGeneratingReceipt(subscription.id);
+      
+      const { data, error } = await supabase.functions.invoke('generate-subscription-receipt', {
+        body: { subscriptionId: subscription.id }
+      });
+
+      if (error) throw error;
+
+      // Create blob from response and trigger download
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ricevuta-abbonamento-${subscription.user.first_name}-${subscription.user.last_name}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error generating receipt:', error);
+      alert('Errore nella generazione della ricevuta. Riprova più tardi.');
+    } finally {
+      setGeneratingReceipt(null);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Caricamento abbonamenti...</div>;
   }
@@ -363,21 +393,36 @@ const OwnerSubscriptions: React.FC = () => {
                         {new Date(sub.expires_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        {canExtendSubscription(sub) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExtendClick(sub)}
-                            className="flex items-center space-x-1"
-                          >
-                            <Clock className="w-3 h-3" />
-                            <span>Estendi</span>
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Non estendibile
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {canExtendSubscription(sub) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExtendClick(sub)}
+                              className="flex items-center space-x-1"
+                            >
+                              <Clock className="w-3 h-3" />
+                              <span>Estendi</span>
+                            </Button>
+                          )}
+                          {(sub.status === 'active' || sub.status === 'expired') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadReceipt(sub)}
+                              disabled={generatingReceipt === sub.id}
+                              className="flex items-center space-x-1"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
+                            </Button>
+                          )}
+                          {!canExtendSubscription(sub) && sub.status !== 'active' && sub.status !== 'expired' && (
+                            <span className="text-xs text-muted-foreground">
+                              Nessuna azione
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
