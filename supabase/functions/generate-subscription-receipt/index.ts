@@ -189,14 +189,12 @@ serve(async (req) => {
     // Receipt title
     doc.setFontSize(22);
     doc.setTextColor(...textColor);
-    doc.text('RICEVUTA ABBONAMENTO', 105, yPosition, { align: 'center' });
+    doc.text('RICEVUTA FISCALE', 105, yPosition, { align: 'center' });
     yPosition += 15;
     
-    // Receipt number and date (right aligned)
+    // Receipt date (right aligned)
     doc.setFontSize(10);
     doc.setTextColor(...lightGray);
-    doc.text(`Ricevuta Nr. ${receiptNumber}`, 190, yPosition, { align: 'right' });
-    yPosition += 5;
     doc.text(`Data emissione: ${issueDate}`, 190, yPosition, { align: 'right' });
     yPosition += 20;
     
