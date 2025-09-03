@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import jsPDF from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -127,196 +128,184 @@ serve(async (req) => {
     console.log('Found gym:', gym.name);
 
     // Generate receipt number (timestamp-based for uniqueness)
-    const receiptNumber = `RIC-${Date.now()}`;
+    const receiptNumber = `RIC-${subscription.id.substring(0, 8)}-${Date.now()}`;
     
     // Format dates
     const issueDate = new Date().toLocaleDateString('it-IT');
     const startDate = new Date(subscription.starts_at).toLocaleDateString('it-IT');
     const endDate = new Date(subscription.expires_at).toLocaleDateString('it-IT');
 
-    // Create HTML content for PDF
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ricevuta Abbonamento</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 20px;
-                color: #333;
-                line-height: 1.6;
-            }
-            .header {
-                text-align: center;
-                border-bottom: 2px solid #333;
-                padding-bottom: 20px;
-                margin-bottom: 30px;
-            }
-            .gym-logo {
-                max-width: 100px;
-                margin-bottom: 10px;
-            }
-            .gym-name {
-                font-size: 24px;
-                font-weight: bold;
-                margin-bottom: 5px;
-            }
-            .gym-info {
-                font-size: 12px;
-                color: #666;
-            }
-            .receipt-title {
-                text-align: center;
-                font-size: 20px;
-                font-weight: bold;
-                margin: 30px 0;
-                text-transform: uppercase;
-            }
-            .receipt-number {
-                text-align: right;
-                margin-bottom: 20px;
-                font-weight: bold;
-            }
-            .section {
-                margin-bottom: 25px;
-            }
-            .section-title {
-                font-weight: bold;
-                border-bottom: 1px solid #ccc;
-                padding-bottom: 5px;
-                margin-bottom: 10px;
-            }
-            .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 5px;
-            }
-            .amount-section {
-                background-color: #f9f9f9;
-                padding: 15px;
-                border-radius: 5px;
-                margin: 20px 0;
-            }
-            .total-amount {
-                font-size: 18px;
-                font-weight: bold;
-                text-align: center;
-            }
-            .footer {
-                margin-top: 40px;
-                padding-top: 20px;
-                border-top: 1px solid #ccc;
-                font-size: 10px;
-                color: #666;
-                text-align: center;
-            }
-            @media print {
-                body { margin: 0; }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            ${gym.logo_url ? `<img src="${gym.logo_url}" alt="Logo" class="gym-logo">` : ''}
-            <div class="gym-name">${gym.name}</div>
-            <div class="gym-info">
-                ${gym.address}, ${gym.city} ${gym.postal_code}<br>
-                Tel: ${gym.phone || 'N/A'} | Email: ${gym.email || 'N/A'}
-            </div>
-        </div>
+    console.log('Creating PDF with jsPDF...');
 
-        <div class="receipt-title">Ricevuta Abbonamento</div>
-        
-        <div class="receipt-number">
-            Ricevuta N°: ${receiptNumber}<br>
-            Data emissione: ${issueDate}
-        </div>
-
-        <div class="section">
-            <div class="section-title">Dati Cliente</div>
-            <div class="info-row">
-                <span>Nome e Cognome:</span>
-                <span>${user.first_name} ${user.last_name}</span>
-            </div>
-            <div class="info-row">
-                <span>Email:</span>
-                <span>${user.email}</span>
-            </div>
-            ${user.fiscal_code ? `
-            <div class="info-row">
-                <span>Codice Fiscale:</span>
-                <span>${user.fiscal_code}</span>
-            </div>
-            ` : ''}
-        </div>
-
-        <div class="section">
-            <div class="section-title">Dettagli Abbonamento</div>
-            <div class="info-row">
-                <span>Piano:</span>
-                <span>${plan.name}</span>
-            </div>
-            <div class="info-row">
-                <span>Durata:</span>
-                <span>${plan.duration_days} giorni</span>
-            </div>
-            <div class="info-row">
-                <span>Periodo:</span>
-                <span>dal ${startDate} al ${endDate}</span>
-            </div>
-            <div class="info-row">
-                <span>Tipo:</span>
-                <span>${plan.unlimited_access ? 'Accesso Illimitato' : `${plan.credits_included} Crediti`}</span>
-            </div>
-            <div class="info-row">
-                <span>Causale:</span>
-                <span>${plan.name}</span>
-            </div>
-        </div>
-
-        <div class="amount-section">
-            <div class="total-amount">
-                Importo: € ${plan.price ? parseFloat(plan.price).toFixed(2) : '0.00'}
-            </div>
-        </div>
-
-        <div class="footer">
-            Ricevuta generata automaticamente il ${issueDate}<br>
-            ${gym.name} - Sistema di gestione abbonamenti
-        </div>
-    </body>
-    </html>
-    `;
-
-    // Use Puppeteer to generate PDF
-    const puppeteer = await import("https://deno.land/x/puppeteer@16.2.0/mod.ts");
+    // Create PDF using jsPDF
+    const doc = new jsPDF();
     
-    const browser = await puppeteer.default.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    // Set up colors
+    const primaryColor = [74, 144, 226]; // #4A90E2
+    const textColor = [51, 51, 51]; // #333
+    const lightGray = [102, 102, 102]; // #666
+    const greenColor = [39, 174, 96]; // #27AE60
     
-    const page = await browser.newPage();
+    let yPosition = 20;
     
-    await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0'
-    });
+    // Header - Gym name
+    doc.setFontSize(20);
+    doc.setTextColor(...primaryColor);
+    doc.text(gym.name, 105, yPosition, { align: 'center' });
+    yPosition += 8;
     
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '15mm',
-        bottom: '20mm',
-        left: '15mm'
-      }
-    });
+    // Gym address
+    doc.setFontSize(10);
+    doc.setTextColor(...lightGray);
+    const gymAddress = `${gym.address}, ${gym.city}${gym.postal_code ? ` ${gym.postal_code}` : ''}`;
+    doc.text(gymAddress, 105, yPosition, { align: 'center' });
+    yPosition += 5;
     
-    await browser.close();
+    // Gym contacts
+    if (gym.phone || gym.email) {
+      const contacts = `${gym.phone ? `Tel: ${gym.phone}` : ''}${gym.phone && gym.email ? ' | ' : ''}${gym.email ? `Email: ${gym.email}` : ''}`;
+      doc.text(contacts, 105, yPosition, { align: 'center' });
+    }
+    yPosition += 15;
+    
+    // Horizontal line under header
+    doc.setDrawColor(...textColor);
+    doc.setLineWidth(0.5);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 15;
+    
+    // Receipt title
+    doc.setFontSize(22);
+    doc.setTextColor(...textColor);
+    doc.text('RICEVUTA ABBONAMENTO', 105, yPosition, { align: 'center' });
+    yPosition += 15;
+    
+    // Receipt number and date (right aligned)
+    doc.setFontSize(10);
+    doc.setTextColor(...lightGray);
+    doc.text(`Ricevuta N° ${receiptNumber}`, 190, yPosition, { align: 'right' });
+    yPosition += 5;
+    doc.text(`Data emissione: ${issueDate}`, 190, yPosition, { align: 'right' });
+    yPosition += 20;
+    
+    // Customer data section
+    doc.setFontSize(14);
+    doc.setTextColor(...primaryColor);
+    doc.text('Dati Cliente', 20, yPosition);
+    yPosition += 8;
+    
+    // Section background
+    doc.setFillColor(248, 249, 250);
+    const customerSectionHeight = user.fiscal_code ? 25 : 18;
+    doc.rect(20, yPosition - 3, 170, customerSectionHeight, 'F');
+    
+    // Left border accent
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(2);
+    doc.line(20, yPosition - 3, 20, yPosition + customerSectionHeight - 3);
+    
+    // Customer info
+    doc.setFontSize(10);
+    doc.setTextColor(...textColor);
+    doc.text('Nome e Cognome:', 25, yPosition);
+    doc.text(`${user.first_name} ${user.last_name}`, 90, yPosition);
+    yPosition += 6;
+    
+    doc.text('Email:', 25, yPosition);
+    doc.text(user.email, 90, yPosition);
+    yPosition += 6;
+    
+    if (user.fiscal_code) {
+      doc.text('Codice Fiscale:', 25, yPosition);
+      doc.text(user.fiscal_code, 90, yPosition);
+      yPosition += 6;
+    }
+    
+    yPosition += 15;
+    
+    // Subscription details section
+    doc.setFontSize(14);
+    doc.setTextColor(...primaryColor);
+    doc.text('Dettagli Abbonamento', 20, yPosition);
+    yPosition += 8;
+    
+    // Calculate section height
+    let subscriptionHeight = 36;
+    if (plan.credits_included && !plan.unlimited_access) subscriptionHeight += 6;
+    
+    // Section background
+    doc.setFillColor(248, 249, 250);
+    doc.rect(20, yPosition - 3, 170, subscriptionHeight, 'F');
+    
+    // Left border accent
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(2);
+    doc.line(20, yPosition - 3, 20, yPosition + subscriptionHeight - 3);
+    
+    // Subscription details
+    doc.setFontSize(10);
+    doc.setTextColor(...textColor);
+    
+    doc.text('Piano:', 25, yPosition);
+    doc.text(plan.name, 90, yPosition);
+    yPosition += 6;
+    
+    doc.text('Durata:', 25, yPosition);
+    doc.text(`${plan.duration_days} giorni`, 90, yPosition);
+    yPosition += 6;
+    
+    doc.text('Periodo:', 25, yPosition);
+    doc.text(`dal ${startDate} al ${endDate}`, 90, yPosition);
+    yPosition += 6;
+    
+    doc.text('Tipo:', 25, yPosition);
+    const accessType = plan.unlimited_access ? 'Accesso Illimitato' : `${plan.credits_included || 0} Crediti`;
+    doc.text(accessType, 90, yPosition);
+    yPosition += 6;
+    
+    if (plan.credits_included && !plan.unlimited_access) {
+      doc.text('Crediti inclusi:', 25, yPosition);
+      doc.text(`${plan.credits_included}`, 90, yPosition);
+      yPosition += 6;
+    }
+    
+    yPosition += 15;
+    
+    // Amount section with highlighted background
+    doc.setFillColor(249, 249, 249);
+    doc.rect(20, yPosition - 3, 170, 20, 'F');
+    doc.setDrawColor(204, 204, 204);
+    doc.setLineWidth(0.5);
+    doc.rect(20, yPosition - 3, 170, 20);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(...greenColor);
+    const amount = `€ ${plan.price ? parseFloat(plan.price).toFixed(2) : '0.00'}`;
+    doc.text('Importo:', 25, yPosition + 8);
+    doc.text(amount, 90, yPosition + 8);
+    yPosition += 25;
+    
+    // Thank you message
+    doc.setFontSize(12);
+    doc.setTextColor(...primaryColor);
+    doc.text(`Grazie per aver scelto ${gym.name}!`, 105, yPosition, { align: 'center' });
+    yPosition += 20;
+    
+    // Footer line
+    doc.setDrawColor(...lightGray);
+    doc.setLineWidth(0.3);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 10;
+    
+    // Footer text
+    doc.setFontSize(8);
+    doc.setTextColor(...lightGray);
+    doc.text('Ricevuta generata automaticamente dal sistema di gestione palestra', 105, yPosition, { align: 'center' });
+    yPosition += 4;
+    doc.text('Per qualsiasi chiarimento, contattare la palestra ai recapiti sopra indicati', 105, yPosition, { align: 'center' });
+    
+    // Generate PDF as ArrayBuffer
+    const pdfBuffer = doc.output('arraybuffer');
 
     console.log('PDF generated successfully for subscription:', subscriptionId);
 
