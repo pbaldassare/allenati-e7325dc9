@@ -985,6 +985,57 @@ export type Database = {
         }
         Relationships: []
       }
+      instructor_gym_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          gym_id: string
+          has_owner_privileges: boolean
+          id: string
+          instructor_id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          gym_id: string
+          has_owner_privileges?: boolean
+          id?: string
+          instructor_id: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          gym_id?: string
+          has_owner_privileges?: boolean
+          id?: string
+          instructor_id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_gym_assignments_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructor_gym_assignments_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructors: {
         Row: {
           bio: string | null
@@ -1879,6 +1930,14 @@ export type Database = {
         Args: { _gym_id: string }
         Returns: string
       }
+      get_instructor_gyms: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      get_instructor_id_for_gym: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: string
+      }
       get_user_credits_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: number
@@ -1908,6 +1967,10 @@ export type Database = {
       }
       instructor_has_owner_privileges: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      instructor_has_owner_privileges_for_gym: {
+        Args: { _gym_id: string; _user_id: string }
         Returns: boolean
       }
       is_backoffice_user: {
