@@ -310,17 +310,17 @@ serve(async (req) => {
     yPosition += 15;
     
     
-    // Generate PDF as ArrayBuffer
+    // Generate PDF and convert to base64
     const pdfBuffer = doc.output('arraybuffer');
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
 
     console.log('PDF generated successfully for subscription:', subscriptionId);
 
-    return new Response(pdfBuffer, {
+    return new Response(JSON.stringify({ pdf: base64 }), {
       status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="ricevuta-abbonamento-${receiptNumber}.pdf"`
+        'Content-Type': 'application/json'
       }
     });
 
