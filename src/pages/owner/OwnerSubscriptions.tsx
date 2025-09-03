@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -48,6 +49,7 @@ const OwnerSubscriptions: React.FC = () => {
   });
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
   const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
@@ -367,6 +369,27 @@ const OwnerSubscriptions: React.FC = () => {
     return null;
   };
 
+  // Filter subscriptions based on search query
+  const filteredSubscriptions = subscriptions.filter(sub => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const userName = `${sub.user.first_name} ${sub.user.last_name}`.toLowerCase();
+    const userEmail = sub.user.email.toLowerCase();
+    return userName.includes(query) || userEmail.includes(query);
+  });
+
+  // Calculate filtered stats
+  const filteredStats = {
+    total: filteredSubscriptions.length,
+    active: filteredSubscriptions.filter(s => s.status === 'active').length,
+    expiring_soon: filteredSubscriptions.filter(s => {
+      const now = new Date();
+      const soon = new Date();
+      soon.setDate(soon.getDate() + 7);
+      return s.status === 'active' && new Date(s.expires_at) <= soon;
+    }).length
+  };
+
   if (loading) {
     return <div className="text-center py-8">Caricamento abbonamenti...</div>;
   }
@@ -434,11 +457,26 @@ const OwnerSubscriptions: React.FC = () => {
         </Card>
       </div>
 
+      {/* Search Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Cerca utente per nome o email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="all" className="w-full">
         <TabsList>
-          <TabsTrigger value="all">Tutti ({stats.total})</TabsTrigger>
-          <TabsTrigger value="active">Attivi ({stats.active})</TabsTrigger>
-          <TabsTrigger value="expiring">In Scadenza ({stats.expiring_soon})</TabsTrigger>
+          <TabsTrigger value="all">Tutti ({searchQuery ? filteredStats.total : stats.total})</TabsTrigger>
+          <TabsTrigger value="active">Attivi ({searchQuery ? filteredStats.active : stats.active})</TabsTrigger>
+          <TabsTrigger value="expiring">In Scadenza ({searchQuery ? filteredStats.expiring_soon : stats.expiring_soon})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
@@ -462,7 +500,7 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions.map((sub) => (
+                  {filteredSubscriptions.map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -561,7 +599,7 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions
+                  {filteredSubscriptions
                     .filter(sub => sub.status === 'active')
                     .map((sub) => (
                     <TableRow key={sub.id}>
@@ -619,7 +657,7 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions
+                  {filteredSubscriptions
                     .filter(sub => {
                       if (sub.status !== 'active') return false;
                       const expiresDate = new Date(sub.expires_at);

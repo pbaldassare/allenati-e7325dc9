@@ -45,6 +45,7 @@ const OwnerUsers = () => {
   const [demoting, setDemoting] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [showOnlyWithoutCert, setShowOnlyWithoutCert] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -323,9 +324,29 @@ const OwnerUsers = () => {
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredByStatus = showInactive ? members : members.filter((m) => m.membership_status === 'active');
-  const listToShow = normalizedQuery
-    ? filteredByStatus.filter((m) => `${m.first_name} ${m.last_name}`.toLowerCase().includes(normalizedQuery))
+  
+  // Filter by medical certificate if toggle is enabled
+  const filteredByCertificate = showOnlyWithoutCert 
+    ? filteredByStatus.filter((m) => {
+        // Consider no certificate or expired certificate as "without certificate"
+        if (!m.medical_expiry_date) return true;
+        const now = new Date();
+        const expiryDate = new Date(m.medical_expiry_date);
+        return expiryDate < now; // Expired certificate
+      })
     : filteredByStatus;
+  
+  const listToShow = normalizedQuery
+    ? filteredByCertificate.filter((m) => `${m.first_name} ${m.last_name}`.toLowerCase().includes(normalizedQuery))
+    : filteredByCertificate;
+    
+  // Calculate members without valid certificate
+  const membersWithoutCert = members.filter((m) => {
+    if (!m.medical_expiry_date) return true;
+    const now = new Date();
+    const expiryDate = new Date(m.medical_expiry_date);
+    return expiryDate < now;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -395,9 +416,15 @@ const OwnerUsers = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <div className="flex items-center gap-2">
-              <Switch id="show-inactive" checked={showInactive} onCheckedChange={(v) => setShowInactive(!!v)} />
-              <Label htmlFor="show-inactive">Mostra inattivi</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2">
+                <Switch id="show-inactive" checked={showInactive} onCheckedChange={(v) => setShowInactive(!!v)} />
+                <Label htmlFor="show-inactive">Mostra inattivi</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="show-without-cert" checked={showOnlyWithoutCert} onCheckedChange={(v) => setShowOnlyWithoutCert(!!v)} />
+                <Label htmlFor="show-without-cert">Solo senza certificato ({membersWithoutCert})</Label>
+              </div>
             </div>
           </div>
           
