@@ -16,8 +16,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 const OwnerBookings: React.FC = () => {
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('thisWeek');
+  const [statusFilter, setStatusFilter] = useState<string>('confirmed');
+  const [dateFilter, setDateFilter] = useState<string>('today');
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
@@ -83,6 +83,12 @@ const OwnerBookings: React.FC = () => {
         const scheduledDate = new Date(booking.scheduled_date);
         
         switch (dateFilter) {
+          case 'today':
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+            return scheduledDate >= today && scheduledDate <= todayEnd;
           case 'thisWeek':
             return scheduledDate >= getStartOfWeek() && scheduledDate <= getEndOfWeek();
           case 'nextWeek':
@@ -215,6 +221,7 @@ const OwnerBookings: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte</SelectItem>
+              <SelectItem value="today">Oggi</SelectItem>
               <SelectItem value="thisWeek">Questa settimana</SelectItem>
               <SelectItem value="nextWeek">Settimana prossima</SelectItem>
               <SelectItem value="thisMonth">Questo mese</SelectItem>
@@ -250,6 +257,7 @@ const OwnerBookings: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte</SelectItem>
+              <SelectItem value="today">Oggi</SelectItem>
               <SelectItem value="thisWeek">Questa settimana</SelectItem>
               <SelectItem value="nextWeek">Settimana prossima</SelectItem>
               <SelectItem value="thisMonth">Questo mese</SelectItem>
