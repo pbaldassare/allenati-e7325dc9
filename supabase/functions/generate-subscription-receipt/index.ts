@@ -13,11 +13,25 @@ serve(async (req) => {
   }
 
   try {
+    // Check environment variables first
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    console.log('Environment check - URL exists:', !!supabaseUrl);
+    console.log('Environment check - Service role key exists:', !!serviceRoleKey);
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error('Missing required environment variables');
+    }
+
     // Initialize Supabase client with service role key for database access
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
+      supabaseUrl,
+      serviceRoleKey,
+      { 
+        auth: { persistSession: false },
+        db: { schema: 'public' }
+      }
     );
 
     const { subscriptionId } = await req.json();
@@ -28,12 +42,25 @@ serve(async (req) => {
 
     console.log('Generating receipt for subscription:', subscriptionId);
 
+    // Test basic connectivity first
+    const { data: testConnection, error: testError } = await supabaseClient
+      .from('user_subscriptions')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      console.error('Database connection test failed:', testError);
+      throw new Error('Impossibile connettersi al database');
+    }
+    
+    console.log('Database connection test successful');
+
     // Get subscription details first
     const { data: subscription, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*')
       .eq('id', subscriptionId)
-      .single();
+      .maybeSingle();
 
     if (subError || !subscription) {
       console.error('Subscription query error:', subError);
@@ -47,10 +74,15 @@ serve(async (req) => {
       .from('subscription_plans')
       .select('name, price, duration_days, credits_included, unlimited_access')
       .eq('id', subscription.plan_id)
-      .single();
+      .maybeSingle();
 
-    if (planError || !plan) {
+    if (planError) {
       console.error('Plan query error:', planError);
+      throw new Error('Errore nel recupero del piano abbonamento');
+    }
+    
+    if (!plan) {
+      console.error('Plan not found for ID:', subscription.plan_id);
       throw new Error('Piano abbonamento non trovato');
     }
 
@@ -61,10 +93,15 @@ serve(async (req) => {
       .from('profiles')
       .select('first_name, last_name, fiscal_code, email')
       .eq('user_id', subscription.user_id)
-      .single();
+      .maybeSingle();
 
-    if (userError || !user) {
+    if (userError) {
       console.error('User query error:', userError);
+      throw new Error('Errore nel recupero dati utente');
+    }
+    
+    if (!user) {
+      console.error('User not found for ID:', subscription.user_id);
       throw new Error('Dati utente non trovati');
     }
 
@@ -75,10 +112,15 @@ serve(async (req) => {
       .from('gyms')
       .select('name, address, city, postal_code, phone, email, logo_url')
       .eq('id', subscription.gym_id)
-      .single();
+      .maybeSingle();
 
-    if (gymError || !gym) {
+    if (gymError) {
       console.error('Gym query error:', gymError);
+      throw new Error('Errore nel recupero dati palestra');
+    }
+    
+    if (!gym) {
+      console.error('Gym not found for ID:', subscription.gym_id);
       throw new Error('Dati palestra non trovati');
     }
 
