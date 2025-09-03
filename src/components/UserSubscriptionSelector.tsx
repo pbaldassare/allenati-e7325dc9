@@ -86,6 +86,27 @@ export const UserSubscriptionSelector: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utente non autenticato');
 
+      const selectedPlan = plans.find(p => p.id === planId);
+      if (!selectedPlan) throw new Error('Piano non trovato');
+
+      // Check for existing active subscription for the same plan
+      const { data: existingSubscription } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('plan_id', planId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (existingSubscription) {
+        toast({
+          title: "Abbonamento già attivo",
+          description: `Hai già un abbonamento attivo per il piano "${selectedPlan.name}".`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Disattiva TUTTI gli abbonamenti attivi esistenti per questo utente
       const { error: cancelError } = await supabase
         .from('user_subscriptions')
@@ -97,10 +118,6 @@ export const UserSubscriptionSelector: React.FC = () => {
         console.error('Error cancelling existing subscriptions:', cancelError);
         throw cancelError;
       }
-
-      // Create new subscription
-      const selectedPlan = plans.find(p => p.id === planId);
-      if (!selectedPlan) throw new Error('Piano non trovato');
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedPlan.duration_days);
