@@ -148,25 +148,7 @@ serve(async (req) => {
     
     let yPosition = 20;
     
-    // Add gym logo if available
-    if (gym.logo_url) {
-      try {
-        // Fetch and add logo to PDF
-        const logoResponse = await fetch(gym.logo_url);
-        if (logoResponse.ok) {
-          const logoArrayBuffer = await logoResponse.arrayBuffer();
-          const logoBase64 = btoa(String.fromCharCode(...new Uint8Array(logoArrayBuffer)));
-          const logoDataUrl = `data:image/jpeg;base64,${logoBase64}`;
-          
-          // Add logo (30x30 size, adjust as needed)
-          doc.addImage(logoDataUrl, 'JPEG', 20, yPosition - 5, 30, 30);
-          yPosition += 30;
-        }
-      } catch (logoError) {
-        console.warn('Logo loading failed:', logoError);
-        // Continue without logo if it fails
-      }
-    }
+    // Logo temporarily disabled to prevent PDF rendering issues
     
     // Header - Gym name (use business name if available)
     doc.setFontSize(20);
@@ -213,7 +195,7 @@ serve(async (req) => {
     // Receipt number and date (right aligned)
     doc.setFontSize(10);
     doc.setTextColor(...lightGray);
-    doc.text(`Ricevuta N° ${receiptNumber}`, 190, yPosition, { align: 'right' });
+    doc.text(`Ricevuta Nr. ${receiptNumber}`, 190, yPosition, { align: 'right' });
     yPosition += 5;
     doc.text(`Data emissione: ${issueDate}`, 190, yPosition, { align: 'right' });
     yPosition += 20;
