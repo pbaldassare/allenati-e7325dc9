@@ -226,6 +226,18 @@ const OwnerSubscriptions: React.FC = () => {
     }, 1000);
   };
 
+  const handleManualActivationCompleted = async () => {
+    setManualActivationDialogOpen(false);
+    
+    toast({
+      title: "Abbonamento attivato",
+      description: "L'abbonamento è stato attivato con successo.",
+    });
+    
+    // Reload data to reflect changes
+    await loadSubscriptionData();
+  };
+
   const handleDownloadReceipt = async (subscription: UserSubscription) => {
     try {
       setGeneratingReceipt(subscription.id);
@@ -748,7 +760,7 @@ const OwnerSubscriptions: React.FC = () => {
       <ManualSubscriptionActivationDialog
         isOpen={manualActivationDialogOpen}
         onClose={() => setManualActivationDialogOpen(false)}
-        onActivated={loadSubscriptionData}
+        onActivated={handleManualActivationCompleted}
       />
     </div>
   );
