@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 
 interface InstructorCourse {
   id: string;
@@ -31,32 +32,24 @@ export const useInstructorCourses = () => {
   const [courses, setCourses] = useState<InstructorCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, hasOwnerPrivileges } = useAuth();
+  const { user } = useAuth();
+  const { selectedGymId, hasOwnerPrivilegesForGym } = useInstructorGym();
 
   const fetchInstructorCourses = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !selectedGymId) {
+      setCourses([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       
       let coursesData;
       
-      if (hasOwnerPrivileges) {
-        // For super instructors, get user's gym ID and fetch ALL courses from that gym
-        const { data: membership, error: membershipError } = await supabase
-          .from('user_gym_memberships')
-          .select('gym_id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
-        
-        if (membershipError || !membership) {
-          throw new Error('Palestra non trovata');
-        }
-        
-        const gymId = membership.gym_id;
+      if (hasOwnerPrivilegesForGym(selectedGymId)) {
+        // For super instructors, fetch ALL courses from the selected gym
 
-        // Get all courses from the gym
         const { data: allCoursesData, error: coursesError } = await supabase
           .from('courses')
           .select(`
@@ -77,26 +70,25 @@ export const useInstructorCourses = () => {
               room_name
             )
           `)
-          .eq('gym_id', gymId)
+          .eq('gym_id', selectedGymId)
           .eq('is_active', true)
           .order('name');
 
         if (coursesError) throw coursesError;
         coursesData = allCoursesData;
       } else {
-        // Regular instructor - get only their assigned courses
-        const { data: instructor, error: instructorError } = await supabase
-          .from('instructors')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .single();
+        // Regular instructor - get instructor ID for the selected gym
+        const instructorId = await supabase
+          .rpc('get_instructor_id_for_gym', { 
+            _user_id: user.id, 
+            _gym_id: selectedGymId 
+          });
 
-        if (instructorError || !instructor) {
-          throw new Error('Istruttore non trovato');
+        if (!instructorId.data) {
+          throw new Error('Istruttore non trovato per questa palestra');
         }
 
-        // Get courses assigned to this instructor
+        // Get courses assigned to this instructor in the selected gym
         const { data: instructorCoursesData, error: coursesError } = await supabase
           .from('courses')
           .select(`
@@ -117,7 +109,8 @@ export const useInstructorCourses = () => {
               room_name
             )
           `)
-          .eq('instructor_id', instructor.id)
+          .eq('instructor_id', instructorId.data)
+          .eq('gym_id', selectedGymId)
           .eq('is_active', true)
           .order('name');
 
@@ -152,7 +145,7 @@ export const useInstructorCourses = () => {
 
   useEffect(() => {
     fetchInstructorCourses();
-  }, [user?.id]);
+  }, [user?.id, selectedGymId]);
 
   return {
     courses,

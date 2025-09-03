@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Home, BookOpen, Users, Calendar, BarChart3, ShoppingBag, User, LogOut, Settings, Crown } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInstructorGym } from "@/contexts/InstructorGymContext";
+import { InstructorGymSelector } from "./InstructorGymSelector";
 import { toast } from "sonner";
 
 import {
@@ -13,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -42,8 +45,10 @@ const getItems = (hasOwnerPrivileges: boolean) => {
 export function InstructorSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, hasOwnerPrivileges } = useAuth();
+  const { logout } = useAuth();
+  const { selectedGymId, hasOwnerPrivilegesForGym } = useInstructorGym();
   const currentPath = location.pathname;
+  const hasOwnerPrivileges = selectedGymId ? hasOwnerPrivilegesForGym(selectedGymId) : false;
   const items = getItems(hasOwnerPrivileges);
 
   const handleLogout = async () => {
@@ -61,8 +66,12 @@ export function InstructorSidebar() {
     isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50";
 
   return (
-    <SidebarContent>
-      <SidebarGroup>
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <InstructorGymSelector />
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
           <SidebarGroupLabel>
             {hasOwnerPrivileges ? (
               <div className="flex items-center gap-2">
@@ -120,5 +129,6 @@ export function InstructorSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+    </Sidebar>
   );
 }

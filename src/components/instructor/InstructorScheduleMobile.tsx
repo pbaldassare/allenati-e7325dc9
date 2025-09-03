@@ -9,6 +9,7 @@ import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { SessionManagementDrawer } from "@/components/owner/SessionManagementDrawer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInstructorGym } from "@/contexts/InstructorGymContext";
 
 interface SessionData {
   id: string;
@@ -32,16 +33,18 @@ const InstructorScheduleMobile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const { user, hasOwnerPrivileges } = useAuth();
+  const { user } = useAuth();
+  const { selectedGymId, hasOwnerPrivilegesForGym } = useInstructorGym();
 
   console.log('=== INSTRUCTOR SCHEDULE MOBILE ===');
   console.log('User:', user?.id);
-  console.log('Has owner privileges:', hasOwnerPrivileges);
+  console.log('Selected gym:', selectedGymId);
+  console.log('Has owner privileges for gym:', selectedGymId ? hasOwnerPrivilegesForGym(selectedGymId) : false);
   console.log('Current date:', format(currentDate, 'yyyy-MM-dd'));
 
   useEffect(() => {
     fetchSessions();
-  }, [currentDate, user, hasOwnerPrivileges]);
+  }, [currentDate, user, selectedGymId]);
 
   const fetchSessions = async () => {
     console.log('🔄 fetchSessions called');
@@ -56,77 +59,67 @@ const InstructorScheduleMobile: React.FC = () => {
         return;
       }
 
+      if (!selectedGymId) {
+        console.log('❌ No selected gym found');
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
+
+      const hasOwnerPrivileges = hasOwnerPrivilegesForGym(selectedGymId);
       console.log('Fetching sessions for user:', user.id, 'hasOwnerPrivileges:', hasOwnerPrivileges);
 
       let courseIds: string[] = [];
 
       if (hasOwnerPrivileges) {
-        // Super instructor - get all gym courses
-        const { data: membership, error: membershipError } = await supabase
-          .from('user_gym_memberships')
-          .select('gym_id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
-
-        if (membershipError) {
-          console.error('Error fetching membership:', membershipError);
-          setSessions([]);
-          setLoading(false);
-          return;
-        }
-
-        if (membership) {
-          console.log('Found gym membership:', membership.gym_id);
-          const { data: courses, error: coursesError } = await supabase
-            .from('courses')
-            .select('id')
-            .eq('gym_id', membership.gym_id)
-            .eq('is_active', true);
-
-          if (coursesError) {
-            console.error('Error fetching courses:', coursesError);
-            setSessions([]);
-            setLoading(false);
-            return;
-          }
-
-          courseIds = courses?.map(c => c.id) || [];
-          console.log('Found courses for gym:', courseIds.length);
-        }
-      } else {
-        // Regular instructor - get only their courses
-        const { data: instructor, error: instructorError } = await supabase
-          .from('instructors')
+        // Super instructor - get all courses from selected gym
+        const { data: courses, error: coursesError } = await supabase
+          .from('courses')
           .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+          .eq('gym_id', selectedGymId)
+          .eq('is_active', true);
 
-        if (instructorError) {
-          console.error('Error fetching instructor:', instructorError);
+        if (coursesError) {
+          console.error('Error fetching courses:', coursesError);
           setSessions([]);
           setLoading(false);
           return;
         }
 
-        if (instructor) {
-          console.log('Found instructor:', instructor.id);
-          const { data: courses, error: coursesError } = await supabase
-            .from('courses')
-            .select('id')
-            .eq('instructor_id', instructor.id)
-            .eq('is_active', true);
+        courseIds = courses?.map(c => c.id) || [];
+        console.log('Found courses for gym:', courseIds.length);
+      } else {
+        // Regular instructor - get instructor ID for selected gym
+        const { data: instructorId } = await supabase
+          .rpc('get_instructor_id_for_gym', { 
+            _user_id: user.id, 
+            _gym_id: selectedGymId 
+          });
 
-          if (coursesError) {
-            console.error('Error fetching instructor courses:', coursesError);
-            setSessions([]);
-            setLoading(false);
-            return;
-          }
-
-          courseIds = courses?.map(c => c.id) || [];
-          console.log('Found instructor courses:', courseIds.length);
+        if (!instructorId) {
+          console.log('No instructor record found for this gym');
+          setSessions([]);
+          setLoading(false);
+          return;
         }
+
+        console.log('Found instructor:', instructorId);
+        const { data: courses, error: coursesError } = await supabase
+          .from('courses')
+          .select('id')
+          .eq('instructor_id', instructorId)
+          .eq('gym_id', selectedGymId)
+          .eq('is_active', true);
+
+        if (coursesError) {
+          console.error('Error fetching instructor courses:', coursesError);
+          setSessions([]);
+          setLoading(false);
+          return;
+        }
+
+        courseIds = courses?.map(c => c.id) || [];
+        console.log('Found instructor courses:', courseIds.length);
       }
 
       if (courseIds.length === 0) {
@@ -236,12 +229,12 @@ const InstructorScheduleMobile: React.FC = () => {
   if (loading) {
     return (
       <Card className="p-6">
-        <div className="text-center space-y-2">
-          <div>🔄 Caricamento calendario mobile...</div>
-          <div className="text-xs text-muted-foreground">
-            User: {user?.id} | Privileges: {hasOwnerPrivileges ? 'Owner' : 'Regular'}
+          <div className="text-center space-y-2">
+            <div>🔄 Caricamento calendario mobile...</div>
+            <div className="text-xs text-muted-foreground">
+              User: {user?.id} | Gym: {selectedGymId?.slice(0,8)}... | Privileges: {selectedGymId && hasOwnerPrivilegesForGym(selectedGymId) ? 'Owner' : 'Regular'}
+            </div>
           </div>
-        </div>
       </Card>
     );
   }
@@ -255,7 +248,7 @@ const InstructorScheduleMobile: React.FC = () => {
             Riprova
           </Button>
           <div className="text-xs text-muted-foreground">
-            Debug: User {user?.id} | Privileges: {hasOwnerPrivileges ? 'Owner' : 'Regular'}
+            Debug: User {user?.id} | Privileges: {selectedGymId && hasOwnerPrivilegesForGym(selectedGymId) ? 'Owner' : 'Regular'}
           </div>
         </div>
       </Card>
@@ -284,7 +277,7 @@ const InstructorScheduleMobile: React.FC = () => {
             {sessions.length} {sessions.length === 1 ? 'sessione' : 'sessioni'} programmate
           </p>
           <div className="text-xs text-muted-foreground mt-2">
-            🔍 {hasOwnerPrivileges ? 'Super Istruttore' : 'Istruttore'} | {user?.id?.slice(0,8)}...
+            🔍 {selectedGymId && hasOwnerPrivilegesForGym(selectedGymId) ? 'Super Istruttore' : 'Istruttore'} | {user?.id?.slice(0,8)}... | Gym: {selectedGymId?.slice(0,8)}...
           </div>
         </div>
         
