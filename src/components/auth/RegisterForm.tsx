@@ -34,7 +34,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     phone: '',
     fiscalCode: '',
     gymId: '',
-    belt: 'Bianca',
+    belt: 'Nessuna',
     guardianFirstName: '',
     guardianLastName: '',
     guardianPhone: '',
@@ -152,7 +152,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             phone: formData.phone,
             fiscal_code: formData.fiscalCode.toUpperCase(),
             selected_gym_id: formData.gymId,
-            belt: formData.belt || 'Bianca',
+            belt: formData.belt || 'Nessuna',
             ...(isMinor
               ? {
                   is_minor: true,
@@ -184,7 +184,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         phone: '',
         fiscalCode: '',
         gymId: '',
-        belt: 'Bianca',
+        belt: 'Nessuna',
         guardianFirstName: '',
         guardianLastName: '',
         guardianPhone: '',
@@ -372,6 +372,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                     <SelectValue placeholder="Cintura selezionata" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Nessuna">🚫 Nessuna cintura</SelectItem>
                     <SelectItem value="Bianca">🥋 Bianca</SelectItem>
                     <SelectItem value="Blu">🥋 Blu</SelectItem>
                     <SelectItem value="Viola">🥋 Viola</SelectItem>

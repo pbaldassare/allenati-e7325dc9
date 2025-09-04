@@ -177,6 +177,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     if (!belt) return null;
     
     const beltColors: Record<string, string> = {
+      'Nessuna': 'bg-muted text-muted-foreground border border-muted-foreground/30',
       'Bianca': 'bg-white text-black border border-gray-300',
       'Blu': 'bg-blue-500 text-white',
       'Viola': 'bg-purple-500 text-white',

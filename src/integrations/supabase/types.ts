@@ -1997,7 +1997,7 @@ export type Database = {
     Enums: {
       access_level: "backoffice" | "mobile" | "both"
       app_role: "admin" | "gym_owner" | "instructor" | "basic_user"
-      belt_level: "Bianca" | "Blu" | "Viola" | "Marrone" | "Nera"
+      belt_level: "Nessuna" | "Bianca" | "Blu" | "Viola" | "Marrone" | "Nera"
       booking_status:
         | "confirmed"
         | "waitlist"
@@ -2146,7 +2146,7 @@ export const Constants = {
     Enums: {
       access_level: ["backoffice", "mobile", "both"],
       app_role: ["admin", "gym_owner", "instructor", "basic_user"],
-      belt_level: ["Bianca", "Blu", "Viola", "Marrone", "Nera"],
+      belt_level: ["Nessuna", "Bianca", "Blu", "Viola", "Marrone", "Nera"],
       booking_status: [
         "confirmed",
         "waitlist",
