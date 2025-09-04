@@ -32,12 +32,14 @@ interface ManualSubscriptionActivationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onActivated: () => void;
+  preselectedUserId?: string;
 }
 
 export default function ManualSubscriptionActivationDialog({
   isOpen,
   onClose,
-  onActivated
+  onActivated,
+  preselectedUserId
 }: ManualSubscriptionActivationDialogProps) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [members, setMembers] = useState<GymMember[]>([]);
@@ -54,6 +56,16 @@ export default function ManualSubscriptionActivationDialog({
       loadData();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (preselectedUserId && members.length > 0) {
+      const preselected = members.find(member => member.user_id === preselectedUserId);
+      if (preselected) {
+        setSelectedMember(preselected);
+        setSearchQuery('');
+      }
+    }
+  }, [preselectedUserId, members]);
 
   useEffect(() => {
     if (searchQuery) {
@@ -249,22 +261,25 @@ export default function ManualSubscriptionActivationDialog({
 
         <div className="space-y-6">
           {/* Member Selection */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Seleziona Utente
-            </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca per nome o email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          {!preselectedUserId && (
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Seleziona Utente
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca per nome o email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
+          )}
             
-            {searchQuery && (
+            {!preselectedUserId && searchQuery && (
               <div className="max-h-40 overflow-y-auto border rounded-lg">
                 {filteredMembers.map((member) => (
                   <div
@@ -296,9 +311,10 @@ export default function ManualSubscriptionActivationDialog({
               </div>
             )}
 
-            {selectedMember && (
-              <Card>
-                <CardContent className="p-4">
+          {selectedMember && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={selectedMember.profile_picture_url} />
@@ -313,10 +329,15 @@ export default function ManualSubscriptionActivationDialog({
                       <div className="text-sm text-muted-foreground">{selectedMember.email}</div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  {preselectedUserId && (
+                    <div className="text-xs text-muted-foreground">
+                      Utente preselezionato
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Plan Selection */}
           <div className="space-y-2">

@@ -25,6 +25,7 @@ import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
 import { MedicalCertificateStatusBadge } from './MedicalCertificateStatusBadge';
+import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
 
 interface SessionData {
   id: string;
@@ -98,6 +99,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [removing, setRemoving] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancellingSession, setCancellingSession] = useState(false);
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [selectedUserForSubscription, setSelectedUserForSubscription] = useState<{ id: string; name: string; email: string } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -393,6 +396,23 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     return `${dateStr} ${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`;
   };
 
+  const handleSubscriptionBadgeClick = (participant: Participant) => {
+    // Only handle click if user has no subscription
+    if (!participant.subscription) {
+      setSelectedUserForSubscription({
+        id: participant.user_id,
+        name: `${participant.user.first_name} ${participant.user.last_name}`,
+        email: participant.user.email
+      });
+      setSubscriptionDialogOpen(true);
+    }
+  };
+
+  const handleSubscriptionActivated = () => {
+    loadParticipants(); // Reload participants to see updated subscription status
+    setSelectedUserForSubscription(null);
+  };
+
   const occupancyRate = ((session.max_participants - session.available_spots) / session.max_participants) * 100;
   const isAlmostFull = session.available_spots <= 3 && session.available_spots > 0;
   const isFull = session.available_spots <= 0;
@@ -569,7 +589,11 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                               </div>
                               
                               <div className="flex flex-col gap-1">
-                                <SubscriptionStatusBadge subscription={participant.subscription} />
+                                <SubscriptionStatusBadge 
+                                  subscription={participant.subscription} 
+                                  onClick={!participant.subscription ? () => handleSubscriptionBadgeClick(participant) : undefined}
+                                  isClickable={!participant.subscription}
+                                />
                                 <MedicalCertificateStatusBadge certificate={participant.medical_certificate} />
                               </div>
                             </div>
@@ -612,6 +636,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         }}
         onConfirm={cancelSession}
         isLoading={cancellingSession}
+      />
+
+      <ManualSubscriptionActivationDialog
+        isOpen={subscriptionDialogOpen}
+        onClose={() => {
+          setSubscriptionDialogOpen(false);
+          setSelectedUserForSubscription(null);
+        }}
+        onActivated={handleSubscriptionActivated}
+        preselectedUserId={selectedUserForSubscription?.id}
       />
     </Drawer>
   );

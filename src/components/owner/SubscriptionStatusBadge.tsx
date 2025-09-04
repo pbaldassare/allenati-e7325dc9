@@ -13,16 +13,29 @@ interface SubscriptionStatusBadgeProps {
       unlimited_access: boolean;
     };
   } | null;
+  onClick?: () => void;
+  isClickable?: boolean;
 }
 
 export const SubscriptionStatusBadge: React.FC<SubscriptionStatusBadgeProps> = ({ 
-  subscription 
+  subscription,
+  onClick,
+  isClickable = false
 }) => {
   if (!subscription) {
     return (
-      <Badge variant="destructive" className="flex items-center gap-1">
+      <Badge 
+        variant="destructive" 
+        className={`flex items-center gap-1 ${
+          isClickable 
+            ? 'cursor-pointer hover:bg-destructive/90 transition-colors' 
+            : ''
+        }`}
+        onClick={onClick}
+        title={isClickable ? 'Clicca per attivare abbonamento' : undefined}
+      >
         <XCircle className="h-3 w-3" />
-        Nessun abbonamento
+        {isClickable ? 'Nessun abbonamento - Clicca per attivare' : 'Nessun abbonamento'}
       </Badge>
     );
   }
