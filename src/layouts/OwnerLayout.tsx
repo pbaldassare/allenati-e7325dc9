@@ -7,17 +7,26 @@ import { HowItWorksModal } from '@/components/modals/HowItWorksModal';
 import { Button } from '@/components/ui/button';
 import { HelpCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const isMobile = useIsMobile();
+  const { hasOwnerPrivileges, isInstructor } = useAuth();
+
+  // Determina il titolo in base al tipo di utente
+  const isSuperInstructor = isInstructor && hasOwnerPrivileges;
+  const pageTitle = isSuperInstructor ? 'Area Super Istruttore' : 'Area Proprietario';
+  const headerTitle = isSuperInstructor 
+    ? (isMobile ? 'Super Istruttore' : 'Area Super Istruttore')
+    : (isMobile ? 'Proprietario' : 'Area Proprietario');
 
   useEffect(() => {
-    document.title = 'Area Proprietario | Gym Manager';
-  }, []);
+    document.title = `${pageTitle} | Gym Manager`;
+  }, [pageTitle]);
 
   return (
-    <ProtectedRoute requiredRoles={['gym_owner', 'admin']}>
+    <ProtectedRoute requiredRoles={['gym_owner', 'admin', 'instructor']}>
       <SidebarProvider defaultOpen={!isMobile}>
         <div className="min-h-screen flex w-full">
           <Sidebar 
@@ -33,7 +42,7 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                 <div className="flex items-center gap-2">
                   <SidebarTrigger />
                   <h1 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
-                    {isMobile ? 'Proprietario' : 'Area Proprietario'}
+                    {headerTitle}
                   </h1>
                 </div>
                 {!isMobile && (
