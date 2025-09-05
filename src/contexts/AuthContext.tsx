@@ -95,16 +95,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let hasOwnerPrivileges = false;
 
       if (role === 'instructor') {
+        // Get instructor data and check owner privileges from instructor_gym_assignments
         const { data: instructorData } = await supabase
           .from('instructors')
-          .select('gym_id, has_owner_privileges, gyms(name)')
+          .select('id, gym_id, gyms(name)')
           .eq('user_id', userId)
+          .eq('is_active', true)
           .single();
 
         if (instructorData) {
           gymId = instructorData.gym_id;
           gymName = instructorData.gyms?.name;
-          hasOwnerPrivileges = instructorData.has_owner_privileges || false;
+          
+          // Check owner privileges from instructor_gym_assignments
+          const { data: assignmentData } = await supabase
+            .from('instructor_gym_assignments')
+            .select('has_owner_privileges')
+            .eq('instructor_id', instructorData.id)
+            .eq('gym_id', instructorData.gym_id)
+            .eq('is_active', true)
+            .single();
+          
+          hasOwnerPrivileges = assignmentData?.has_owner_privileges || false;
         }
       } else if (role === 'gym_owner') {
         const { data: gymData } = await supabase
