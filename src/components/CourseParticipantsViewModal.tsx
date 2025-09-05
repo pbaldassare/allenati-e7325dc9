@@ -77,73 +77,47 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     try {
       setLoading(true);
       
-      // Get all confirmed bookings for this session
-      const { data: bookings, error: bookingsError } = await supabase
+      // Get all data in one optimized query with joins
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          courses!inner(name),
+          profiles!inner(user_id, first_name, last_name, email, profile_picture_url, belt),
+          user_subscriptions(
+            subscription_plans!inner(name, unlimited_access)
+          )
+        `)
         .eq('session_id', sessionId)
         .eq('status', 'confirmed')
+        .eq('user_subscriptions.status', 'active')
         .order('scheduled_date', { ascending: true });
 
       if (bookingsError) throw bookingsError;
 
-      if (!bookings || bookings.length === 0) {
+      if (!bookingsData || bookingsData.length === 0) {
         setParticipants([]);
         return;
       }
 
-      // Get course name from first booking
-      if (bookings.length > 0) {
-        const { data: course, error: courseError } = await supabase
-          .from('courses')
-          .select('name')
-          .eq('id', bookings[0].course_id)
-          .single();
-        
-        if (!courseError && course) {
-          setCourseName(course.name);
-        }
+      // Set course name from first booking
+      if (bookingsData.length > 0 && bookingsData[0].courses) {
+        setCourseName(bookingsData[0].courses.name);
       }
 
-      // Get unique user IDs
-      const userIds = [...new Set(bookings.map(b => b.user_id))];
-      
-      // Fetch profiles for all users
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name, email, profile_picture_url, belt')
-        .in('user_id', userIds);
-
-      if (profilesError) throw profilesError;
-
-      // Enhance with subscription data (optional for view-only mode)
-      const participantsWithSubs = await Promise.all(
-        bookings.map(async (booking: any) => {
-          const userProfile = profiles?.find(p => p.user_id === booking.user_id);
-          
-          const { data: subData } = await supabase
-            .from('user_subscriptions')
-            .select(`
-              subscription_plans!inner(name, unlimited_access)
-            `)
-            .eq('user_id', booking.user_id)
-            .eq('status', 'active')
-            .maybeSingle();
-
-          return {
-            ...booking,
-            user: userProfile || {
-              first_name: 'Nome non trovato',
-              last_name: '',
-              email: 'Email non trovata'
-            },
-            subscription: subData?.subscription_plans ? {
-              plan_name: subData.subscription_plans.name,
-              unlimited_access: subData.subscription_plans.unlimited_access
-            } : undefined
-          };
-        })
-      );
+      // Transform the data
+      const participantsWithSubs = bookingsData.map((booking: any) => ({
+        ...booking,
+        user: booking.profiles || {
+          first_name: 'Nome non trovato',
+          last_name: '',
+          email: 'Email non trovata'
+        },
+        subscription: booking.user_subscriptions?.[0]?.subscription_plans ? {
+          plan_name: booking.user_subscriptions[0].subscription_plans.name,
+          unlimited_access: booking.user_subscriptions[0].subscription_plans.unlimited_access
+        } : undefined
+      }));
 
       setParticipants(participantsWithSubs);
     } catch (error) {
