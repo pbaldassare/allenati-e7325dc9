@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
  * Hook per gestire i redirect automatici basati sullo stato di autenticazione
@@ -9,6 +10,7 @@ export const useAuthRedirect = () => {
   const { isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Wait for auth to be fully loaded AND user data to be complete
@@ -30,9 +32,11 @@ export const useAuthRedirect = () => {
       if (user?.role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (user?.role === 'gym_owner') {
-        navigate('/owner', { replace: true });
+        // Su mobile vai direttamente al calendario, su desktop alla dashboard
+        navigate(isMobile ? '/owner/schedule' : '/owner', { replace: true });
       } else if (user?.role === 'instructor') {
-        navigate('/instructor', { replace: true });
+        // Su mobile vai direttamente al calendario, su desktop alla dashboard
+        navigate(isMobile ? '/instructor/schedule' : '/instructor', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
@@ -45,10 +49,12 @@ export const useAuthRedirect = () => {
         navigate('/admin', { replace: true });
         return;
       } else if (user?.role === 'gym_owner') {
-        navigate('/owner', { replace: true });
+        // Su mobile vai direttamente al calendario, su desktop alla dashboard
+        navigate(isMobile ? '/owner/schedule' : '/owner', { replace: true });
         return;
       } else if (user?.role === 'instructor') {
-        navigate('/instructor', { replace: true });
+        // Su mobile vai direttamente al calendario, su desktop alla dashboard
+        navigate(isMobile ? '/instructor/schedule' : '/instructor', { replace: true });
         return;
       }
       // Gli utenti normali rimangono sulla homepage
