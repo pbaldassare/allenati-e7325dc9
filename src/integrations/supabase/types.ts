@@ -1989,6 +1989,10 @@ export type Database = {
         Args: { bio?: string; target_user_id: string }
         Returns: string
       }
+      toggle_session_visibility: {
+        Args: { _new_status: string; _session_id: string }
+        Returns: boolean
+      }
       user_has_permission: {
         Args: { _permission_name: string; _user_id: string }
         Returns: boolean

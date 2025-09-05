@@ -16,11 +16,14 @@ import {
   UserMinus,
   Calendar,
   AlertCircle,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
@@ -39,6 +42,7 @@ interface SessionData {
   max_participants: number;
   available_spots: number;
   participant_count: number;
+  status?: string;
 }
 
 interface Participant {
@@ -98,6 +102,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [toggleVisibilityLoading, setToggleVisibilityLoading] = useState(false);
   const [cancellingSession, setCancellingSession] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [selectedUserForSubscription, setSelectedUserForSubscription] = useState<{ id: string; name: string; email: string } | null>(null);
@@ -289,6 +294,36 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     }
   };
 
+  const toggleSessionVisibility = async () => {
+    setToggleVisibilityLoading(true);
+    try {
+      const newStatus = session.status === 'hidden' ? 'scheduled' : 'hidden';
+      
+      const { error } = await supabase.rpc('toggle_session_visibility', {
+        _session_id: session.id,
+        _new_status: newStatus
+      });
+
+      if (error) {
+        console.error('Error toggling session visibility:', error);
+        throw error;
+      }
+
+      toast.success(
+        newStatus === 'hidden' 
+          ? 'Sessione nascosta agli utenti' 
+          : 'Sessione ora visibile agli utenti'
+      );
+      
+      onSessionUpdate?.();
+    } catch (error) {
+      console.error('Error toggling session visibility:', error);
+      toast.error('Errore durante la modifica della visibilità');
+    } finally {
+      setToggleVisibilityLoading(false);
+    }
+  };
+
   const cancelSession = async (reason?: string) => {
     if (!user?.id) return;
 
@@ -457,15 +492,38 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                   {occupancyRate.toFixed(0)}% occupato
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCancelDialogOpen(true)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Cancella
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSessionVisibility}
+                  disabled={toggleVisibilityLoading}
+                  className={cn(
+                    "gap-2",
+                    session.status === 'hidden' 
+                      ? "text-orange-600 hover:text-orange-700" 
+                      : "text-blue-600 hover:text-blue-700"
+                  )}
+                >
+                  {toggleVisibilityLoading ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : session.status === 'hidden' ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  {session.status === 'hidden' ? 'Mostra' : 'Nascondi'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCancelDialogOpen(true)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Cancella
+                </Button>
+              </div>
             </div>
           </DrawerTitle>
         </DrawerHeader>

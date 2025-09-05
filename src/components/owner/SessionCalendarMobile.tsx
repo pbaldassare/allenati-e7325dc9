@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay } from "date-fns";
 import { it } from "date-fns/locale/it";
@@ -22,7 +22,7 @@ interface SessionData {
   instructor: string;
   participants: number;
   maxParticipants: number;
-  status: 'scheduled' | 'cancelled' | 'completed';
+  status: 'scheduled' | 'cancelled' | 'completed' | 'hidden';
   credits: number;
 }
 
@@ -100,7 +100,7 @@ const SessionCalendarMobile: React.FC = () => {
         `)
         .eq('courses.gym_id', gymId)
         .eq('session_date', format(dayStart, 'yyyy-MM-dd'))
-        .eq('status', 'scheduled')
+        .in('status', ['scheduled', 'hidden'])
         .order('start_time');
 
       if (error) {
@@ -139,7 +139,7 @@ const SessionCalendarMobile: React.FC = () => {
         instructor: 'Non assegnato',
         participants: bookingCountMap[session.id] || 0,
         maxParticipants: session.max_participants,
-        status: session.status as 'scheduled' | 'cancelled' | 'completed',
+        status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
         credits: session.courses.credits_required
       }));
 
@@ -245,21 +245,31 @@ const SessionCalendarMobile: React.FC = () => {
                 room_name: session.room,
                 max_participants: session.maxParticipants,
                 available_spots: session.maxParticipants - session.participants,
-                participant_count: session.participants
+                participant_count: session.participants,
+                status: session.status
               }}
               onSessionUpdate={fetchSessions}
             >
               <Card 
                 className={cn(
                   "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
-                  getOccupancyColor(session.participants, session.maxParticipants)
+                  getOccupancyColor(session.participants, session.maxParticipants),
+                  session.status === 'hidden' && "opacity-60 bg-muted/50"
                 )}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base mb-1 truncate">
-                      {session.courseName}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-base truncate">
+                        {session.courseName}
+                      </h3>
+                      {session.status === 'hidden' && (
+                        <div className="flex items-center gap-1">
+                          <EyeOff className="h-4 w-4 text-orange-600" />
+                          <span className="text-xs text-orange-600 font-medium">Nascosta</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">
                         🕐 {session.time}
