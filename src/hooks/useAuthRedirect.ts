@@ -14,13 +14,27 @@ export const useAuthRedirect = () => {
 
   useEffect(() => {
     // Wait for auth to be fully loaded AND user data to be complete
-    if (loading) return;
+    if (loading) {
+      console.log('AuthRedirect: Still loading auth...');
+      return;
+    }
     
     // If user is authenticated but we don't have complete user data yet, wait
     if (isAuthenticated && (!user || user.role === undefined)) {
-      console.log('AuthRedirect: User authenticated but role not loaded yet, waiting...');
+      console.log('AuthRedirect: User authenticated but role not loaded yet, waiting...', { 
+        isAuthenticated, 
+        hasUser: !!user, 
+        userRole: user?.role 
+      });
       return;
     }
+
+    console.log('AuthRedirect: Processing redirect', { 
+      isAuthenticated, 
+      userRole: user?.role, 
+      currentPath: location.pathname,
+      isMobile 
+    });
 
     const currentPath = location.pathname;
     
@@ -33,10 +47,17 @@ export const useAuthRedirect = () => {
         navigate('/admin', { replace: true });
       } else if (user?.role === 'gym_owner') {
         // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        navigate(isMobile ? '/owner/schedule' : '/owner', { replace: true });
+        const targetRoute = isMobile ? '/owner/schedule' : '/owner';
+        console.log('AuthRedirect: Redirecting gym_owner to', targetRoute);
+        navigate(targetRoute, { replace: true });
       } else if (user?.role === 'instructor') {
-        // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        navigate(isMobile ? '/instructor/schedule' : '/instructor', { replace: true });
+        // Super-istruttori vanno su owner/schedule su mobile, istruttori normali su instructor/schedule
+        const hasOwnerPrivileges = user?.has_owner_privileges;
+        const targetRoute = isMobile 
+          ? (hasOwnerPrivileges ? '/owner/schedule' : '/instructor/schedule')
+          : (hasOwnerPrivileges ? '/owner' : '/instructor');
+        console.log('AuthRedirect: Redirecting instructor to', targetRoute, { hasOwnerPrivileges, isMobile });
+        navigate(targetRoute, { replace: true });
       } else {
         navigate('/', { replace: true });
       }
@@ -50,11 +71,18 @@ export const useAuthRedirect = () => {
         return;
       } else if (user?.role === 'gym_owner') {
         // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        navigate(isMobile ? '/owner/schedule' : '/owner', { replace: true });
+        const targetRoute = isMobile ? '/owner/schedule' : '/owner';
+        console.log('AuthRedirect: Redirecting gym_owner from homepage to', targetRoute);
+        navigate(targetRoute, { replace: true });
         return;
       } else if (user?.role === 'instructor') {
-        // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        navigate(isMobile ? '/instructor/schedule' : '/instructor', { replace: true });
+        // Super-istruttori vanno su owner/schedule su mobile, istruttori normali su instructor/schedule
+        const hasOwnerPrivileges = user?.has_owner_privileges;
+        const targetRoute = isMobile 
+          ? (hasOwnerPrivileges ? '/owner/schedule' : '/instructor/schedule')
+          : (hasOwnerPrivileges ? '/owner' : '/instructor');
+        console.log('AuthRedirect: Redirecting instructor from homepage to', targetRoute, { hasOwnerPrivileges, isMobile });
+        navigate(targetRoute, { replace: true });
         return;
       }
       // Gli utenti normali rimangono sulla homepage
@@ -73,7 +101,7 @@ export const useAuthRedirect = () => {
       return;
     }
 
-    if (currentPath.startsWith('/owner') && !(user?.role === 'gym_owner' || user?.role === 'admin')) {
+    if (currentPath.startsWith('/owner') && !(user?.role === 'gym_owner' || user?.role === 'admin' || (user?.role === 'instructor' && user?.has_owner_privileges))) {
       navigate('/', { replace: true });
       return;
     }
