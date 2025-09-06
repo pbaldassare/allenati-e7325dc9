@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      additional_gym_requests: {
+        Row: {
+          created_at: string
+          gym_id: string
+          id: string
+          message: string | null
+          requester_user_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          id?: string
+          message?: string | null
+          requester_user_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          id?: string
+          message?: string | null
+          requester_user_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_action_logs: {
         Row: {
           action: string
@@ -1993,6 +2029,10 @@ export type Database = {
         Returns: string
       }
       get_user_gyms: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      get_user_owned_gyms: {
         Args: { _user_id: string }
         Returns: string[]
       }
