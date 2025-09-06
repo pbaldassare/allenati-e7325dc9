@@ -245,11 +245,7 @@ const OwnerCoursesList: React.FC = () => {
   /*
   const duplicateCourse = async (courseId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) return;
+      if (!selectedGym?.id) return;
 
       // Get original course data
       const { data: originalCourse } = await supabase
@@ -280,7 +276,7 @@ const OwnerCoursesList: React.FC = () => {
           requirements,
           benefits,
           equipment_needed,
-          gym_id: gymId,
+          gym_id: selectedGym.id,
           is_active: false // Start as inactive
         });
 

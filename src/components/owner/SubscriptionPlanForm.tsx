@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface SubscriptionPlan {
   id: string;
@@ -80,6 +81,7 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
   onSuccess,
   editingPlan,
 }) => {
+  const { selectedGym } = useOwnerGym();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -169,15 +171,11 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) throw new Error('Gym not found');
+      if (!selectedGym?.id) throw new Error('Nessuna palestra selezionata');
 
       const planData = {
         ...formData,
-        gym_id: gymId,
+        gym_id: selectedGym.id,
         features: formData.features,
       };
 

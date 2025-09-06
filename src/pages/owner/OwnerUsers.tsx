@@ -248,15 +248,16 @@ const OwnerUsers = () => {
   };
 
   const reloadMembers = async () => {
-    const { data: userRes } = await supabase.auth.getUser();
-    const userId = userRes?.user?.id;
-    if (!userId) return;
-
-    const { data: gymId } = await (supabase as any).rpc('get_user_gym_id', { _user_id: userId });
-    if (!gymId) return;
-
-    // Trigger page reload to get fresh data
-    window.location.reload();
+    if (!selectedGym?.id) return;
+    
+    // Re-trigger the data loading effect by updating the dependency
+    const timer = setTimeout(() => {
+      // Force re-fetch by updating the key state or calling the load function directly
+      const loadEvent = new CustomEvent('reload-members');
+      window.dispatchEvent(loadEvent);
+    }, 100);
+    
+    return () => clearTimeout(timer);
   };
 
   const handlePromoteClick = (userId: string) => {

@@ -23,6 +23,7 @@ import {
   Image
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface UserDetailsModalProps {
   isOpen: boolean;
@@ -60,6 +61,7 @@ interface FullUserProfile {
 }
 
 const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, userId }) => {
+  const { selectedGym } = useOwnerGym();
   const [userDetails, setUserDetails] = useState<FullUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -75,13 +77,10 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
     
     setLoading(true);
     try {
-      // Get current user's gym ID
-      const { data: userRes } = await supabase.auth.getUser();
-      const currentUserId = userRes?.user?.id;
-      if (!currentUserId) return;
-
-      const { data: gymId } = await (supabase as any).rpc('get_user_gym_id', { _user_id: currentUserId });
-      if (!gymId) return;
+      if (!selectedGym?.id) {
+        console.log('❌ No selected gym available');
+        return;
+      }
 
       // Get full profile data
       const { data: profile, error: profileErr } = await supabase
@@ -97,7 +96,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
         .from('user_gym_memberships')
         .select('status, membership_type')
         .eq('user_id', userId)
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .single();
       
       if (membershipErr) throw membershipErr;
@@ -117,7 +116,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
         .select('id')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .maybeSingle();
       
       if (instructorErr) throw instructorErr;
@@ -127,7 +126,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
         .from('medical_certificates')
         .select('expiry_date, file_path')
         .eq('user_id', userId)
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
