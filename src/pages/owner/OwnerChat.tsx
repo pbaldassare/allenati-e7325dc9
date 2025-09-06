@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { MessageSquare, Users, Plus } from 'lucide-react';
@@ -22,10 +23,10 @@ interface ChatRoom {
 
 const OwnerChat: React.FC = () => {
   const { user } = useAuth();
+  const { selectedGym } = useOwnerGym();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
-  const [userGymId, setUserGymId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalRooms: 0,
     activeUsers: 0,
@@ -33,32 +34,15 @@ const OwnerChat: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      loadUserGym();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (userGymId) {
+    if (selectedGym?.id) {
+      console.log('🏢 OwnerChat - Loading data for gym:', selectedGym.name, 'ID:', selectedGym.id);
       loadChatRooms();
       loadStats();
     }
-  }, [userGymId]);
-
-  const loadUserGym = async () => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_user_gym_id', { _user_id: user?.id });
-
-      if (error) throw error;
-      setUserGymId(data);
-    } catch (error) {
-      console.error('Error getting user gym:', error);
-    }
-  };
+  }, [selectedGym]);
 
   const loadChatRooms = async () => {
-    if (!userGymId) return;
+    if (!selectedGym?.id) return;
 
     try {
       setLoading(true);
@@ -73,7 +57,7 @@ const OwnerChat: React.FC = () => {
           gym_id,
           is_active
         `)
-        .eq('gym_id', userGymId)
+        .eq('gym_id', selectedGym.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -102,21 +86,21 @@ const OwnerChat: React.FC = () => {
   };
 
   const loadStats = async () => {
-    if (!userGymId) return;
+    if (!selectedGym?.id) return;
 
     try {
       // Count rooms for this gym
       const { count: roomCount } = await supabase
         .from('chat_rooms')
         .select('*', { count: 'exact', head: true })
-        .eq('gym_id', userGymId)
+        .eq('gym_id', selectedGym.id)
         .eq('is_active', true);
 
       // Count active participants in gym rooms
       const { data: roomIds } = await supabase
         .from('chat_rooms')
         .select('id')
-        .eq('gym_id', userGymId)
+        .eq('gym_id', selectedGym.id)
         .eq('is_active', true);
 
       let participantCount = 0;
@@ -156,12 +140,12 @@ const OwnerChat: React.FC = () => {
   };
 
   const createGeneralChat = async () => {
-    if (!userGymId || !user) return;
+    if (!selectedGym?.id || !user) return;
 
     try {
       const { data, error } = await supabase
         .rpc('create_gym_general_chat', { 
-          _gym_id: userGymId, 
+          _gym_id: selectedGym.id, 
           _created_by: user.id 
         });
 
@@ -195,7 +179,7 @@ const OwnerChat: React.FC = () => {
           </p>
         </div>
         
-        <Button onClick={createGeneralChat} disabled={!userGymId}>
+        <Button onClick={createGeneralChat} disabled={!selectedGym?.id}>
           <Plus className="h-4 w-4 mr-2" />
           Chat Generale
         </Button>
