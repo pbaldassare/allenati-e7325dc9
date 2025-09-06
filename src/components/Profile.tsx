@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useUserBeltVisibility } from "@/hooks/useUserBeltVisibility";
 import { CreditsBalance } from "@/components/credits/CreditsBalance";
 import { useState } from "react";
 import { CreditsPurchase } from "@/components/credits/CreditsPurchase";
@@ -24,6 +25,7 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
   const [showCreditsPurchase, setShowCreditsPurchase] = useState(false);
   const [creditsKey, setCreditsKey] = useState(0);
   const { stats, loading: statsLoading } = useUserStats(user?.id);
+  const { shouldShowBelt } = useUserBeltVisibility();
   
   const handleLogout = async () => {
     try {
@@ -67,6 +69,12 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
            user?.role === 'gym_owner' ? 'Proprietario' :
            user?.role === 'instructor' ? 'Istruttore' : 'Utente'}
         </Badge>
+        {shouldShowBelt && user?.belt && user.belt !== 'Nessuna' && (
+          <Badge variant="outline" className="mt-2 border-primary text-primary">
+            <Award className="w-3 h-3 mr-1" />
+            Cintura {user.belt}
+          </Badge>
+        )}
         {user?.gym_name && (
           <p className="text-sm sm:text-base text-muted-foreground mt-1">{user.gym_name}</p>
         )}

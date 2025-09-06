@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { GymApplicationForm } from '@/components/GymApplicationForm';
 import { useToast } from '@/hooks/use-toast';
 import { MinorGuardianModal } from '@/components/auth/MinorGuardianModal';
+import { useCategoriesWithMain } from '@/hooks/useCategoriesWithMain';
 
 interface Gym {
   id: string;
@@ -50,6 +51,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const [phonePrefix, setPhonePrefix] = useState('+39');
   const { register } = useAuth();
   const { toast } = useToast();
+  const [shouldShowBelt, setShouldShowBelt] = useState(false);
+  const { categories } = useCategoriesWithMain();
 
   const [gymsLoading, setGymsLoading] = useState(true);
 
@@ -60,6 +63,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   useEffect(() => {
     onShowGymApplication?.(showGymApplication);
   }, [showGymApplication, onShowGymApplication]);
+
+  useEffect(() => {
+    if (formData.gymId && categories.length > 0) {
+      const selectedGymCategories = categories.filter(cat => cat.gym_id === formData.gymId);
+      const hasMartialArts = selectedGymCategories.some(cat => 
+        cat.main_categories?.requires_belt === true
+      );
+      setShouldShowBelt(hasMartialArts);
+    }
+  }, [formData.gymId, categories]);
 
   const loadGyms = async () => {
     setGymsLoading(true);
@@ -362,25 +375,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="belt" className="text-lg sm:text-base">Cintura</Label>
-                <Select
-                  value={formData.belt}
-                  onValueChange={(value) => setFormData({ ...formData, belt: value })}
-                >
-                  <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
-                    <SelectValue placeholder="Cintura selezionata" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Nessuna">🚫 Nessuna cintura</SelectItem>
-                    <SelectItem value="Bianca">🥋 Bianca</SelectItem>
-                    <SelectItem value="Blu">🥋 Blu</SelectItem>
-                    <SelectItem value="Viola">🥋 Viola</SelectItem>
-                    <SelectItem value="Marrone">🥋 Marrone</SelectItem>
-                    <SelectItem value="Nera">🥋 Nera</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {shouldShowBelt && (
+                <div className="space-y-2">
+                  <Label htmlFor="belt" className="text-lg sm:text-base">Cintura</Label>
+                  <Select
+                    value={formData.belt}
+                    onValueChange={(value) => setFormData({ ...formData, belt: value })}
+                  >
+                    <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
+                      <SelectValue placeholder="Cintura selezionata" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Nessuna">🚫 Nessuna cintura</SelectItem>
+                      <SelectItem value="Bianca">🥋 Bianca</SelectItem>
+                      <SelectItem value="Blu">🥋 Blu</SelectItem>
+                      <SelectItem value="Viola">🥋 Viola</SelectItem>
+                      <SelectItem value="Marrone">🥋 Marrone</SelectItem>
+                      <SelectItem value="Nera">🥋 Nera</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="gym" className="text-lg sm:text-base">Palestra *</Label>

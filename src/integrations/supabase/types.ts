@@ -372,6 +372,7 @@ export type Database = {
           icon_name: string | null
           id: string
           is_active: boolean
+          main_category_id: string | null
           name: string
         }
         Insert: {
@@ -382,6 +383,7 @@ export type Database = {
           icon_name?: string | null
           id?: string
           is_active?: boolean
+          main_category_id?: string | null
           name: string
         }
         Update: {
@@ -392,6 +394,7 @@ export type Database = {
           icon_name?: string | null
           id?: string
           is_active?: boolean
+          main_category_id?: string | null
           name?: string
         }
         Relationships: [
@@ -400,6 +403,13 @@ export type Database = {
             columns: ["gym_id"]
             isOneToOne: false
             referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_categories_main_category_id_fkey"
+            columns: ["main_category_id"]
+            isOneToOne: false
+            referencedRelation: "main_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -1094,6 +1104,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      main_categories: {
+        Row: {
+          color_hex: string | null
+          created_at: string
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          requires_belt: boolean
+          updated_at: string
+        }
+        Insert: {
+          color_hex?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          requires_belt?: boolean
+          updated_at?: string
+        }
+        Update: {
+          color_hex?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          requires_belt?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       medical_certificates: {
         Row: {
@@ -1995,6 +2041,10 @@ export type Database = {
       }
       user_has_permission: {
         Args: { _permission_name: string; _user_id: string }
+        Returns: boolean
+      }
+      user_practices_martial_arts: {
+        Args: { _user_id: string }
         Returns: boolean
       }
     }
