@@ -130,10 +130,10 @@ const OwnerSubscriptions: React.FC = () => {
         
         return {
           ...sub,
-          plan,
-          user
+          plan: plan || null,
+          user: user || null // Ensure user is null if not found instead of undefined
         };
-      }); // Rimosso filtro per vedere tutte le subscription
+      }).filter(sub => sub.plan && sub.user); // Filter out subscriptions without plan or user data
       
       console.log('Processed subscriptions:', subs);
       setSubscriptions(subs);
@@ -252,7 +252,7 @@ const OwnerSubscriptions: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ricevuta-abbonamento-${subscription.user.first_name}-${subscription.user.last_name}.pdf`;
+      link.download = `ricevuta-abbonamento-${subscription.user?.first_name || 'utente'}-${subscription.user?.last_name || 'sconosciuto'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -329,7 +329,7 @@ const OwnerSubscriptions: React.FC = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Disattivare abbonamento?</AlertDialogTitle>
               <AlertDialogDescription>
-                Questa azione disattiverà l'abbonamento di {subscription.user.first_name} {subscription.user.last_name}. 
+                Questa azione disattiverà l'abbonamento di {subscription.user?.first_name || 'questo utente'} {subscription.user?.last_name || ''}. 
                 L'utente non potrà più accedere ai servizi dell'abbonamento.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -384,8 +384,8 @@ const OwnerSubscriptions: React.FC = () => {
   const filteredSubscriptions = subscriptions.filter(sub => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const userName = `${sub.user.first_name} ${sub.user.last_name}`.toLowerCase();
-    const userEmail = sub.user.email.toLowerCase();
+    const userName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
+    const userEmail = (sub.user?.email || '').toLowerCase();
     return userName.includes(query) || userEmail.includes(query);
   });
 
@@ -516,7 +516,7 @@ const OwnerSubscriptions: React.FC = () => {
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={sub.user.profile_picture_url} />
+                             <AvatarImage src={sub.user?.profile_picture_url || undefined} />
                              <AvatarFallback>
                                {sub.user ? 
                                  `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
@@ -541,12 +541,12 @@ const OwnerSubscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{sub.plan.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {sub.plan.unlimited_access ? 
-                              sub.plan.name : 
-                              `${sub.plan.credits_included} crediti`
-                            }
+                           <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
+                           <div className="text-sm text-muted-foreground">
+                             {sub.plan?.unlimited_access ? 
+                               sub.plan?.name : 
+                               `${sub.plan?.credits_included || 0} crediti`
+                             }
                           </div>
                         </div>
                       </TableCell>
