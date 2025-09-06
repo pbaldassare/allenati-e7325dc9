@@ -61,47 +61,98 @@ export const useOwnerBookings = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      console.log("🔍 Loading bookings for gym:", gymData);
+
+      // 1) Prima query: bookings con corsi
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           *,
-          profiles (
-            first_name,
-            last_name,
-            email,
-            phone,
-            profile_picture_url,
-            current_credits
-          ),
           courses!inner (
             name,
             deadline_hours,
             gym_id
-          ),
-          course_sessions (
-            room_id,
-            gym_rooms!inner (
-              name
-            )
           )
         `)
         .eq('courses.gym_id', gymData)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
 
-      const formattedData = data?.map(booking => ({
-        ...booking,
-        user: booking.profiles,
-        course: booking.courses,
-        room_name: (booking as any).course_sessions?.gym_rooms?.name || 'Sala non assegnata'
-      })) as OwnerBooking[];
+      console.log("📋 Bookings loaded:", bookingsData?.length || 0, bookingsData);
 
-      if (error) {
-        console.error('Error fetching owner bookings:', error);
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
         toast.error('Errore nel caricamento delle prenotazioni');
         return;
       }
 
+      const bookingsList = (bookingsData || []) as any[];
+      const userIds = [...new Set(bookingsList.map((b) => b.user_id).filter(Boolean))];
+      
+      // 2) Seconda query: profili utenti
+      let profilesById = new Map<string, any>();
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, first_name, last_name, email, phone, profile_picture_url, current_credits")
+          .in("user_id", userIds);
+
+        console.log('👤 User profiles loaded:', {
+          requestedUserIds: userIds,
+          foundProfiles: profilesData?.length || 0,
+          error: profilesError,
+          data: profilesData
+        });
+
+        if (!profilesError && profilesData) {
+          profilesById = new Map(
+            profilesData.map((p: any) => [p.user_id as string, p])
+          );
+        } else if (profilesError) {
+          console.warn("Errore caricamento profili utenti:", profilesError);
+        }
+      }
+
+      // 3) Terza query: sale per le sessioni (se necessario)
+      const sessionIds = [...new Set(bookingsList.map((b) => b.session_id).filter(Boolean))];
+      let roomsBySessionId = new Map<string, string>();
+      
+      if (sessionIds.length > 0) {
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('course_sessions')
+          .select(`
+            id,
+            room_name,
+            gym_rooms (name)
+          `)
+          .in('id', sessionIds);
+
+        console.log('🏠 Room data loaded:', sessionsData?.length || 0, sessionsData);
+
+        if (!sessionsError && sessionsData) {
+          sessionsData.forEach((s: any) => {
+            const roomName = s.room_name || (s.gym_rooms?.name) || 'Sala non assegnata';
+            roomsBySessionId.set(s.id, roomName);
+          });
+        }
+      }
+
+      // 4) Merge dei dati
+      const formattedData: OwnerBooking[] = bookingsList.map((booking: any) => ({
+        ...booking,
+        user: profilesById.get(booking.user_id) || {
+          first_name: "Nome",
+          last_name: "Non Disponibile", 
+          email: null,
+          phone: null,
+          profile_picture_url: null,
+          current_credits: 0,
+        },
+        course: booking.courses,
+        room_name: roomsBySessionId.get(booking.session_id) || 'Sala non assegnata'
+      }));
+
+      console.log("✅ Final formatted bookings:", formattedData.length, formattedData);
       setBookings(formattedData || []);
     } catch (error) {
       console.error('Unexpected error:', error);
