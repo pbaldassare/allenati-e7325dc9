@@ -122,6 +122,7 @@ export const OwnerProfile: React.FC = () => {
       }
     };
 
+    console.log('🏢 OwnerProfile - Loading data for gym:', selectedGym?.name, 'ID:', selectedGym?.id);
     loadData();
   }, [user, selectedGym, form, isUploadingLogo, logoUrl]);
 

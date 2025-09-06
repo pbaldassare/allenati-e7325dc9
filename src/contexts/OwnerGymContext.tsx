@@ -98,20 +98,34 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
 
       setOwnedGyms(gyms || []);
 
-      // Auto-select gym
+      // Auto-select gym with preservation logic
       if (gyms && gyms.length > 0) {
-        // Try to restore from localStorage
-        const savedGymId = localStorage.getItem(SELECTED_GYM_KEY);
-        const savedGym = gyms.find(g => g.id === savedGymId);
+        // First check if current selectedGym is still valid
+        const currentSelectedGym = selectedGym;
+        const currentGymStillExists = currentSelectedGym && gyms.find(g => g.id === currentSelectedGym.id);
         
-        if (savedGym) {
-          console.log('🎯 Restored saved gym:', savedGym.name);
-          setSelectedGymState(savedGym);
+        if (currentGymStillExists) {
+          console.log('🎯 Preserving current gym:', currentSelectedGym.name);
+          // Update the selected gym data but keep the same selection
+          const updatedCurrentGym = gyms.find(g => g.id === currentSelectedGym.id);
+          if (updatedCurrentGym) {
+            setSelectedGymState(updatedCurrentGym);
+            localStorage.setItem(SELECTED_GYM_KEY, updatedCurrentGym.id);
+          }
         } else {
-          // Default to first gym
-          console.log('🎯 Selected first gym:', gyms[0].name);
-          setSelectedGymState(gyms[0]);
-          localStorage.setItem(SELECTED_GYM_KEY, gyms[0].id);
+          // Try to restore from localStorage
+          const savedGymId = localStorage.getItem(SELECTED_GYM_KEY);
+          const savedGym = gyms.find(g => g.id === savedGymId);
+          
+          if (savedGym) {
+            console.log('🎯 Restored saved gym:', savedGym.name);
+            setSelectedGymState(savedGym);
+          } else {
+            // Default to first gym
+            console.log('🎯 Selected first gym:', gyms[0].name);
+            setSelectedGymState(gyms[0]);
+            localStorage.setItem(SELECTED_GYM_KEY, gyms[0].id);
+          }
         }
       } else {
         console.log('❌ No gyms available');
