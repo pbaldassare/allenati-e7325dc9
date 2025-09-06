@@ -70,7 +70,14 @@ const OwnerUsers = () => {
 
   useEffect(() => {
     const loadMembers = async () => {
+      console.log('👥 OwnerUsers - DEBUG START:', {
+        selectedGym: selectedGym?.id,
+        selectedGymName: selectedGym?.name,
+        timestamp: new Date().toISOString()
+      });
+
       if (!selectedGym?.id) {
+        console.log('❌ No selectedGym, clearing members');
         setMembers([]);
         setLoading(false);
         return;
@@ -78,20 +85,30 @@ const OwnerUsers = () => {
 
       setLoading(true);
       try {
-        const { data: userRes } = await supabase.auth.getUser();
+        const { data: userRes, error: authError } = await supabase.auth.getUser();
         const userId = userRes?.user?.id;
+        
+        console.log('🔐 Auth check:', { userId, authError });
+        
         setAuthUserId(userId ?? null);
         if (!userId) {
+          console.log('❌ No authenticated user');
           setMembers([]);
           return;
         }
 
-        console.log('Loading members for gym:', selectedGym.id);
+        console.log('🔍 Loading members for gym:', selectedGym.id, selectedGym.name);
 
         const { data: memberships, error: memErr } = await supabase
           .from('user_gym_memberships')
           .select('user_id, status, membership_type')
           .eq('gym_id', selectedGym.id);
+        
+        console.log('📊 Memberships query result:', {
+          count: memberships?.length || 0,
+          error: memErr,
+          sample: memberships?.slice(0, 3)
+        });
         
         if (memErr) throw memErr;
 
@@ -183,16 +200,33 @@ const OwnerUsers = () => {
           } as MemberProfile;
         });
 
+        console.log('✅ Members loaded successfully:', {
+          totalMembers: combined.length,
+          activeMembers: combined.filter(m => m.membership_status === 'active').length,
+          instructors: combined.filter(m => m.is_instructor).length,
+          sample: combined.slice(0, 3).map(m => ({ 
+            name: `${m.first_name} ${m.last_name}`, 
+            status: m.membership_status,
+            isInstructor: m.is_instructor 
+          }))
+        });
+
         setMembers(combined as MemberProfile[]);
       } catch (e: any) {
-        console.error('loadMembers error', e);
+        console.error('❌ loadMembers error:', e);
         toast({ title: 'Errore caricamento utenti', description: e?.message ?? 'Qualcosa è andato storto', variant: 'destructive' });
+        setMembers([]); // Ensure we clear members on error
       } finally {
         setLoading(false);
       }
     };
 
-    loadMembers();
+    // Add a small delay to ensure gym context is fully loaded
+    const timer = setTimeout(() => {
+      loadMembers();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [selectedGym?.id, toast]);
 
   // Helper function to get the highest priority role

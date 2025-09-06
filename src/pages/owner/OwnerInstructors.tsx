@@ -73,21 +73,26 @@ const OwnerInstructors: React.FC = () => {
     const load = async () => {
       console.log("🏋️ OwnerInstructors - DEBUG START:", {
         gymLoading,
-        selectedGym,
-        selectedGymId: selectedGym?.id,
-        ownedGyms,
+        selectedGym: selectedGym?.id,
+        selectedGymName: selectedGym?.name,
+        ownedGyms: ownedGyms?.length,
         timestamp: new Date().toISOString()
       });
 
       // Test authentication first
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log("🔐 Auth check:", { user: user?.id, error: authError });
+      console.log("🔐 Auth check:", { userId: user?.id, error: authError });
 
       // Early return if no gym selected or still loading
-      if (gymLoading || !selectedGym?.id) {
-        console.log("🚫 Early return:", { 
-          gymLoading, 
-          selectedGymId: selectedGym?.id,
+      if (gymLoading) {
+        console.log("⏳ Gym context still loading, waiting...");
+        setLoading(true);
+        return;
+      }
+
+      if (!selectedGym?.id) {
+        console.log("🚫 No gym selected:", { 
+          selectedGym: selectedGym?.id,
           ownedGymsCount: ownedGyms?.length 
         });
         setLoading(false);
@@ -157,15 +162,32 @@ const OwnerInstructors: React.FC = () => {
           },
         }));
 
+        console.log('✅ Instructors loaded successfully:', {
+          totalInstructors: merged.length,
+          instructorsWithProfiles: merged.filter(i => i.profile?.first_name).length,
+          sample: merged.slice(0, 3).map(i => ({ 
+            name: `${i.profile?.first_name} ${i.profile?.last_name}`, 
+            hasPrivileges: i.has_owner_privileges,
+            userId: i.user_id
+          }))
+        });
+
         setInstructors(merged);
       } catch (e) {
-        console.error("Errore imprevisto nel caricamento istruttori:", e);
+        console.error("❌ Errore imprevisto nel caricamento istruttori:", e);
         setInstructors([]);
+        toast.error('Errore nel caricamento degli istruttori');
       } finally {
         setLoading(false);
       }
     };
-    load();
+
+    // Add small delay to ensure gym context is fully ready
+    const timer = setTimeout(() => {
+      load();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [selectedGym?.id, gymLoading]);
 
   useEffect(() => {

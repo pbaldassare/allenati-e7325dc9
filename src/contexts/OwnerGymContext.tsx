@@ -37,7 +37,14 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
   const { user, hasOwnerPrivileges } = useAuth();
 
   const fetchOwnerGyms = async () => {
+    console.log('🏢 OwnerGymContext - fetchOwnerGyms START:', {
+      user: user?.id,
+      hasOwnerPrivileges,
+      timestamp: new Date().toISOString()
+    });
+
     if (!user || !hasOwnerPrivileges) {
+      console.log('❌ No user or owner privileges, clearing gyms');
       setOwnedGyms([]);
       setSelectedGymState(null);
       setLoading(false);
@@ -52,8 +59,14 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
         _user_id: user.id
       });
 
+      console.log('🔍 Owned gym IDs query:', {
+        gymIds,
+        error: idsError,
+        count: gymIds?.length || 0
+      });
+
       if (idsError) {
-        console.error('Error fetching owned gym IDs:', idsError);
+        console.error('❌ Error fetching owned gym IDs:', idsError);
         toast.error('Errore nel caricamento delle palestre');
         return;
       }
@@ -78,6 +91,11 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
         return;
       }
 
+      console.log('✅ Gyms loaded successfully:', {
+        count: gyms?.length || 0,
+        gyms: gyms?.map(g => ({ id: g.id, name: g.name }))
+      });
+
       setOwnedGyms(gyms || []);
 
       // Auto-select gym
@@ -87,18 +105,26 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
         const savedGym = gyms.find(g => g.id === savedGymId);
         
         if (savedGym) {
+          console.log('🎯 Restored saved gym:', savedGym.name);
           setSelectedGymState(savedGym);
         } else {
           // Default to first gym
+          console.log('🎯 Selected first gym:', gyms[0].name);
           setSelectedGymState(gyms[0]);
           localStorage.setItem(SELECTED_GYM_KEY, gyms[0].id);
         }
+      } else {
+        console.log('❌ No gyms available');
+        setSelectedGymState(null);
       }
     } catch (error) {
-      console.error('Error in fetchOwnerGyms:', error);
+      console.error('❌ Error in fetchOwnerGyms:', error);
       toast.error('Errore nel caricamento delle palestre');
+      setOwnedGyms([]);
+      setSelectedGymState(null);
     } finally {
       setLoading(false);
+      console.log('🏢 OwnerGymContext - fetchOwnerGyms END');
     }
   };
 
