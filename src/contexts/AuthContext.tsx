@@ -119,16 +119,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           hasOwnerPrivileges = assignmentData?.has_owner_privileges || false;
         }
       } else if (role === 'gym_owner') {
-        const { data: gymData } = await supabase
-          .from('gyms')
-          .select('id, name')
-          .eq('owner_email', userEmail)
-          .single();
-
-        if (gymData) {
-          gymId = gymData.id;
-          gymName = gymData.name;
-        }
+        // For gym owners, set hasOwnerPrivileges = true
+        // The OwnerGymContext will handle loading owned gyms using get_user_owned_gyms()
+        hasOwnerPrivileges = true;
       }
 
       return {
