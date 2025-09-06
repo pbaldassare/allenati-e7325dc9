@@ -112,19 +112,18 @@ const OwnerInstructors: React.FC = () => {
         
         console.log("📊 All active instructors:", allInstructors?.length || 0, allInstructors);
 
-        // 1) Carica gli istruttori per la palestra selezionata con il join ai profili in una query
+        // 1) Carica gli istruttori per la palestra selezionata
         const { data: instData, error: instError } = await supabase
           .from("instructors")
           .select(`
             id, user_id, bio, is_active, has_owner_privileges, created_at, 
-            specializations, certifications, experience_years, hourly_rate, gym_id,
-            profiles!inner(first_name, last_name, phone, profile_picture_url)
+            specializations, certifications, experience_years, hourly_rate, gym_id
           `)
           .eq("is_active", true)
           .eq("gym_id", selectedGym.id)
           .order("created_at", { ascending: false });
 
-        console.log("🎯 Instructors with profiles for gym:", instData?.length || 0, instData);
+        console.log("🎯 Instructors for gym:", instData?.length || 0, instData);
 
         if (instError) {
           console.error("Errore nel caricamento degli istruttori:", instError);
@@ -133,8 +132,35 @@ const OwnerInstructors: React.FC = () => {
           return;
         }
 
-        // 2) Trasforma i dati in formato Instructor
-        const merged: Instructor[] = (instData || []).map((ins: any) => ({
+        const instructorsList = (instData || []) as any[];
+        const userIds = instructorsList.map((i) => i.user_id).filter(Boolean);
+
+        // 2) Carica i profili collegati
+        let profilesById = new Map<string, any>();
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("user_id, first_name, last_name, phone, profile_picture_url")
+            .in("user_id", userIds);
+
+          console.log('👤 Profiles loaded:', {
+            requestedUserIds: userIds,
+            foundProfiles: profilesData?.length || 0,
+            error: profilesError,
+            data: profilesData
+          });
+
+          if (!profilesError && profilesData) {
+            profilesById = new Map(
+              profilesData.map((p: any) => [p.user_id as string, p])
+            );
+          } else if (profilesError) {
+            console.warn("Errore caricamento profili:", profilesError);
+          }
+        }
+
+        // 3) Merge dei dati
+        const merged: Instructor[] = instructorsList.map((ins: any) => ({
           id: ins.id,
           user_id: ins.user_id,
           gym_id: ins.gym_id,
@@ -147,11 +173,11 @@ const OwnerInstructors: React.FC = () => {
           has_owner_privileges: ins.has_owner_privileges ?? false,
           created_at: ins.created_at,
           updated_at: ins.updated_at,
-          profile: {
-            first_name: ins.profiles?.first_name || "Nome",
-            last_name: ins.profiles?.last_name || "Non Disponibile",
-            phone: ins.profiles?.phone || null,
-            profile_picture_url: ins.profiles?.profile_picture_url || null,
+          profile: profilesById.get(ins.user_id) || {
+            first_name: "Nome",
+            last_name: "Non Disponibile",
+            phone: null,
+            profile_picture_url: null,
           },
         }));
 
