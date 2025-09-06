@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useOwnerGym } from "@/contexts/OwnerGymContext";
 
 interface Instructor {
   id: string;
@@ -29,6 +30,7 @@ interface Instructor {
 }
 
 const OwnerInstructors: React.FC = () => {
+  const { selectedGym, loading: gymLoading } = useOwnerGym();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,15 +71,23 @@ const OwnerInstructors: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
+      // Early return if no gym selected or still loading
+      if (gymLoading || !selectedGym?.id) {
+        setLoading(false);
+        setInstructors([]);
+        return;
+      }
+
       try {
         setLoading(true);
-        // 1) Carica gli istruttori
+        // 1) Carica gli istruttori per la palestra selezionata
         const { data: instData, error: instError } = await (supabase as any)
           .from("instructors")
           .select(
             `id, user_id, bio, is_active, has_owner_privileges, created_at, specializations, certifications, experience_years, hourly_rate`
           )
           .eq("is_active", true)
+          .eq("gym_id", selectedGym.id)
           .order("created_at", { ascending: false });
 
         if (instError) {
@@ -127,7 +137,7 @@ const OwnerInstructors: React.FC = () => {
       }
     };
     load();
-  }, []);
+  }, [selectedGym?.id, gymLoading]);
 
   useEffect(() => {
     const channel = supabase
