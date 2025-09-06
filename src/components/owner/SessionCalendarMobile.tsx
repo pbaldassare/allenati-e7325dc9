@@ -8,6 +8,7 @@ import { format, addDays, startOfDay } from "date-fns";
 import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface SessionData {
   id: string;
@@ -27,56 +28,21 @@ interface SessionData {
 }
 
 const SessionCalendarMobile: React.FC = () => {
+  const { selectedGym } = useOwnerGym();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     fetchSessions();
-  }, [currentDate]);
+  }, [currentDate, selectedGym]);
 
   const fetchSessions = async () => {
     setLoading(true);
     
     try {
-      // Get user's gym ID (for gym owners)
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('SessionCalendarMobile - User:', user);
-      
-      if (!user) {
-        console.log('SessionCalendarMobile - No user found');
-        setSessions([]);
-        setLoading(false);
-        return;
-      }
-
-      // First try to get gym from user_gym_memberships, then from ownership
-      let gymId = null;
-      
-      const { data: membership } = await supabase
-        .from('user_gym_memberships')
-        .select('gym_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (membership) {
-        gymId = membership.gym_id;
-      } else {
-        // Check if user is a gym owner
-        const { data: ownerGym } = await supabase
-          .from('gyms')
-          .select('id')
-          .eq('owner_email', user.email)
-          .maybeSingle();
-        
-        if (ownerGym) {
-          gymId = ownerGym.id;
-        }
-      }
-
-      if (!gymId) {
-        console.log('SessionCalendarMobile - No gym ID found');
+      if (!selectedGym?.id) {
+        console.log('SessionCalendarMobile - No selected gym found');
         setSessions([]);
         setLoading(false);
         return;
@@ -98,7 +64,7 @@ const SessionCalendarMobile: React.FC = () => {
             credits_required
           )
         `)
-        .eq('courses.gym_id', gymId)
+        .eq('courses.gym_id', selectedGym.id)
         .eq('session_date', format(dayStart, 'yyyy-MM-dd'))
         .in('status', ['scheduled', 'hidden'])
         .order('start_time');

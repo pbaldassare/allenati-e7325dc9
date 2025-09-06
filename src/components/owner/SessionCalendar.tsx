@@ -11,6 +11,7 @@ import { CourseParticipantCount } from "@/components/CourseParticipantCount";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
 import SessionCalendarMobile from "./SessionCalendarMobile";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface SessionData {
   id: string;
@@ -33,6 +34,7 @@ type ViewMode = 'week' | 'month';
 
 const SessionCalendar: React.FC = () => {
   const isMobile = useIsMobile();
+  const { selectedGym } = useOwnerGym();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -43,7 +45,7 @@ const SessionCalendar: React.FC = () => {
     if (!isMobile) {
       fetchSessions();
     }
-  }, [currentWeek, currentMonth, viewMode, isMobile]);
+  }, [currentWeek, currentMonth, viewMode, isMobile, selectedGym]);
 
   // Return mobile version if on mobile
   if (isMobile) {
@@ -54,40 +56,7 @@ const SessionCalendar: React.FC = () => {
     setLoading(true);
     
     try {
-      // Get user's gym ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setSessions([]);
-        setLoading(false);
-        return;
-      }
-
-      // First try to get gym from user_gym_memberships, then from ownership
-      let gymId = null;
-      
-      const { data: membership } = await supabase
-        .from('user_gym_memberships')
-        .select('gym_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (membership) {
-        gymId = membership.gym_id;
-      } else {
-        // Check if user is a gym owner
-        const { data: ownerGym } = await supabase
-          .from('gyms')
-          .select('id')
-          .eq('owner_email', user.email)
-          .maybeSingle();
-        
-        if (ownerGym) {
-          gymId = ownerGym.id;
-        }
-      }
-
-      if (!gymId) {
+      if (!selectedGym?.id) {
         setSessions([]);
         setLoading(false);
         return;
@@ -116,7 +85,7 @@ const SessionCalendar: React.FC = () => {
             credits_required
           )
         `)
-        .eq('courses.gym_id', gymId)
+        .eq('courses.gym_id', selectedGym.id)
         .gte('session_date', format(startDate, 'yyyy-MM-dd'))
         .lte('session_date', format(endDate, 'yyyy-MM-dd'))
         .in('status', ['scheduled', 'hidden'])
