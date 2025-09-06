@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
   CreditCard, 
@@ -27,6 +28,7 @@ interface GymStripeData {
 
 const OwnerStripeSetup = () => {
   const { user } = useAuth();
+  const { selectedGym } = useOwnerGym();
   const { toast } = useToast();
   const [gym, setGym] = useState<GymStripeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,29 +44,19 @@ const OwnerStripeSetup = () => {
   useEffect(() => {
     document.title = 'Configurazione Stripe | Gym Manager';
     loadGymData();
-  }, []);
+  }, [selectedGym]);
 
   const loadGymData = async () => {
     try {
-      if (!user) return;
-
-      // Get user's gym
-      const { data: membership } = await supabase
-        .from('user_gym_memberships')
-        .select('gym_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .eq('membership_type', 'owner')
-        .single();
-
-      if (!membership) {
-        toast({
-          title: "Errore",
-          description: "Nessuna palestra trovata per questo proprietario",
-          variant: "destructive",
-        });
+      if (!user || !selectedGym) {
+        console.log('🚫 OwnerStripeSetup: No user or selected gym');
         return;
       }
+
+      console.log('🔐 OwnerStripeSetup: Loading Stripe data for gym:', {
+        gymId: selectedGym.id,
+        gymName: selectedGym.name
+      });
 
       // Get gym with Stripe data
       const { data: gymData, error } = await supabase
@@ -76,7 +68,7 @@ const OwnerStripeSetup = () => {
           stripe_publishable_key,
           stripe_credentials_configured
         `)
-        .eq('id', membership.gym_id)
+        .eq('id', selectedGym.id)
         .single();
 
       if (error) throw error;
