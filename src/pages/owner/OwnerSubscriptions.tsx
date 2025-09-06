@@ -646,7 +646,7 @@ const OwnerSubscriptions: React.FC = () => {
                            </div>
                         </div>
                       </TableCell>
-                      <TableCell>{sub.plan.name}</TableCell>
+                      <TableCell>{sub.plan?.name || 'Piano non disponibile'}</TableCell>
                       <TableCell>
                         {new Date(sub.expires_at).toLocaleDateString()}
                       </TableCell>
@@ -715,7 +715,7 @@ const OwnerSubscriptions: React.FC = () => {
                                </div>
                             </div>
                           </TableCell>
-                          <TableCell>{sub.plan.name}</TableCell>
+                          <TableCell>{sub.plan?.name || 'Piano non disponibile'}</TableCell>
                           <TableCell>
                             {expiresDate.toLocaleDateString()}
                           </TableCell>
