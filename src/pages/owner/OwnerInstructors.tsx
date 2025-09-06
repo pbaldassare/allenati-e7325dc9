@@ -71,8 +71,15 @@ const OwnerInstructors: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
+      console.log("🏋️ OwnerInstructors - DEBUG:", {
+        gymLoading,
+        selectedGym,
+        selectedGymId: selectedGym?.id
+      });
+
       // Early return if no gym selected or still loading
       if (gymLoading || !selectedGym?.id) {
+        console.log("🚫 Early return:", { gymLoading, selectedGymId: selectedGym?.id });
         setLoading(false);
         setInstructors([]);
         return;
@@ -80,6 +87,16 @@ const OwnerInstructors: React.FC = () => {
 
       try {
         setLoading(true);
+        console.log("🔍 Fetching instructors for gym:", selectedGym.id);
+        
+        // TEMPORANEO: Prima proviamo senza filtro per vedere se ci sono istruttori
+        const { data: allInstructors, error: allError } = await supabase
+          .from("instructors")
+          .select("*")
+          .eq("is_active", true);
+        
+        console.log("📊 All active instructors:", allInstructors?.length || 0, allInstructors);
+
         // 1) Carica gli istruttori per la palestra selezionata
         const { data: instData, error: instError } = await (supabase as any)
           .from("instructors")
@@ -89,6 +106,8 @@ const OwnerInstructors: React.FC = () => {
           .eq("is_active", true)
           .eq("gym_id", selectedGym.id)
           .order("created_at", { ascending: false });
+
+        console.log("🎯 Filtered instructors for gym:", instData?.length || 0, instData);
 
         if (instError) {
           console.error("Errore nel caricamento degli istruttori:", instError);
