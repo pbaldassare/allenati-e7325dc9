@@ -71,6 +71,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         cat.main_categories?.requires_belt === true
       );
       setShouldShowBelt(hasMartialArts);
+      
+      // Reset belt to "Nessuna" if martial arts not available
+      if (!hasMartialArts) {
+        setFormData(prev => ({ ...prev, belt: 'Nessuna' }));
+      }
+    } else {
+      setShouldShowBelt(false);
+      setFormData(prev => ({ ...prev, belt: 'Nessuna' }));
     }
   }, [formData.gymId, categories]);
 

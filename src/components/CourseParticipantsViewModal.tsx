@@ -25,6 +25,13 @@ interface Participant {
     plan_name: string;
     unlimited_access: boolean;
   };
+  courses?: {
+    course_categories?: {
+      main_categories?: {
+        requires_belt: boolean;
+      };
+    };
+  };
 }
 
 interface CourseParticipantsViewModalProps {
@@ -147,11 +154,13 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     return <Badge variant="secondary">{participant.subscription.plan_name}</Badge>;
   };
 
-  const getBeltBadge = (belt?: string) => {
-    if (!belt) return null;
+  const getBeltBadge = (belt?: string, courseCategory?: any) => {
+    if (!belt || belt === 'Nessuna') return null;
+    
+    // Only show belt if the course requires it (martial arts)
+    if (!courseCategory?.main_categories?.requires_belt) return null;
     
     const beltColors: Record<string, string> = {
-      'Nessuna': 'bg-muted text-muted-foreground border border-muted-foreground/30',
       'Bianca': 'bg-white text-black border border-gray-300',
       'Blu': 'bg-blue-500 text-white',
       'Viola': 'bg-purple-500 text-white',
@@ -232,7 +241,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
                               <h4 className="font-medium">
                                 {participant.user.first_name} {participant.user.last_name}
                               </h4>
-                              {getBeltBadge(participant.user.belt)}
+                              {getBeltBadge(participant.user.belt, participant.courses?.course_categories)}
                               {isStaff && getSubscriptionBadge(participant)}
                             </div>
                             {isStaff && (
