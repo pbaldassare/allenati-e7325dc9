@@ -122,11 +122,18 @@ const OwnerUsers = () => {
           (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
         );
 
-        // Get profiles
+        // Get profiles - using correct user_id join
         const { data: profiles, error: profErr } = await supabase
           .from('profiles')
           .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
           .in('user_id', userIds);
+        
+        console.log('👤 Profiles query result:', {
+          requestedUserIds: userIds.length,
+          foundProfiles: profiles?.length || 0,
+          error: profErr,
+          sample: profiles?.slice(0, 3)
+        });
         
         if (profErr) throw profErr;
 
@@ -180,23 +187,26 @@ const OwnerUsers = () => {
         // Set of instructor user IDs
         const instructorUserIds = new Set((instructors || []).map((i: any) => i.user_id));
 
-        const combined = (profiles || []).map((p: any) => {
-          const cert = latestCertByUser.get(p.user_id);
+        // Create combined member data - ensure all users from memberships are included
+        const combined = userIds.map((userId: string) => {
+          const profile = (profiles || []).find((p: any) => p.user_id === userId);
+          const cert = latestCertByUser.get(userId);
+          
           return {
-            user_id: p.user_id,
-            first_name: p.first_name,
-            last_name: p.last_name,
-            email: p.email,
-            phone: p.phone,
-            fiscal_code: p.fiscal_code,
-            profile_picture_url: p.profile_picture_url,
-            membership_status: membershipByUser.get(p.user_id)?.status ?? 'unknown',
-            membership_type: membershipByUser.get(p.user_id)?.membership_type ?? 'member',
-            user_roles: rolesByUser.get(p.user_id) || ['basic_user'],
-            is_instructor: instructorUserIds.has(p.user_id),
+            user_id: userId,
+            first_name: profile?.first_name || 'Nome',
+            last_name: profile?.last_name || 'Non Disponibile',
+            email: profile?.email || null,
+            phone: profile?.phone || null,
+            fiscal_code: profile?.fiscal_code || null,
+            profile_picture_url: profile?.profile_picture_url || null,
+            membership_status: membershipByUser.get(userId)?.status ?? 'unknown',
+            membership_type: membershipByUser.get(userId)?.membership_type ?? 'member',
+            user_roles: rolesByUser.get(userId) || ['basic_user'],
+            is_instructor: instructorUserIds.has(userId),
             medical_expiry_date: cert?.expiry_date ?? null,
             medical_file_path: cert?.file_path ?? null,
-            belt: p.belt ?? null,
+            belt: profile?.belt ?? null,
           } as MemberProfile;
         });
 

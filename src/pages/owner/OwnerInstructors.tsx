@@ -134,13 +134,20 @@ const OwnerInstructors: React.FC = () => {
         const instructorsList = (instData || []) as any[];
         const userIds = instructorsList.map((i) => i.user_id).filter(Boolean);
 
-        // 2) Carica i profili collegati (nome, cognome, telefono, avatar)
+        // 2) Carica i profili collegati (nome, cognome, telefono, avatar) - using correct user_id join
         let profilesById = new Map<string, any>();
         if (userIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await (supabase as any)
+          const { data: profilesData, error: profilesError } = await supabase
             .from("profiles")
             .select("user_id, first_name, last_name, phone, profile_picture_url")
             .in("user_id", userIds);
+
+          console.log('👤 Instructor profiles query result:', {
+            requestedUserIds: userIds.length,
+            foundProfiles: profilesData?.length || 0,
+            error: profilesError,
+            sample: profilesData?.slice(0, 3)
+          });
 
           if (!profilesError && profilesData) {
             profilesById = new Map(
@@ -151,12 +158,17 @@ const OwnerInstructors: React.FC = () => {
           }
         }
 
-        // 3) Merge dei dati
+        // 3) Merge dei dati with null-safe fallbacks
         const merged: Instructor[] = instructorsList.map((ins: any) => ({
           ...ins,
+          bio: ins.bio || null,
+          specializations: ins.specializations || [],
+          certifications: ins.certifications || [],
+          experience_years: ins.experience_years || null,
+          hourly_rate: ins.hourly_rate || null,
           profile: profilesById.get(ins.user_id) || {
-            first_name: "",
-            last_name: "",
+            first_name: "Nome",
+            last_name: "Non Disponibile",
             phone: null,
             profile_picture_url: null,
           },
