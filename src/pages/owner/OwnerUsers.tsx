@@ -17,6 +17,7 @@ import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploa
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDetailsModal from '@/components/owner/UserDetailsModal';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface MemberProfile {
   user_id: string;
@@ -39,6 +40,7 @@ interface MemberProfile {
 
 const OwnerUsers = () => {
   const isMobile = useIsMobile();
+  const { selectedGym } = useOwnerGym();
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
@@ -68,6 +70,12 @@ const OwnerUsers = () => {
 
   useEffect(() => {
     const loadMembers = async () => {
+      if (!selectedGym?.id) {
+        setMembers([]);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const { data: userRes } = await supabase.auth.getUser();
@@ -78,24 +86,12 @@ const OwnerUsers = () => {
           return;
         }
 
-        // Debug: verifica permessi utente
-        console.log('DEBUG - Current user ID:', userId);
-        const { data: debugInfo } = await (supabase as any).rpc('debug_user_permissions', { _user_id: userId });
-        console.log('DEBUG - User permissions:', debugInfo);
-
-        const { data: gymId, error: gymErr } = await (supabase as any).rpc('get_user_gym_id', { _user_id: userId });
-        console.log('DEBUG - Gym ID result:', gymId, 'Error:', gymErr);
-        if (gymErr) throw gymErr;
-        if (!gymId) {
-          setMembers([]);
-          toast({ title: 'Nessuna palestra trovata', description: 'Associa prima una palestra al tuo account.', variant: 'destructive' });
-          return;
-        }
+        console.log('Loading members for gym:', selectedGym.id);
 
         const { data: memberships, error: memErr } = await supabase
           .from('user_gym_memberships')
           .select('user_id, status, membership_type')
-          .eq('gym_id', gymId);
+          .eq('gym_id', selectedGym.id);
         
         if (memErr) throw memErr;
 
@@ -132,7 +128,7 @@ const OwnerUsers = () => {
           .select('user_id')
           .in('user_id', userIds)
           .eq('is_active', true)
-          .eq('gym_id', gymId);
+          .eq('gym_id', selectedGym.id);
         
         if (instructorErr) throw instructorErr;
 
@@ -140,7 +136,7 @@ const OwnerUsers = () => {
         const { data: certs, error: certsErr } = await supabase
           .from('medical_certificates')
           .select('user_id, expiry_date, file_path, created_at')
-          .eq('gym_id', gymId)
+          .eq('gym_id', selectedGym.id)
           .in('user_id', userIds)
           .order('created_at', { ascending: false });
         if (certsErr) throw certsErr;
@@ -197,7 +193,7 @@ const OwnerUsers = () => {
     };
 
     loadMembers();
-  }, []);
+  }, [selectedGym?.id, toast]);
 
   // Helper function to get the highest priority role
   const getHighestRole = (roles: string[]) => {

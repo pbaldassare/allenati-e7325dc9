@@ -12,6 +12,7 @@ import { CourseParticipantOverview } from "@/components/CourseParticipantOvervie
 import { useToast } from "@/hooks/use-toast";
 import { RepairCoursesButton } from '@/components/RepairCoursesButton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface CourseItem {
   id: string;
@@ -42,6 +43,7 @@ interface CourseItem {
 const OwnerCoursesList: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { selectedGym } = useOwnerGym();
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<CourseItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,42 +74,16 @@ const OwnerCoursesList: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
+      if (!selectedGym?.id) {
+        setCourses([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         
-        // Get user's gym_id
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast({
-            title: 'Errore',
-            description: 'Utente non autenticato',
-            variant: 'destructive',
-          });
-          setLoading(false);
-          return;
-        }
-
-        const { data: gymId, error: gymError } = await supabase
-          .rpc('get_user_gym_id', { _user_id: user.id });
-        
-        if (gymError) {
-          console.error('Error getting gym ID:', gymError);
-          toast({
-            title: 'Errore',
-            description: 'Impossibile ottenere l\'ID della palestra',
-            variant: 'destructive',
-          });
-          setLoading(false);
-          return;
-        }
-
-        if (!gymId) {
-          console.log('No gym ID found for user');
-          setLoading(false);
-          return;
-        }
-
-        console.log('Loading courses for gym:', gymId);
+        console.log('Loading courses for gym:', selectedGym.id);
 
         // Fetch courses with separate queries for better compatibility
         const { data, error } = await supabase
@@ -124,7 +100,7 @@ const OwnerCoursesList: React.FC = () => {
             category_id,
             instructor_id
           `)
-          .eq('gym_id', gymId)
+          .eq('gym_id', selectedGym.id)
           .order("created_at", { ascending: false });
         
         if (error) {
@@ -263,7 +239,7 @@ const OwnerCoursesList: React.FC = () => {
       setLoading(false);
     };
     load();
-  }, [toast]);
+  }, [selectedGym?.id, toast]);
 
   // TEMPORARILY DISABLED - Duplicate functionality
   /*

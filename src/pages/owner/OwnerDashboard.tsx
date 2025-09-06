@@ -9,6 +9,7 @@ import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coin
 import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface GymStripeData {
   id: string;
@@ -17,6 +18,7 @@ interface GymStripeData {
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
+  const { selectedGym } = useOwnerGym();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [membersCount, setMembersCount] = useState<number | null>(null);
@@ -38,44 +40,40 @@ const OwnerDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        if (!user) return;
+      if (!selectedGym?.id) {
+        setMembersCount(null);
+        setUpcomingBookings(null);
+        setGymStripeData(null);
+        setLoading(false);
+        return;
+      }
 
-        // Get user's gym to fetch Stripe data
-        const { data: membership } = await supabase
-          .from('user_gym_memberships')
-          .select('gym_id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .eq('membership_type', 'owner')
+      try {
+        // Get gym Stripe data
+        const { data: gymData } = await supabase
+          .from('gyms')
+          .select(`
+            id,
+            stripe_credentials_configured
+          `)
+          .eq('id', selectedGym.id)
           .single();
 
-        if (membership) {
-          // Get gym Stripe data
-          const { data: gymData } = await supabase
-            .from('gyms')
-            .select(`
-              id,
-              stripe_credentials_configured
-            `)
-            .eq('id', membership.gym_id)
-            .single();
-
-          if (gymData) {
-            setGymStripeData(gymData);
-          }
+        if (gymData) {
+          setGymStripeData(gymData);
         }
 
-        // Count active memberships for this owner's gym (RLS restricts automatically)
+        // Count active memberships for this gym
         const { count: membersCnt } = await supabase
           .from('user_gym_memberships')
-          .select('id', { count: 'exact', head: true });
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', selectedGym.id);
 
         // Get courses for this gym only
         const { data: courses } = await supabase
           .from('courses')
           .select('id')
-          .eq('gym_id', membership?.gym_id);
+          .eq('gym_id', selectedGym.id);
 
         let bookingsCnt: number | null = 0;
         if (courses && courses.length > 0) {
@@ -99,7 +97,7 @@ const OwnerDashboard = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [selectedGym?.id]);
 
   return (
     <div className="space-y-6">

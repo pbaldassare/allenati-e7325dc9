@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface SubscriptionStats {
   total: number;
@@ -41,6 +42,7 @@ interface UserSubscription {
 }
 
 const OwnerSubscriptions: React.FC = () => {
+  const { selectedGym } = useOwnerGym();
   const [stats, setStats] = useState<SubscriptionStats>({
     total: 0,
     active: 0,
@@ -59,28 +61,25 @@ const OwnerSubscriptions: React.FC = () => {
 
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
-    loadSubscriptionData();
-  }, []);
+    if (selectedGym?.id) {
+      loadSubscriptionData();
+    } else {
+      setSubscriptions([]);
+      setLoading(false);
+    }
+  }, [selectedGym?.id]);
 
   const loadSubscriptionData = async () => {
+    if (!selectedGym?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Debug: verifica permessi utente
-      console.log('DEBUG - Current user ID:', user.id);
-      const { data: debugInfo } = await supabase.rpc('debug_user_permissions', { _user_id: user.id });
-      console.log('DEBUG - User permissions:', debugInfo);
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      console.log('DEBUG - Gym ID result:', gymId);
-      if (!gymId) return;
+      console.log('Loading subscriptions for gym:', selectedGym.id);
 
       // First get gym member user IDs
       const { data: memberIds } = await supabase
         .from('user_gym_memberships')
         .select('user_id')
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .eq('status', 'active');
 
       if (!memberIds || memberIds.length === 0) {

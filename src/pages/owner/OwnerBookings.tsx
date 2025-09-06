@@ -12,8 +12,10 @@ import { Search, CheckCircle, XCircle, Clock, Trash2, Calendar, Users, TrendingU
 import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 const OwnerBookings: React.FC = () => {
+  const { selectedGym } = useOwnerGym();
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('confirmed');
