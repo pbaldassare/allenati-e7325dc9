@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import SubscriptionPlanForm from '@/components/owner/SubscriptionPlanForm';
 
 interface SubscriptionPlan {
@@ -24,6 +25,7 @@ interface SubscriptionPlan {
 }
 
 const OwnerSubscriptionPlans: React.FC = () => {
+  const { selectedGym } = useOwnerGym();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -32,24 +34,35 @@ const OwnerSubscriptionPlans: React.FC = () => {
   useEffect(() => {
     document.title = 'Gestione Piani Abbonamento | Area Proprietario';
     loadPlans();
-  }, []);
+  }, [selectedGym]);
 
   const loadPlans = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!selectedGym) {
+        console.log('🚫 OwnerSubscriptionPlans: No selected gym');
+        setPlans([]);
+        return;
+      }
 
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) return;
+      console.log('📋 OwnerSubscriptionPlans: Loading plans for gym:', {
+        gymId: selectedGym.id,
+        gymName: selectedGym.name
+      });
 
       // Load only gym-specific plans
       const { data, error } = await supabase
         .from('subscription_plans')
         .select('*')
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log('✅ OwnerSubscriptionPlans: Plans loaded:', {
+        count: data?.length || 0,
+        plans: data?.map(p => ({ id: p.id, name: p.name }))
+      });
+      
       setPlans(data || []);
     } catch (error) {
       console.error('Error loading plans:', error);
