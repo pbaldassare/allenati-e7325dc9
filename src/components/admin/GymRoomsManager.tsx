@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, MapPin, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ export const GymRoomsManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingRoom, setEditingRoom] = useState<GymRoom | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [userGymId, setUserGymId] = useState<string | null>(null);
+  const { selectedGym } = useOwnerGym();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -51,31 +52,20 @@ export const GymRoomsManager: React.FC = () => {
   });
 
   useEffect(() => {
-    const initializeData = async () => {
-      // Get user's gym ID first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-        setUserGymId(gymId);
-        // Load rooms only after getting gym ID
-        if (gymId) {
-          await loadRooms(gymId);
-        }
-      }
-    };
-    
-    initializeData();
-  }, []);
+    if (selectedGym?.id) {
+      console.log('🏢 GymRoomsManager - Loading rooms for gym:', selectedGym.name, 'ID:', selectedGym.id);
+      loadRooms(selectedGym.id);
+    }
+  }, [selectedGym]);
 
-  const loadRooms = async (gymId?: string) => {
-    const targetGymId = gymId || userGymId;
-    if (!targetGymId) return;
+  const loadRooms = async (gymId: string) => {
+    if (!gymId) return;
     
     try {
       const { data, error } = await supabase
         .from('gym_rooms')
         .select('*')
-        .eq('gym_id', targetGymId)
+        .eq('gym_id', gymId)
         .order('name');
 
       if (error) throw error;
@@ -128,10 +118,10 @@ export const GymRoomsManager: React.FC = () => {
       return;
     }
 
-    if (!userGymId) {
+    if (!selectedGym?.id) {
       toast({
         title: 'Errore',
-        description: 'ID palestra non trovato',
+        description: 'Palestra non selezionata',
         variant: 'destructive',
       });
       return;
@@ -160,7 +150,7 @@ export const GymRoomsManager: React.FC = () => {
         const { error } = await supabase
           .from('gym_rooms')
           .insert({
-            gym_id: userGymId,
+            gym_id: selectedGym.id,
             name: formData.name,
             description: formData.description,
             color: formData.color,
@@ -177,7 +167,9 @@ export const GymRoomsManager: React.FC = () => {
 
       setIsDialogOpen(false);
       resetForm();
-      await loadRooms();
+      if (selectedGym?.id) {
+        await loadRooms(selectedGym.id);
+      }
     } catch (error) {
       console.error('Error saving room:', error);
       toast({
@@ -202,7 +194,9 @@ export const GymRoomsManager: React.FC = () => {
         description: `Sala ${!room.is_active ? 'attivata' : 'disattivata'} con successo`,
       });
 
-      await loadRooms();
+      if (selectedGym?.id) {
+        await loadRooms(selectedGym.id);
+      }
     } catch (error) {
       console.error('Error toggling room status:', error);
       toast({
@@ -227,7 +221,9 @@ export const GymRoomsManager: React.FC = () => {
         description: 'Sala eliminata con successo',
       });
 
-      await loadRooms();
+      if (selectedGym?.id) {
+        await loadRooms(selectedGym.id);
+      }
     } catch (error) {
       console.error('Error deleting room:', error);
       toast({
