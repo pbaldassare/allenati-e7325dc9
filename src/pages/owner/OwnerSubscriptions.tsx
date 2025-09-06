@@ -203,8 +203,8 @@ const OwnerSubscriptions: React.FC = () => {
   const canExtendSubscription = (subscription: UserSubscription) => {
     return (
       subscription.status === 'active' &&
-      subscription.plan.unlimited_access &&
-      subscription.plan.duration_days === 365
+      subscription.plan?.unlimited_access &&
+      subscription.plan?.duration_days === 365
     );
   };
 
