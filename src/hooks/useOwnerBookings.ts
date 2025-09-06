@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { toast } from 'sonner';
 
 export interface OwnerBooking {
@@ -37,31 +38,24 @@ export const useOwnerBookings = () => {
   const [bookings, setBookings] = useState<OwnerBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { selectedGym } = useOwnerGym();
 
   const fetchOwnerBookings = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !selectedGym) {
+      console.log('🚫 useOwnerBookings: No user or selected gym');
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       
-      // First get the owner's gym ID
-      const { data: gymData, error: gymError } = await supabase
-        .rpc('get_user_gym_id', { _user_id: user.id });
-
-      if (gymError) {
-        console.error('Error getting gym ID:', gymError);
-        toast.error('Errore nel recupero dei dati palestra');
-        return;
-      }
-
-      if (!gymData) {
-        console.error('No gym found for owner');
-        toast.error('Nessuna palestra associata al proprietario');
-        setBookings([]);
-        return;
-      }
-
-      console.log("🔍 Loading bookings for gym:", gymData);
+      const gymId = selectedGym.id;
+      console.log("🔍 Loading bookings for gym:", {
+        gymId,
+        gymName: selectedGym.name
+      });
 
       // 1) Prima query: bookings con corsi
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -74,7 +68,7 @@ export const useOwnerBookings = () => {
             gym_id
           )
         `)
-        .eq('courses.gym_id', gymData)
+        .eq('courses.gym_id', gymId)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
 
@@ -240,7 +234,7 @@ export const useOwnerBookings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, selectedGym]);
 
   return {
     bookings,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface RevenueStats {
   weeklyRevenue: number;
@@ -42,6 +43,7 @@ interface SubscriptionTypeBreakdown {
 
 export const useOwnerRevenue = () => {
   const { user } = useAuth();
+  const { selectedGym } = useOwnerGym();
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({
     weeklyRevenue: 0,
     monthlyRevenue: 0,
@@ -73,21 +75,17 @@ export const useOwnerRevenue = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user) return;
+      if (!user || !selectedGym) {
+        console.log('🚫 useOwnerRevenue: No user or selected gym');
+        return;
+      }
 
       try {
-        // Get user's gym
-        const { data: membership } = await supabase
-          .from('user_gym_memberships')
-          .select('gym_id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .eq('membership_type', 'owner')
-          .single();
-
-        if (!membership) return;
-
-        const gymId = membership.gym_id;
+        const gymId = selectedGym.id;
+        console.log('💰 useOwnerRevenue: Fetching stats for gym:', {
+          gymId,
+          gymName: selectedGym.name
+        });
 
         // Calculate dates
         const now = new Date();
@@ -407,7 +405,7 @@ export const useOwnerRevenue = () => {
     };
 
     fetchStats();
-  }, [user]);
+  }, [user, selectedGym]);
 
   return {
     revenueStats,
