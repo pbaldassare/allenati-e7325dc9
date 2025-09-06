@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGym } from '@/contexts/GymContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -41,7 +41,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 export const OwnerProfile: React.FC = () => {
   const { user } = useAuth();
-  const { selectedGym, refreshGyms } = useGym();
+  const { selectedGym, refreshOwnerGyms } = useOwnerGym();
   const [isLoading, setIsLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -165,7 +165,7 @@ export const OwnerProfile: React.FC = () => {
 
       // Refresh gyms data after a short delay to ensure database is synced
       setTimeout(() => {
-        refreshGyms();
+        refreshOwnerGyms();
       }, 1000);
       
     } catch (error) {
@@ -217,7 +217,7 @@ export const OwnerProfile: React.FC = () => {
 
       if (profileError) throw profileError;
 
-      await refreshGyms();
+      await refreshOwnerGyms();
       
       toast({
         title: 'Successo',
