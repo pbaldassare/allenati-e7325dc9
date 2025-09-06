@@ -30,7 +30,7 @@ interface Instructor {
 }
 
 const OwnerInstructors: React.FC = () => {
-  const { selectedGym, loading: gymLoading } = useOwnerGym();
+  const { selectedGym, ownedGyms, loading: gymLoading } = useOwnerGym();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,15 +71,25 @@ const OwnerInstructors: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      console.log("🏋️ OwnerInstructors - DEBUG:", {
+      console.log("🏋️ OwnerInstructors - DEBUG START:", {
         gymLoading,
         selectedGym,
-        selectedGymId: selectedGym?.id
+        selectedGymId: selectedGym?.id,
+        ownedGyms,
+        timestamp: new Date().toISOString()
       });
+
+      // Test authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log("🔐 Auth check:", { user: user?.id, error: authError });
 
       // Early return if no gym selected or still loading
       if (gymLoading || !selectedGym?.id) {
-        console.log("🚫 Early return:", { gymLoading, selectedGymId: selectedGym?.id });
+        console.log("🚫 Early return:", { 
+          gymLoading, 
+          selectedGymId: selectedGym?.id,
+          ownedGymsCount: ownedGyms?.length 
+        });
         setLoading(false);
         setInstructors([]);
         return;
