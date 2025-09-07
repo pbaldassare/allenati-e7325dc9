@@ -69,80 +69,109 @@ serve(async (req) => {
           ...conversationContext,
           { role: 'user', content: message }
         ],
-        functions: [
+        tools: [
           {
-            name: 'getAvailableCourses',
-            description: 'Ottieni la lista dei corsi disponibili per una data specifica',
-            parameters: {
-              type: 'object',
-              properties: {
-                date: { type: 'string', description: 'Data in formato YYYY-MM-DD' },
-                courseType: { type: 'string', description: 'Tipo di corso (opzionale)' }
-              },
-              required: ['date']
-            }
-          },
-          {
-            name: 'bookSession',
-            description: 'Prenota una lezione per l\'utente',
-            parameters: {
-              type: 'object',
-              properties: {
-                sessionId: { type: 'string', description: 'ID della sessione da prenotare' },
-                courseName: { type: 'string', description: 'Nome del corso' },
-                date: { type: 'string', description: 'Data della lezione' },
-                time: { type: 'string', description: 'Orario della lezione' }
-              },
-              required: ['sessionId', 'courseName', 'date', 'time']
-            }
-          },
-          {
-            name: 'getSessionParticipants',
-            description: 'Ottieni la lista dei partecipanti a una lezione',
-            parameters: {
-              type: 'object',
-              properties: {
-                sessionId: { type: 'string', description: 'ID della sessione' }
-              },
-              required: ['sessionId']
-            }
-          },
-          {
-            name: 'getUserBookings',
-            description: 'Ottieni le prenotazioni dell\'utente',
-            parameters: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', description: 'Stato delle prenotazioni (confirmed, cancelled, etc.)' }
+            type: 'function',
+            function: {
+              name: 'getAvailableCourses',
+              description: 'Ottieni la lista dei corsi disponibili per una data specifica',
+              parameters: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', description: 'Data in formato YYYY-MM-DD' },
+                  courseType: { type: 'string', description: 'Tipo di corso (opzionale)' }
+                },
+                required: ['date']
               }
             }
           },
           {
-            name: 'cancelBooking',
-            description: 'Cancella una prenotazione',
-            parameters: {
-              type: 'object',
-              properties: {
-                bookingId: { type: 'string', description: 'ID della prenotazione da cancellare' },
-                courseName: { type: 'string', description: 'Nome del corso' },
-                date: { type: 'string', description: 'Data della lezione' }
-              },
-              required: ['bookingId', 'courseName', 'date']
+            type: 'function',
+            function: {
+              name: 'prepareBookingConfirmation',
+              description: 'Prepara la conferma di prenotazione per una lezione specifica',
+              parameters: {
+                type: 'object',
+                properties: {
+                  sessionId: { type: 'string', description: 'ID della sessione' },
+                  courseName: { type: 'string', description: 'Nome del corso' },
+                  date: { type: 'string', description: 'Data della lezione' },
+                  time: { type: 'string', description: 'Orario della lezione' }
+                },
+                required: ['sessionId', 'courseName', 'date', 'time']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getSessionParticipants',
+              description: 'Ottieni la lista dei partecipanti confermati per una sessione',
+              parameters: {
+                type: 'object',
+                properties: {
+                  sessionId: { type: 'string', description: 'ID della sessione' }
+                },
+                required: ['sessionId']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getUserBookings',
+              description: 'Ottieni lo storico delle prenotazioni dell\'utente',
+              parameters: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string', description: 'Stato delle prenotazioni (confirmed, cancelled, completed)' }
+                }
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'prepareCancellationConfirmation',
+              description: 'Prepara la conferma di cancellazione per una prenotazione',
+              parameters: {
+                type: 'object',
+                properties: {
+                  bookingId: { type: 'string', description: 'ID della prenotazione' },
+                  courseName: { type: 'string', description: 'Nome del corso' },
+                  date: { type: 'string', description: 'Data della lezione' }
+                },
+                required: ['bookingId', 'courseName', 'date']
+              }
             }
           }
         ],
-        function_call: 'auto'
+        tool_choice: 'auto'
       }),
     });
 
     const aiResponse = await response.json();
     
-    if (aiResponse.choices[0].function_call) {
-      return await handleFunctionCall(aiResponse.choices[0].function_call, user_id, gym_id);
+    console.log('OpenAI response:', JSON.stringify(aiResponse, null, 2));
+    
+    // Check if response has choices
+    if (!aiResponse.choices || aiResponse.choices.length === 0) {
+      throw new Error('Invalid response from OpenAI: no choices');
+    }
+    
+    const choice = aiResponse.choices[0];
+    
+    // Check for tool calls (new format)
+    if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+      const toolCall = choice.message.tool_calls[0];
+      return await handleFunctionCall({
+        name: toolCall.function.name,
+        arguments: toolCall.function.arguments
+      }, user_id, gym_id);
     }
 
     return new Response(JSON.stringify({
-      response: aiResponse.choices[0].message.content
+      response: choice.message?.content || 'Nessuna risposta disponibile'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -197,7 +226,7 @@ async function handleFunctionCall(functionCall: any, userId: string, gymId: stri
       case 'getAvailableCourses':
         return await getAvailableCourses(args, gymId);
       
-      case 'bookSession':
+      case 'prepareBookingConfirmation':
         return await prepareBookingConfirmation(args, userId, gymId);
       
       case 'getSessionParticipants':
@@ -206,7 +235,7 @@ async function handleFunctionCall(functionCall: any, userId: string, gymId: stri
       case 'getUserBookings':
         return await getUserBookings(userId, gymId, args.status);
       
-      case 'cancelBooking':
+      case 'prepareCancellationConfirmation':
         return await prepareCancellationConfirmation(args, userId);
       
       default:
