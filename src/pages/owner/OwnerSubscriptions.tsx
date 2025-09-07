@@ -249,30 +249,85 @@ const OwnerSubscriptions: React.FC = () => {
     await loadSubscriptionData();
   };
 
-  const handleDownloadReceipt = async (subscription: UserSubscription) => {
+  const handleDownloadReceipt = async (subscription: UserSubscription, retryCount = 0) => {
     try {
       setGeneratingReceipt(subscription.id);
+      
+      console.log(`[RECEIPT-DOWNLOAD] Starting receipt generation for subscription: ${subscription.id}, attempt: ${retryCount + 1}`);
       
       const { data, error } = await supabase.functions.invoke('generate-subscription-receipt', {
         body: { subscriptionId: subscription.id }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[RECEIPT-DOWNLOAD] Edge function error:', error);
+        throw error;
+      }
 
-      // Create blob from response and trigger download
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      console.log('[RECEIPT-DOWNLOAD] Edge function response received:', typeof data, data ? 'has data' : 'no data');
+
+      if (!data || !data.pdf) {
+        throw new Error('Invalid response format - missing PDF data');
+      }
+
+      // Convert base64 to blob using fetch approach for better compatibility
+      const base64Response = await fetch(`data:application/pdf;base64,${data.pdf}`);
+      const blob = await base64Response.blob();
+      
+      console.log('[RECEIPT-DOWNLOAD] PDF blob created, size:', blob.size, 'bytes');
+
+      if (blob.size === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `ricevuta-abbonamento-${subscription.user?.first_name || 'utente'}-${subscription.user?.last_name || 'sconosciuto'}.pdf`;
+      
+      // Ensure link is temporarily added to DOM for compatibility
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      
+      // Clean up object URL
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      console.log('[RECEIPT-DOWNLOAD] Download completed successfully');
+      
+      toast({
+        title: "Ricevuta scaricata",
+        description: "La ricevuta è stata generata e scaricata con successo.",
+      });
 
     } catch (error) {
-      console.error('Error generating receipt:', error);
-      alert('Errore nella generazione della ricevuta. Riprova più tardi.');
+      console.error('[RECEIPT-DOWNLOAD] Error generating receipt:', error);
+      
+      // Retry logic for transient failures
+      if (retryCount < 2 && (
+        error.message?.includes('network') || 
+        error.message?.includes('timeout') ||
+        error.message?.includes('fetch')
+      )) {
+        console.log(`[RECEIPT-DOWNLOAD] Retrying download, attempt ${retryCount + 2}/3...`);
+        setTimeout(() => {
+          handleDownloadReceipt(subscription, retryCount + 1);
+        }, 1000 * (retryCount + 1)); // Progressive delay
+        return;
+      }
+
+      // Show user-friendly error message
+      const errorMessage = error.message?.includes('PDF') 
+        ? 'Errore nella generazione del PDF. Riprova più tardi.'
+        : error.message?.includes('network') || error.message?.includes('fetch')
+        ? 'Errore di connessione. Verifica la tua connessione e riprova.'
+        : 'Errore nella generazione della ricevuta. Riprova più tardi.';
+
+      toast({
+        title: "Errore download ricevuta",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setGeneratingReceipt(null);
     }
