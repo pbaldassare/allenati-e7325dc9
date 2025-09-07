@@ -5,8 +5,10 @@ import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { BookOpen, Users, Calendar, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 
 const InstructorDashboard = () => {
+  const { selectedGymId } = useInstructorGym();
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
   const { hasOwnerPrivileges } = useAuth();

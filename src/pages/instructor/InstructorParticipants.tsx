@@ -8,6 +8,7 @@ import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { Users, Search, Calendar, Mail, Phone, X, UserPlus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,7 @@ import { InstructorManualEnrollment } from '@/components/instructor/InstructorMa
 const InstructorParticipants = () => {
   const [searchParams] = useSearchParams();
   const selectedCourseId = searchParams.get('course');
+  const { selectedGymId } = useInstructorGym();
   
   const { bookings, loading, cancelBooking } = useInstructorBookings();
   const { courses } = useInstructorCourses();

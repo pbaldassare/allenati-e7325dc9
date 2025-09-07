@@ -11,9 +11,11 @@ import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWe
 import { it } from 'date-fns/locale/it';
 import { useIsMobile } from '@/hooks/use-mobile';
 import InstructorScheduleMobile from '@/components/instructor/InstructorScheduleMobile';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 
 const InstructorSchedule = () => {
   const isMobile = useIsMobile();
+  const { selectedGymId } = useInstructorGym();
   
   // If mobile, render the mobile component
   if (isMobile) {
@@ -27,7 +29,7 @@ const InstructorSchedule = () => {
 
   useEffect(() => {
     fetchSessions();
-  }, [currentWeek, courses]);
+  }, [currentWeek, courses, selectedGymId]);
 
   const fetchSessions = async () => {
     if (!courses.length) return;

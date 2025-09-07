@@ -6,8 +6,10 @@ import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { BookOpen, Users, Clock, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 
 const InstructorCourses = () => {
+  const { selectedGymId } = useInstructorGym();
   const { courses, loading, error } = useInstructorCourses();
   const { hasOwnerPrivileges } = useAuth();
 

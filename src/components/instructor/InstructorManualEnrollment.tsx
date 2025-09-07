@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 
 interface User {
   id: string;
@@ -43,19 +44,30 @@ export const InstructorManualEnrollment: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { courses } = useInstructorCourses();
+  const { selectedGymId } = useInstructorGym();
 
   // Search users in the gym
   const searchUsers = async () => {
-    if (!searchTerm.trim()) {
+    if (!searchTerm.trim() || !selectedGymId) {
       setUsers([]);
       return;
     }
 
     setLoading(true);
     try {
+      // Only search users who are members of the selected gym
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, current_credits')
+        .select(`
+          user_id, 
+          first_name, 
+          last_name, 
+          email, 
+          current_credits,
+          user_gym_memberships!inner(gym_id, status)
+        `)
+        .eq('user_gym_memberships.gym_id', selectedGymId)
+        .eq('user_gym_memberships.status', 'active')
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
         .limit(10);
 
@@ -82,18 +94,23 @@ export const InstructorManualEnrollment: React.FC = () => {
     }
   };
 
-  // Load course sessions
+  // Load course sessions for the selected gym
   const loadSessions = async () => {
-    if (!selectedCourse) {
+    if (!selectedCourse || !selectedGymId) {
       setSessions([]);
       return;
     }
 
     try {
+      // Only load sessions for courses in the selected gym
       const { data, error } = await supabase
         .from('course_sessions')
-        .select('*')
+        .select(`
+          *,
+          courses!inner(gym_id)
+        `)
         .eq('course_id', selectedCourse)
+        .eq('courses.gym_id', selectedGymId)
         .eq('status', 'scheduled')
         .gte('session_date', new Date().toISOString().split('T')[0])
         .order('session_date', { ascending: true })
@@ -153,7 +170,7 @@ export const InstructorManualEnrollment: React.FC = () => {
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (searchTerm.trim()) {
+      if (searchTerm.trim() && selectedGymId) {
         searchUsers();
       } else {
         setUsers([]);
@@ -161,7 +178,7 @@ export const InstructorManualEnrollment: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
+  }, [searchTerm, selectedGymId]);
 
   const selectedCourseName = courses.find(c => c.id === selectedCourse)?.name || '';
   const selectedCourseCredits = courses.find(c => c.id === selectedCourse)?.credits_required || 1;
