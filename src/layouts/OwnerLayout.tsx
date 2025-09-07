@@ -5,7 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/compon
 import { OwnerSidebar } from '@/components/owner/OwnerSidebar';
 import { HowItWorksModal } from '@/components/modals/HowItWorksModal';
 import { Button } from '@/components/ui/button';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { OwnerGymProvider } from '@/contexts/OwnerGymContext';
@@ -15,7 +15,7 @@ import { RequestAdditionalGymDialog } from '@/components/owner/RequestAdditional
 export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const isMobile = useIsMobile();
-  const { hasOwnerPrivileges, isInstructor } = useAuth();
+  const { hasOwnerPrivileges, isInstructor, logout } = useAuth();
 
   // Determina il titolo in base al tipo di utente
   const isSuperInstructor = isInstructor && hasOwnerPrivileges;
@@ -57,6 +57,17 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                   <div className="flex items-center gap-2">
                     {isMobile && <OwnerGymSelector />}
                     <RequestAdditionalGymDialog />
+                    {isMobile && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={logout}
+                        className="flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Esci
+                      </Button>
+                    )}
                     {!isMobile && (
                       <Button 
                         variant="ghost" 
