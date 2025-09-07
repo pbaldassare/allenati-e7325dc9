@@ -10,7 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { OwnerGymProvider } from '@/contexts/OwnerGymContext';
 import { OwnerGymSelector } from '@/components/owner/OwnerGymSelector';
-import { RequestAdditionalGymDialog } from '@/components/owner/RequestAdditionalGymDialog';
+
 
 export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
@@ -70,7 +70,6 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                   </div>
                   <div className="flex items-center gap-2">
                     {isMobile && <OwnerGymSelector />}
-                    <RequestAdditionalGymDialog />
                     {isMobile && (
                       <Button 
                         variant="ghost" 

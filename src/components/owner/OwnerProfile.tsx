@@ -328,12 +328,27 @@ export const OwnerProfile: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Palestra Attuale</p>
-                  <p className="text-muted-foreground">{selectedGym.name} - {selectedGym.city}</p>
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/30 rounded-lg border border-dashed">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">Palestra Attuale</p>
+                      <p className="text-muted-foreground">{selectedGym.name}</p>
+                      <p className="text-xs text-muted-foreground">{selectedGym.city}</p>
+                    </div>
+                    <div className="text-xs text-emerald-600 font-medium">
+                      Collegata
+                    </div>
+                  </div>
                 </div>
-                <RequestAdditionalGymDialog />
+                
+                <div className="flex items-center justify-between pt-2">
+                  <div>
+                    <p className="text-sm font-medium">Richiedi collegamento ad un'altra palestra</p>
+                    <p className="text-xs text-muted-foreground">La richiesta verrà valutata dall'amministratore</p>
+                  </div>
+                  <RequestAdditionalGymDialog />
+                </div>
               </div>
             </CardContent>
           </Card>
