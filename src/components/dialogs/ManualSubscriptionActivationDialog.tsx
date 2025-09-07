@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Search, CreditCard, Calendar, User } from 'lucide-react';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface SubscriptionPlan {
   id: string;
@@ -41,6 +42,7 @@ export default function ManualSubscriptionActivationDialog({
   onActivated,
   preselectedUserId
 }: ManualSubscriptionActivationDialogProps) {
+  const { selectedGym } = useOwnerGym();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [members, setMembers] = useState<GymMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<GymMember[]>([]);
@@ -82,17 +84,16 @@ export default function ManualSubscriptionActivationDialog({
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) return;
+      if (!selectedGym?.id) {
+        toast.error('Nessuna palestra selezionata');
+        return;
+      }
 
       // Load subscription plans for this gym
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .eq('is_active', true)
         .order('price');
 
@@ -102,7 +103,7 @@ export default function ManualSubscriptionActivationDialog({
       const { data: membershipsData, error: membershipsError } = await supabase
         .from('user_gym_memberships')
         .select('user_id')
-        .eq('gym_id', gymId)
+        .eq('gym_id', selectedGym.id)
         .eq('status', 'active');
 
       if (membershipsError) {
@@ -172,12 +173,10 @@ export default function ManualSubscriptionActivationDialog({
       const plan = getSelectedPlan()!;
       const expiryDate = calculateExpiryDate()!;
 
-      // Get current user and gym ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-      if (!gymId) throw new Error('Gym not found');
+      // Check if gym is selected
+      if (!selectedGym?.id) {
+        throw new Error('Nessuna palestra selezionata');
+      }
 
       // Check for existing active subscriptions
       const { data: existingSubscriptions } = await supabase
@@ -202,7 +201,7 @@ export default function ManualSubscriptionActivationDialog({
         .insert({
           user_id: selectedMember.user_id,
           plan_id: selectedPlan,
-          gym_id: gymId,
+          gym_id: selectedGym.id,
           status: 'active',
           starts_at: new Date(startDate).toISOString(),
           expires_at: expiryDate.toISOString(),
@@ -217,7 +216,7 @@ export default function ManualSubscriptionActivationDialog({
           .from('credits_transactions')
           .insert({
             user_id: selectedMember.user_id,
-            gym_id: gymId,
+            gym_id: selectedGym.id,
             amount: plan.credits_included,
             balance_after: plan.credits_included,
             transaction_type: 'subscription_activation',
