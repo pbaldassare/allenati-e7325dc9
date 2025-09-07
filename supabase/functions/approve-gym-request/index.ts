@@ -23,35 +23,60 @@ serve(async (req) => {
       throw new Error("Request ID and action are required");
     }
 
-    // Get request details
-    const { data: request, error: requestError } = await supabaseClient
+    // Get request details - check both tables
+    let request, requestType;
+    
+    // First try gym_join_requests
+    const { data: joinRequest, error: joinError } = await supabaseClient
       .from('gym_join_requests')
       .select('*, gym:gyms(name)')
       .eq('id', requestId)
-      .single();
+      .maybeSingle();
+    
+    if (joinRequest) {
+      request = joinRequest;
+      requestType = 'join';
+    } else {
+      // Try additional_gym_requests
+      const { data: additionalRequest, error: additionalError } = await supabaseClient
+        .from('additional_gym_requests')
+        .select('*, gym:gyms(name)')
+        .eq('id', requestId)
+        .single();
+      
+      if (additionalError) throw additionalError;
+      request = additionalRequest;
+      requestType = 'additional';
+    }
 
-    if (requestError) throw requestError;
+    if (!request) {
+      throw new Error("Request not found");
+    }
 
     if (action === 'approve') {
       // Create gym membership
+      const membershipType = requestType === 'additional' ? 'owner' : 'member';
+      const userId = requestType === 'additional' ? request.requester_user_id : request.user_id;
+      
       const { error: membershipError } = await supabaseClient
         .from('user_gym_memberships')
         .insert({
-          user_id: request.user_id,
+          user_id: userId,
           gym_id: request.gym_id,
-          membership_type: 'member',
+          membership_type: membershipType,
           status: 'active'
         });
 
       if (membershipError) throw membershipError;
 
-      // Update request status
+      // Update request status in the appropriate table
+      const tableName = requestType === 'additional' ? 'additional_gym_requests' : 'gym_join_requests';
       const { error: updateError } = await supabaseClient
-        .from('gym_join_requests')
+        .from(tableName)
         .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: request.user_id // In realtà dovrebbe essere l'ID del gym owner
+          reviewed_by: userId // TODO: Should be the ID of the approving admin
         })
         .eq('id', requestId);
 
@@ -62,13 +87,16 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else if (action === 'reject') {
-      // Update request status
+      // Update request status in the appropriate table
+      const tableName = requestType === 'additional' ? 'additional_gym_requests' : 'gym_join_requests';
+      const userId = requestType === 'additional' ? request.requester_user_id : request.user_id;
+      
       const { error: updateError } = await supabaseClient
-        .from('gym_join_requests')
+        .from(tableName)
         .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: request.user_id, // In realtà dovrebbe essere l'ID del gym owner
+          reviewed_by: userId, // TODO: Should be the ID of the approving admin
           message: reason || 'Request rejected'
         })
         .eq('id', requestId);

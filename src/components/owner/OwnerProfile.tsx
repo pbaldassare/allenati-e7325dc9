@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Loader2, Building, User } from 'lucide-react';
+import { Camera, Loader2, Building, User, Link2 } from 'lucide-react';
+import { RequestAdditionalGymDialog } from '@/components/owner/RequestAdditionalGymDialog';
 
 const profileSchema = z.object({
   // Dati Palestra
@@ -311,6 +312,28 @@ export const OwnerProfile: React.FC = () => {
                     </Button>
                   </label>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Connected Gyms Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5" />
+                Palestre Collegate
+              </CardTitle>
+              <CardDescription>
+                Gestisci le palestre a cui sei collegato
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Palestra Attuale</p>
+                  <p className="text-muted-foreground">{selectedGym.name} - {selectedGym.city}</p>
+                </div>
+                <RequestAdditionalGymDialog />
               </div>
             </CardContent>
           </Card>

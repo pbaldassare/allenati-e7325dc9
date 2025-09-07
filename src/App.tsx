@@ -30,6 +30,7 @@ import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
 import AdminGyms from "./pages/admin/AdminGyms";
 import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
+import AdminGymRequests from "./pages/admin/AdminGymRequests";
 import AdminGymDetail from "./pages/admin/AdminGymDetail";
 import AdminGymEdit from "./pages/admin/AdminGymEdit";
 
@@ -113,6 +114,7 @@ const App = () => (
                   <Route path="gyms/:id" element={<AdminGymDetail />} />
                   <Route path="gyms/:id/edit" element={<AdminGymEdit />} />
                   <Route path="gym-applications" element={<AdminGymApplications />} />
+                  <Route path="gym-requests" element={<AdminGymRequests />} />
                   
                   <Route path="rooms" element={<AdminRooms />} />
                   <Route path="schedule" element={<AdminSchedule />} />

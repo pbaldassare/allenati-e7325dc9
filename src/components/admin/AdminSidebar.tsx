@@ -19,7 +19,8 @@ import {
   Users,
   Building,
   LogOut,
-  FileCheck
+  FileCheck,
+  Link2
 } from 'lucide-react';
 
 const dashboardItems = [
@@ -33,6 +34,7 @@ const userItems = [
 const gymItems = [
   { title: "Palestre", url: "/admin/gyms", icon: Building },
   { title: "Candidature Palestre", url: "/admin/gym-applications", icon: FileCheck },
+  { title: "Richieste Collegamento", url: "/admin/gym-requests", icon: Link2 },
 ];
 
 export function AdminSidebar() {
