@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -57,6 +59,10 @@ const OwnerSubscriptions: React.FC = () => {
   const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'status' | 'expires_at' | 'created_at'>('status');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -447,20 +453,74 @@ const OwnerSubscriptions: React.FC = () => {
     return null;
   };
 
-  // Filter subscriptions based on search query
-  const filteredSubscriptions = subscriptions.filter(sub => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const userName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
-    const userEmail = (sub.user?.email || '').toLowerCase();
-    return userName.includes(query) || userEmail.includes(query);
-  });
+  // Filter and sort subscriptions
+  const filteredAndSortedSubscriptions = React.useMemo(() => {
+    // First filter by search query
+    let filtered = subscriptions.filter(sub => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      const userName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
+      const userEmail = (sub.user?.email || '').toLowerCase();
+      return userName.includes(query) || userEmail.includes(query);
+    });
+
+    // Then sort
+    filtered.sort((a, b) => {
+      if (sortBy === 'status') {
+        // Custom status priority: active > expiring > expired > cancelled
+        const statusPriority = {
+          'active': 1,
+          'expired': 2,
+          'cancelled': 3
+        };
+        
+        const aPriority = statusPriority[a.status] || 4;
+        const bPriority = statusPriority[b.status] || 4;
+        
+        if (aPriority !== bPriority) {
+          return sortOrder === 'asc' ? aPriority - bPriority : bPriority - aPriority;
+        }
+        
+        // If same status, sort by expiration date for active subscriptions
+        if (a.status === 'active' && b.status === 'active') {
+          const aExpires = new Date(a.expires_at).getTime();
+          const bExpires = new Date(b.expires_at).getTime();
+          return aExpires - bExpires; // Sooner expiring first
+        }
+        
+        return 0;
+      } else if (sortBy === 'expires_at') {
+        const aDate = new Date(a.expires_at).getTime();
+        const bDate = new Date(b.expires_at).getTime();
+        return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
+      } else if (sortBy === 'created_at') {
+        const aDate = new Date(a.starts_at).getTime();
+        const bDate = new Date(b.starts_at).getTime();
+        return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [subscriptions, searchQuery, sortBy, sortOrder]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedSubscriptions.length / itemsPerPage);
+  const paginatedSubscriptions = filteredAndSortedSubscriptions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, sortOrder]);
 
   // Calculate filtered stats
   const filteredStats = {
-    total: filteredSubscriptions.length,
-    active: filteredSubscriptions.filter(s => s.status === 'active').length,
-    expiring_soon: filteredSubscriptions.filter(s => {
+    total: filteredAndSortedSubscriptions.length,
+    active: filteredAndSortedSubscriptions.filter(s => s.status === 'active').length,
+    expiring_soon: filteredAndSortedSubscriptions.filter(s => {
       const now = new Date();
       const soon = new Date();
       soon.setDate(soon.getDate() + 7);
@@ -535,17 +595,38 @@ const OwnerSubscriptions: React.FC = () => {
         </Card>
       </div>
 
-      {/* Search Bar */}
+      {/* Search and Sorting Controls */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Cerca utente per nome o email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Cerca utente per nome o email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={sortBy} onValueChange={(value: 'status' | 'expires_at' | 'created_at') => setSortBy(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Ordina per" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="status">Stato</SelectItem>
+                  <SelectItem value="expires_at">Scadenza</SelectItem>
+                  <SelectItem value="created_at">Data inizio</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -577,8 +658,8 @@ const OwnerSubscriptions: React.FC = () => {
                     <TableHead>Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredSubscriptions.map((sub) => (
+                 <TableBody>
+                   {paginatedSubscriptions.map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -654,10 +735,58 @@ const OwnerSubscriptions: React.FC = () => {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+               </Table>
+               
+               {/* Pagination */}
+               {totalPages > 1 && (
+                 <div className="mt-6 flex items-center justify-between">
+                   <div className="text-sm text-muted-foreground">
+                     Mostrando {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedSubscriptions.length)} di {filteredAndSortedSubscriptions.length} abbonamenti
+                   </div>
+                   <Pagination>
+                     <PaginationContent>
+                       <PaginationItem>
+                         <PaginationPrevious 
+                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                           className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                         />
+                       </PaginationItem>
+                       
+                       {[...Array(totalPages)].map((_, index) => {
+                         const page = index + 1;
+                         if (totalPages > 7 && (page > 3 && page < totalPages - 2 && Math.abs(page - currentPage) > 1)) {
+                           return page === 4 || page === totalPages - 3 ? (
+                             <PaginationItem key={page}>
+                               <span className="px-3 py-2">...</span>
+                             </PaginationItem>
+                           ) : null;
+                         }
+                         return (
+                           <PaginationItem key={page}>
+                             <PaginationLink
+                               onClick={() => setCurrentPage(page)}
+                               isActive={currentPage === page}
+                               className="cursor-pointer"
+                             >
+                               {page}
+                             </PaginationLink>
+                           </PaginationItem>
+                         );
+                       })}
+                       
+                       <PaginationItem>
+                         <PaginationNext
+                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                           className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                         />
+                       </PaginationItem>
+                     </PaginationContent>
+                   </Pagination>
+                 </div>
+               )}
+             </CardContent>
+           </Card>
+         </TabsContent>
 
         <TabsContent value="active">
           <Card>
@@ -673,10 +802,10 @@ const OwnerSubscriptions: React.FC = () => {
                     <TableHead>Scadenza</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredSubscriptions
-                    .filter(sub => sub.status === 'active')
-                    .map((sub) => (
+                 <TableBody>
+                   {filteredAndSortedSubscriptions
+                     .filter(sub => sub.status === 'active')
+                     .map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -731,16 +860,16 @@ const OwnerSubscriptions: React.FC = () => {
                     <TableHead>Giorni Rimanenti</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredSubscriptions
-                    .filter(sub => {
-                      if (sub.status !== 'active') return false;
-                      const expiresDate = new Date(sub.expires_at);
-                      const now = new Date();
-                      const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                      return daysUntilExpiry <= 7;
-                    })
-                    .map((sub) => {
+                 <TableBody>
+                   {filteredAndSortedSubscriptions
+                     .filter(sub => {
+                       if (sub.status !== 'active') return false;
+                       const expiresDate = new Date(sub.expires_at);
+                       const now = new Date();
+                       const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                       return daysUntilExpiry <= 7;
+                     })
+                     .map((sub) => {
                       const expiresDate = new Date(sub.expires_at);
                       const now = new Date();
                       const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
