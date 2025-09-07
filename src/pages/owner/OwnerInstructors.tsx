@@ -117,7 +117,8 @@ const OwnerInstructors: React.FC = () => {
           .from("instructors")
           .select(`
             id, user_id, bio, is_active, has_owner_privileges, created_at, 
-            specializations, certifications, experience_years, hourly_rate, gym_id
+            specializations, certifications, experience_years, hourly_rate, gym_id,
+            first_name, last_name
           `)
           .eq("is_active", true)
           .eq("gym_id", selectedGym.id)
@@ -159,27 +160,35 @@ const OwnerInstructors: React.FC = () => {
           }
         }
 
-        // 3) Merge dei dati
-        const merged: Instructor[] = instructorsList.map((ins: any) => ({
-          id: ins.id,
-          user_id: ins.user_id,
-          gym_id: ins.gym_id,
-          bio: ins.bio || null,
-          specializations: ins.specializations || [],
-          certifications: ins.certifications || [],
-          experience_years: ins.experience_years || null,
-          hourly_rate: ins.hourly_rate || null,
-          is_active: ins.is_active ?? true,
-          has_owner_privileges: ins.has_owner_privileges ?? false,
-          created_at: ins.created_at,
-          updated_at: ins.updated_at,
-          profile: profilesById.get(ins.user_id) || {
-            first_name: "Nome",
-            last_name: "Non Disponibile",
-            phone: null,
-            profile_picture_url: null,
-          },
-        }));
+        // 3) Merge dei dati con fallback migliorato
+        const merged: Instructor[] = instructorsList.map((ins: any) => {
+          const existingProfile = profilesById.get(ins.user_id);
+          
+          // Usa i dati dal profilo se disponibili, altrimenti fallback ai dati dell'istruttore
+          const firstName = existingProfile?.first_name || ins.first_name || "Nome";
+          const lastName = existingProfile?.last_name || ins.last_name || "Non Disponibile";
+          
+          return {
+            id: ins.id,
+            user_id: ins.user_id,
+            gym_id: ins.gym_id,
+            bio: ins.bio || null,
+            specializations: ins.specializations || [],
+            certifications: ins.certifications || [],
+            experience_years: ins.experience_years || null,
+            hourly_rate: ins.hourly_rate || null,
+            is_active: ins.is_active ?? true,
+            has_owner_privileges: ins.has_owner_privileges ?? false,
+            created_at: ins.created_at,
+            updated_at: ins.updated_at,
+            profile: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: existingProfile?.phone || null,
+              profile_picture_url: existingProfile?.profile_picture_url || null,
+            },
+          };
+        });
 
         console.log('✅ Instructors loaded successfully:', {
           totalInstructors: merged.length,
@@ -230,10 +239,18 @@ const OwnerInstructors: React.FC = () => {
                 .maybeSingle();
 
               setInstructors((prev) => {
+                // Usa fallback migliorato anche per gli aggiornamenti real-time
+                const firstName = p?.first_name || newRow.first_name || "Nome";
+                const lastName = p?.last_name || newRow.last_name || "Non Disponibile";
+                
                 const merged: Instructor = {
                   ...(newRow as any),
-                  profile:
-                    p || { first_name: '', last_name: '', phone: null, profile_picture_url: null },
+                  profile: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: p?.phone || null,
+                    profile_picture_url: p?.profile_picture_url || null,
+                  },
                 };
                 const exists = prev.some((i) => i.id === newRow.id);
                 return exists
@@ -249,11 +266,19 @@ const OwnerInstructors: React.FC = () => {
                 .eq('user_id', newRow.user_id)
                 .maybeSingle();
 
+              // Usa fallback migliorato anche per i nuovi istruttori
+              const firstName = p?.first_name || newRow.first_name || "Nome";
+              const lastName = p?.last_name || newRow.last_name || "Non Disponibile";
+
               setInstructors((prev) => [
                 {
                   ...(newRow as any),
-                  profile:
-                    p || { first_name: '', last_name: '', phone: null, profile_picture_url: null },
+                  profile: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: p?.phone || null,
+                    profile_picture_url: p?.profile_picture_url || null,
+                  },
                 } as Instructor,
                 ...prev,
               ]);
