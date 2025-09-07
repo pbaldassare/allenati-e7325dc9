@@ -14,6 +14,7 @@ import { RequestAdditionalGymDialog } from '@/components/owner/RequestAdditional
 
 export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isMobile = useIsMobile();
   const { hasOwnerPrivileges, isInstructor, logout } = useAuth();
 
@@ -23,6 +24,19 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
   const headerTitle = isSuperInstructor 
     ? (isMobile ? 'Super Istruttore' : 'Area Super Istruttore')
     : (isMobile ? 'Proprietario' : 'Area Proprietario');
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
+    try {
+      setIsLoggingOut(true);
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     document.title = `${pageTitle} | Gym Manager`;
@@ -61,11 +75,12 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={logout}
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
                         className="flex items-center gap-2"
                       >
                         <LogOut className="w-4 h-4" />
-                        Esci
+                        {isLoggingOut ? 'Uscendo...' : 'Esci'}
                       </Button>
                     )}
                     {!isMobile && (

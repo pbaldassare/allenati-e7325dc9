@@ -40,10 +40,21 @@ export const OwnerSidebar: React.FC = () => {
   const isMobile = useIsMobile();
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
-    await logout();
-    navigate('/');
-    toast({ title: 'Logout effettuato' });
+    if (isLoggingOut) return;
+    
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      toast({ title: 'Logout effettuato' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({ title: 'Logout effettuato', variant: 'default' });
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
   const items = [
     { title: "Dashboard", url: "/owner", icon: Gauge },
@@ -115,9 +126,9 @@ export const OwnerSidebar: React.FC = () => {
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
+                <SidebarMenuButton onClick={handleLogout} disabled={isLoggingOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Esci</span>
+                  <span>{isLoggingOut ? 'Uscendo...' : 'Esci'}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

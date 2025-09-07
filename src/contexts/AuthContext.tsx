@@ -279,7 +279,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async (): Promise<void> => {
-    await supabase.auth.signOut();
+    try {
+      setLoading(true);
+      
+      // Clear local state first
+      setUser(null);
+      setSession(null);
+      
+      // Attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      // Even if signOut fails (session not found), we still redirect
+      // This handles cases where the session has already expired
+      if (error && !error.message.includes('session_not_found')) {
+        console.warn('Logout warning:', error.message);
+      }
+      
+      // Force navigation to auth page
+      window.location.href = '/auth';
+      
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even on error, clear state and redirect
+      setUser(null);
+      setSession(null);
+      window.location.href = '/auth';
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateUser = async (userData: Partial<User>): Promise<void> => {
