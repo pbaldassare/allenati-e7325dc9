@@ -299,15 +299,31 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     try {
       const newStatus = session.status === 'hidden' ? 'scheduled' : 'hidden';
       
-      const { error } = await supabase.rpc('toggle_session_visibility', {
+      console.log('🔄 Toggling session visibility:', {
+        session_id: session.id,
+        current_status: session.status,
+        new_status: newStatus,
+        user_id: user?.id,
+        timestamp: new Date().toISOString()
+      });
+      
+      const { data, error } = await supabase.rpc('toggle_session_visibility', {
         _session_id: session.id,
         _new_status: newStatus
       });
 
       if (error) {
-        console.error('Error toggling session visibility:', error);
+        console.error('❌ Error toggling session visibility:', {
+          error,
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code
+        });
         throw error;
       }
+
+      console.log('✅ Session visibility toggled successfully:', data);
 
       toast.success(
         newStatus === 'hidden' 
@@ -316,9 +332,9 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       );
       
       onSessionUpdate?.();
-    } catch (error) {
-      console.error('Error toggling session visibility:', error);
-      toast.error('Errore durante la modifica della visibilità');
+    } catch (error: any) {
+      console.error('❌ Error in toggleSessionVisibility:', error);
+      toast.error(error.message || 'Errore durante la modifica della visibilità');
     } finally {
       setToggleVisibilityLoading(false);
     }
@@ -329,6 +345,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
     setCancellingSession(true);
     try {
+      console.log('🚫 Cancelling session:', {
+        session_id: session.id,
+        user_id: user.id,
+        reason,
+        timestamp: new Date().toISOString()
+      });
+
       // Get user role for refund processing
       const userRole = await getUserRole(user.id);
 
