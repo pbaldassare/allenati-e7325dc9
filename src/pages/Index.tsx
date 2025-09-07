@@ -7,6 +7,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { Leaderboard } from "@/components/Leaderboard";
 import { UserSubscriptionSelector } from "@/components/UserSubscriptionSelector";
 import { Profile } from "@/components/Profile";
+import { AIAssistant } from "@/components/AIAssistant";
 import { CourseCalendar } from "@/components/CourseCalendar";
 import { Chat } from "@/pages/Chat";
 import { WelcomeModal } from "@/components/modals/WelcomeModal";
@@ -71,6 +72,8 @@ const Index = () => {
         return <CourseCalendar />;
       case "chat":
         return <Chat />;
+      case "ai-assistant":
+        return <AIAssistant />;
       case "subscription":
         return <UserSubscriptionSelector />;
       case "profile":

@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, MessageSquare, Plus } from "lucide-react";
+import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, MessageSquare, Plus, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,8 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
         { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
         // Add gym join button for regular users only
         ...(!isInstructor ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
+        // Add AI assistant for regular users only
+        ...(!isInstructor ? [{ id: "ai-assistant", icon: Brain, label: "IA" }] : []),
         ...(isInstructor
           ? [{ id: "instructor", icon: Settings, label: "Istruttore" }]
           : [{ id: "profile", icon: User, label: "Profilo" }]),
