@@ -161,16 +161,10 @@ export const AIAssistant = () => {
         historyLength: requestPayload.conversation_history?.length || 0
       });
 
-      // Create a promise with timeout for better error handling
-      const invokePromise = supabase.functions.invoke('ai-assistant', {
+      // Direct invoke without timeout race to avoid network issues
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: requestPayload
       });
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout - try a simpler question')), 90000);
-      });
-
-      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
       console.log('📥 Risposta AI ricevuta (raw):', {
         hasData: !!data,
@@ -330,8 +324,8 @@ export const AIAssistant = () => {
     if (confirmed) {
       setIsLoading(true);
       try {
-        // Enhanced action confirmation with timeout
-        const actionPromise = supabase.functions.invoke('ai-assistant', {
+      // Enhanced action confirmation with better error handling
+        const { data, error } = await supabase.functions.invoke('ai-assistant', {
           body: {
             confirmAction: true,
             actionType: message.actionRequired.type,
@@ -340,12 +334,6 @@ export const AIAssistant = () => {
             gym_id: selectedGym.id
           }
         });
-
-        const actionTimeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Action timeout - please try again')), 60000);
-        });
-
-        const { data, error } = await Promise.race([actionPromise, actionTimeoutPromise]) as any;
 
         console.log('📥 Risposta conferma azione:', { data, error });
 
