@@ -85,41 +85,73 @@ const AdminCourseSessions = () => {
     if (!id) return;
 
     try {
+      console.log('Saving', newSessions.length, 'sessions for course', id);
+      
+      // Validate and remove duplicates before saving
+      const uniqueSessions = new Map<string, any>();
+      const validatedSessions = newSessions
+        .filter(session => {
+          const key = `${session.session_date}-${session.start_time}`;
+          if (uniqueSessions.has(key)) {
+            console.warn('Duplicate session detected:', key);
+            return false;
+          }
+          uniqueSessions.set(key, true);
+          return true;
+        })
+        .map(session => ({
+          course_id: id,
+          session_date: session.session_date,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          room_id: session.room_id,
+          room_name: session.room_name,
+          max_participants: session.max_participants,
+          available_spots: session.available_spots,
+          status: session.status
+        }));
+
+      console.log('After deduplication:', validatedSessions.length, 'unique sessions');
+
       // Delete existing sessions
-      await supabase
+      const { error: deleteError } = await supabase
         .from('course_sessions')
         .delete()
         .eq('course_id', id);
 
-      // Insert new sessions
-      if (newSessions.length > 0) {
-        const { error } = await supabase
-          .from('course_sessions')
-          .insert(newSessions.map(session => ({
-            course_id: id,
-            session_date: session.session_date,
-            start_time: session.start_time,
-            end_time: session.end_time,
-            room_id: session.room_id,
-            room_name: session.room_name,
-            max_participants: session.max_participants,
-            available_spots: session.available_spots,
-            status: session.status
-          })));
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
 
-        if (error) throw error;
+      // Insert new sessions in batches to avoid large transaction issues
+      if (validatedSessions.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < validatedSessions.length; i += batchSize) {
+          const batch = validatedSessions.slice(i, i + batchSize);
+          console.log(`Inserting batch ${Math.floor(i/batchSize) + 1}: ${batch.length} sessions`);
+          
+          const { error } = await supabase
+            .from('course_sessions')
+            .insert(batch);
+
+          if (error) {
+            console.error('Insert error in batch:', error);
+            throw error;
+          }
+        }
       }
 
       setSessions(newSessions);
       toast({
         title: 'Sessioni aggiornate',
-        description: 'Le sessioni del corso sono state aggiornate con successo'
+        description: `${validatedSessions.length} sessioni del corso sono state salvate con successo`
       });
     } catch (error) {
       console.error('Error updating sessions:', error);
       toast({
         title: 'Errore',
-        description: 'Errore durante l\'aggiornamento delle sessioni',
+        description: `Errore durante l'aggiornamento delle sessioni: ${error.message}`,
         variant: 'destructive'
       });
     }

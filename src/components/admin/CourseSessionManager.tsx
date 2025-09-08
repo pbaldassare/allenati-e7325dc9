@@ -68,26 +68,38 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
     }
 
     const newSessions: CourseSession[] = [];
+    const sessionKeys = new Set<string>(); // To track unique sessions
     let currentDate = new Date(startDate);
+
+    console.log('Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+    console.log('Schedules:', schedules.length);
 
     while (currentDate <= endDate) {
       schedules.forEach(schedule => {
         if (currentDate.getDay() === schedule.day_of_week) {
-          newSessions.push({
-            session_date: format(currentDate, 'yyyy-MM-dd'),
-            start_time: schedule.start_time,
-            end_time: schedule.end_time,
-            room_id: schedule.room_id,
-            room_name: schedule.room_name,
-            max_participants: maxParticipants,
-            available_spots: maxParticipants,
-            status: 'scheduled'
-          });
+          const sessionDate = format(currentDate, 'yyyy-MM-dd');
+          const sessionKey = `${sessionDate}-${schedule.start_time}`;
+          
+          // Check for duplicates
+          if (!sessionKeys.has(sessionKey)) {
+            sessionKeys.add(sessionKey);
+            newSessions.push({
+              session_date: sessionDate,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              room_id: schedule.room_id,
+              room_name: schedule.room_name,
+              max_participants: maxParticipants,
+              available_spots: maxParticipants,
+              status: 'scheduled'
+            });
+          }
         }
       });
       currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
     }
 
+    console.log('Generated', newSessions.length, 'unique sessions');
     setGeneratedSessions(newSessions);
     setShowPreview(true);
   };
