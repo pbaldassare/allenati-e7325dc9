@@ -37,17 +37,16 @@ export const MonthlyCalendarCompact: React.FC<MonthlyCalendarCompactProps> = ({
   const [courseSessions, setCourseSessions] = useState<CourseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { userGyms } = useGym();
+  const { selectedGym } = useGym();
 
   useEffect(() => {
-    if (user && userGyms.length > 0) {
+    if (user && selectedGym?.id) {
       loadCourseSessions();
     }
-  }, [user, userGyms, currentDate]);
+  }, [user, selectedGym, currentDate]);
 
   const loadCourseSessions = async () => {
     try {
-      const userGymIds = userGyms.map(gym => gym.id);
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
       
@@ -67,7 +66,7 @@ export const MonthlyCalendarCompact: React.FC<MonthlyCalendarCompactProps> = ({
             gym_id
           )
         `)
-        .in('courses.gym_id', userGymIds)
+        .eq('courses.gym_id', selectedGym?.id)
         .eq('courses.is_active', true)
         .eq('status', 'scheduled')
         .gte('session_date', format(monthStart, 'yyyy-MM-dd'))

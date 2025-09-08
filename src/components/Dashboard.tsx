@@ -89,17 +89,16 @@ export const Dashboard = () => {
   // Load available sessions from Supabase
   useEffect(() => {
     const loadAvailableSessions = async () => {
-      if (!user || userGyms.length === 0) {
+      if (!user || !selectedGym?.id) {
         setLoading(false);
         return;
       }
       
       setLoading(true);
-      const userGymIds = userGyms.map(gym => gym.id);
       const today = new Date().toISOString().split('T')[0];
       
       try {
-        // Load all future sessions from user's gyms with instructor names via foreign key
+        // Load all future sessions from selected gym with instructor names via foreign key
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('course_sessions')
           .select(`
@@ -117,7 +116,7 @@ export const Dashboard = () => {
               gyms(name)
             )
           `)
-          .in('courses.gym_id', userGymIds)
+          .eq('courses.gym_id', selectedGym.id)
           .eq('courses.is_active', true)
           .eq('status', 'scheduled')
           .gte('session_date', today)
@@ -159,7 +158,7 @@ export const Dashboard = () => {
 
     loadAvailableSessions();
     loadUserCreditsAndSubscription();
-  }, [user, userGyms, selectedGym, toast]);
+  }, [user, selectedGym, toast]);
 
   const openBookingDialog = (session: any) => {
     setSelectedSession(session);

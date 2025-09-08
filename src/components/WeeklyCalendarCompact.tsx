@@ -33,7 +33,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
   const [courseSchedules, setCourseSchedules] = useState<CourseSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { userGyms } = useGym();
+  const { selectedGym } = useGym();
 
   const getWeekDays = (date: Date) => {
     const week = [];
@@ -55,11 +55,10 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
 
   useEffect(() => {
     const loadCourseSchedules = async () => {
-      if (!user || userGyms.length === 0) return;
+      if (!user || !selectedGym?.id) return;
 
       try {
         setLoading(true);
-        const userGymIds = userGyms.map(gym => gym.id);
         const { data: schedules } = await supabase
           .from('course_schedules')
           .select(`
@@ -78,7 +77,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
               )
             )
           `)
-          .in('course.gym_id', userGymIds)
+          .eq('course.gym_id', selectedGym.id)
           .eq('course.is_active', true)
           .eq('is_active', true);
 
@@ -109,7 +108,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
     };
 
     loadCourseSchedules();
-  }, [user, userGyms]);
+  }, [user, selectedGym]);
 
   const getCoursesForDay = (dayOfWeek: number) => {
     return courseSchedules.filter(schedule => schedule.day_of_week === dayOfWeek);
