@@ -67,12 +67,12 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
       return;
     }
 
-    const newSessions: CourseSession[] = [];
-    const sessionKeys = new Set<string>(); // To track unique sessions
-    let currentDate = new Date(startDate);
+    console.log('🔄 Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+    console.log('📋 Schedules:', schedules.length);
 
-    console.log('Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
-    console.log('Schedules:', schedules.length);
+    // Use Map to prevent duplicates more efficiently
+    const sessionMap = new Map<string, CourseSession>();
+    let currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
       schedules.forEach(schedule => {
@@ -80,10 +80,9 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
           const sessionDate = format(currentDate, 'yyyy-MM-dd');
           const sessionKey = `${sessionDate}-${schedule.start_time}`;
           
-          // Check for duplicates
-          if (!sessionKeys.has(sessionKey)) {
-            sessionKeys.add(sessionKey);
-            newSessions.push({
+          // Only create if not already exists
+          if (!sessionMap.has(sessionKey)) {
+            sessionMap.set(sessionKey, {
               session_date: sessionDate,
               start_time: schedule.start_time,
               end_time: schedule.end_time,
@@ -99,8 +98,9 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
       currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
     }
 
-    console.log('Generated', newSessions.length, 'unique sessions');
-    setGeneratedSessions(newSessions);
+    const uniqueSessions = Array.from(sessionMap.values());
+    console.log('✅ Generated', uniqueSessions.length, 'unique sessions');
+    setGeneratedSessions(uniqueSessions);
     setShowPreview(true);
   };
 
