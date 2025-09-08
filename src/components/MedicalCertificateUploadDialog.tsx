@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useGym } from "@/contexts/GymContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const MedicalCertificateUploadDialog = ({ open, onOpenChange, onUploaded }: Prop
   const [file, setFile] = useState<File | null>(null);
   const [expiryDate, setExpiryDate] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const { selectedGym } = useGym();
   const { toast } = useToast();
 
   const handleUpload = async () => {
@@ -37,9 +39,8 @@ const MedicalCertificateUploadDialog = ({ open, onOpenChange, onUploaded }: Prop
       const userId = userRes.user?.id;
       if (!userId) throw new Error("Utente non autenticato");
 
-      const { data: gymId, error: gymErr } = await (supabase as any).rpc("get_user_gym_id", { _user_id: userId });
-      if (gymErr) throw gymErr;
-      if (!gymId) throw new Error("Nessuna palestra associata all'utente");
+      if (!selectedGym) throw new Error("Nessuna palestra selezionata");
+      const gymId = selectedGym.id;
 
       const path = `${userId}/${Date.now()}_${file.name}`;
       console.log("[MedicalCert] Uploading to storage path:", path);

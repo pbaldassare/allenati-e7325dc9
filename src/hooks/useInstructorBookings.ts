@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInstructorGym } from '@/contexts/InstructorGymContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface InstructorBooking {
@@ -30,10 +31,11 @@ export const useInstructorBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, hasOwnerPrivileges } = useAuth();
+  const { instructorGyms, selectedGymId } = useInstructorGym();
   const { toast } = useToast();
 
   const fetchInstructorBookings = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !selectedGymId) return;
 
     try {
       setLoading(true);
@@ -42,11 +44,7 @@ export const useInstructorBookings = () => {
       
       if (hasOwnerPrivileges) {
         // For super instructors, get ALL bookings from their gym
-        const { data: gymId } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-        
-        if (!gymId) {
-          throw new Error('Palestra non trovata');
-        }
+        const gymId = selectedGymId;
 
         // Get all bookings for courses in the gym
         const { data: allBookingsData, error: bookingsError } = await supabase
@@ -185,7 +183,7 @@ export const useInstructorBookings = () => {
 
   useEffect(() => {
     fetchInstructorBookings();
-  }, [user?.id]);
+  }, [user?.id, selectedGymId]);
 
   return {
     bookings,

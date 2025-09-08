@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X, Sparkles, Zap, Star, Trophy, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGym } from "@/contexts/GymContext";
 import { useToast } from "@/hooks/use-toast";
 import { BookingConfirmDialog } from "@/components/dialogs/BookingConfirmDialog";
 import { CancellationConfirmDialog } from "@/components/dialogs/CancellationConfirmDialog";
@@ -68,28 +69,17 @@ export const CourseCalendar = () => {
   } | null>(null);
 
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const { toast } = useToast();
 
   // Load data from Supabase - using course_sessions for exact sessions
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user || !selectedGym) return;
       
       setLoading(true);
       try {
-        // Get user's gym ID
-        const { data: userGym } = await supabase
-          .rpc('get_user_gym_id', { _user_id: user.id });
-
-        if (!userGym) {
-          toast({
-            title: "Errore",
-            description: "Non sei associato a nessuna palestra",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
+        const userGym = selectedGym.id;
 
         // Get courses where user has active bookings
         const { data: userBookings } = await supabase
@@ -381,15 +371,12 @@ export const CourseCalendar = () => {
 
       // Consume credits if not unlimited subscription
       if (!hasUnlimitedAccess) {
-        // Get user's gym ID for credit deduction
-        const { data: userGym } = await supabase
-          .rpc('get_user_gym_id', { _user_id: user.id });
-        
-        if (userGym) {
+        // Use selected gym ID for credit deduction
+        if (selectedGym) {
           const { deductCredits } = await import('@/lib/creditRefundHelpers');
           const result = await deductCredits(
             user.id,
-            userGym,
+            selectedGym.id,
             creditsRequired,
             `Prenotazione ${selectedCourse?.name}`,
             booking.id
@@ -412,8 +399,7 @@ export const CourseCalendar = () => {
       
       // Refresh data to update available spots
       const loadData = async () => {
-        const { data: userGym } = await supabase.rpc('get_user_gym_id', { _user_id: user.id });
-        if (userGym) {
+        if (selectedGym) {
           const weekInfo = getWeekDates(currentWeek);
           const weekStart = weekInfo.start.toISOString().split('T')[0];
           const weekEnd = weekInfo.end.toISOString().split('T')[0];
@@ -428,7 +414,7 @@ export const CourseCalendar = () => {
                 instructors!courses_instructor_id_fkey(*)
               )
             `)
-            .eq('courses.gym_id', userGym)
+            .eq('courses.gym_id', selectedGym.id)
             .eq('courses.is_active', true)
             .eq('status', 'scheduled')
             .gte('session_date', weekStart)
