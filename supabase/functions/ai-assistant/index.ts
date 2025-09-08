@@ -18,6 +18,7 @@ serve(async (req) => {
   }
 
   try {
+    const startTime = Date.now();
     const { message, user_id, gym_id, conversation_history, confirmAction, actionType, actionData } = await req.json();
 
     // Validate required parameters
@@ -60,7 +61,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-5-mini-2025-08-07', // Using faster mini model
         messages: [
           {
             role: 'system',
@@ -98,7 +99,7 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
           ...conversationContext,
           { role: 'user', content: message }
         ],
-        max_completion_tokens: 2000,
+        max_completion_tokens: 1000, // Reduced for faster responses
         tools: [
           {
             type: 'function',
@@ -244,14 +245,20 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
               }
             }
           }
-        ],
+        ].slice(0, 8), // Limit to 8 most important tools for better performance
         tool_choice: 'auto'
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
     const aiResponse = await response.json();
-    
-    console.log('OpenAI response:', JSON.stringify(aiResponse, null, 2));
+    const openAITime = Date.now() - startTime;
+    console.log(`OpenAI API call completed in ${openAITime}ms`);
     
     // Check if response has choices
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
@@ -269,6 +276,9 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
       }, user_id, gym_id);
     }
 
+    const totalTime = Date.now() - startTime;
+    console.log(`Total function execution time: ${totalTime}ms`);
+    
     return new Response(JSON.stringify({
       response: choice.message?.content || 'Nessuna risposta disponibile'
     }), {
@@ -277,8 +287,19 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
 
   } catch (error) {
     console.error('Error in ai-assistant function:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    if (error.message?.includes('timeout')) {
+      errorMessage = 'Request timeout - please try again';
+    } else if (error.message?.includes('OpenAI')) {
+      errorMessage = 'AI service temporarily unavailable';
+    } else if (error.message?.includes('User ID') || error.message?.includes('Gym ID')) {
+      errorMessage = 'Invalid request parameters';
+    }
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       response: 'Mi dispiace, si è verificato un errore. Riprova più tardi.'
     }), {
       status: 500,

@@ -116,7 +116,7 @@ export const AIAssistant = () => {
           message: messageContent,
           user_id: user.id,
           gym_id: selectedGym.id,
-          conversation_history: messages.slice(-10) // Last 10 messages for context
+          conversation_history: messages.slice(-5) // Reduced to 5 messages for better performance
         }
       });
 
@@ -179,17 +179,20 @@ export const AIAssistant = () => {
       console.error('💥 Errore completo invio messaggio:', error);
       
       const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+      const toastMessage = errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')
+        ? "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice."
+        : `Si è verificato un errore: ${errorMsg}`;
       
       toast({
         title: "Errore AI",
-        description: `Si è verificato un errore: ${errorMsg}`,
+        description: toastMessage,
         variant: "destructive"
       });
 
       const errorMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         type: 'system',
-        content: `Si è verificato un errore: ${errorMsg}. Per favore riprova più tardi.`,
+        content: toastMessage,
         timestamp: new Date()
       };
 
@@ -267,10 +270,13 @@ export const AIAssistant = () => {
       } catch (error) {
         console.error('💥 Errore completo conferma azione:', error);
         const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+        const errorMessage = errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')
+          ? "L'operazione sta impiegando più tempo del previsto. Riprova."
+          : `Errore nell'eseguire l'azione: ${errorMsg}`;
         
         toast({
           title: "Errore",
-          description: `Errore nell'eseguire l'azione: ${errorMsg}`,
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {
@@ -388,6 +394,9 @@ export const AIAssistant = () => {
                         {typingText || 'Sto pensando...'}
                       </span>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      L'elaborazione può richiedere fino a 60 secondi
+                    </p>
                     <div className="flex gap-1 mt-2">
                       <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
                       <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
