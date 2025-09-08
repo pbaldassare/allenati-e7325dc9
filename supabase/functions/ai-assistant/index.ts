@@ -19,20 +19,67 @@ serve(async (req) => {
 
   try {
     const startTime = Date.now();
-    const { message, user_id, gym_id, conversation_history, confirmAction, actionType, actionData } = await req.json();
-
-    // Validate required parameters
-    if (!user_id || user_id === 'undefined') {
-      console.error('Invalid user_id:', user_id);
-      throw new Error('User ID is required and must be valid');
+    
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
+      throw new Error('Invalid JSON in request body');
     }
 
-    if (!gym_id || gym_id === 'undefined') {
-      console.error('Invalid gym_id:', gym_id);
-      throw new Error('Gym ID is required and must be valid');
+    const { message, user_id, gym_id, conversation_history, confirmAction, actionType, actionData } = requestBody;
+
+    console.log('📥 Raw request parameters:', { 
+      user_id: typeof user_id, 
+      gym_id: typeof gym_id, 
+      hasMessage: !!message, 
+      confirmAction,
+      messageLength: message?.length || 0,
+      historyLength: conversation_history?.length || 0
+    });
+
+    // Enhanced parameter validation with detailed logging
+    if (!user_id || user_id === 'undefined' || user_id === 'null' || typeof user_id !== 'string') {
+      console.error('❌ Invalid user_id:', { 
+        value: user_id, 
+        type: typeof user_id, 
+        isString: typeof user_id === 'string',
+        length: user_id?.length || 0
+      });
+      throw new Error('User ID is required and must be a valid string');
     }
 
-    console.log('Request parameters validated:', { user_id, gym_id, hasMessage: !!message, confirmAction });
+    if (!gym_id || gym_id === 'undefined' || gym_id === 'null' || typeof gym_id !== 'string') {
+      console.error('❌ Invalid gym_id:', { 
+        value: gym_id, 
+        type: typeof gym_id,
+        isString: typeof gym_id === 'string',
+        length: gym_id?.length || 0
+      });
+      throw new Error('Gym ID is required and must be a valid string');
+    }
+
+    // UUID format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    
+    if (!uuidRegex.test(user_id)) {
+      console.error('❌ Invalid user_id format:', { user_id, length: user_id.length });
+      throw new Error('User ID must be a valid UUID format');
+    }
+
+    if (!uuidRegex.test(gym_id)) {
+      console.error('❌ Invalid gym_id format:', { gym_id, length: gym_id.length });
+      throw new Error('Gym ID must be a valid UUID format');
+    }
+
+    console.log('✅ Request parameters validated successfully:', { 
+      user_id: user_id.substring(0, 8) + '...', 
+      gym_id: gym_id.substring(0, 8) + '...', 
+      hasMessage: !!message, 
+      confirmAction 
+    });
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -286,53 +333,111 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
     });
 
   } catch (error) {
-    console.error('Error in ai-assistant function:', error);
+    console.error('❌ Complete error in ai-assistant function:', {
+      error: error.message || 'Unknown error',
+      stack: error.stack || 'No stack trace',
+      type: error.constructor.name || 'Unknown error type'
+    });
     
-    // Provide more specific error messages
+    // Enhanced error categorization and messaging
     let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    let userFriendlyMessage = 'Mi dispiace, si è verificato un errore interno. Riprova più tardi.';
+    
     if (error.message?.includes('timeout')) {
       errorMessage = 'Request timeout - please try again';
-    } else if (error.message?.includes('OpenAI')) {
+      userFriendlyMessage = 'La richiesta ha impiegato troppo tempo. Riprova con una domanda più semplice.';
+      statusCode = 408;
+    } else if (error.message?.includes('OpenAI') || error.message?.includes('API error')) {
       errorMessage = 'AI service temporarily unavailable';
-    } else if (error.message?.includes('User ID') || error.message?.includes('Gym ID')) {
+      userFriendlyMessage = 'Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto.';
+      statusCode = 503;
+    } else if (error.message?.includes('User ID') || error.message?.includes('Gym ID') || error.message?.includes('UUID')) {
       errorMessage = 'Invalid request parameters';
+      userFriendlyMessage = 'Parametri della richiesta non validi. Prova a rifare il login.';
+      statusCode = 400;
+    } else if (error.message?.includes('JSON')) {
+      errorMessage = 'Invalid request format';
+      userFriendlyMessage = 'Formato della richiesta non valido. Riprova.';
+      statusCode = 400;
+    } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+      errorMessage = 'Network error';
+      userFriendlyMessage = 'Errore di connessione. Controlla la tua connessione internet.';
+      statusCode = 502;
     }
     
     return new Response(JSON.stringify({ 
       error: errorMessage,
-      response: 'Mi dispiace, si è verificato un errore. Riprova più tardi.'
+      response: userFriendlyMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     }), {
-      status: 500,
+      status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
 
 async function getUserContext(userId: string, gymId: string) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('current_credits, first_name')
-    .eq('user_id', userId)
-    .single();
+  console.log('🔍 Fetching user context for:', { 
+    userId: userId.substring(0, 8) + '...', 
+    gymId: gymId.substring(0, 8) + '...' 
+  });
 
-  const { data: gym } = await supabase
-    .from('gyms')
-    .select('name')
-    .eq('id', gymId)
-    .single();
+  try {
+    // Parallel queries for better performance
+    const [profileResult, gymResult, gymCreditsResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('current_credits, first_name')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      
+      supabase
+        .from('gyms')
+        .select('name')
+        .eq('id', gymId)
+        .maybeSingle(),
+      
+      supabase
+        .from('gym_credits')
+        .select('credits')
+        .eq('user_id', userId)
+        .eq('gym_id', gymId)
+        .maybeSingle()
+    ]);
 
-  const { data: gymCredits } = await supabase
-    .from('gym_credits')
-    .select('credits')
-    .eq('user_id', userId)
-    .eq('gym_id', gymId)
-    .single();
+    console.log('📊 User context query results:', {
+      profileFound: !!profileResult.data,
+      gymFound: !!gymResult.data,
+      gymCreditsFound: !!gymCreditsResult.data,
+      profileError: profileResult.error?.message,
+      gymError: gymResult.error?.message,
+      gymCreditsError: gymCreditsResult.error?.message
+    });
 
-  return {
-    credits: gymCredits?.credits || 0,
-    userName: profile?.first_name || 'Utente',
-    gymName: gym?.name || 'Palestra'
-  };
+    const context = {
+      credits: gymCreditsResult.data?.credits || 0,
+      userName: profileResult.data?.first_name || 'Utente',
+      gymName: gymResult.data?.name || 'Palestra'
+    };
+
+    console.log('✅ User context prepared:', {
+      credits: context.credits,
+      userName: context.userName,
+      gymName: context.gymName
+    });
+
+    return context;
+  } catch (error) {
+    console.error('❌ Error fetching user context:', error);
+    
+    // Return fallback values to prevent complete failure
+    return {
+      credits: 0,
+      userName: 'Utente',
+      gymName: 'Palestra'
+    };
+  }
 }
 
 async function handleFunctionCall(functionCall: any, userId: string, gymId: string) {

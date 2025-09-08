@@ -66,12 +66,12 @@ export const AIAssistant = () => {
     }, delay);
   };
 
-  const sendMessage = async (messageContent: string) => {
+  const sendMessage = async (messageContent: string, retryCount: number = 0) => {
     if (!messageContent.trim() || isLoading) return;
 
-    // Validazione dati utente
-    if (!user) {
-      console.error('Utente non autenticato');
+    // Enhanced validation with detailed logging
+    if (!user || !user.id) {
+      console.error('❌ User validation failed:', { user: !!user, userId: user?.id });
       toast({
         title: "Errore",
         description: "Devi essere autenticato per usare l'AI Assistant.",
@@ -80,11 +80,33 @@ export const AIAssistant = () => {
       return;
     }
 
-    if (!selectedGym) {
-      console.error('Nessuna palestra selezionata');
+    if (!selectedGym || !selectedGym.id) {
+      console.error('❌ Gym validation failed:', { selectedGym: !!selectedGym, gymId: selectedGym?.id });
       toast({
         title: "Errore",
         description: "Seleziona una palestra per usare l'AI Assistant.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Additional UUID format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(user.id)) {
+      console.error('❌ Invalid user ID format:', user.id);
+      toast({
+        title: "Errore",
+        description: "ID utente non valido. Prova a fare il logout e login di nuovo.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!uuidRegex.test(selectedGym.id)) {
+      console.error('❌ Invalid gym ID format:', selectedGym.id);
+      toast({
+        title: "Errore",
+        description: "ID palestra non valido. Prova a selezionare nuovamente la palestra.",
         variant: "destructive"
       });
       return;
@@ -97,27 +119,42 @@ export const AIAssistant = () => {
       timestamp: new Date()
     };
 
-    console.log('📤 Invio messaggio AI:', { 
-      message: messageContent, 
+    console.log('📤 Sending AI message (validated):', { 
+      message: messageContent.substring(0, 50) + '...', 
       userId: user.id, 
-      gymId: selectedGym.id 
+      gymId: selectedGym.id,
+      userType: typeof user.id,
+      gymType: typeof selectedGym.id,
+      retryCount 
     });
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
-    // Simulate more realistic typing
-    simulateTyping('Sto analizzando la tua richiesta...');
+    // Enhanced typing simulation with retry context
+    const typingMessage = retryCount > 0 
+      ? `Tentativo ${retryCount + 1}/3 - Elaborando...` 
+      : 'Sto analizzando la tua richiesta...';
+    simulateTyping(typingMessage);
 
     try {
+      const requestPayload = {
+        message: messageContent,
+        user_id: user.id,
+        gym_id: selectedGym.id,
+        conversation_history: messages.slice(-5)
+      };
+
+      console.log('📤 Request payload validation:', {
+        hasMessage: !!requestPayload.message,
+        userIdValid: !!requestPayload.user_id && typeof requestPayload.user_id === 'string',
+        gymIdValid: !!requestPayload.gym_id && typeof requestPayload.gym_id === 'string',
+        historyLength: requestPayload.conversation_history?.length || 0
+      });
+
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: {
-          message: messageContent,
-          user_id: user.id,
-          gym_id: selectedGym.id,
-          conversation_history: messages.slice(-5) // Reduced to 5 messages for better performance
-        }
+        body: requestPayload
       });
 
       console.log('📥 Risposta AI ricevuta (raw):', JSON.stringify({ data, error }, null, 2));
@@ -176,12 +213,45 @@ export const AIAssistant = () => {
 
     } catch (error) {
       setTypingText('');
-      console.error('💥 Errore completo invio messaggio:', error);
+      console.error('💥 Complete error details:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : 'No stack',
+        retryCount,
+        maxRetries: 2
+      });
       
       const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
-      const toastMessage = errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')
-        ? "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice."
-        : `Si è verificato un errore: ${errorMsg}`;
+      
+      // Enhanced retry logic for 500 errors
+      if ((errorMsg.includes('500') || errorMsg.includes('Internal server error')) && retryCount < 2) {
+        console.log(`🔄 Retrying request (attempt ${retryCount + 1}/3) after server error`);
+        
+        // Show retry message
+        setTypingText(`Riprovo... tentativo ${retryCount + 2}/3`);
+        
+        // Wait before retry (exponential backoff)
+        const delay = (retryCount + 1) * 2000; // 2s, 4s delays
+        setTimeout(() => {
+          sendMessage(messageContent, retryCount + 1);
+        }, delay);
+        
+        return; // Don't show error message yet
+      }
+      
+      // Determine appropriate error message
+      let toastMessage: string;
+      if (errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')) {
+        toastMessage = "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice.";
+      } else if (errorMsg?.includes('500') || errorMsg?.includes('Internal server error')) {
+        toastMessage = retryCount >= 2 
+          ? "Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto."
+          : "Si è verificato un errore del server. Riprovo automaticamente...";
+      } else if (errorMsg?.includes('Invalid request parameters')) {
+        toastMessage = "Parametri della richiesta non validi. Prova a rifare il login.";
+      } else {
+        toastMessage = `Si è verificato un errore: ${errorMsg}`;
+      }
       
       toast({
         title: "Errore AI",
