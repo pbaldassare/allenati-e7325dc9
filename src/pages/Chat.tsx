@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +22,7 @@ interface ChatRoom {
 
 export const Chat: React.FC = () => {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const isMobile = useIsMobile();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
@@ -28,39 +30,23 @@ export const Chat: React.FC = () => {
   const [showChatList, setShowChatList] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (user && selectedGym) {
       loadChatRooms();
     }
-  }, [user]);
+  }, [user, selectedGym]);
 
   const loadChatRooms = async () => {
     try {
       setLoading(true);
-      console.log('Loading chat rooms for user:', user?.id);
+      console.log('Loading chat rooms for selected gym:', selectedGym?.id);
       
-      // First check user's gym membership
-      const { data: membership, error: membershipError } = await supabase
-        .from('user_gym_memberships')
-        .select('gym_id, membership_type, status')
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      console.log('User membership:', membership, 'Error:', membershipError);
-
-      if (membershipError && membershipError.code !== 'PGRST116') {
-        throw membershipError;
-      }
-
-      if (!membership?.gym_id) {
-        console.log('User has no active gym membership');
+      if (!selectedGym?.id) {
+        console.log('No gym selected');
         setChatRooms([]);
         return;
       }
 
-      console.log('User belongs to gym:', membership.gym_id);
-
-      // Get chat rooms for the user's gym
+      // Get chat rooms for the selected gym
       const { data: rooms, error: roomsError } = await supabase
         .from('chat_rooms')
         .select(`
@@ -73,7 +59,7 @@ export const Chat: React.FC = () => {
           is_active
         `)
         .eq('is_active', true)
-        .eq('gym_id', membership.gym_id);
+        .eq('gym_id', selectedGym.id);
 
       console.log('Found chat rooms:', rooms, 'Error:', roomsError);
 
