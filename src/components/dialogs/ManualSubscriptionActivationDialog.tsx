@@ -60,11 +60,20 @@ export default function ManualSubscriptionActivationDialog({
   }, [isOpen]);
 
   useEffect(() => {
+    console.log('🔍 Preselection effect triggered');
+    console.log('🔍 Preselected user ID:', preselectedUserId);
+    console.log('🔍 Members available:', members.length);
+    
     if (preselectedUserId && members.length > 0) {
       const preselected = members.find(member => member.user_id === preselectedUserId);
+      console.log('🔍 Found preselected member:', preselected);
+      
       if (preselected) {
         setSelectedMember(preselected);
         setSearchQuery('');
+        console.log('✅ Preselected member set:', preselected);
+      } else {
+        console.log('❌ Preselected member not found in members list');
       }
     }
   }, [preselectedUserId, members]);
@@ -84,12 +93,18 @@ export default function ManualSubscriptionActivationDialog({
 
   const loadData = async () => {
     try {
+      console.log('🔍 ManualSubscriptionActivationDialog - Loading data...');
+      console.log('🔍 Selected gym:', selectedGym);
+      console.log('🔍 Preselected user ID:', preselectedUserId);
+      
       if (!selectedGym?.id) {
+        console.error('❌ No gym selected');
         toast.error('Nessuna palestra selezionata');
         return;
       }
 
       // Load subscription plans for this gym
+      console.log('🔍 Loading subscription plans for gym:', selectedGym.id);
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
@@ -97,9 +112,14 @@ export default function ManualSubscriptionActivationDialog({
         .eq('is_active', true)
         .order('price');
 
-      if (plansError) throw plansError;
+      if (plansError) {
+        console.error('❌ Error loading plans:', plansError);
+        throw plansError;
+      }
+      console.log('✅ Loaded plans:', plansData);
 
       // Load gym members - first get memberships
+      console.log('🔍 Loading gym memberships...');
       const { data: membershipsData, error: membershipsError } = await supabase
         .from('user_gym_memberships')
         .select('user_id')
@@ -107,11 +127,13 @@ export default function ManualSubscriptionActivationDialog({
         .eq('status', 'active');
 
       if (membershipsError) {
-        console.error('Error loading memberships:', membershipsError);
+        console.error('❌ Error loading memberships:', membershipsError);
         throw membershipsError;
       }
+      console.log('✅ Loaded memberships:', membershipsData);
 
       if (!membershipsData || membershipsData.length === 0) {
+        console.log('⚠️ No active memberships found');
         setMembers([]);
         setLoading(false);
         return;
@@ -119,15 +141,17 @@ export default function ManualSubscriptionActivationDialog({
 
       // Then get profiles for those users
       const userIds = membershipsData.map(m => m.user_id);
+      console.log('🔍 Loading profiles for user IDs:', userIds);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, first_name, last_name, email, profile_picture_url')
         .in('user_id', userIds);
 
       if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
+        console.error('❌ Error loading profiles:', profilesError);
         throw profilesError;
       }
+      console.log('✅ Loaded profiles:', profilesData);
 
       const membersData = profilesData?.map((profile: any) => ({
         user_id: profile.user_id,
@@ -137,12 +161,14 @@ export default function ManualSubscriptionActivationDialog({
         profile_picture_url: profile.profile_picture_url
       })) || [];
 
+      console.log('✅ Final members data:', membersData);
+
       setPlans(plansData || []);
       setMembers(membersData);
       setFilteredMembers(membersData);
 
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
       toast.error('Errore nel caricamento dei dati');
     }
   };
@@ -163,7 +189,13 @@ export default function ManualSubscriptionActivationDialog({
   };
 
   const handleActivateSubscription = async () => {
+    console.log('🚀 Starting manual subscription activation...');
+    console.log('🚀 Selected member:', selectedMember);
+    console.log('🚀 Selected plan:', selectedPlan);
+    console.log('🚀 Selected gym:', selectedGym);
+    
     if (!selectedMember || !selectedPlan) {
+      console.error('❌ Missing selection - Member or plan not selected');
       toast.error('Seleziona utente e piano abbonamento');
       return;
     }
@@ -172,47 +204,74 @@ export default function ManualSubscriptionActivationDialog({
     try {
       const plan = getSelectedPlan()!;
       const expiryDate = calculateExpiryDate()!;
+      
+      console.log('🚀 Plan details:', plan);
+      console.log('🚀 Expiry date:', expiryDate);
 
       // Check if gym is selected
       if (!selectedGym?.id) {
+        console.error('❌ No gym ID available');
         throw new Error('Nessuna palestra selezionata');
       }
 
       // Check for existing active subscriptions
-      const { data: existingSubscriptions } = await supabase
+      console.log('🔍 Checking for existing subscriptions...');
+      const { data: existingSubscriptions, error: existingError } = await supabase
         .from('user_subscriptions')
         .select('id')
         .eq('user_id', selectedMember.user_id)
         .eq('status', 'active')
         .gt('expires_at', new Date().toISOString());
 
+      if (existingError) {
+        console.error('❌ Error checking existing subscriptions:', existingError);
+        throw existingError;
+      }
+      console.log('🔍 Existing subscriptions:', existingSubscriptions);
+
       // Cancel existing active subscriptions
       if (existingSubscriptions && existingSubscriptions.length > 0) {
-        await supabase
+        console.log('🔄 Cancelling existing subscriptions...');
+        const { error: cancelError } = await supabase
           .from('user_subscriptions')
           .update({ status: 'cancelled' })
           .eq('user_id', selectedMember.user_id)
           .eq('status', 'active');
+          
+        if (cancelError) {
+          console.error('❌ Error cancelling subscriptions:', cancelError);
+          throw cancelError;
+        }
+        console.log('✅ Existing subscriptions cancelled');
       }
 
       // Create new subscription
+      console.log('📝 Creating new subscription...');
+      const subscriptionData = {
+        user_id: selectedMember.user_id,
+        plan_id: selectedPlan,
+        gym_id: selectedGym.id,
+        status: 'active' as const,
+        starts_at: new Date(startDate).toISOString(),
+        expires_at: expiryDate.toISOString(),
+        auto_renew: false
+      };
+      console.log('📝 Subscription data:', subscriptionData);
+      
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
-        .insert({
-          user_id: selectedMember.user_id,
-          plan_id: selectedPlan,
-          gym_id: selectedGym.id,
-          status: 'active',
-          starts_at: new Date(startDate).toISOString(),
-          expires_at: expiryDate.toISOString(),
-          auto_renew: false
-        });
+        .insert(subscriptionData);
 
-      if (subscriptionError) throw subscriptionError;
+      if (subscriptionError) {
+        console.error('❌ Error creating subscription:', subscriptionError);
+        throw subscriptionError;
+      }
+      console.log('✅ Subscription created successfully');
 
       // Add credits if the plan includes them
       if (plan.credits_included > 0) {
-        await supabase
+        console.log('💳 Adding credits:', plan.credits_included);
+        const { error: creditsError } = await supabase
           .from('credits_transactions')
           .insert({
             user_id: selectedMember.user_id,
@@ -222,15 +281,24 @@ export default function ManualSubscriptionActivationDialog({
             transaction_type: 'subscription_activation',
             description: `Crediti da attivazione manuale abbonamento: ${plan.name}${notes ? ` - ${notes}` : ''}`
           });
+          
+        if (creditsError) {
+          console.error('❌ Error adding credits:', creditsError);
+          // Don't throw here, subscription was created successfully
+          toast.error('Abbonamento attivato ma errore nell\'aggiunta crediti');
+        } else {
+          console.log('✅ Credits added successfully');
+        }
       }
 
+      console.log('🎉 Manual subscription activation completed successfully');
       toast.success(`Abbonamento ${plan.name} attivato per ${selectedMember.first_name} ${selectedMember.last_name}`);
       onActivated();
       handleClose();
 
     } catch (error) {
-      console.error('Error activating subscription:', error);
-      toast.error('Errore nell\'attivazione dell\'abbonamento');
+      console.error('❌ Error activating subscription:', error);
+      toast.error(`Errore nell'attivazione dell'abbonamento: ${error.message || 'Errore sconosciuto'}`);
     } finally {
       setLoading(false);
     }
