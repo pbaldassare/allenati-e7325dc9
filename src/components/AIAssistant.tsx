@@ -5,38 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Send, Bot, User, Loader2, Check, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
-
-interface AIMessage {
-  id: string;
-  type: 'user' | 'ai' | 'system';
-  content: string;
-  timestamp: Date;
-  actionRequired?: {
-    type: 'booking' | 'cancellation';
-    data: any;
-    confirmed?: boolean;
-  };
-}
+import { useAIAssistant } from '@/hooks/useAIAssistant';
 
 export const AIAssistant = () => {
-  const { user } = useAuth();
   const { selectedGym } = useGym();
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<AIMessage[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: '👋 Ciao! Sono il tuo assistente AI intelligente! 🤖\n\n✨ **Posso aiutarti con:**\n• 📅 Prenotare e cancellare lezioni\n• 👥 Vedere partecipanti ai corsi\n• 💳 Gestire i tuoi crediti\n• 📊 Visualizzare le tue statistiche\n• 🔍 Informazioni dettagliate sui corsi\n• 👨‍🏫 Orari degli istruttori\n\n💬 **Cosa vorresti fare oggi?**',
-      timestamp: new Date()
-    }
-  ]);
+  const { messages, isLoading, typingText, sendMessage, confirmAction } = useAIAssistant();
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [typingText, setTypingText] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,340 +27,12 @@ export const AIAssistant = () => {
     scrollToBottom();
   }, [messages]);
 
-  const simulateTyping = (text: string, delay: number = 30) => {
-    setTypingText('');
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index < text.length) {
-        setTypingText(text.slice(0, index + 1));
-        index++;
-      } else {
-        clearInterval(timer);
-        setTimeout(() => setTypingText(''), 500);
-      }
-    }, delay);
-  };
-
-  const sendMessage = async (messageContent: string, retryCount: number = 0) => {
-    if (!messageContent.trim() || isLoading) return;
-
-    // Enhanced validation with detailed logging
-    if (!user || !user.id) {
-      console.error('❌ User validation failed:', { user: !!user, userId: user?.id });
-      toast({
-        title: "Errore",
-        description: "Devi essere autenticato per usare l'AI Assistant.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!selectedGym || !selectedGym.id) {
-      console.error('❌ Gym validation failed:', { selectedGym: !!selectedGym, gymId: selectedGym?.id });
-      toast({
-        title: "Errore",
-        description: "Seleziona una palestra per usare l'AI Assistant.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Additional UUID format validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(user.id)) {
-      console.error('❌ Invalid user ID format:', user.id);
-      toast({
-        title: "Errore",
-        description: "ID utente non valido. Prova a fare il logout e login di nuovo.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!uuidRegex.test(selectedGym.id)) {
-      console.error('❌ Invalid gym ID format:', selectedGym.id);
-      toast({
-        title: "Errore",
-        description: "ID palestra non valido. Prova a selezionare nuovamente la palestra.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const userMessage: AIMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: messageContent,
-      timestamp: new Date()
-    };
-
-      console.log('📤 Sending AI message (validated):', { 
-        message: messageContent.substring(0, 50) + '...', 
-        userId: user.id, 
-        gymId: selectedGym.id,
-        userType: typeof user.id,
-        gymType: typeof selectedGym.id,
-        retryCount,
-        timestamp: new Date().toISOString(),
-        navigator: {
-          onLine: navigator.onLine,
-          userAgent: navigator.userAgent.substring(0, 50)
-        }
-      });
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    // Enhanced typing simulation with retry context
-    const typingMessage = retryCount > 0 
-      ? `Tentativo ${retryCount + 1}/3 - Elaborando...` 
-      : 'Sto analizzando la tua richiesta...';
-    simulateTyping(typingMessage);
-
-    try {
-      const requestPayload = {
-        message: messageContent,
-        user_id: user.id,
-        gym_id: selectedGym.id,
-        conversation_history: messages.slice(-3).map(msg => ({
-          type: msg.type,
-          content: msg.content.substring(0, 200) // Limit content length
-        }))
-      };
-
-      console.log('📤 Request payload validation:', {
-        hasMessage: !!requestPayload.message,
-        userIdValid: !!requestPayload.user_id && typeof requestPayload.user_id === 'string',
-        gymIdValid: !!requestPayload.gym_id && typeof requestPayload.gym_id === 'string',
-        historyLength: requestPayload.conversation_history?.length || 0
-      });
-
-      // Direct invoke without timeout race to avoid network issues
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: requestPayload
-      });
-
-      console.log('📥 Risposta AI ricevuta (raw):', {
-        hasData: !!data,
-        hasError: !!error,
-        dataKeys: data ? Object.keys(data) : [],
-        errorMessage: error?.message,
-        timestamp: new Date().toISOString()
-      });
-
-      if (error) {
-        console.error('❌ Errore API AI:', error);
-        throw new Error(error.message || 'Errore nella comunicazione con l\'AI');
-      }
-
-      if (!data) {
-        console.error('🚨 Nessun dato ricevuto dall\'AI');
-        throw new Error('Nessuna risposta dall\'AI');
-      }
-
-      console.log('🔍 Analisi struttura dati ricevuti:', {
-        hasResponse: !!data.response,
-        hasMessage: !!data.message,
-        hasActionRequired: !!data.actionRequired,
-        dataKeys: Object.keys(data)
-      });
-
-      // Gestione migliorata delle risposte
-      let aiMessage: AIMessage;
-      
-      if (data.response) {
-        console.log('✅ Usando campo "response":', data.response.substring(0, 100) + '...');
-        aiMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: data.response,
-          timestamp: new Date(),
-          actionRequired: data.actionRequired
-        };
-      } else if (data.message) {
-        console.log('✅ Usando campo "message":', data.message.substring(0, 100) + '...');
-        aiMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: data.message,
-          timestamp: new Date(),
-          actionRequired: data.actionRequired
-        };
-      } else {
-        console.error('🚨 Formato risposta AI non riconosciuto:', JSON.stringify(data, null, 2));
-        console.error('🔍 Campi disponibili:', Object.keys(data));
-        throw new Error(`Formato risposta AI non valido. Campi ricevuti: ${Object.keys(data).join(', ')}`);
-      }
-
-      console.log('✅ Messaggio AI processato:', {
-        id: aiMessage.id,
-        contentLength: aiMessage.content.length,
-        contentPreview: aiMessage.content.substring(0, 100) + '...',
-        hasAction: !!aiMessage.actionRequired
-      });
-      setMessages(prev => [...prev, aiMessage]);
-
-    } catch (error) {
-      setTypingText('');
-      console.error('💥 Complete error details:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : 'No stack',
-        retryCount,
-        maxRetries: 2
-      });
-      
-      const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
-      
-      // Enhanced retry logic for 500 errors
-      if ((errorMsg.includes('500') || errorMsg.includes('Internal server error')) && retryCount < 2) {
-        console.log(`🔄 Retrying request (attempt ${retryCount + 1}/3) after server error`);
-        
-        // Show retry message
-        setTypingText(`Riprovo... tentativo ${retryCount + 2}/3`);
-        
-        // Wait before retry (exponential backoff)
-        const delay = (retryCount + 1) * 2000; // 2s, 4s delays
-        setTimeout(() => {
-          sendMessage(messageContent, retryCount + 1);
-        }, delay);
-        
-        return; // Don't show error message yet
-      }
-      
-      // Enhanced error message handling
-      let toastMessage: string;
-      if (errorMsg?.includes('Failed to send a request to the Edge Function') || 
-          errorMsg?.includes('Failed to fetch') || 
-          errorMsg?.includes('timeout') ||
-          errorMsg?.includes('AbortError')) {
-        toastMessage = retryCount === 0 
-          ? "Richiesta in elaborazione... riprovo automaticamente."
-          : "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice.";
-      } else if (errorMsg?.includes('500') || errorMsg?.includes('Internal server error')) {
-        toastMessage = retryCount >= 2 
-          ? "Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto."
-          : "Si è verificato un errore del server. Riprovo automaticamente...";
-      } else if (errorMsg?.includes('Invalid request parameters')) {
-        toastMessage = "Parametri della richiesta non validi. Prova a rifare il login.";
-      } else if (errorMsg?.includes('Network error')) {
-        toastMessage = "Errore di connessione. Controlla la tua connessione internet.";
-      } else {
-        toastMessage = `Si è verificato un errore: ${errorMsg}`;
-      }
-      
-      toast({
-        title: "Errore AI",
-        description: toastMessage,
-        variant: "destructive"
-      });
-
-      const errorMessage: AIMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'system',
-        content: toastMessage,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-      setTypingText('');
-    }
-  };
-
-  const confirmAction = async (messageId: string, confirmed: boolean) => {
-    const message = messages.find(m => m.id === messageId);
-    if (!message?.actionRequired || !user || !selectedGym) {
-      console.error('❌ Dati mancanti per conferma azione:', { 
-        message: !!message, 
-        actionRequired: !!message?.actionRequired,
-        user: !!user, 
-        selectedGym: !!selectedGym 
-      });
-      return;
-    }
-
-    console.log('🔄 Conferma azione:', { 
-      messageId, 
-      confirmed, 
-      actionType: message.actionRequired.type,
-      userId: user.id, 
-      gymId: selectedGym.id 
-    });
-
-    setMessages(prev => prev.map(m => 
-      m.id === messageId 
-        ? { ...m, actionRequired: { ...m.actionRequired!, confirmed } }
-        : m
-    ));
-
-    if (confirmed) {
-      setIsLoading(true);
-      try {
-      // Enhanced action confirmation with better error handling
-        const { data, error } = await supabase.functions.invoke('ai-assistant', {
-          body: {
-            confirmAction: true,
-            actionType: message.actionRequired.type,
-            actionData: message.actionRequired.data,
-            user_id: user.id,
-            gym_id: selectedGym.id
-          }
-        });
-
-        console.log('📥 Risposta conferma azione:', { data, error });
-
-        if (error) {
-          console.error('❌ Errore API conferma azione:', error);
-          throw new Error(error.message || 'Errore nella conferma dell\'azione');
-        }
-
-        if (!data) {
-          throw new Error('Nessuna risposta per la conferma dell\'azione');
-        }
-
-        const confirmationMessage: AIMessage = {
-          id: Date.now().toString(),
-          type: 'ai',
-          content: data.response || data.message || 'Azione completata!',
-          timestamp: new Date()
-        };
-
-        setMessages(prev => [...prev, confirmationMessage]);
-
-        toast({
-          title: "Azione completata",
-          description: confirmationMessage.content
-        });
-
-      } catch (error) {
-        console.error('💥 Errore completo conferma azione:', error);
-        const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
-        const errorMessage = errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')
-          ? "L'operazione sta impiegando più tempo del previsto. Riprova."
-          : `Errore nell'eseguire l'azione: ${errorMsg}`;
-        
-        toast({
-          title: "Errore",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      toast({
-        title: "Azione annullata",
-        description: "L'azione è stata annullata."
-      });
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    if (input.trim()) {
+      sendMessage(input.trim());
+      setInput('');
+    }
   };
 
   return (
@@ -483,18 +130,18 @@ export const AIAssistant = () => {
                   <div className="bg-muted rounded-lg p-3 min-w-[200px]">
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      <span className="text-sm font-medium">
-                        {typingText || 'Sto pensando...'}
-                      </span>
+                       <span className="text-sm font-medium">
+                         {typingText || '🤔 Sto pensando...'}
+                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      L'elaborazione può richiedere fino a 60 secondi
-                    </p>
-                    <div className="flex gap-1 mt-2">
-                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                    </div>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       {typingText.includes('Riprovo') ? 'Nuovo tentativo in corso...' : 'Risposta ottimizzata e velocizzata'}
+                     </p>
+                     <div className="flex gap-1 mt-2">
+                       <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
+                       <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                       <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                     </div>
                   </div>
                 </div>
               )}

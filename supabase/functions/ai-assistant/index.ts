@@ -102,7 +102,10 @@ serve(async (req) => {
       content: msg.content
     })) || [];
 
-    // Call OpenAI with function calling
+    // Optimize message context - only keep last 2 messages for performance
+    const optimizedContext = conversationContext.slice(-2);
+    
+    // Call OpenAI with streaming and optimized payload
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -110,56 +113,28 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07', // Using faster mini model
+        model: 'gpt-5-nano-2025-08-07', // Using fastest model for quick responses
+        stream: true, // Enable streaming
         messages: [
           {
             role: 'system',
-            content: `Sei l'assistente AI intelligente di ${userContext.gymName}, specializzato nel supporto completo per palestre e centri fitness italiani. 
-
-🎯 **LE TUE CAPACITÀ PRINCIPALI:**
-• 📅 Gestione prenotazioni e cancellazioni lezioni
-• 👥 Informazioni dettagliate su corsi, istruttori e partecipanti  
-• 💳 Gestione crediti e storico transazioni
-• 📊 Statistiche personali e progressi
-• 🔍 Ricerca corsi per livello, orario e tipo
-• ❓ Supporto generale sulla palestra
-
-👤 **CONTESTO UTENTE:**
-• Nome: ${userContext.userName}
-• Crediti disponibili: ${userContext.credits}
-• Palestra: ${userContext.gymName}
-
-🎨 **STILE DI COMUNICAZIONE:**
-• Usa un tono amichevole e professionale
-• Includi emoji pertinenti per rendere i messaggi più accattivanti
-• Fornisci risposte chiare e actionable
-• Per azioni critiche (prenotazioni/cancellazioni), usa sempre le function calls
-• Suggerisci alternative quando possibile
-• Celebra i successi dell'utente
-
-💡 **ESEMPI DI CONVERSAZIONE:**
-• "Voglio prenotarmi per la lezione di domani" 
-• "Chi partecipa al corso di BJJ di giovedì?"
-• "Quanto crediti ho ancora?"
-• "Mostrami le mie statistiche di allenamento"
-
-Rispondi sempre in italiano con entusiasmo e competenza!`
+            content: `Sei l'assistente AI di ${userContext.gymName}. Gestisci prenotazioni, crediti (${userContext.credits}) e info corsi per ${userContext.userName}. Rispondi brevemente e usa le function calls per azioni specifiche.`
           },
-          ...conversationContext,
-          { role: 'user', content: message }
+          ...optimizedContext,
+          { role: 'user', content: message.substring(0, 500) } // Limit message length
         ],
-        max_completion_tokens: 1000, // Reduced for faster responses
+        max_completion_tokens: 800, // Reduced for faster responses
         tools: [
           {
             type: 'function',
             function: {
               name: 'getAvailableCourses',
-              description: 'Ottieni la lista dei corsi disponibili per una data specifica',
+              description: 'Corsi disponibili per data',
               parameters: {
                 type: 'object',
                 properties: {
-                  date: { type: 'string', description: 'Data in formato YYYY-MM-DD' },
-                  courseType: { type: 'string', description: 'Tipo di corso (opzionale)' }
+                  date: { type: 'string', description: 'Data YYYY-MM-DD' },
+                  courseType: { type: 'string', description: 'Tipo corso (opzionale)' }
                 },
                 required: ['date']
               }
@@ -169,14 +144,14 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
             type: 'function',
             function: {
               name: 'prepareBookingConfirmation',
-              description: 'Prepara la conferma di prenotazione per una lezione specifica',
+              description: 'Prepara prenotazione',
               parameters: {
                 type: 'object',
                 properties: {
-                  sessionId: { type: 'string', description: 'ID della sessione' },
-                  courseName: { type: 'string', description: 'Nome del corso' },
-                  date: { type: 'string', description: 'Data della lezione' },
-                  time: { type: 'string', description: 'Orario della lezione' }
+                  sessionId: { type: 'string' },
+                  courseName: { type: 'string' },
+                  date: { type: 'string' },
+                  time: { type: 'string' }
                 },
                 required: ['sessionId', 'courseName', 'date', 'time']
               }
@@ -185,26 +160,12 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
           {
             type: 'function',
             function: {
-              name: 'getSessionParticipants',
-              description: 'Ottieni la lista dei partecipanti confermati per una sessione',
-              parameters: {
-                type: 'object',
-                properties: {
-                  sessionId: { type: 'string', description: 'ID della sessione' }
-                },
-                required: ['sessionId']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
               name: 'getUserBookings',
-              description: 'Ottieni lo storico delle prenotazioni dell\'utente',
+              description: 'Storico prenotazioni utente',
               parameters: {
                 type: 'object',
                 properties: {
-                  status: { type: 'string', description: 'Stato delle prenotazioni (confirmed, cancelled, completed)' }
+                  status: { type: 'string', description: 'confirmed, cancelled, completed' }
                 }
               }
             }
@@ -213,13 +174,13 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
             type: 'function',
             function: {
               name: 'prepareCancellationConfirmation',
-              description: 'Prepara la conferma di cancellazione per una prenotazione',
+              description: 'Prepara cancellazione',
               parameters: {
                 type: 'object',
                 properties: {
-                  bookingId: { type: 'string', description: 'ID della prenotazione' },
-                  courseName: { type: 'string', description: 'Nome del corso' },
-                  date: { type: 'string', description: 'Data della lezione' }
+                  bookingId: { type: 'string' },
+                  courseName: { type: 'string' },
+                  date: { type: 'string' }
                 },
                 required: ['bookingId', 'courseName', 'date']
               }
@@ -228,73 +189,17 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
           {
             type: 'function',
             function: {
-              name: 'getCourseDetails',
-              description: 'Ottieni informazioni dettagliate su un corso specifico',
-              parameters: {
-                type: 'object',
-                properties: {
-                  courseName: { type: 'string', description: 'Nome del corso' },
-                  courseId: { type: 'string', description: 'ID del corso (opzionale)' }
-                },
-                required: ['courseName']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'getInstructorSchedule',
-              description: 'Ottieni gli orari e i corsi di un istruttore specifico',
-              parameters: {
-                type: 'object',
-                properties: {
-                  instructorName: { type: 'string', description: 'Nome dell\'istruttore' },
-                  date: { type: 'string', description: 'Data specifica (YYYY-MM-DD), opzionale' }
-                },
-                required: ['instructorName']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'getUserStats',
-              description: 'Ottieni statistiche e progressi dell\'utente',
-              parameters: {
-                type: 'object',
-                properties: {
-                  period: { type: 'string', description: 'Periodo: week, month, year' }
-                }
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
               name: 'getUserCreditsHistory',
-              description: 'Ottieni lo storico delle transazioni crediti dell\'utente',
+              description: 'Storico crediti',
               parameters: {
                 type: 'object',
                 properties: {
-                  limit: { type: 'number', description: 'Numero massimo di transazioni (default 10)' }
-                }
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'getUpcomingBookings',
-              description: 'Ottieni le prossime prenotazioni dell\'utente',
-              parameters: {
-                type: 'object',
-                properties: {
-                  days: { type: 'number', description: 'Giorni futuri da considerare (default 7)' }
+                  limit: { type: 'number', description: 'Max 10' }
                 }
               }
             }
           }
-        ].slice(0, 8), // Limit to 8 most important tools for better performance
+        ], // Reduced to 5 most used tools
         tool_choice: 'auto'
       }),
     });
@@ -305,19 +210,71 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
-    const openAITime = Date.now() - startTime;
-    console.log(`OpenAI API call completed in ${openAITime}ms`);
-    
-    // Check if response has choices
-    if (!aiResponse.choices || aiResponse.choices.length === 0) {
-      throw new Error('Invalid response from OpenAI: no choices');
+    // Handle streaming response
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      let accumulatedContent = '';
+      let toolCalls = null;
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
+            if (!line.startsWith('data: ')) continue;
+            
+            try {
+              const data = JSON.parse(line.slice(6));
+              const delta = data.choices?.[0]?.delta;
+              
+              if (delta?.content) {
+                accumulatedContent += delta.content;
+              }
+              
+              if (delta?.tool_calls) {
+                toolCalls = delta.tool_calls;
+              }
+              
+              if (data.choices?.[0]?.finish_reason === 'tool_calls' && toolCalls) {
+                return await handleFunctionCall({
+                  name: toolCalls[0].function.name,
+                  arguments: toolCalls[0].function.arguments
+                }, user_id, gym_id);
+              }
+              
+            } catch (parseError) {
+              // Skip invalid JSON chunks
+              continue;
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ Streaming response completed in ${totalTime}ms`);
+      
+      return new Response(JSON.stringify({
+        response: accumulatedContent || 'Ciao! Come posso aiutarti oggi?',
+        execution_time_ms: totalTime
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     
-    const choice = aiResponse.choices[0];
+    // Fallback for non-streaming
+    const aiResponse = await response.json();
+    const choice = aiResponse.choices?.[0];
     
-    // Check for tool calls (new format)
-    if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+    if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
       const toolCall = choice.message.tool_calls[0];
       return await handleFunctionCall({
         name: toolCall.function.name,
@@ -326,12 +283,10 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`Total function execution time: ${totalTime}ms`);
-    
-    console.log(`✅ Sending successful response. Total execution time: ${totalTime}ms`);
+    console.log(`✅ Non-streaming response completed in ${totalTime}ms`);
     
     return new Response(JSON.stringify({
-      response: choice.message?.content || 'Nessuna risposta disponibile',
+      response: choice?.message?.content || 'Ciao! Come posso aiutarti oggi?',
       execution_time_ms: totalTime
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -394,50 +349,43 @@ async function getUserContext(userId: string, gymId: string) {
   });
 
   try {
-    // Parallel queries for better performance
-    const [profileResult, gymResult, gymCreditsResult] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('current_credits, first_name')
-        .eq('user_id', userId)
-        .maybeSingle(),
-      
-      supabase
-        .from('gyms')
-        .select('name')
-        .eq('id', gymId)
-        .maybeSingle(),
-      
-      supabase
-        .from('gym_credits')
-        .select('credits')
-        .eq('user_id', userId)
-        .eq('gym_id', gymId)
-        .maybeSingle()
-    ]);
+    // Optimized single query approach for better performance
+    const { data: gymCredits, error: creditsError } = await supabase
+      .from('gym_credits')
+      .select(`
+        credits,
+        profiles!inner(first_name),
+        gyms!inner(name)
+      `)
+      .eq('user_id', userId)
+      .eq('gym_id', gymId)
+      .maybeSingle();
 
-    console.log('📊 User context query results:', {
-      profileFound: !!profileResult.data,
-      gymFound: !!gymResult.data,
-      gymCreditsFound: !!gymCreditsResult.data,
-      profileError: profileResult.error?.message,
-      gymError: gymResult.error?.message,
-      gymCreditsError: gymCreditsResult.error?.message
-    });
+    if (creditsError) {
+      console.log('⚠️ Gym credits not found, falling back to separate queries');
+      
+      // Fallback to separate queries
+      const [profileResult, gymResult] = await Promise.all([
+        supabase.from('profiles').select('first_name').eq('user_id', userId).maybeSingle(),
+        supabase.from('gyms').select('name').eq('id', gymId).maybeSingle()
+      ]);
+
+      return {
+        credits: 0,
+        userName: profileResult.data?.first_name || 'Utente',
+        gymName: gymResult.data?.name || 'Palestra'
+      };
+    }
 
     const context = {
-      credits: gymCreditsResult.data?.credits || 0,
-      userName: profileResult.data?.first_name || 'Utente',
-      gymName: gymResult.data?.name || 'Palestra'
+      credits: gymCredits?.credits || 0,
+      userName: gymCredits?.profiles?.first_name || 'Utente',
+      gymName: gymCredits?.gyms?.name || 'Palestra'
     };
 
-    console.log('✅ User context prepared:', {
-      credits: context.credits,
-      userName: context.userName,
-      gymName: context.gymName
-    });
-
+    console.log('✅ User context prepared:', context);
     return context;
+    
   } catch (error) {
     console.error('❌ Error fetching user context:', error);
     
