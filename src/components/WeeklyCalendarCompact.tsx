@@ -2,25 +2,24 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 
-interface CourseSchedule {
+interface CourseSession {
   id: string;
-  day_of_week: number;
+  course_id: string;
+  session_date: string;
   start_time: string;
   end_time: string;
-  course: {
-    id: string;
+  available_spots: number;
+  max_participants: number;
+  courses: {
     name: string;
-    category_id: string;
-    course_categories: {
-      name: string;
-      color_hex: string;
-    };
+    is_active: boolean;
+    gym_id: string;
   };
-  booking_count: number;
 }
 
 interface WeeklyCalendarCompactProps {
@@ -30,7 +29,7 @@ interface WeeklyCalendarCompactProps {
 
 const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompactProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [courseSchedules, setCourseSchedules] = useState<CourseSchedule[]>([]);
+  const [courseSessions, setCourseSessions] = useState<CourseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { selectedGym } = useGym();
@@ -54,64 +53,53 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
   const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
   useEffect(() => {
-    const loadCourseSchedules = async () => {
+    const loadCourseSessions = async () => {
       if (!user || !selectedGym?.id) return;
 
       try {
         setLoading(true);
-        const { data: schedules } = await supabase
-          .from('course_schedules')
+        const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Monday as first day
+        const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+        
+        const { data, error } = await supabase
+          .from('course_sessions')
           .select(`
             id,
-            day_of_week,
+            course_id,
+            session_date,
             start_time,
             end_time,
-            course:courses!inner (
-              id,
+            available_spots,
+            max_participants,
+            courses!inner (
               name,
-              category_id,
-              gym_id,
-              course_categories (
-                name,
-                color_hex
-              )
+              is_active,
+              gym_id
             )
           `)
-          .eq('course.gym_id', selectedGym.id)
-          .eq('course.is_active', true)
-          .eq('is_active', true);
+          .eq('courses.gym_id', selectedGym.id)
+          .eq('courses.is_active', true)
+          .eq('status', 'scheduled')
+          .gte('session_date', format(weekStart, 'yyyy-MM-dd'))
+          .lte('session_date', format(weekEnd, 'yyyy-MM-dd'))
+          .order('session_date', { ascending: true });
 
-        if (schedules) {
-          // Add booking counts
-          const schedulesWithCounts = await Promise.all(
-            schedules.map(async (schedule) => {
-              const { count } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('course_id', schedule.course.id)
-                .neq('status', 'cancelled');
+        if (error) throw error;
 
-              return {
-                ...schedule,
-                booking_count: count || 0
-              };
-            })
-          );
-
-          setCourseSchedules(schedulesWithCounts);
-        }
+        setCourseSessions(data || []);
       } catch (error) {
-        console.error('Errore nel caricamento degli schedule:', error);
+        console.error('Error loading course sessions:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadCourseSchedules();
-  }, [user, selectedGym]);
+    loadCourseSessions();
+  }, [user, selectedGym, currentWeek]);
 
-  const getCoursesForDay = (dayOfWeek: number) => {
-    return courseSchedules.filter(schedule => schedule.day_of_week === dayOfWeek);
+  const getSessionsForDay = (date: Date) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    return courseSessions.filter(session => session.session_date === dateString);
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -183,12 +171,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
       {/* Griglia giorni della settimana - senza bordi */}
       <div className="grid grid-cols-7 gap-1">
         {weekDays.map((date, index) => {
-          // Convert calendar index to database day_of_week format
-          // Calendar: Monday=0, Tuesday=1, ..., Sunday=6
-          // Database: Monday=1, Tuesday=2, ..., Sunday=0
-          const calendarDayOfWeek = index; // 0=Monday in our calendar
-          const dbDayOfWeek = calendarDayOfWeek === 6 ? 0 : calendarDayOfWeek + 1; // Convert to DB format
-          const actualCoursesForDay = getCoursesForDay(dbDayOfWeek);
+          const sessionsForDay = getSessionsForDay(date);
 
           return (
             <div
@@ -207,7 +190,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
               
               {/* Area badge - sempre in basso */}
               <div className="h-6 flex items-center justify-center">
-                {actualCoursesForDay.length > 0 ? (
+                {sessionsForDay.length > 0 ? (
                   <Badge 
                     variant="secondary" 
                     className={`text-xs px-2 py-1 min-w-0 cursor-pointer transition-colors ${
@@ -217,7 +200,7 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
                     }`}
                     onClick={() => onDayClick?.(date)}
                   >
-                    {actualCoursesForDay.length}
+                    {sessionsForDay.length}
                   </Badge>
                 ) : (
                   <div className="h-6"></div>
