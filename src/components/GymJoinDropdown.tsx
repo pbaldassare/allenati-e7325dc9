@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, Send, Loader2, Plus, Sparkles, Zap } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Loader2, Plus, Sparkles, Zap } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Gym {
@@ -78,7 +78,7 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
     }
   };
 
-  const requestJoinGym = async () => {
+  const joinGym = async () => {
     if (!user || !selectedGymId) return;
 
     const selectedGym = availableGyms.find(g => g.id === selectedGymId);
@@ -86,52 +86,56 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
 
     setRequesting(true);
     try {
-      // Verifica se c'è già una richiesta pendente
-      const { data: existingRequest } = await supabase
-        .from('gym_join_requests')
+      console.log('🏃‍♂️ Tentativo di entrare nella palestra:', selectedGymId);
+
+      // Verifica se l'utente è già membro
+      const { data: existingMembership } = await supabase
+        .from('user_gym_memberships')
         .select('id')
         .eq('user_id', user.id)
         .eq('gym_id', selectedGymId)
-        .eq('status', 'pending')
+        .eq('status', 'active')
         .single();
 
-      if (existingRequest) {
+      if (existingMembership) {
         toast({
-          title: 'Richiesta già inviata',
-          description: 'Hai già una richiesta pendente per questa palestra',
+          title: 'Già iscritto',
+          description: 'Sei già membro di questa palestra',
           variant: 'destructive',
         });
         return;
       }
 
-      // Crea nuova richiesta
+      // Crea membership diretta come member
       const { error } = await supabase
-        .from('gym_join_requests')
+        .from('user_gym_memberships')
         .insert({
           user_id: user.id,
           gym_id: selectedGymId,
-          status: 'pending',
-          message: `Richiesta di accesso alla palestra ${selectedGym.name}`,
+          membership_type: 'member',
+          status: 'active',
         });
 
       if (error) throw error;
 
+      console.log('✅ Collegamento riuscito alla palestra:', selectedGym.name);
       toast({
-        title: 'Richiesta inviata!',
-        description: `La tua richiesta per ${selectedGym.name} è stata inviata.`,
+        title: 'Benvenuto!',
+        description: `Sei ora membro di ${selectedGym.name}!`,
       });
 
-      // Reset form e ricarica
+      // Reset form e aggiorna contesti
       setSelectedGymId('');
       setSearchTerm('');
       setIsOpen(false);
       await loadAvailableGyms();
+      await refreshGyms();
       onRequestSent?.();
     } catch (error) {
-      console.error('Error requesting gym access:', error);
+      console.error('❌ Errore nel collegamento alla palestra:', error);
       toast({
         title: 'Errore',
-        description: 'Impossibile inviare la richiesta',
+        description: 'Impossibile collegarsi alla palestra',
         variant: 'destructive',
       });
     } finally {
@@ -209,9 +213,9 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
         </SelectContent>
       </Select>
 
-      {/* Request Button */}
+      {/* Join Button */}
       <Button
-        onClick={requestJoinGym}
+        onClick={joinGym}
         disabled={!selectedGymId || requesting}
         className="w-full h-10 bg-gradient-accent hover:bg-gradient-accent/90 text-white shadow-glow transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:scale-100"
         size="sm"
@@ -219,12 +223,12 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
         {requesting ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Inviando...
+            Collegamento...
           </>
         ) : (
           <>
-            <Send className="w-4 h-4 mr-2" />
-            Richiedi Accesso
+            <ArrowRight className="w-4 h-4 mr-2" />
+            Entra nella Palestra
             <Zap className="w-3 h-3 ml-1 animate-pulse" />
           </>
         )}
