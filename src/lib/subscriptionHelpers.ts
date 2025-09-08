@@ -17,6 +17,8 @@ export interface ActiveSubscription {
  */
 export const hasActiveUnlimitedSubscription = async (userId: string, gymId: string): Promise<boolean> => {
   try {
+    console.log('Checking unlimited subscription for user:', userId, 'gym:', gymId);
+    
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select(`
@@ -27,9 +29,15 @@ export const hasActiveUnlimitedSubscription = async (userId: string, gymId: stri
       .eq('gym_id', gymId)
       .eq('subscription_plans.unlimited_access', true)
       .gt('expires_at', new Date().toISOString())
-      .single();
+      .maybeSingle();
 
-    if (error) return false;
+    console.log('Unlimited subscription check result:', { data, error });
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking unlimited subscription:', error);
+      return false;
+    }
+    
     return !!data;
   } catch (error) {
     console.error('Error checking unlimited subscription:', error);

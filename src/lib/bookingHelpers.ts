@@ -27,10 +27,14 @@ export const checkBookingEligibility = async (
   creditsRequired: number
 ): Promise<BookingEligibility> => {
   try {
+    console.log('Checking booking eligibility for user:', userId, 'gym:', gymId, 'credits needed:', creditsRequired);
+    
     // First check for unlimited subscription
     const hasUnlimited = await hasActiveUnlimitedSubscription(userId, gymId);
+    console.log('Has unlimited subscription:', hasUnlimited);
     
     if (hasUnlimited) {
+      console.log('User has unlimited access, booking allowed');
       return {
         canBook: true,
         hasUnlimitedAccess: true,
@@ -39,16 +43,21 @@ export const checkBookingEligibility = async (
     }
 
     // Check gym-specific credits
-    const { data: gymCredits } = await supabase
+    console.log('Checking gym credits...');
+    const { data: gymCredits, error: creditsError } = await supabase
       .from('gym_credits')
       .select('credits')
       .eq('user_id', userId)
       .eq('gym_id', gymId)
       .maybeSingle();
 
+    console.log('Gym credits query result:', { gymCredits, creditsError });
+
     const availableCredits = gymCredits?.credits || 0;
+    console.log('Available credits:', availableCredits);
 
     if (availableCredits >= creditsRequired) {
+      console.log('Sufficient credits available, booking allowed');
       return {
         canBook: true,
         hasUnlimitedAccess: false,
@@ -56,6 +65,7 @@ export const checkBookingEligibility = async (
       };
     }
 
+    console.log('Insufficient credits, booking denied');
     return {
       canBook: false,
       hasUnlimitedAccess: false,
@@ -81,6 +91,8 @@ export const processBooking = async (
   bookingData: BookingData
 ): Promise<{ success: boolean; message: string; bookingId?: string }> => {
   try {
+    console.log('Processing booking for user:', userId, 'data:', bookingData);
+    
     // Check eligibility first
     const eligibility = await checkBookingEligibility(
       userId, 
@@ -88,7 +100,10 @@ export const processBooking = async (
       bookingData.creditsRequired
     );
 
+    console.log('Booking eligibility result:', eligibility);
+
     if (!eligibility.canBook) {
+      console.log('Booking not allowed:', eligibility.reason);
       return {
         success: false,
         message: eligibility.reason || 'Non puoi prenotare questa sessione'
@@ -97,13 +112,17 @@ export const processBooking = async (
 
     // Check session availability if sessionId provided
     if (bookingData.sessionId) {
-      const { data: session } = await supabase
+      console.log('Checking session availability for session:', bookingData.sessionId);
+      const { data: session, error: sessionError } = await supabase
         .from('course_sessions')
         .select('available_spots')
         .eq('id', bookingData.sessionId)
         .single();
 
-      if (!session || session.available_spots <= 0) {
+      console.log('Session availability check:', { session, sessionError });
+
+      if (sessionError || !session || session.available_spots <= 0) {
+        console.log('No available spots');
         return {
           success: false,
           message: 'Nessun posto disponibile per questa sessione'
@@ -125,16 +144,24 @@ export const processBooking = async (
       bookingInsertData.session_id = bookingData.sessionId;
     }
 
+    console.log('Creating booking with data:', bookingInsertData);
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert(bookingInsertData)
       .select()
       .single();
 
-    if (bookingError) throw bookingError;
+    console.log('Booking creation result:', { booking, bookingError });
+
+    if (bookingError) {
+      console.error('Booking creation failed:', bookingError);
+      throw bookingError;
+    }
 
     // Deduct credits if not unlimited
     if (!eligibility.hasUnlimitedAccess) {
+      console.log('Deducting credits...');
       const deductionResult = await deductCredits(
         userId,
         bookingData.gymId,
@@ -143,7 +170,10 @@ export const processBooking = async (
         booking.id
       );
 
+      console.log('Credit deduction result:', deductionResult);
+
       if (!deductionResult.success) {
+        console.log('Credit deduction failed, rolling back booking');
         // Rollback booking
         await supabase
           .from('bookings')
@@ -157,6 +187,7 @@ export const processBooking = async (
       }
     }
 
+    console.log('Booking process completed successfully');
     return {
       success: true,
       message: eligibility.hasUnlimitedAccess 
