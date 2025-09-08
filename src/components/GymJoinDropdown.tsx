@@ -88,40 +88,17 @@ export function GymJoinDropdown({ onRequestSent }: GymJoinDropdownProps) {
     try {
       console.log('🏃‍♂️ Tentativo di entrare nella palestra:', selectedGymId);
 
-      // Verifica se l'utente è già membro
-      const { data: existingMembership } = await supabase
-        .from('user_gym_memberships')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('gym_id', selectedGymId)
-        .eq('status', 'active')
-        .single();
-
-      if (existingMembership) {
-        toast({
-          title: 'Già iscritto',
-          description: 'Sei già membro di questa palestra',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Crea membership diretta come member
-      const { error } = await supabase
-        .from('user_gym_memberships')
-        .insert({
-          user_id: user.id,
-          gym_id: selectedGymId,
-          membership_type: 'member',
-          status: 'active',
-        });
+      // Chiama l'Edge Function per collegare la palestra
+      const { data, error } = await supabase.functions.invoke('join-gym', {
+        body: { gym_id: selectedGymId }
+      });
 
       if (error) throw error;
 
-      console.log('✅ Collegamento riuscito alla palestra:', selectedGym.name);
+      console.log('✅ Collegamento riuscito alla palestra:', data.gym.name);
       toast({
         title: 'Benvenuto!',
-        description: `Sei ora membro di ${selectedGym.name}!`,
+        description: data.message || `Sei ora membro di ${data.gym.name}!`,
       });
 
       // Reset form e aggiorna contesti
