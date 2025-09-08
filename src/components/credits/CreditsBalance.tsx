@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Coins, Calendar, Infinity } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
 
 interface CreditsBalanceProps {
   onPurchaseClick?: () => void;
@@ -20,11 +21,12 @@ interface UserCredits {
 
 export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const [creditsData, setCreditsData] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !selectedGym) return;
 
     const fetchCreditsData = async () => {
       try {
@@ -35,7 +37,7 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .eq('user_id', user.id)
           .single();
 
-        // Get active subscription
+        // Get active subscription for selected gym
         const { data: subscription } = await supabase
           .from('user_subscriptions')
           .select(`
@@ -46,6 +48,7 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
             )
           `)
           .eq('user_id', user.id)
+          .eq('gym_id', selectedGym.id)
           .eq('status', 'active')
           .gt('expires_at', new Date().toISOString())
           .single();
@@ -66,7 +69,7 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
     };
 
     fetchCreditsData();
-  }, [user]);
+  }, [user, selectedGym]);
 
   if (loading) {
     return (

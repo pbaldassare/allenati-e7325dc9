@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { History, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGym } from '@/contexts/GymContext';
 
 interface CreditTransaction {
   id: string;
@@ -16,11 +17,12 @@ interface CreditTransaction {
 
 export const CreditsHistory = () => {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !selectedGym) return;
 
     const fetchTransactions = async () => {
       try {
@@ -28,6 +30,7 @@ export const CreditsHistory = () => {
           .from('credits_transactions')
           .select('*')
           .eq('user_id', user.id)
+          .eq('gym_id', selectedGym.id)
           .order('created_at', { ascending: false })
           .limit(50);
 
@@ -41,7 +44,7 @@ export const CreditsHistory = () => {
     };
 
     fetchTransactions();
-  }, [user]);
+  }, [user, selectedGym]);
 
   const getTransactionTypeLabel = (type: string) => {
     switch (type) {
