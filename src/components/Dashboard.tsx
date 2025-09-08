@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { CourseParticipantCount } from './CourseParticipantCount';
 import { useSessionBookings } from '@/hooks/useSessionBookings';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { GymSelectorWithLogo } from '@/components/GymSelectorWithLogo';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -427,34 +428,10 @@ export const Dashboard = () => {
             </Button>
           </div>
           
-          {/* Gym Info - Mobile Optimized */}
-          {selectedGym ? (
-            <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
-              <div className="flex items-center gap-1 sm:gap-2 bg-background/90 backdrop-blur-sm border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 shadow-sm min-w-0">
-                {selectedGym.logo_url ? (
-                  <Avatar className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0">
-                    <AvatarImage src={selectedGym.logo_url} alt={selectedGym.name} />
-                    <AvatarFallback className="text-xs">
-                      <Building2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
-                  </div>
-                )}
-                <span className="text-xs sm:text-sm font-medium text-foreground truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
-                  {selectedGym.name}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 ml-2 sm:ml-4">
-              <div className="bg-muted/50 border rounded-lg px-2 py-1.5">
-                <span className="text-xs text-muted-foreground">Caricamento...</span>
-              </div>
-            </div>
-          )}
+          {/* Gym Selector with Logo */}
+          <div className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
+            <GymSelectorWithLogo />
+          </div>
         </div>
       </div>
 
