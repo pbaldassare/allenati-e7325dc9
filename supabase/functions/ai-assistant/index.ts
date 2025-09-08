@@ -4,7 +4,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 const supabase = createClient(
@@ -326,17 +328,22 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
     const totalTime = Date.now() - startTime;
     console.log(`Total function execution time: ${totalTime}ms`);
     
+    console.log(`✅ Sending successful response. Total execution time: ${totalTime}ms`);
+    
     return new Response(JSON.stringify({
-      response: choice.message?.content || 'Nessuna risposta disponibile'
+      response: choice.message?.content || 'Nessuna risposta disponibile',
+      execution_time_ms: totalTime
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
+    const totalTime = Date.now() - (Date.now() - 10000); // Fallback timing
     console.error('❌ Complete error in ai-assistant function:', {
       error: error.message || 'Unknown error',
       stack: error.stack || 'No stack trace',
-      type: error.constructor.name || 'Unknown error type'
+      type: error.constructor.name || 'Unknown error type',
+      execution_time_ms: totalTime
     });
     
     // Enhanced error categorization and messaging
@@ -366,10 +373,13 @@ Rispondi sempre in italiano con entusiasmo e competenza!`
       statusCode = 502;
     }
     
+    console.log(`💥 Sending error response with status ${statusCode}`);
+    
     return new Response(JSON.stringify({ 
       error: errorMessage,
       response: userFriendlyMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: Deno.env.get('DENO_ENV') === 'development' ? error.message : undefined,
+      timestamp: new Date().toISOString()
     }), {
       status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

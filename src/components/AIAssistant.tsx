@@ -119,14 +119,19 @@ export const AIAssistant = () => {
       timestamp: new Date()
     };
 
-    console.log('📤 Sending AI message (validated):', { 
-      message: messageContent.substring(0, 50) + '...', 
-      userId: user.id, 
-      gymId: selectedGym.id,
-      userType: typeof user.id,
-      gymType: typeof selectedGym.id,
-      retryCount 
-    });
+      console.log('📤 Sending AI message (validated):', { 
+        message: messageContent.substring(0, 50) + '...', 
+        userId: user.id, 
+        gymId: selectedGym.id,
+        userType: typeof user.id,
+        gymType: typeof selectedGym.id,
+        retryCount,
+        timestamp: new Date().toISOString(),
+        navigator: {
+          onLine: navigator.onLine,
+          userAgent: navigator.userAgent.substring(0, 50)
+        }
+      });
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -143,7 +148,10 @@ export const AIAssistant = () => {
         message: messageContent,
         user_id: user.id,
         gym_id: selectedGym.id,
-        conversation_history: messages.slice(-5)
+        conversation_history: messages.slice(-3).map(msg => ({
+          type: msg.type,
+          content: msg.content.substring(0, 200) // Limit content length
+        }))
       };
 
       console.log('📤 Request payload validation:', {
@@ -153,11 +161,24 @@ export const AIAssistant = () => {
         historyLength: requestPayload.conversation_history?.length || 0
       });
 
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+      // Create a promise with timeout for better error handling
+      const invokePromise = supabase.functions.invoke('ai-assistant', {
         body: requestPayload
       });
 
-      console.log('📥 Risposta AI ricevuta (raw):', JSON.stringify({ data, error }, null, 2));
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout - try a simpler question')), 90000);
+      });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+
+      console.log('📥 Risposta AI ricevuta (raw):', {
+        hasData: !!data,
+        hasError: !!error,
+        dataKeys: data ? Object.keys(data) : [],
+        errorMessage: error?.message,
+        timestamp: new Date().toISOString()
+      });
 
       if (error) {
         console.error('❌ Errore API AI:', error);
@@ -239,16 +260,23 @@ export const AIAssistant = () => {
         return; // Don't show error message yet
       }
       
-      // Determine appropriate error message
+      // Enhanced error message handling
       let toastMessage: string;
-      if (errorMsg?.includes('Failed to fetch') || errorMsg?.includes('timeout')) {
-        toastMessage = "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice.";
+      if (errorMsg?.includes('Failed to send a request to the Edge Function') || 
+          errorMsg?.includes('Failed to fetch') || 
+          errorMsg?.includes('timeout') ||
+          errorMsg?.includes('AbortError')) {
+        toastMessage = retryCount === 0 
+          ? "Richiesta in elaborazione... riprovo automaticamente."
+          : "L'AI sta impiegando più tempo del previsto. Riprova con una richiesta più semplice.";
       } else if (errorMsg?.includes('500') || errorMsg?.includes('Internal server error')) {
         toastMessage = retryCount >= 2 
           ? "Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto."
           : "Si è verificato un errore del server. Riprovo automaticamente...";
       } else if (errorMsg?.includes('Invalid request parameters')) {
         toastMessage = "Parametri della richiesta non validi. Prova a rifare il login.";
+      } else if (errorMsg?.includes('Network error')) {
+        toastMessage = "Errore di connessione. Controlla la tua connessione internet.";
       } else {
         toastMessage = `Si è verificato un errore: ${errorMsg}`;
       }
@@ -302,7 +330,8 @@ export const AIAssistant = () => {
     if (confirmed) {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        // Enhanced action confirmation with timeout
+        const actionPromise = supabase.functions.invoke('ai-assistant', {
           body: {
             confirmAction: true,
             actionType: message.actionRequired.type,
@@ -311,6 +340,12 @@ export const AIAssistant = () => {
             gym_id: selectedGym.id
           }
         });
+
+        const actionTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Action timeout - please try again')), 60000);
+        });
+
+        const { data, error } = await Promise.race([actionPromise, actionTimeoutPromise]) as any;
 
         console.log('📥 Risposta conferma azione:', { data, error });
 
