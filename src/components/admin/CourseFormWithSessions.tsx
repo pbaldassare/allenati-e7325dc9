@@ -249,9 +249,6 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
           .single();
 
         if (courseError) throw courseError;
-        
-        // Genera automaticamente le sessioni se necessario
-        await autoGenerateSessionsIfNeeded(courseData.id);
 
         // Create course schedules
         if (data.schedule && data.schedule.length > 0) {
@@ -278,6 +275,9 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
 
           if (scheduleError) throw scheduleError;
         }
+
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(courseData.id);
 
         // Generate sessions if auto-generate is enabled
         if (data.autoGenerateSessions) {

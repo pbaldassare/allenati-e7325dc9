@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { Course } from '@/contexts/AppDataContext';
 import { X, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 
 const courseSchema = z.object({
   name: z.string().min(3, 'Il nome deve essere almeno 3 caratteri'),
@@ -173,6 +174,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
           if (scheduleError) throw scheduleError;
         }
 
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(courseData.id);
+
         toast({
           title: 'Corso creato',
           description: 'Il nuovo corso è stato creato con successo',
@@ -225,6 +229,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             if (scheduleError) throw scheduleError;
           }
         }
+
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(course.id);
 
         toast({
           title: 'Corso aggiornato',

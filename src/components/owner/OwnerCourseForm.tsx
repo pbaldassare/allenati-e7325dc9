@@ -252,6 +252,9 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         
         if (error) throw error;
         
+        // Genera automaticamente le sessioni se necessario
+        await autoGenerateSessionsIfNeeded(insertedData.id);
+        
         // Call the callback if provided
         if (onCourseCreated && insertedData) {
           onCourseCreated({

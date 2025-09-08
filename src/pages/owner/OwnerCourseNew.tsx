@@ -13,6 +13,7 @@ import { useGym } from '@/contexts/GymContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { ScheduleItem, GymRoom, CourseSession } from '@/types/schedule';
+import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 
 interface CourseBasicData {
   id?: string;
@@ -160,6 +161,9 @@ const OwnerCourseNew: React.FC = () => {
 
         if (exceptionError) throw exceptionError;
       }
+
+      // Genera automaticamente le sessioni se necessario
+      await autoGenerateSessionsIfNeeded(courseData.id);
 
       toast({
         title: 'Successo',
