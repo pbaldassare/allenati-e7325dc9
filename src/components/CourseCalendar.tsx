@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { BookingConfirmDialog } from "@/components/dialogs/BookingConfirmDialog";
 import { CancellationConfirmDialog } from "@/components/dialogs/CancellationConfirmDialog";
 import { ReservedSpotsDialog } from "@/components/dialogs/ReservedSpotsDialog";
+import { processBooking, checkBookingEligibility, BookingData, getUserGymCredits } from '@/lib/bookingHelpers';
+import { hasActiveUnlimitedSubscription } from '@/lib/subscriptionHelpers';
 
 // Icon mapping
 const courseIcons = {
@@ -181,24 +183,17 @@ export const CourseCalendar = () => {
 
   const openBookingDialog = async (session: any) => {
     console.log('Opening booking dialog for session:', { sessionId: session.session_id, courseId: session.id });
-    // Check user credits and subscription status
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('current_credits')
-      .eq('user_id', user?.id)
-      .maybeSingle();
+    
+    if (!user || !selectedGym) return;
+    
+    // Check user eligibility using unified logic
+    const eligibility = await checkBookingEligibility(
+      user.id, 
+      selectedGym.id, 
+      session.credits_required || 1
+    );
 
-    const { data: activeSubscription } = await supabase
-      .from('user_subscriptions')
-      .select('*, subscription_plans(unlimited_access)')
-      .eq('user_id', user?.id)
-      .eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    const hasCreditsOrUnlimitedAccess = 
-      (profile && profile.current_credits > 0) || 
-      (activeSubscription?.subscription_plans?.unlimited_access);
+    const hasCreditsOrUnlimitedAccess = eligibility.canBook;
 
     // Use session's available spots instead of counting bookings
     const availableSpots = session.session_available_spots || 0;
@@ -254,67 +249,25 @@ export const CourseCalendar = () => {
   };
 
   const handleBookingConfirm = async () => {
-    if (!user || !pendingBookingData) return;
+    if (!user || !pendingBookingData || !selectedGym) return;
     
     const sessionKey = pendingBookingData.sessionId || `${pendingBookingData.courseId}-${pendingBookingData.scheduledDate}-${pendingBookingData.scheduledTime}`;
     setLoadingBooking(sessionKey);
     try {
-      // Check if user has sufficient credits or active unlimited subscription
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('current_credits')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Check for active unlimited subscription
-      const { data: subscription } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          id,
-          subscription_plans!inner(unlimited_access)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .gt('expires_at', new Date().toISOString())
-        .single();
-
-      const hasUnlimitedAccess = subscription?.subscription_plans?.unlimited_access;
-      const creditsRequired = selectedCourse?.credits_required || 1;
-      const currentCredits = profile?.current_credits || 0;
-
-      if (!hasUnlimitedAccess && currentCredits < creditsRequired) {
-        toast({
-          title: "Crediti insufficienti",
-          description: `Ti servono ${creditsRequired} crediti per questa prenotazione. Ne hai ${currentCredits}.`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create booking with session_id
-      const bookingData: any = {
-        user_id: user.id,
-        course_id: pendingBookingData.courseId,
-        scheduled_date: pendingBookingData.scheduledDate,
-        scheduled_time: pendingBookingData.scheduledTime,
-        status: 'confirmed',
-        credits_used: hasUnlimitedAccess ? 0 : creditsRequired
+      const bookingData: BookingData = {
+        sessionId: pendingBookingData.sessionId,
+        courseId: pendingBookingData.courseId,
+        gymId: selectedGym.id,
+        scheduledDate: pendingBookingData.scheduledDate,
+        scheduledTime: pendingBookingData.scheduledTime,
+        creditsRequired: selectedCourse?.credits_required || 1
       };
 
-      // Add session_id if available
-      if (pendingBookingData.sessionId) {
-        bookingData.session_id = pendingBookingData.sessionId;
+      const result = await processBooking(user.id, bookingData);
+
+      if (!result.success) {
+        throw new Error(result.message);
       }
-
-      const { data: booking, error } = await supabase
-        .from('bookings')
-        .insert(bookingData)
-        .select()
-        .single();
-
-      if (error) throw error;
 
       // Send booking confirmation email
       try {
@@ -339,7 +292,7 @@ export const CourseCalendar = () => {
         if (profile && gym && instructor) {
           await supabase.functions.invoke('send-booking-confirmation', {
             body: {
-              bookingId: booking.id,
+              bookingId: result.bookingId,
               userEmail: profile.email,
               userName: `${profile.first_name} ${profile.last_name}`,
               courseName: selectedCourse.name,
@@ -348,7 +301,7 @@ export const CourseCalendar = () => {
               gymName: gym.name,
               gymAddress: `${gym.address}, ${gym.city}`,
               instructorName: `${instructor.first_name} ${instructor.last_name}`,
-              creditsUsed: hasUnlimitedAccess ? 0 : creditsRequired,
+              creditsUsed: bookingData.creditsRequired,
             }
           });
         }
@@ -357,43 +310,18 @@ export const CourseCalendar = () => {
         // Don't fail the booking if email fails
       }
 
-      // Update session available spots
-      if (pendingBookingData.sessionId) {
-        const { error: sessionError } = await supabase
-          .from('course_sessions')
-          .update({ 
-            available_spots: Math.max(0, (selectedCourse?.session_available_spots || 0) - 1)
-          })
-          .eq('id', pendingBookingData.sessionId);
+      // Refresh bookings list
+      const { data: updatedBookings } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'confirmed');
 
-        if (sessionError) console.error('Error updating session spots:', sessionError);
-      }
-
-      // Consume credits if not unlimited subscription
-      if (!hasUnlimitedAccess) {
-        // Use selected gym ID for credit deduction
-        if (selectedGym) {
-          const { deductCredits } = await import('@/lib/creditRefundHelpers');
-          const result = await deductCredits(
-            user.id,
-            selectedGym.id,
-            creditsRequired,
-            `Prenotazione ${selectedCourse?.name}`,
-            booking.id
-          );
-          
-          if (!result.success) {
-            throw new Error(result.message);
-          }
-        }
-      }
-
-      setBookings(prev => [...prev, booking]);
+      setBookings(updatedBookings || []);
+      
       toast({
         title: "Prenotazione confermata", 
-        description: hasUnlimitedAccess 
-          ? "Sessione prenotata con successo! (Abbonamento illimitato)"
-          : `Sessione prenotata con successo! Utilizzati ${creditsRequired} crediti.`,
+        description: result.message,
       });
       setBookingDialogOpen(false);
       
@@ -441,7 +369,7 @@ export const CourseCalendar = () => {
       console.error('Booking error:', error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'operazione",
+        description: error.message || "Si è verificato un errore durante l'operazione",
         variant: "destructive",
       });
     } finally {

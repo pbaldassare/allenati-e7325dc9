@@ -20,6 +20,7 @@ import { CourseParticipantCount } from './CourseParticipantCount';
 import { useSessionBookings } from '@/hooks/useSessionBookings';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { GymSelectorWithLogo } from '@/components/GymSelectorWithLogo';
+import { processBooking, checkBookingEligibility, BookingData } from '@/lib/bookingHelpers';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -172,45 +173,24 @@ export const Dashboard = () => {
   };
 
   const handleBookingConfirm = async () => {
-    if (!user || !selectedSession) return;
+    if (!user || !selectedSession || !selectedGym) return;
     
     setLoadingBooking(selectedSession.id);
     try {
-      // Check if user has enough credits
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('current_credits')
-        .eq('user_id', user.id)
-        .single();
+      const bookingData: BookingData = {
+        sessionId: selectedSession.id,
+        courseId: selectedSession.course_id,
+        gymId: selectedGym.id,
+        scheduledDate: selectedSession.session_date,
+        scheduledTime: selectedSession.start_time,
+        creditsRequired: selectedSession.courses?.credits_required || 1
+      };
 
-      const currentCredits = profile?.current_credits || 0;
-      const creditsRequired = selectedSession.courses?.credits_required || 1;
+      const result = await processBooking(user.id, bookingData);
 
-      if (currentCredits < creditsRequired) {
-        throw new Error('Crediti insufficienti per prenotare questa sessione');
+      if (!result.success) {
+        throw new Error(result.message);
       }
-
-      // Check if session has available spots
-      if (selectedSession.available_spots <= 0) {
-        throw new Error('Nessun posto disponibile per questa sessione');
-      }
-
-      // Create booking
-      const { data: booking, error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          course_id: selectedSession.course_id,
-          session_id: selectedSession.id,
-          scheduled_date: selectedSession.session_date,
-          scheduled_time: selectedSession.start_time,
-          status: 'confirmed',
-          credits_used: creditsRequired
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
 
       // Send booking confirmation email
       try {
@@ -235,7 +215,7 @@ export const Dashboard = () => {
         if (profile && gym && instructor) {
           await supabase.functions.invoke('send-booking-confirmation', {
             body: {
-              bookingId: booking.id,
+              bookingId: result.bookingId,
               userEmail: profile.email,
               userName: `${profile.first_name} ${profile.last_name}`,
               courseName: selectedSession.courses?.name || 'Corso',
@@ -244,7 +224,7 @@ export const Dashboard = () => {
               gymName: gym.name,
               gymAddress: `${gym.address}, ${gym.city}`,
               instructorName: `${instructor.first_name} ${instructor.last_name}`,
-              creditsUsed: creditsRequired,
+              creditsUsed: bookingData.creditsRequired,
             }
           });
         }
@@ -253,45 +233,14 @@ export const Dashboard = () => {
         // Don't fail the booking if email fails
       }
 
-      // Check for unlimited subscription first
-      const { data: subscription } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          id,
-          subscription_plans!inner(unlimited_access)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .gt('expires_at', new Date().toISOString())
-        .single();
-
-      const hasUnlimitedAccess = subscription?.subscription_plans?.unlimited_access;
-
-      // Deduct credits only if no unlimited subscription
-      if (!hasUnlimitedAccess) {
-        // Get user's gym ID for credit deduction
-        const gymId = selectedGym?.id;
-        if (gymId) {
-          const { deductCredits } = await import('@/lib/creditRefundHelpers');
-          const result = await deductCredits(
-            user.id,
-            gymId,
-            creditsRequired,
-            `Prenotazione sessione: ${selectedSession.courses?.name}`,
-            booking.id
-          );
-          
-          if (!result.success) {
-            throw new Error(result.message);
-          }
-        }
-      }
-
       toast({
         title: "Prenotazione confermata",
-        description: `Sessione prenotata per ${new Date(selectedSession.session_date).toLocaleDateString('it-IT')} alle ${selectedSession.start_time}`,
+        description: result.message,
       });
       setBookingDialogOpen(false);
+      
+      // Reload data to reflect changes
+      loadUserCreditsAndSubscription();
     } catch (error) {
       console.error('Booking error:', error);
       toast({

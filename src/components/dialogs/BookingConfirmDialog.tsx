@@ -6,6 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditPurchaseDialog } from './CreditPurchaseDialog';
+import { useGym } from '@/contexts/GymContext';
+import { getUserGymCredits } from '@/lib/bookingHelpers';
+import { hasActiveUnlimitedSubscription } from '@/lib/subscriptionHelpers';
 
 interface BookingConfirmDialogProps {
   open: boolean;
@@ -69,6 +72,7 @@ export const BookingConfirmDialog = ({
   isLoading 
 }: BookingConfirmDialogProps) => {
   const { user } = useAuth();
+  const { selectedGym } = useGym();
   const [userCredits, setUserCredits] = useState<number>(0);
   const [hasUnlimitedAccess, setHasUnlimitedAccess] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(true);
@@ -76,38 +80,18 @@ export const BookingConfirmDialog = ({
   const [gymName, setGymName] = useState<string>('');
 
   useEffect(() => {
-    if (!user || !open) return;
+    if (!user || !open || !selectedGym) return;
 
     const fetchUserCredits = async () => {
       try {
-        // Get current credits
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', user.id)
-          .single();
+        // Get gym-specific credits
+        const gymCredits = await getUserGymCredits(user.id, selectedGym.id);
+        
+        // Check for unlimited subscription for this gym
+        const unlimited = await hasActiveUnlimitedSubscription(user.id, selectedGym.id);
 
-        // Check for active unlimited subscription for this gym
-        const { data: courseData } = await supabase
-          .from('courses')
-          .select('gym_id')
-          .eq('id', course?.id)
-          .single();
-
-        const { data: subscription } = await supabase
-          .from('user_subscriptions')
-          .select(`
-            subscription_plans!inner(unlimited_access),
-            gym_id
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .eq('gym_id', courseData?.gym_id)
-          .gt('expires_at', new Date().toISOString())
-          .single();
-
-        setUserCredits(profile?.current_credits || 0);
-        setHasUnlimitedAccess(subscription?.subscription_plans?.unlimited_access || false);
+        setUserCredits(gymCredits);
+        setHasUnlimitedAccess(unlimited);
       } catch (error) {
         console.error('Error fetching credits:', error);
       } finally {
@@ -134,20 +118,15 @@ export const BookingConfirmDialog = ({
 
     fetchUserCredits();
     fetchGymName();
-  }, [user, open, course?.id, scheduledDate, scheduledTime, sessionId]);
+  }, [user, open, selectedGym, course?.id, scheduledDate, scheduledTime, sessionId]);
 
   const hasInsufficientCredits = !hasUnlimitedAccess && userCredits < (course?.credits_required || 1);
 
   const handleCreditPurchaseComplete = async () => {
-    // Ricarica i crediti dopo l'acquisto
-    if (user) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('current_credits')
-        .eq('user_id', user.id)
-        .single();
-      
-      setUserCredits(profileData?.current_credits || 0);
+    // Ricarica i crediti specifici per palestra dopo l'acquisto
+    if (user && selectedGym) {
+      const gymCredits = await getUserGymCredits(user.id, selectedGym.id);
+      setUserCredits(gymCredits);
     }
   };
 
