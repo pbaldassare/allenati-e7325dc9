@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SubscriptionStats {
   total: number;
@@ -45,6 +46,7 @@ interface UserSubscription {
 
 const OwnerSubscriptions: React.FC = () => {
   const { selectedGym } = useOwnerGym();
+  const isMobile = useIsMobile();
   const [stats, setStats] = useState<SubscriptionStats>({
     total: 0,
     active: 0,
@@ -534,7 +536,7 @@ const OwnerSubscriptions: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className={`${isMobile ? 'space-y-4' : 'flex justify-between items-start'}`}>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Gestione Abbonamenti
@@ -545,10 +547,10 @@ const OwnerSubscriptions: React.FC = () => {
         </div>
         <Button 
           onClick={() => setManualActivationDialogOpen(true)}
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}
         >
           <Plus className="w-4 h-4" />
-          Attiva Abbonamento Manuale
+          {isMobile ? 'Attiva Abbonamento' : 'Attiva Abbonamento Manuale'}
         </Button>
       </div>
 
