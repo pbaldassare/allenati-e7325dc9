@@ -6,6 +6,7 @@ import { Plus, Building } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface Gym {
   id: string;
@@ -25,6 +26,7 @@ export const AutoLinkGymDialog: React.FC<AutoLinkGymDialogProps> = ({ onSuccess 
   const [loading, setLoading] = useState(false);
   const [loadingGyms, setLoadingGyms] = useState(false);
   const { user } = useAuth();
+  const { refreshOwnerGyms } = useOwnerGym();
 
   const fetchAvailableGyms = async () => {
     if (!user) return;
@@ -71,6 +73,7 @@ export const AutoLinkGymDialog: React.FC<AutoLinkGymDialogProps> = ({ onSuccess 
 
     try {
       setLoading(true);
+      console.log('🔗 Attempting to link gym:', selectedGymId);
 
       const { data, error } = await supabase.functions.invoke('owner-link-gym', {
         body: {
@@ -78,19 +81,26 @@ export const AutoLinkGymDialog: React.FC<AutoLinkGymDialogProps> = ({ onSuccess 
         }
       });
 
+      console.log('🔗 Link gym response:', { data, error });
+
       if (error) {
-        console.error('Error linking gym:', error);
-        toast.error('Errore nel collegamento alla palestra');
+        console.error('❌ Error linking gym:', error);
+        toast.error(`Errore nel collegamento alla palestra: ${error.message}`);
         return;
       }
 
-      toast.success(`Collegato con successo a ${data.gym.name}!`);
+      console.log('✅ Successfully linked to gym:', data.gym.name);
+      toast.success(`Collegato con successo alla palestra ${data.gym.name}!`);
+      
+      // Refresh the owner gyms context to show the new gym immediately
+      await refreshOwnerGyms();
+      
       setOpen(false);
       setSelectedGymId('');
       onSuccess?.();
     } catch (error) {
-      console.error('Error in handleLinkGym:', error);
-      toast.error('Errore nel collegamento alla palestra');
+      console.error('❌ Error in handleLinkGym:', error);
+      toast.error('Errore imprevisto nel collegamento alla palestra');
     } finally {
       setLoading(false);
     }
