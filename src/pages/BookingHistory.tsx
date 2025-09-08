@@ -31,7 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const BookingHistory = () => {
   const { user } = useAuth();
-  const { userGyms } = useGym();
+  const { selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -45,17 +45,17 @@ const BookingHistory = () => {
     loading: bookingsLoading,
     fetchBookings,
     cancelBooking
-  } = useBookings();
+  } = useBookings(selectedGym?.id);
 
   // Debug logging
   useEffect(() => {
     console.log('BookingHistory - Debugging info:');
     console.log('User:', user?.id);
-    console.log('User gyms:', userGyms?.length);
+    console.log('Selected gym:', selectedGym?.id, selectedGym?.name);
     console.log('Bookings:', bookings?.length);
     console.log('Bookings loading:', bookingsLoading);
     console.log('Full bookings data:', bookings);
-  }, [user, userGyms, bookings, bookingsLoading]);
+  }, [user, selectedGym, bookings, bookingsLoading]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showCancellationDialog, setShowCancellationDialog] = useState(false);

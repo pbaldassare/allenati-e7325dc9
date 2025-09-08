@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export type BookingWithCourse = any;
 
-export const useBookings = () => {
+export const useBookings = (gymId?: string) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<BookingWithCourse[]>([]);
@@ -18,7 +18,7 @@ export const useBookings = () => {
     console.log('Fetching bookings for user:', user.id);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -44,8 +44,14 @@ export const useBookings = () => {
             )
           )
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
+
+      // Filter by gym if gymId is provided
+      if (gymId) {
+        query = query.eq('courses.gym_id', gymId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       console.log('Bookings query result:', { data, error });
 
@@ -167,7 +173,7 @@ export const useBookings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, gymId]);
 
   // Helper functions for session-specific booking management
   const isSessionBooked = (courseId: string, date: string, time: string) => {

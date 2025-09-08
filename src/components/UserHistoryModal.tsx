@@ -12,6 +12,7 @@ interface UserHistoryModalProps {
   userName: string;
   isOpen: boolean;
   onClose: () => void;
+  gymId?: string;
 }
 
 interface BookingHistory {
@@ -50,7 +51,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   userId,
   userName,
   isOpen,
-  onClose
+  onClose,
+  gymId
 }) => {
   const [bookings, setBookings] = useState<BookingHistory[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionHistory[]>([]);
@@ -67,31 +69,52 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setLoading(true);
     try {
       // Load booking history
-      const { data: bookingsData } = await supabase
+      let bookingsQuery = supabase
         .from('bookings')
         .select(`
           *,
-          course:courses(name)
+          course:courses(name, gym_id)
         `)
-        .eq('user_id', userId)
+        .eq('user_id', userId);
+
+      // Filter by gym if gymId is provided
+      if (gymId) {
+        bookingsQuery = bookingsQuery.eq('course.gym_id', gymId);
+      }
+
+      const { data: bookingsData } = await bookingsQuery
         .order('created_at', { ascending: false })
         .limit(50);
 
       // Load subscription history
-      const { data: subscriptionsData } = await supabase
+      let subscriptionsQuery = supabase
         .from('user_subscriptions')
         .select(`
           *,
           plan:subscription_plans(name, credits_included, unlimited_access)
         `)
-        .eq('user_id', userId)
+        .eq('user_id', userId);
+
+      // Filter by gym if gymId is provided
+      if (gymId) {
+        subscriptionsQuery = subscriptionsQuery.eq('gym_id', gymId);
+      }
+
+      const { data: subscriptionsData } = await subscriptionsQuery
         .order('created_at', { ascending: false });
 
       // Load credit transactions
-      const { data: transactionsData } = await supabase
+      let transactionsQuery = supabase
         .from('credits_transactions')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId);
+
+      // Filter by gym if gymId is provided
+      if (gymId) {
+        transactionsQuery = transactionsQuery.eq('gym_id', gymId);
+      }
+
+      const { data: transactionsData } = await transactionsQuery
         .order('created_at', { ascending: false })
         .limit(50);
 
