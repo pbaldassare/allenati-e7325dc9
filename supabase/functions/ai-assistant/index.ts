@@ -47,28 +47,45 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-2025-08-07',
         messages: [
           {
             role: 'system',
-            content: `Sei un assistente AI per una palestra. Puoi aiutare gli utenti con:
-            - Prenotazioni lezioni
-            - Informazioni sui corsi e orari
-            - Lista partecipanti alle lezioni
-            - Gestione crediti
-            - Storico prenotazioni
-            
-            Contesto utente:
-            - User ID: ${user_id}
-            - Gym ID: ${gym_id}
-            - Crediti disponibili: ${userContext.credits}
-            - Palestra: ${userContext.gymName}
-            
-            Rispondi sempre in italiano in modo amichevole. Per azioni critiche come prenotazioni o cancellazioni, usa le function calls appropriate.`
+            content: `Sei l'assistente AI intelligente di ${userContext.gymName}, specializzato nel supporto completo per palestre e centri fitness italiani. 
+
+🎯 **LE TUE CAPACITÀ PRINCIPALI:**
+• 📅 Gestione prenotazioni e cancellazioni lezioni
+• 👥 Informazioni dettagliate su corsi, istruttori e partecipanti  
+• 💳 Gestione crediti e storico transazioni
+• 📊 Statistiche personali e progressi
+• 🔍 Ricerca corsi per livello, orario e tipo
+• ❓ Supporto generale sulla palestra
+
+👤 **CONTESTO UTENTE:**
+• Nome: ${userContext.userName}
+• Crediti disponibili: ${userContext.credits}
+• Palestra: ${userContext.gymName}
+
+🎨 **STILE DI COMUNICAZIONE:**
+• Usa un tono amichevole e professionale
+• Includi emoji pertinenti per rendere i messaggi più accattivanti
+• Fornisci risposte chiare e actionable
+• Per azioni critiche (prenotazioni/cancellazioni), usa sempre le function calls
+• Suggerisci alternative quando possibile
+• Celebra i successi dell'utente
+
+💡 **ESEMPI DI CONVERSAZIONE:**
+• "Voglio prenotarmi per la lezione di domani" 
+• "Chi partecipa al corso di BJJ di giovedì?"
+• "Quanto crediti ho ancora?"
+• "Mostrami le mie statistiche di allenamento"
+
+Rispondi sempre in italiano con entusiasmo e competenza!`
           },
           ...conversationContext,
           { role: 'user', content: message }
         ],
+        max_completion_tokens: 2000,
         tools: [
           {
             type: 'function',
@@ -142,6 +159,75 @@ serve(async (req) => {
                   date: { type: 'string', description: 'Data della lezione' }
                 },
                 required: ['bookingId', 'courseName', 'date']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getCourseDetails',
+              description: 'Ottieni informazioni dettagliate su un corso specifico',
+              parameters: {
+                type: 'object',
+                properties: {
+                  courseName: { type: 'string', description: 'Nome del corso' },
+                  courseId: { type: 'string', description: 'ID del corso (opzionale)' }
+                },
+                required: ['courseName']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getInstructorSchedule',
+              description: 'Ottieni gli orari e i corsi di un istruttore specifico',
+              parameters: {
+                type: 'object',
+                properties: {
+                  instructorName: { type: 'string', description: 'Nome dell\'istruttore' },
+                  date: { type: 'string', description: 'Data specifica (YYYY-MM-DD), opzionale' }
+                },
+                required: ['instructorName']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getUserStats',
+              description: 'Ottieni statistiche e progressi dell\'utente',
+              parameters: {
+                type: 'object',
+                properties: {
+                  period: { type: 'string', description: 'Periodo: week, month, year' }
+                }
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getUserCreditsHistory',
+              description: 'Ottieni lo storico delle transazioni crediti dell\'utente',
+              parameters: {
+                type: 'object',
+                properties: {
+                  limit: { type: 'number', description: 'Numero massimo di transazioni (default 10)' }
+                }
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'getUpcomingBookings',
+              description: 'Ottieni le prossime prenotazioni dell\'utente',
+              parameters: {
+                type: 'object',
+                properties: {
+                  days: { type: 'number', description: 'Giorni futuri da considerare (default 7)' }
+                }
               }
             }
           }
@@ -237,6 +323,21 @@ async function handleFunctionCall(functionCall: any, userId: string, gymId: stri
       
       case 'prepareCancellationConfirmation':
         return await prepareCancellationConfirmation(args, userId);
+      
+      case 'getCourseDetails':
+        return await getCourseDetails(args, gymId);
+      
+      case 'getInstructorSchedule':
+        return await getInstructorSchedule(args, gymId);
+      
+      case 'getUserStats':
+        return await getUserStats(userId, gymId, args.period);
+      
+      case 'getUserCreditsHistory':
+        return await getUserCreditsHistory(userId, gymId, args.limit);
+      
+      case 'getUpcomingBookings':
+        return await getUpcomingBookings(userId, gymId, args.days);
       
       default:
         throw new Error(`Function ${functionName} not implemented`);
@@ -566,6 +667,306 @@ async function executeCancellation(actionData: any, userId: string, gymId: strin
 
   return new Response(JSON.stringify({
     response: `❌ Prenotazione cancellata\n\n📅 ${courseName}\n🕐 ${date}\n💳 ${booking.credits_used} crediti rimborsati\n\nLa prenotazione è stata annullata con successo.`
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// ============= NUOVE FUNZIONI AVANZATE =============
+
+async function getCourseDetails(args: any, gymId: string) {
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select(`
+      id,
+      name,
+      description,
+      difficulty_level,
+      duration_minutes,
+      credits_required,
+      max_participants,
+      requirements,
+      benefits,
+      equipment_needed,
+      course_categories(name, description),
+      instructors(first_name, last_name, bio, specializations),
+      course_schedules(day_of_week, start_time, end_time, gym_rooms(name))
+    `)
+    .eq('gym_id', gymId)
+    .ilike('name', `%${args.courseName}%`)
+    .eq('is_active', true);
+
+  if (error) throw error;
+
+  if (!courses || courses.length === 0) {
+    return new Response(JSON.stringify({
+      response: `❌ Non ho trovato corsi con il nome "${args.courseName}". Prova a verificare il nome o chiedi la lista completa dei corsi disponibili.`
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const course = courses[0];
+  const scheduleText = course.course_schedules.map((s: any) => {
+    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    return `${dayNames[s.day_of_week]} ${s.start_time}-${s.end_time} (${s.gym_rooms?.name || 'Sala TBD'})`;
+  }).join('\n• ');
+
+  const difficultyText = course.difficulty_level ? 
+    ['Principiante', 'Intermedio', 'Avanzato', 'Esperto'][course.difficulty_level - 1] : 'N/A';
+
+  const equipmentText = course.equipment_needed?.length ? 
+    course.equipment_needed.join(', ') : 'Nessuno specifico';
+
+  const instructorText = course.instructors ? 
+    `${course.instructors.first_name} ${course.instructors.last_name}` : 'TBD';
+
+  const response = `🏋️ **${course.name}**
+
+📝 **Descrizione:** ${course.description || 'Descrizione non disponibile'}
+
+👨‍🏫 **Istruttore:** ${instructorText}
+📊 **Livello:** ${difficultyText}
+⏱️ **Durata:** ${course.duration_minutes} minuti
+💳 **Crediti:** ${course.credits_required}
+👥 **Max partecipanti:** ${course.max_participants}
+
+📅 **Orari:**
+• ${scheduleText}
+
+🎯 **Benefici:** ${course.benefits?.join(', ') || 'Miglioramento forma fisica generale'}
+📋 **Requisiti:** ${course.requirements?.join(', ') || 'Nessuno specifico'}
+🥊 **Attrezzatura:** ${equipmentText}
+
+Vuoi prenotarti per questo corso? Dimmi per quale giorno!`;
+
+  return new Response(JSON.stringify({
+    response
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function getInstructorSchedule(args: any, gymId: string) {
+  const { data: instructors, error } = await supabase
+    .from('instructors')
+    .select(`
+      id,
+      first_name,
+      last_name,
+      bio,
+      specializations,
+      courses(
+        name,
+        course_schedules(day_of_week, start_time, end_time, gym_rooms(name))
+      )
+    `)
+    .eq('gym_id', gymId)
+    .eq('is_active', true)
+    .or(`first_name.ilike.%${args.instructorName}%,last_name.ilike.%${args.instructorName}%`);
+
+  if (error) throw error;
+
+  if (!instructors || instructors.length === 0) {
+    return new Response(JSON.stringify({
+      response: `❌ Non ho trovato istruttori con il nome "${args.instructorName}". Verifica il nome o chiedi la lista completa dello staff.`
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const instructor = instructors[0];
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  
+  let scheduleText = '';
+  instructor.courses.forEach((course: any) => {
+    course.course_schedules.forEach((schedule: any) => {
+      scheduleText += `• ${dayNames[schedule.day_of_week]} ${schedule.start_time}-${schedule.end_time}: **${course.name}** (${schedule.gym_rooms?.name || 'Sala TBD'})\n`;
+    });
+  });
+
+  const response = `👨‍🏫 **${instructor.first_name} ${instructor.last_name}**
+
+${instructor.bio ? `📝 **Bio:** ${instructor.bio}\n` : ''}
+${instructor.specializations?.length ? `🎯 **Specializzazioni:** ${instructor.specializations.join(', ')}\n` : ''}
+
+📅 **Orari settimanali:**
+${scheduleText || '• Nessun corso programmato al momento'}
+
+${args.date ? `📌 Per una data specifica come ${args.date}, verifica la disponibilità dei singoli corsi.` : ''}
+
+Vuoi prenotarti per uno dei suoi corsi?`;
+
+  return new Response(JSON.stringify({
+    response
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function getUserStats(userId: string, gymId: string, period: string = 'month') {
+  const now = new Date();
+  let startDate = new Date();
+  
+  switch (period) {
+    case 'week':
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case 'month':
+      startDate.setMonth(now.getMonth() - 1);
+      break;
+    case 'year':
+      startDate.setFullYear(now.getFullYear() - 1);
+      break;
+    default:
+      startDate.setMonth(now.getMonth() - 1);
+  }
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      status,
+      scheduled_date,
+      courses!inner(name, gym_id)
+    `)
+    .eq('user_id', userId)
+    .eq('courses.gym_id', gymId)
+    .gte('scheduled_date', startDate.toISOString().split('T')[0]);
+
+  if (error) throw error;
+
+  const totalBookings = bookings?.length || 0;
+  const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0;
+  const cancelledBookings = bookings?.filter(b => b.status === 'cancelled').length || 0;
+  const attendanceRate = totalBookings > 0 ? ((completedBookings / totalBookings) * 100).toFixed(1) : '0';
+
+  // Conta corsi per tipo
+  const courseTypes = bookings?.reduce((acc: any, booking) => {
+    if (booking.status === 'completed') {
+      acc[booking.courses.name] = (acc[booking.courses.name] || 0) + 1;
+    }
+    return acc;
+  }, {}) || {};
+
+  const topCourse = Object.keys(courseTypes).reduce((a, b) => 
+    courseTypes[a] > courseTypes[b] ? a : b, 'Nessuno');
+
+  const periodText = period === 'week' ? 'ultima settimana' : 
+                    period === 'month' ? 'ultimo mese' : 'ultimo anno';
+
+  const response = `📊 **Le tue statistiche (${periodText})**
+
+🏋️ **Allenamenti:**
+• Totali: ${totalBookings}
+• Completati: ${completedBookings}
+• Cancellati: ${cancelledBookings}
+• Tasso di partecipazione: ${attendanceRate}%
+
+${Object.keys(courseTypes).length > 0 ? `🥇 **Corso preferito:** ${topCourse} (${courseTypes[topCourse]} volte)
+
+📈 **Breakdown corsi:**
+${Object.entries(courseTypes).map(([course, count]) => `• ${course}: ${count} volte`).join('\n')}` : ''}
+
+${completedBookings >= 10 ? '🏆 **Ottimo lavoro!** Stai mantenendo una routine costante!' : 
+  completedBookings >= 5 ? '💪 **Bene!** Continua così!' : 
+  '🚀 **Forza!** Prenota più lezioni per migliorare le tue statistiche!'}
+
+Vuoi vedere le statistiche per un altro periodo?`;
+
+  return new Response(JSON.stringify({
+    response
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function getUserCreditsHistory(userId: string, gymId: string, limit: number = 10) {
+  const { data: transactions, error } = await supabase
+    .from('credits_transactions')
+    .select('amount, transaction_type, description, created_at')
+    .eq('user_id', userId)
+    .eq('gym_id', gymId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  if (!transactions || transactions.length === 0) {
+    return new Response(JSON.stringify({
+      response: '📝 Non hai ancora transazioni crediti per questa palestra.'
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const transactionList = transactions.map(t => {
+    const date = new Date(t.created_at).toLocaleDateString('it-IT');
+    const icon = t.amount > 0 ? '➕' : '➖';
+    const amountText = t.amount > 0 ? `+${t.amount}` : t.amount.toString();
+    return `${icon} ${amountText} crediti - ${t.description} (${date})`;
+  }).join('\n');
+
+  const response = `💳 **Storico crediti (ultimi ${limit})**
+
+${transactionList}
+
+💡 **Suggerimento:** Usa i crediti regolarmente per mantenere una routine di allenamento costante!`;
+
+  return new Response(JSON.stringify({
+    response
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function getUpcomingBookings(userId: string, gymId: string, days: number = 7) {
+  const now = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(now.getDate() + days);
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      scheduled_date,
+      scheduled_time,
+      status,
+      courses!inner(name, gym_id)
+    `)
+    .eq('user_id', userId)
+    .eq('courses.gym_id', gymId)
+    .eq('status', 'confirmed')
+    .gte('scheduled_date', now.toISOString().split('T')[0])
+    .lte('scheduled_date', futureDate.toISOString().split('T')[0])
+    .order('scheduled_date')
+    .order('scheduled_time');
+
+  if (error) throw error;
+
+  if (!bookings || bookings.length === 0) {
+    return new Response(JSON.stringify({
+      response: `📅 Non hai prenotazioni confermate nei prossimi ${days} giorni. Vuoi prenotare qualche corso?`
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const upcomingList = bookings.map(booking => {
+    const date = new Date(booking.scheduled_date).toLocaleDateString('it-IT');
+    return `📅 ${booking.courses.name} - ${date} alle ${booking.scheduled_time}`;
+  }).join('\n');
+
+  const response = `🗓️ **Le tue prossime lezioni (${days} giorni)**
+
+${upcomingList}
+
+🎯 **Preparati!** ${bookings.length === 1 ? 'Hai 1 lezione' : `Hai ${bookings.length} lezioni`} in programma.
+
+Vuoi cancellare qualche prenotazione o prenotarne di nuove?`;
+
+  return new Response(JSON.stringify({
+    response
   }), {
     headers: { 'Content-Type': 'application/json' },
   });

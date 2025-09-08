@@ -30,12 +30,13 @@ export const AIAssistant = () => {
     {
       id: '1',
       type: 'ai',
-      content: 'Ciao! Sono il tuo assistente AI. Posso aiutarti a prenotare lezioni, vedere chi partecipa ai corsi, controllare i tuoi crediti e molto altro. Cosa vorresti fare oggi?',
+      content: '👋 Ciao! Sono il tuo assistente AI intelligente! 🤖\n\n✨ **Posso aiutarti con:**\n• 📅 Prenotare e cancellare lezioni\n• 👥 Vedere partecipanti ai corsi\n• 💳 Gestire i tuoi crediti\n• 📊 Visualizzare le tue statistiche\n• 🔍 Informazioni dettagliate sui corsi\n• 👨‍🏫 Orari degli istruttori\n\n💬 **Cosa vorresti fare oggi?**',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [typingText, setTypingText] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -51,6 +52,20 @@ export const AIAssistant = () => {
     scrollToBottom();
   }, [messages]);
 
+  const simulateTyping = (text: string, delay: number = 30) => {
+    setTypingText('');
+    let index = 0;
+    const timer = setInterval(() => {
+      if (index < text.length) {
+        setTypingText(text.slice(0, index + 1));
+        index++;
+      } else {
+        clearInterval(timer);
+        setTimeout(() => setTypingText(''), 500);
+      }
+    }, delay);
+  };
+
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
 
@@ -64,6 +79,9 @@ export const AIAssistant = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    // Simulate more realistic typing
+    simulateTyping('Sto analizzando la tua richiesta...');
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
@@ -88,6 +106,7 @@ export const AIAssistant = () => {
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
+      setTypingText('');
       console.error('Error sending message:', error);
       toast({
         title: "Errore",
@@ -105,6 +124,7 @@ export const AIAssistant = () => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setTypingText('');
     }
   };
 
@@ -257,10 +277,17 @@ export const AIAssistant = () => {
               {isLoading && (
                 <div className="flex gap-3">
                   <Bot className="h-8 w-8 p-1.5 bg-primary text-white rounded-full" />
-                  <div className="bg-muted rounded-lg p-3">
+                  <div className="bg-muted rounded-lg p-3 min-w-[200px]">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">Sto pensando...</span>
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm font-medium">
+                        {typingText || 'Sto pensando...'}
+                      </span>
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
                   </div>
                 </div>
@@ -268,7 +295,31 @@ export const AIAssistant = () => {
             </div>
           </ScrollArea>
           
-          <div className="border-t p-4">
+          <div className="border-t p-4 space-y-3">
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                "📅 Mostra corsi oggi",
+                "💳 I miei crediti",
+                "📊 Le mie statistiche",
+                "🗓️ Prossime lezioni"
+              ].map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => {
+                    setInput(suggestion.substring(2)); // Remove emoji
+                    sendMessage(suggestion.substring(2));
+                  }}
+                  disabled={isLoading}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
+            
             <form onSubmit={handleSubmit} className="flex gap-2">
               <Input
                 value={input}
@@ -281,8 +332,8 @@ export const AIAssistant = () => {
                 <Send className="h-4 w-4" />
               </Button>
             </form>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Esempi: "Voglio prenotarmi alla kickboxing di domani", "Chi c'è nella lezione di BJJ?"
+            <p className="text-xs text-muted-foreground text-center">
+              💡 <strong>Esempi:</strong> "Prenotami alla kickboxing di domani", "Dettagli corso BJJ", "Orari di Marco"
             </p>
           </div>
         </CardContent>
