@@ -114,9 +114,9 @@ export const AIAssistant = () => {
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: {
           message: messageContent,
-          userId: user.id,
-          gymId: selectedGym.id,
-          conversationHistory: messages.slice(-10) // Last 10 messages for context
+          user_id: user.id,
+          gym_id: selectedGym.id,
+          conversation_history: messages.slice(-10) // Last 10 messages for context
         }
       });
 
@@ -234,8 +234,8 @@ export const AIAssistant = () => {
             confirmAction: true,
             actionType: message.actionRequired.type,
             actionData: message.actionRequired.data,
-            userId: user.id,
-            gymId: selectedGym.id
+            user_id: user.id,
+            gym_id: selectedGym.id
           }
         });
 

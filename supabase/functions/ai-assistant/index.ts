@@ -20,6 +20,19 @@ serve(async (req) => {
   try {
     const { message, user_id, gym_id, conversation_history, confirmAction, actionType, actionData } = await req.json();
 
+    // Validate required parameters
+    if (!user_id || user_id === 'undefined') {
+      console.error('Invalid user_id:', user_id);
+      throw new Error('User ID is required and must be valid');
+    }
+
+    if (!gym_id || gym_id === 'undefined') {
+      console.error('Invalid gym_id:', gym_id);
+      throw new Error('Gym ID is required and must be valid');
+    }
+
+    console.log('Request parameters validated:', { user_id, gym_id, hasMessage: !!message, confirmAction });
+
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
