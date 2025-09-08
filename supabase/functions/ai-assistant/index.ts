@@ -921,9 +921,23 @@ ${transactionList}
 }
 
 async function getUpcomingBookings(userId: string, gymId: string, days: number = 7) {
+  console.log(`[getUpcomingBookings] Input - userId: ${userId}, gymId: ${gymId}, days: ${days}`);
+  
+  // Validazione parametri di input
+  if (!userId || !gymId) {
+    console.error('[getUpcomingBookings] Missing required parameters');
+    return new Response(JSON.stringify({
+      response: '❌ Errore: parametri mancanti per recuperare le prenotazioni.'
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const now = new Date();
   const futureDate = new Date();
   futureDate.setDate(now.getDate() + days);
+  
+  console.log(`[getUpcomingBookings] Date range: ${now.toISOString().split('T')[0]} to ${futureDate.toISOString().split('T')[0]}`);
 
   const { data: bookings, error } = await supabase
     .from('bookings')
@@ -942,19 +956,37 @@ async function getUpcomingBookings(userId: string, gymId: string, days: number =
     .order('scheduled_date')
     .order('scheduled_time');
 
-  if (error) throw error;
-
-  if (!bookings || bookings.length === 0) {
+  console.log(`[getUpcomingBookings] Query result - error: ${error}, bookings count: ${bookings?.length || 0}`);
+  
+  if (error) {
+    console.error('[getUpcomingBookings] Database error:', error);
     return new Response(JSON.stringify({
-      response: `📅 Non hai prenotazioni confermate nei prossimi ${days} giorni. Vuoi prenotare qualche corso?`
+      response: '❌ Errore nel recuperare le prenotazioni. Riprova tra poco.'
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const upcomingList = bookings.map(booking => {
+  if (!bookings || bookings.length === 0) {
+    console.log('[getUpcomingBookings] No upcoming bookings found');
+    return new Response(JSON.stringify({
+      response: `📅 Non hai prenotazioni confermate nei prossimi ${days} giorni. 
+
+💡 **Suggerimento:** Prenota un corso ora per mantenere la tua routine di allenamento!
+
+Vuoi vedere i corsi disponibili?`
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  console.log(`[getUpcomingBookings] Found ${bookings.length} upcoming bookings`);
+  
+  const upcomingList = bookings.map((booking, index) => {
+    console.log(`[getUpcomingBookings] Processing booking ${index + 1}:`, booking);
     const date = new Date(booking.scheduled_date).toLocaleDateString('it-IT');
-    return `📅 ${booking.courses.name} - ${date} alle ${booking.scheduled_time}`;
+    const courseName = booking.courses?.name || 'Corso sconosciuto';
+    return `📅 ${courseName} - ${date} alle ${booking.scheduled_time}`;
   }).join('\n');
 
   const response = `🗓️ **Le tue prossime lezioni (${days} giorni)**
@@ -965,6 +997,8 @@ ${upcomingList}
 
 Vuoi cancellare qualche prenotazione o prenotarne di nuove?`;
 
+  console.log('[getUpcomingBookings] Response prepared successfully');
+  
   return new Response(JSON.stringify({
     response
   }), {

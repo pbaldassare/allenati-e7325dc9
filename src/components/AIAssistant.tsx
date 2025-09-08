@@ -120,7 +120,7 @@ export const AIAssistant = () => {
         }
       });
 
-      console.log('📥 Risposta AI ricevuta:', { data, error });
+      console.log('📥 Risposta AI ricevuta (raw):', JSON.stringify({ data, error }, null, 2));
 
       if (error) {
         console.error('❌ Errore API AI:', error);
@@ -128,13 +128,22 @@ export const AIAssistant = () => {
       }
 
       if (!data) {
+        console.error('🚨 Nessun dato ricevuto dall\'AI');
         throw new Error('Nessuna risposta dall\'AI');
       }
+
+      console.log('🔍 Analisi struttura dati ricevuti:', {
+        hasResponse: !!data.response,
+        hasMessage: !!data.message,
+        hasActionRequired: !!data.actionRequired,
+        dataKeys: Object.keys(data)
+      });
 
       // Gestione migliorata delle risposte
       let aiMessage: AIMessage;
       
       if (data.response) {
+        console.log('✅ Usando campo "response":', data.response.substring(0, 100) + '...');
         aiMessage = {
           id: (Date.now() + 1).toString(),
           type: 'ai',
@@ -143,6 +152,7 @@ export const AIAssistant = () => {
           actionRequired: data.actionRequired
         };
       } else if (data.message) {
+        console.log('✅ Usando campo "message":', data.message.substring(0, 100) + '...');
         aiMessage = {
           id: (Date.now() + 1).toString(),
           type: 'ai',
@@ -151,11 +161,17 @@ export const AIAssistant = () => {
           actionRequired: data.actionRequired
         };
       } else {
-        console.error('🚨 Formato risposta AI non riconosciuto:', data);
-        throw new Error('Formato risposta AI non valido');
+        console.error('🚨 Formato risposta AI non riconosciuto:', JSON.stringify(data, null, 2));
+        console.error('🔍 Campi disponibili:', Object.keys(data));
+        throw new Error(`Formato risposta AI non valido. Campi ricevuti: ${Object.keys(data).join(', ')}`);
       }
 
-      console.log('✅ Messaggio AI processato:', aiMessage);
+      console.log('✅ Messaggio AI processato:', {
+        id: aiMessage.id,
+        contentLength: aiMessage.content.length,
+        contentPreview: aiMessage.content.substring(0, 100) + '...',
+        hasAction: !!aiMessage.actionRequired
+      });
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
