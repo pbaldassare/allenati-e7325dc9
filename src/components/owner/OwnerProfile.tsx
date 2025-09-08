@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Loader2, Building, User, Link2 } from 'lucide-react';
-import { RequestAdditionalGymDialog } from '@/components/owner/RequestAdditionalGymDialog';
+import { AutoLinkGymDialog } from '@/components/owner/AutoLinkGymDialog';
 
 const profileSchema = z.object({
   // Dati Palestra
@@ -344,10 +344,10 @@ export const OwnerProfile: React.FC = () => {
                 
                 <div className="flex items-center justify-between pt-2">
                   <div>
-                    <p className="text-sm font-medium">Richiedi collegamento ad un'altra palestra</p>
-                    <p className="text-xs text-muted-foreground">La richiesta verrà valutata dall'amministratore</p>
+                    <p className="text-sm font-medium">Collega ad un'altra palestra</p>
+                    <p className="text-xs text-muted-foreground">Collegamento istantaneo a qualsiasi palestra attiva</p>
                   </div>
-                  <RequestAdditionalGymDialog />
+                  <AutoLinkGymDialog onSuccess={refreshOwnerGyms} />
                 </div>
               </div>
             </CardContent>
