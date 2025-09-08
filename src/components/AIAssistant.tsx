@@ -69,12 +69,39 @@ export const AIAssistant = () => {
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
 
+    // Validazione dati utente
+    if (!user) {
+      console.error('Utente non autenticato');
+      toast({
+        title: "Errore",
+        description: "Devi essere autenticato per usare l'AI Assistant.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedGym) {
+      console.error('Nessuna palestra selezionata');
+      toast({
+        title: "Errore",
+        description: "Seleziona una palestra per usare l'AI Assistant.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const userMessage: AIMessage = {
       id: Date.now().toString(),
       type: 'user',
       content: messageContent,
       timestamp: new Date()
     };
+
+    console.log('📤 Invio messaggio AI:', { 
+      message: messageContent, 
+      userId: user.id, 
+      gymId: selectedGym.id 
+    });
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -87,37 +114,66 @@ export const AIAssistant = () => {
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: {
           message: messageContent,
-          user_id: user?.id,
-          gym_id: selectedGym?.id,
-          conversation_history: messages.slice(-10) // Last 10 messages for context
+          userId: user.id,
+          gymId: selectedGym.id,
+          conversationHistory: messages.slice(-10) // Last 10 messages for context
         }
       });
 
-      if (error) throw error;
+      console.log('📥 Risposta AI ricevuta:', { data, error });
 
-      const aiMessage: AIMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: data.response,
-        timestamp: new Date(),
-        actionRequired: data.actionRequired
-      };
+      if (error) {
+        console.error('❌ Errore API AI:', error);
+        throw new Error(error.message || 'Errore nella comunicazione con l\'AI');
+      }
 
+      if (!data) {
+        throw new Error('Nessuna risposta dall\'AI');
+      }
+
+      // Gestione migliorata delle risposte
+      let aiMessage: AIMessage;
+      
+      if (data.response) {
+        aiMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: data.response,
+          timestamp: new Date(),
+          actionRequired: data.actionRequired
+        };
+      } else if (data.message) {
+        aiMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: data.message,
+          timestamp: new Date(),
+          actionRequired: data.actionRequired
+        };
+      } else {
+        console.error('🚨 Formato risposta AI non riconosciuto:', data);
+        throw new Error('Formato risposta AI non valido');
+      }
+
+      console.log('✅ Messaggio AI processato:', aiMessage);
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
       setTypingText('');
-      console.error('Error sending message:', error);
+      console.error('💥 Errore completo invio messaggio:', error);
+      
+      const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
       toast({
-        title: "Errore",
-        description: "Si è verificato un errore. Riprova.",
+        title: "Errore AI",
+        description: `Si è verificato un errore: ${errorMsg}`,
         variant: "destructive"
       });
 
       const errorMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         type: 'system',
-        content: 'Si è verificato un errore. Per favore riprova.',
+        content: `Si è verificato un errore: ${errorMsg}. Per favore riprova più tardi.`,
         timestamp: new Date()
       };
 
@@ -130,7 +186,23 @@ export const AIAssistant = () => {
 
   const confirmAction = async (messageId: string, confirmed: boolean) => {
     const message = messages.find(m => m.id === messageId);
-    if (!message?.actionRequired) return;
+    if (!message?.actionRequired || !user || !selectedGym) {
+      console.error('❌ Dati mancanti per conferma azione:', { 
+        message: !!message, 
+        actionRequired: !!message?.actionRequired,
+        user: !!user, 
+        selectedGym: !!selectedGym 
+      });
+      return;
+    }
+
+    console.log('🔄 Conferma azione:', { 
+      messageId, 
+      confirmed, 
+      actionType: message.actionRequired.type,
+      userId: user.id, 
+      gymId: selectedGym.id 
+    });
 
     setMessages(prev => prev.map(m => 
       m.id === messageId 
@@ -146,17 +218,26 @@ export const AIAssistant = () => {
             confirmAction: true,
             actionType: message.actionRequired.type,
             actionData: message.actionRequired.data,
-            user_id: user?.id,
-            gym_id: selectedGym?.id
+            userId: user.id,
+            gymId: selectedGym.id
           }
         });
 
-        if (error) throw error;
+        console.log('📥 Risposta conferma azione:', { data, error });
+
+        if (error) {
+          console.error('❌ Errore API conferma azione:', error);
+          throw new Error(error.message || 'Errore nella conferma dell\'azione');
+        }
+
+        if (!data) {
+          throw new Error('Nessuna risposta per la conferma dell\'azione');
+        }
 
         const confirmationMessage: AIMessage = {
           id: Date.now().toString(),
           type: 'ai',
-          content: data.response,
+          content: data.response || data.message || 'Azione completata!',
           timestamp: new Date()
         };
 
@@ -164,19 +245,26 @@ export const AIAssistant = () => {
 
         toast({
           title: "Azione completata",
-          description: data.response
+          description: confirmationMessage.content
         });
 
       } catch (error) {
-        console.error('Error confirming action:', error);
+        console.error('💥 Errore completo conferma azione:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+        
         toast({
           title: "Errore",
-          description: "Errore nell'eseguire l'azione. Riprova.",
+          description: `Errore nell'eseguire l'azione: ${errorMsg}`,
           variant: "destructive"
         });
       } finally {
         setIsLoading(false);
       }
+    } else {
+      toast({
+        title: "Azione annullata",
+        description: "L'azione è stata annullata."
+      });
     }
   };
 
