@@ -112,17 +112,24 @@ const OwnerInstructors: React.FC = () => {
         
         console.log("📊 All active instructors:", allInstructors?.length || 0, allInstructors);
 
-        // 1) Carica gli istruttori per la palestra selezionata
+        // 1) Carica gli istruttori usando instructor_gym_assignments
         const { data: instData, error: instError } = await supabase
-          .from("instructors")
+          .from("instructor_gym_assignments")
           .select(`
-            id, user_id, bio, is_active, has_owner_privileges, created_at, 
-            specializations, certifications, experience_years, hourly_rate, gym_id,
-            first_name, last_name
+            instructor_id,
+            gym_id,
+            has_owner_privileges,
+            is_active,
+            instructors!inner (
+              id, user_id, bio, created_at,
+              specializations, certifications, experience_years, hourly_rate,
+              first_name, last_name, is_active
+            )
           `)
-          .eq("is_active", true)
           .eq("gym_id", selectedGym.id)
-          .order("created_at", { ascending: false });
+          .eq("is_active", true)
+          .eq("instructors.is_active", true)
+          .order("instructors.created_at", { ascending: false });
 
         console.log("🎯 Instructors for gym:", instData?.length || 0, instData);
 
@@ -134,7 +141,7 @@ const OwnerInstructors: React.FC = () => {
         }
 
         const instructorsList = (instData || []) as any[];
-        const userIds = instructorsList.map((i) => i.user_id).filter(Boolean);
+        const userIds = instructorsList.map((i) => i.instructors?.user_id).filter(Boolean);
 
         // 2) Carica i profili collegati
         let profilesById = new Map<string, any>();
@@ -161,7 +168,8 @@ const OwnerInstructors: React.FC = () => {
         }
 
         // 3) Merge dei dati con fallback migliorato
-        const merged: Instructor[] = instructorsList.map((ins: any) => {
+        const merged: Instructor[] = instructorsList.map((assignment: any) => {
+          const ins = assignment.instructors;
           const existingProfile = profilesById.get(ins.user_id);
           
           // Usa i dati dal profilo se disponibili, altrimenti fallback ai dati dell'istruttore
@@ -171,16 +179,14 @@ const OwnerInstructors: React.FC = () => {
           return {
             id: ins.id,
             user_id: ins.user_id,
-            gym_id: ins.gym_id,
             bio: ins.bio || null,
             specializations: ins.specializations || [],
             certifications: ins.certifications || [],
             experience_years: ins.experience_years || null,
             hourly_rate: ins.hourly_rate || null,
             is_active: ins.is_active ?? true,
-            has_owner_privileges: ins.has_owner_privileges ?? false,
+            has_owner_privileges: assignment.has_owner_privileges ?? false,
             created_at: ins.created_at,
-            updated_at: ins.updated_at,
             profile: {
               first_name: firstName,
               last_name: lastName,
@@ -223,69 +229,70 @@ const OwnerInstructors: React.FC = () => {
       .channel('owner-instructors')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'instructors' },
+        { event: '*', schema: 'public', table: 'instructor_gym_assignments' },
         async (payload: any) => {
-          const newRow = payload.new as any;
-          const oldRow = payload.old as any;
+          // Reload the entire list when assignments change
+          if (selectedGym?.id) {
+            const { data: instData } = await supabase
+              .from("instructor_gym_assignments")
+              .select(`
+                instructor_id,
+                gym_id,
+                has_owner_privileges,
+                is_active,
+                instructors!inner (
+                  id, user_id, bio, created_at,
+                  specializations, certifications, experience_years, hourly_rate,
+                  first_name, last_name, is_active
+                )
+              `)
+              .eq("gym_id", selectedGym.id)
+              .eq("is_active", true)
+              .eq("instructors.is_active", true);
 
-          if (payload.eventType === 'UPDATE') {
-            if (newRow?.is_active === false) {
-              setInstructors((prev) => prev.filter((i) => i.id !== newRow.id));
-            } else if (newRow?.is_active === true) {
-              const { data: p } = await (supabase as any)
-                .from('profiles')
-                .select('user_id, first_name, last_name, phone, profile_picture_url')
-                .eq('user_id', newRow.user_id)
-                .maybeSingle();
+            if (instData) {
+              const userIds = instData.map((i: any) => i.instructors?.user_id).filter(Boolean);
+              let profilesById = new Map<string, any>();
+              
+              if (userIds.length > 0) {
+                const { data: profilesData } = await supabase
+                  .from("profiles")
+                  .select("user_id, first_name, last_name, phone, profile_picture_url")
+                  .in("user_id", userIds);
 
-              setInstructors((prev) => {
-                // Usa fallback migliorato anche per gli aggiornamenti real-time
-                const firstName = p?.first_name || newRow.first_name || "Nome";
-                const lastName = p?.last_name || newRow.last_name || "Non Disponibile";
+                if (profilesData) {
+                  profilesById = new Map(profilesData.map((p: any) => [p.user_id, p]));
+                }
+              }
+
+              const merged: Instructor[] = instData.map((assignment: any) => {
+                const ins = assignment.instructors;
+                const existingProfile = profilesById.get(ins.user_id);
                 
-                const merged: Instructor = {
-                  ...(newRow as any),
+                const firstName = existingProfile?.first_name || ins.first_name || "Nome";
+                const lastName = existingProfile?.last_name || ins.last_name || "Non Disponibile";
+                
+                return {
+                  id: ins.id,
+                  user_id: ins.user_id,
+                  bio: ins.bio || null,
+                  specializations: ins.specializations || [],
+                  certifications: ins.certifications || [],
+                  experience_years: ins.experience_years || null,
+                  hourly_rate: ins.hourly_rate || null,
+                  is_active: ins.is_active ?? true,
+                  has_owner_privileges: assignment.has_owner_privileges ?? false,
+                  created_at: ins.created_at,
                   profile: {
                     first_name: firstName,
                     last_name: lastName,
-                    phone: p?.phone || null,
-                    profile_picture_url: p?.profile_picture_url || null,
+                    phone: existingProfile?.phone || null,
+                    profile_picture_url: existingProfile?.profile_picture_url || null,
                   },
                 };
-                const exists = prev.some((i) => i.id === newRow.id);
-                return exists
-                  ? prev.map((i) => (i.id === newRow.id ? merged : i))
-                  : [merged, ...prev];
               });
-            }
-          } else if (payload.eventType === 'INSERT') {
-            if (newRow?.is_active) {
-              const { data: p } = await (supabase as any)
-                .from('profiles')
-                .select('user_id, first_name, last_name, phone, profile_picture_url')
-                .eq('user_id', newRow.user_id)
-                .maybeSingle();
 
-              // Usa fallback migliorato anche per i nuovi istruttori
-              const firstName = p?.first_name || newRow.first_name || "Nome";
-              const lastName = p?.last_name || newRow.last_name || "Non Disponibile";
-
-              setInstructors((prev) => [
-                {
-                  ...(newRow as any),
-                  profile: {
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone: p?.phone || null,
-                    profile_picture_url: p?.profile_picture_url || null,
-                  },
-                } as Instructor,
-                ...prev,
-              ]);
-            }
-          } else if (payload.eventType === 'DELETE') {
-            if (oldRow?.id) {
-              setInstructors((prev) => prev.filter((i) => i.id !== oldRow.id));
+              setInstructors(merged);
             }
           }
         }
@@ -295,7 +302,7 @@ const OwnerInstructors: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedGym?.id]);
 
   return (
     <section>
