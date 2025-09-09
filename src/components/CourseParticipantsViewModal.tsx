@@ -72,13 +72,15 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
     if (!searchTerm) {
       setFilteredParticipants(participants);
     } else {
-      const filtered = participants.filter(p => 
-        `${p.user.first_name} ${p.user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const isStaff = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
+      const filtered = participants.filter(p => {
+        const nameMatch = `${p.user.first_name} ${p.user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+        const emailMatch = isStaff && p.user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        return nameMatch || emailMatch;
+      });
       setFilteredParticipants(filtered);
     }
-  }, [searchTerm, participants]);
+  }, [searchTerm, participants, userRole]);
 
   const loadParticipants = async () => {
     try {
@@ -185,6 +187,11 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           </DialogTitle>
           <DialogDescription>
             {courseName} - {participants.length} partecipanti iscritti
+            {userRole !== 'admin' && userRole !== 'gym_owner' && userRole !== 'instructor' && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Per motivi di privacy, puoi vedere solo nome e cintura degli altri partecipanti
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -193,7 +200,11 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca per nome o email..."
+              placeholder={
+                userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor'
+                  ? "Cerca per nome o email..."
+                  : "Cerca per nome..."
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
