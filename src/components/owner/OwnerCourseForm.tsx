@@ -147,36 +147,68 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
 
       if (categoriesError) throw categoriesError;
 
-      // Load instructors for this gym through instructor_gym_assignments
-      const { data: instructorsData, error: instructorsError } = await supabase
+      // Hybrid approach: Get instructors from both instructor_gym_assignments AND direct instructors table
+      
+      // First: Get instructors via instructor_gym_assignments
+      const { data: assignmentInstructorsData, error: assignmentError } = await supabase
         .from('instructor_gym_assignments')
         .select(`
-          instructor_id,
           instructors!inner (
             id,
-            user_id
+            user_id,
+            is_active
           )
         `)
         .eq('gym_id', selectedGym.id)
         .eq('is_active', true)
         .eq('instructors.is_active', true);
 
-      if (instructorsError) {
-        console.error('Error loading instructors:', instructorsError);
+      // Second: Get instructors directly from instructors table where gym_id matches
+      const { data: directInstructorsData, error: directError } = await supabase
+        .from('instructors')
+        .select('id, user_id, is_active')
+        .eq('gym_id', selectedGym.id)
+        .eq('is_active', true);
+
+      if (assignmentError && directError) {
+        console.error('Error loading instructors:', { assignmentError, directError });
         setInstructors([]);
-      } else if (instructorsData && instructorsData.length > 0) {
-        // Get user IDs from instructors (now coming from the inner join) with safety checks
-        const userIds = instructorsData
-          .map(assignment => assignment?.instructors?.user_id)
-          .filter(userId => userId !== undefined && userId !== null);
+        return;
+      }
+
+      // Combine instructors from both sources, avoiding duplicates
+      const allInstructors = new Map();
+      
+      // Add instructors from assignments
+      if (assignmentInstructorsData) {
+        assignmentInstructorsData.forEach(assignment => {
+          if (assignment?.instructors?.id && assignment?.instructors?.user_id) {
+            allInstructors.set(assignment.instructors.id, {
+              id: assignment.instructors.id,
+              user_id: assignment.instructors.user_id
+            });
+          }
+        });
+      }
+      
+      // Add instructors from direct query (if not already present)
+      if (directInstructorsData) {
+        directInstructorsData.forEach(instructor => {
+          if (instructor?.id && instructor?.user_id && !allInstructors.has(instructor.id)) {
+            allInstructors.set(instructor.id, {
+              id: instructor.id,
+              user_id: instructor.user_id
+            });
+          }
+        });
+      }
+
+      const uniqueInstructors = Array.from(allInstructors.values());
+      
+      if (uniqueInstructors.length > 0) {
+        const userIds = uniqueInstructors.map(instructor => instructor.user_id);
         
-        if (userIds.length === 0) {
-          console.warn('No valid user IDs found in instructor assignments');
-          setInstructors([]);
-          return;
-        }
-        
-        // Fetch profiles separately
+        // Fetch profiles for all instructors
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, first_name, last_name')
@@ -184,29 +216,25 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
 
         if (profilesError) {
           console.error('Error loading profiles:', profilesError);
-          // Set instructors without profiles, but with safety checks
-          setInstructors(instructorsData
-            .filter(assignment => assignment?.instructors?.id && assignment?.instructors?.user_id)
-            .map(assignment => ({
-              id: assignment.instructors.id,
-              user_id: assignment.instructors.user_id,
-              profiles: null
-            })));
+          // Set instructors without profiles
+          setInstructors(uniqueInstructors.map(instructor => ({
+            id: instructor.id,
+            user_id: instructor.user_id,
+            profiles: null
+          })));
         } else {
-          // Map profiles to instructors with safety checks
-          const instructorsWithProfiles = instructorsData
-            .filter(assignment => assignment?.instructors?.id && assignment?.instructors?.user_id)
-            .map(assignment => {
-              const profile = profilesData?.find(p => p.user_id === assignment.instructors.user_id);
-              return {
-                id: assignment.instructors.id,
-                user_id: assignment.instructors.user_id,
-                profiles: profile ? {
-                  first_name: profile.first_name || '',
-                  last_name: profile.last_name || ''
-                } : null
-              };
-            });
+          // Map profiles to instructors
+          const instructorsWithProfiles = uniqueInstructors.map(instructor => {
+            const profile = profilesData?.find(p => p.user_id === instructor.user_id);
+            return {
+              id: instructor.id,
+              user_id: instructor.user_id,
+              profiles: profile ? {
+                first_name: profile.first_name || '',
+                last_name: profile.last_name || ''
+              } : null
+            };
+          });
           setInstructors(instructorsWithProfiles);
         }
       } else {
