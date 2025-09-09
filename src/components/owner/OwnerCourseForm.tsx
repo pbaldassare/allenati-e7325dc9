@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { useGym } from '@/contexts/GymContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -93,7 +93,7 @@ interface Room {
 }
 
 export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, onCourseCreated }) => {
-  const { selectedGym } = useGym();
+  const { selectedGym } = useOwnerGym();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
