@@ -70,6 +70,7 @@ import InstructorCourses from "./pages/instructor/InstructorCourses";
 import InstructorParticipants from "./pages/instructor/InstructorParticipants";
 import InstructorSchedule from "./pages/instructor/InstructorSchedule";
 import { PaymentVerification } from "./components/PaymentVerification";
+import { MobileOptimizations } from "./components/MobileOptimizations";
 
 const queryClient = new QueryClient();
 
@@ -84,10 +85,11 @@ const App = () => (
       <AuthProvider>
         <GymProvider>
           <AppDataProvider>
-            <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+            <MobileOptimizations>
+              <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -170,6 +172,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+            </MobileOptimizations>
           </AppDataProvider>
         </GymProvider>
       </AuthProvider>

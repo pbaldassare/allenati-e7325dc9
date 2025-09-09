@@ -2,6 +2,8 @@ import { Home, TrendingUp, Calendar, CreditCard, User, ShoppingBag, Settings, Me
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
+import { useVirtualKeyboard } from "@/hooks/useVirtualKeyboard";
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -10,6 +12,8 @@ interface BottomNavigationProps {
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
   const { isAdmin, isGymOwner, isInstructor } = useAuth();
+  const scrollDirection = useScrollDirection();
+  const { isVisible: keyboardVisible } = useVirtualKeyboard();
   
   const tabs = isAdmin
     ? [{ id: "admin", icon: Settings, label: "Admin" }]
@@ -32,7 +36,11 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
       ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-primary/10 shadow-card">
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-primary/10 shadow-card transition-transform duration-300 safe-area-bottom",
+      scrollDirection === 'down' && !keyboardVisible && "translate-y-full",
+      keyboardVisible && "translate-y-full"
+    )}>
       <div className="flex items-center justify-around px-6 py-3 max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
