@@ -147,19 +147,26 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
 
       if (categoriesError) throw categoriesError;
 
-      // Load instructors for this gym - using simple query first then fetch profiles separately
+      // Load instructors for this gym through instructor_gym_assignments
       const { data: instructorsData, error: instructorsError } = await supabase
-        .from('instructors')
-        .select('id, user_id')
+        .from('instructor_gym_assignments')
+        .select(`
+          instructor_id,
+          instructors!inner (
+            id,
+            user_id
+          )
+        `)
         .eq('gym_id', selectedGym.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('instructors.is_active', true);
 
       if (instructorsError) {
         console.error('Error loading instructors:', instructorsError);
         setInstructors([]);
       } else if (instructorsData && instructorsData.length > 0) {
-        // Get user IDs from instructors
-        const userIds = instructorsData.map(inst => inst.user_id);
+        // Get user IDs from instructors (now coming from the inner join)
+        const userIds = instructorsData.map(assignment => assignment.instructors.user_id);
         
         // Fetch profiles separately
         const { data: profilesData, error: profilesError } = await supabase
@@ -170,16 +177,18 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         if (profilesError) {
           console.error('Error loading profiles:', profilesError);
           // Set instructors without profiles
-          setInstructors(instructorsData.map(inst => ({
-            ...inst,
+          setInstructors(instructorsData.map(assignment => ({
+            id: assignment.instructors.id,
+            user_id: assignment.instructors.user_id,
             profiles: null
           })));
         } else {
           // Map profiles to instructors
-          const instructorsWithProfiles = instructorsData.map(inst => {
-            const profile = profilesData?.find(p => p.user_id === inst.user_id);
+          const instructorsWithProfiles = instructorsData.map(assignment => {
+            const profile = profilesData?.find(p => p.user_id === assignment.instructors.user_id);
             return {
-              ...inst,
+              id: assignment.instructors.id,
+              user_id: assignment.instructors.user_id,
               profiles: profile ? {
                 first_name: profile.first_name || '',
                 last_name: profile.last_name || ''
