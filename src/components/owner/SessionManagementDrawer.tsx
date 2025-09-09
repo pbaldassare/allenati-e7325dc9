@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
@@ -94,6 +95,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   children
 }) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,34 +130,43 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const loadParticipants = async () => {
     setLoading(true);
     try {
-      const { data: bookings, error } = await supabase
+      console.log('🔍 Loading participants for session:', {
+        sessionId: session.id,
+        isMobile,
+        userAgent: navigator.userAgent
+      });
+      
+      // First, get bookings for this session
+      const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select(`
-          id,
-          user_id,
-          status,
-          credits_used,
-          profiles!inner(
-            user_id,
-            first_name,
-            last_name,
-            email,
-            profile_picture_url,
-            current_credits
-          )
-        `)
+        .select('id, user_id, status, credits_used')
         .eq('session_id', session.id)
         .eq('status', 'confirmed');
 
-      if (error) throw error;
+      console.log('📊 Bookings query result:', { bookings, error: bookingsError });
+
+      if (bookingsError) throw bookingsError;
 
       if (!bookings || bookings.length === 0) {
+        console.log('ℹ️ No confirmed bookings found for session');
         setParticipants([]);
         return;
       }
 
-      // Get user IDs for additional queries
+      // Get user IDs for profile lookup
       const userIds = bookings.map(b => b.user_id);
+      console.log('👥 User IDs for profiles:', userIds);
+
+      // Get user profiles separately
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
+        .in('user_id', userIds);
+
+      console.log('👤 Profiles query result:', { profiles, error: profilesError });
+
+      if (profilesError) throw profilesError;
+
 
       // Get subscriptions for these users
       const { data: subscriptions } = await supabase
@@ -183,6 +194,9 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .gt('expiry_date', new Date().toISOString());
 
       // Create maps for quick lookup
+      const profileMap = new Map(
+        profiles?.map(profile => [profile.user_id, profile]) || []
+      );
       const subscriptionMap = new Map(
         subscriptions?.map(sub => [sub.user_id, sub]) || []
       );
@@ -190,21 +204,36 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         certificates?.map(cert => [cert.user_id, cert]) || []
       );
 
-      const participantsList = bookings.map(booking => ({
-        id: booking.id,
-        user_id: booking.user_id,
-        status: booking.status,
-        credits_used: booking.credits_used,
-        user: {
-          first_name: booking.profiles.first_name || '',
-          last_name: booking.profiles.last_name || '',
-          email: booking.profiles.email || '',
-          profile_picture_url: booking.profiles.profile_picture_url,
-          current_credits: booking.profiles.current_credits || 0
-        },
-        subscription: subscriptionMap.get(booking.user_id) || null,
-        medical_certificate: certificateMap.get(booking.user_id) || null
-      }));
+      console.log('🗺️ Created maps:', {
+        profilesCount: profileMap.size,
+        subscriptionsCount: subscriptionMap.size,
+        certificatesCount: certificateMap.size
+      });
+
+      const participantsList = bookings.map(booking => {
+        const profile = profileMap.get(booking.user_id);
+        if (!profile) {
+          console.warn('⚠️ No profile found for user:', booking.user_id);
+        }
+        
+        return {
+          id: booking.id,
+          user_id: booking.user_id,
+          status: booking.status,
+          credits_used: booking.credits_used,
+          user: {
+            first_name: profile?.first_name || 'Utente',
+            last_name: profile?.last_name || 'Sconosciuto',
+            email: profile?.email || 'email@sconosciuta.com',
+            profile_picture_url: profile?.profile_picture_url,
+            current_credits: profile?.current_credits || 0
+          },
+          subscription: subscriptionMap.get(booking.user_id) || null,
+          medical_certificate: certificateMap.get(booking.user_id) || null
+        };
+      });
+
+      console.log('✅ Final participants list:', participantsList);
 
       setParticipants(participantsList);
     } catch (error) {
@@ -480,7 +509,10 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent className={cn(
+        "max-h-[85vh]",
+        isMobile && "max-h-[90vh]"
+      )}>
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex items-center justify-between">
             <div>
@@ -623,44 +655,82 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
 
           {/* Participants List */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className={cn(
+            "flex-1 overflow-y-auto p-4",
+            isMobile && "min-h-[300px]"
+          )}>
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Partecipanti Iscritti ({participants.length})
               </h4>
+              {isMobile && (
+                <div className="text-xs text-muted-foreground">
+                  📱 Mobile view
+                </div>
+              )}
             </div>
 
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
-                Caricamento partecipanti...
+                <div className="animate-pulse">Caricamento partecipanti...</div>
+                <div className="text-xs mt-2">📱 {isMobile ? 'Mobile' : 'Desktop'}</div>
               </div>
             ) : participants.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nessun partecipante iscritto
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                <p className="font-medium">Nessun partecipante iscritto</p>
+                <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'} - Session: {session.id}</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {participants.map((participant) => (
-                  <Card key={participant.id} className="border-l-4 border-l-primary/20">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
+                  <Card key={participant.id} className={cn(
+                    "border-l-4 border-l-primary/20",
+                    isMobile && "bg-card/80"
+                  )}>
+                    <CardContent className={cn(
+                      "p-3",
+                      isMobile && "p-4"
+                    )}>
+                      <div className={cn(
+                        "flex items-center justify-between",
+                        isMobile && "flex-col space-y-3"
+                      )}>
+                        <div className={cn(
+                          "flex items-center gap-3",
+                          isMobile && "w-full"
+                        )}>
+                          <Avatar className={cn(
+                            "h-10 w-10",
+                            isMobile && "h-12 w-12"
+                          )}>
                             <AvatarImage src={participant.user.profile_picture_url} />
                             <AvatarFallback>
                               {participant.user.first_name[0]}{participant.user.last_name[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">
+                          <div className="flex-1">
+                            <p className={cn(
+                              "font-medium text-sm",
+                              isMobile && "text-base"
+                            )}>
                               {participant.user.first_name} {participant.user.last_name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className={cn(
+                              "text-xs text-muted-foreground",
+                              isMobile && "text-sm"
+                            )}>
                               {participant.user.email}
                             </p>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "space-y-2 mt-2",
+                              isMobile && "mt-3"
+                            )}>
+                              <div className={cn(
+                                "flex items-center gap-2",
+                                isMobile && "flex-wrap"
+                              )}>
                                 <Badge variant="outline" className="text-xs">
                                   {participant.user.current_credits} crediti
                                 </Badge>
@@ -669,7 +739,10 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                                 </Badge>
                               </div>
                               
-                              <div className="flex flex-col gap-1">
+                              <div className={cn(
+                                "flex flex-col gap-1",
+                                isMobile && "gap-2"
+                              )}>
                                 <SubscriptionStatusBadge 
                                   subscription={participant.subscription} 
                                   onClick={!participant.subscription ? () => handleSubscriptionBadgeClick(participant) : undefined}
@@ -682,16 +755,20 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                         </div>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size={isMobile ? "default" : "sm"}
                           onClick={() => removeParticipant(participant.id)}
                           disabled={removing === participant.id}
-                          className="text-destructive hover:text-destructive"
+                          className={cn(
+                            "text-destructive hover:text-destructive",
+                            isMobile && "w-full gap-2"
+                          )}
                         >
                           {removing === participant.id ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                           ) : (
                             <UserMinus className="h-4 w-4" />
                           )}
+                          {isMobile && "Rimuovi"}
                         </Button>
                       </div>
                     </CardContent>
