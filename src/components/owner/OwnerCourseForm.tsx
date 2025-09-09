@@ -165,8 +165,16 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         console.error('Error loading instructors:', instructorsError);
         setInstructors([]);
       } else if (instructorsData && instructorsData.length > 0) {
-        // Get user IDs from instructors (now coming from the inner join)
-        const userIds = instructorsData.map(assignment => assignment.instructors.user_id);
+        // Get user IDs from instructors (now coming from the inner join) with safety checks
+        const userIds = instructorsData
+          .map(assignment => assignment?.instructors?.user_id)
+          .filter(userId => userId !== undefined && userId !== null);
+        
+        if (userIds.length === 0) {
+          console.warn('No valid user IDs found in instructor assignments');
+          setInstructors([]);
+          return;
+        }
         
         // Fetch profiles separately
         const { data: profilesData, error: profilesError } = await supabase
@@ -176,25 +184,29 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
 
         if (profilesError) {
           console.error('Error loading profiles:', profilesError);
-          // Set instructors without profiles
-          setInstructors(instructorsData.map(assignment => ({
-            id: assignment.instructors.id,
-            user_id: assignment.instructors.user_id,
-            profiles: null
-          })));
-        } else {
-          // Map profiles to instructors
-          const instructorsWithProfiles = instructorsData.map(assignment => {
-            const profile = profilesData?.find(p => p.user_id === assignment.instructors.user_id);
-            return {
+          // Set instructors without profiles, but with safety checks
+          setInstructors(instructorsData
+            .filter(assignment => assignment?.instructors?.id && assignment?.instructors?.user_id)
+            .map(assignment => ({
               id: assignment.instructors.id,
               user_id: assignment.instructors.user_id,
-              profiles: profile ? {
-                first_name: profile.first_name || '',
-                last_name: profile.last_name || ''
-              } : null
-            };
-          });
+              profiles: null
+            })));
+        } else {
+          // Map profiles to instructors with safety checks
+          const instructorsWithProfiles = instructorsData
+            .filter(assignment => assignment?.instructors?.id && assignment?.instructors?.user_id)
+            .map(assignment => {
+              const profile = profilesData?.find(p => p.user_id === assignment.instructors.user_id);
+              return {
+                id: assignment.instructors.id,
+                user_id: assignment.instructors.user_id,
+                profiles: profile ? {
+                  first_name: profile.first_name || '',
+                  last_name: profile.last_name || ''
+                } : null
+              };
+            });
           setInstructors(instructorsWithProfiles);
         }
       } else {
@@ -430,12 +442,12 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
                     </FormControl>
                     <SelectContent>
                       {instructors.map((instructor) => (
-                        <SelectItem key={instructor.id} value={instructor.id}>
+                        <SelectItem key={instructor.id || 'unknown'} value={instructor.id || ''}>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
                             {instructor.profiles?.first_name && instructor.profiles?.last_name 
                               ? `${instructor.profiles.first_name} ${instructor.profiles.last_name}`
-                              : `Istruttore ${instructor.id.slice(0, 8)}`
+                              : `Istruttore ${instructor.id ? instructor.id.slice(0, 8) : 'N/A'}`
                             }
                           </div>
                         </SelectItem>
