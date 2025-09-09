@@ -130,10 +130,15 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const loadParticipants = async () => {
     setLoading(true);
     try {
-      console.log('🔍 Loading participants for session:', {
+      console.log('🔄 [MOBILE DEBUG] Loading participants for session:', {
         sessionId: session.id,
+        courseId: session.course_id,
         isMobile,
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        screenWidth: window.screen.width,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        timestamp: new Date().toISOString()
       });
       
       // First, get bookings for this session
@@ -143,12 +148,22 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .eq('session_id', session.id)
         .eq('status', 'confirmed');
 
-      console.log('📊 Bookings query result:', { bookings, error: bookingsError });
+      console.log('📚 [MOBILE DEBUG] Bookings query result:', { 
+        count: bookings?.length || 0,
+        bookings: bookings,
+        error: bookingsError,
+        isMobile,
+        sessionId: session.id
+      });
 
       if (bookingsError) throw bookingsError;
 
       if (!bookings || bookings.length === 0) {
-        console.log('ℹ️ No confirmed bookings found for session');
+        console.log('ℹ️ [MOBILE DEBUG] No confirmed bookings found for session:', {
+          sessionId: session.id,
+          isMobile,
+          timestamp: new Date().toISOString()
+        });
         setParticipants([]);
         return;
       }
@@ -163,7 +178,14 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
         .in('user_id', userIds);
 
-      console.log('👤 Profiles query result:', { profiles, error: profilesError });
+      console.log('👤 [MOBILE DEBUG] Profiles query result:', { 
+        requestedCount: userIds.length,
+        receivedCount: profiles?.length || 0,
+        profiles: profiles,
+        error: profilesError,
+        isMobile,
+        userIds
+      });
 
       if (profilesError) throw profilesError;
 
@@ -204,16 +226,21 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         certificates?.map(cert => [cert.user_id, cert]) || []
       );
 
-      console.log('🗺️ Created maps:', {
+      console.log('🗺️ [MOBILE DEBUG] Created lookup maps:', {
         profilesCount: profileMap.size,
         subscriptionsCount: subscriptionMap.size,
-        certificatesCount: certificateMap.size
+        certificatesCount: certificateMap.size,
+        isMobile,
+        expectedProfiles: userIds.length
       });
 
       const participantsList = bookings.map(booking => {
         const profile = profileMap.get(booking.user_id);
         if (!profile) {
-          console.warn('⚠️ No profile found for user:', booking.user_id);
+          console.warn('⚠️ [MOBILE DEBUG] No profile found for user:', booking.user_id, {
+            bookingId: booking.id,
+            isMobile
+          });
         }
         
         return {
@@ -233,12 +260,23 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         };
       });
 
-      console.log('✅ Final participants list:', participantsList);
+      console.log('✅ [MOBILE DEBUG] Final participants list created:', {
+        count: participantsList.length,
+        participants: participantsList,
+        isMobile,
+        sessionId: session.id,
+        timestamp: new Date().toISOString()
+      });
 
       setParticipants(participantsList);
     } catch (error) {
-      console.error('Error loading participants:', error);
-      toast.error('Errore nel caricamento partecipanti');
+      console.error('❌ [MOBILE DEBUG] Critical error loading participants:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        isMobile,
+        sessionId: session.id
+      });
+      toast.error(`Errore nel caricamento partecipanti: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     } finally {
       setLoading(false);
     }
@@ -505,13 +543,17 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const isFull = session.available_spots <= 0;
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <Drawer 
+      open={open} 
+      onOpenChange={setOpen}
+      shouldScaleBackground={false}
+    >
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
       <DrawerContent className={cn(
-        "max-h-[85vh]",
-        isMobile && "max-h-[90vh]"
+        "max-h-[85vh] flex flex-col",
+        isMobile && "max-h-[90vh] min-h-[60vh]"
       )}>
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex items-center justify-between">
@@ -657,7 +699,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           {/* Participants List */}
           <div className={cn(
             "flex-1 overflow-y-auto p-4",
-            isMobile && "min-h-[300px]"
+            isMobile && "min-h-[300px] max-h-[60vh]"
           )}>
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
@@ -665,29 +707,45 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 Partecipanti Iscritti ({participants.length})
               </h4>
               {isMobile && (
-                <div className="text-xs text-muted-foreground">
-                  📱 Mobile view
+                <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  📱 Mobile ({window.innerWidth}x{window.innerHeight})
                 </div>
               )}
             </div>
+
+            {/* Mobile Debug Info */}
+            {isMobile && (
+              <div className="mb-4 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
+                Debug: Session {session.id.slice(0, 8)}... | 
+                Loading: {loading ? 'YES' : 'NO'} | 
+                Count: {participants.length} |
+                Viewport: {window.innerHeight}px
+              </div>
+            )}
 
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 <div className="animate-pulse">Caricamento partecipanti...</div>
                 <div className="text-xs mt-2">📱 {isMobile ? 'Mobile' : 'Desktop'}</div>
+                <div className="text-xs mt-1">Session: {session.id.slice(0, 8)}...</div>
               </div>
             ) : participants.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="font-medium">Nessun partecipante iscritto</p>
-                <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'} - Session: {session.id}</p>
+                <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'}</p>
+                <p className="text-xs">Session: {session.id}</p>
+                <p className="text-xs">Course: {session.course_name}</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className={cn(
+                "space-y-3",
+                isMobile && "space-y-4"
+              )}>
                 {participants.map((participant) => (
                   <Card key={participant.id} className={cn(
-                    "border-l-4 border-l-primary/20",
-                    isMobile && "bg-card/80"
+                    "border-l-4 border-l-primary/20 transition-all duration-200",
+                    isMobile && "bg-card/90 shadow-sm hover:shadow-md"
                   )}>
                     <CardContent className={cn(
                       "p-3",
@@ -702,23 +760,23 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                           isMobile && "w-full"
                         )}>
                           <Avatar className={cn(
-                            "h-10 w-10",
+                            "h-10 w-10 ring-2 ring-background",
                             isMobile && "h-12 w-12"
                           )}>
                             <AvatarImage src={participant.user.profile_picture_url} />
-                            <AvatarFallback>
+                            <AvatarFallback className="font-semibold">
                               {participant.user.first_name[0]}{participant.user.last_name[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <p className={cn(
-                              "font-medium text-sm",
+                              "font-medium text-sm truncate",
                               isMobile && "text-base"
                             )}>
                               {participant.user.first_name} {participant.user.last_name}
                             </p>
                             <p className={cn(
-                              "text-xs text-muted-foreground",
+                              "text-xs text-muted-foreground truncate",
                               isMobile && "text-sm"
                             )}>
                               {participant.user.email}
@@ -729,12 +787,18 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                             )}>
                               <div className={cn(
                                 "flex items-center gap-2",
-                                isMobile && "flex-wrap"
+                                isMobile && "flex-wrap gap-3"
                               )}>
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className={cn(
+                                  "text-xs font-medium",
+                                  isMobile && "text-sm px-3 py-1"
+                                )}>
                                   {participant.user.current_credits} crediti
                                 </Badge>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className={cn(
+                                  "text-xs",
+                                  isMobile && "text-sm px-3 py-1"
+                                )}>
                                   {participant.status}
                                 </Badge>
                               </div>
@@ -759,8 +823,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                           onClick={() => removeParticipant(participant.id)}
                           disabled={removing === participant.id}
                           className={cn(
-                            "text-destructive hover:text-destructive",
-                            isMobile && "w-full gap-2"
+                            "text-destructive hover:text-destructive shrink-0",
+                            isMobile && "w-full gap-2 h-10"
                           )}
                         >
                           {removing === participant.id ? (
