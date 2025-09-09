@@ -108,31 +108,15 @@ const OwnerUsers = () => {
 
       console.log('🔍 Loading members for gym:', selectedGym.id, selectedGym.name);
 
-      // Get memberships with direct JOIN query as primary method
+      // Step 1: Get gym memberships first
       const { data: memberships, error: memErr } = await supabase
         .from('user_gym_memberships')
-        .select(`
-          user_id, 
-          status, 
-          membership_type,
-          profiles:user_id (
-            user_id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            fiscal_code,
-            profile_picture_url,
-            belt
-          )
-        `)
+        .select('user_id, status, membership_type')
         .eq('gym_id', selectedGym.id);
       
-      console.log('📊 Memberships with profiles query result:', {
+      console.log('📊 Memberships query result:', {
         count: memberships?.length || 0,
         error: memErr,
-        withProfiles: memberships?.filter(m => m.profiles).length || 0,
-        withoutProfiles: memberships?.filter(m => !m.profiles).length || 0,
         sample: memberships?.slice(0, 3)
       });
       
@@ -140,6 +124,7 @@ const OwnerUsers = () => {
 
       const userIds = (memberships || []).map((m: { user_id: string }) => m.user_id);
       if (userIds.length === 0) {
+        console.log('ℹ️ No memberships found for gym:', selectedGym.id);
         setMembers([]);
         return;
       }
@@ -148,44 +133,20 @@ const OwnerUsers = () => {
         (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
       );
 
-      // Extract profiles from JOIN query
-      let profiles = (memberships || [])
-        .map((m: any) => m.profiles)
-        .filter(Boolean); // Remove null profiles
+      // Step 2: Get all profiles for these users
+      const { data: profiles, error: profilesErr } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
+        .in('user_id', userIds);
 
-      console.log('👤 Profiles from JOIN:', {
+      console.log('👤 Profiles query result:', {
         requestedUserIds: userIds.length,
-        foundProfiles: profiles.length,
-        missingUserIds: userIds.filter(id => !profiles.find(p => p.user_id === id))
+        foundProfiles: profiles?.length || 0,
+        error: profilesErr,
+        missingUserIds: userIds.filter(id => !profiles?.find(p => p.user_id === id))
       });
 
-      // Fallback: If JOIN didn't get all profiles, try individual queries
-      const missingUserIds = userIds.filter(id => !profiles.find(p => p.user_id === id));
-      if (missingUserIds.length > 0) {
-        console.log('🔍 Fetching missing profiles individually:', missingUserIds);
-        
-        const individualProfiles = [];
-        for (const userId of missingUserIds) {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
-            .eq('user_id', userId)
-            .single();
-          
-          if (!error && profile) {
-            individualProfiles.push(profile);
-            console.log(`✅ Found individual profile for ${userId}:`, profile);
-          } else {
-            console.error(`❌ Failed to find profile for ${userId}:`, error);
-          }
-        }
-        
-        profiles = [...profiles, ...individualProfiles];
-        console.log('📊 Combined profiles after individual fetch:', {
-          total: profiles.length,
-          stillMissing: userIds.length - profiles.length
-        });
-      }
+      if (profilesErr) throw profilesErr;
 
         // Get user roles
         const { data: userRoles, error: rolesErr } = await supabase
