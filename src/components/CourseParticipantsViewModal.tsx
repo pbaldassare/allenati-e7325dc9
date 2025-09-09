@@ -85,26 +85,34 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
   const loadParticipants = async () => {
     try {
       setLoading(true);
+      console.log('Loading participants for session:', sessionId);
       
-      // Get all data in one optimized query with joins
+      // First, get all confirmed bookings for this session with basic user info
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           *,
-          courses!inner(name),
-          profiles!inner(user_id, first_name, last_name, email, profile_picture_url, belt),
-          user_subscriptions(
-            subscription_plans!inner(name, unlimited_access)
-          )
+          courses!inner(
+            name,
+            course_categories!inner(
+              main_categories!inner(requires_belt)
+            )
+          ),
+          profiles!inner(user_id, first_name, last_name, email, profile_picture_url, belt)
         `)
         .eq('session_id', sessionId)
         .eq('status', 'confirmed')
-        .eq('user_subscriptions.status', 'active')
         .order('scheduled_date', { ascending: true });
 
-      if (bookingsError) throw bookingsError;
+      console.log('Bookings query result:', { bookingsData, bookingsError });
+
+      if (bookingsError) {
+        console.error('Bookings error:', bookingsError);
+        throw bookingsError;
+      }
 
       if (!bookingsData || bookingsData.length === 0) {
+        console.log('No confirmed bookings found for session');
         setParticipants([]);
         return;
       }
@@ -114,7 +122,31 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
         setCourseName(bookingsData[0].courses.name);
       }
 
-      // Transform the data
+      // Get subscription details separately for users who have active subscriptions
+      const userIds = bookingsData.map(booking => booking.user_id);
+      const { data: subscriptionsData } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          user_id,
+          subscription_plans!inner(name, unlimited_access)
+        `)
+        .in('user_id', userIds)
+        .eq('status', 'active');
+
+      console.log('Subscriptions data:', subscriptionsData);
+
+      // Create a map of user subscriptions
+      const subscriptionsMap = new Map();
+      if (subscriptionsData) {
+        subscriptionsData.forEach(sub => {
+          subscriptionsMap.set(sub.user_id, {
+            plan_name: sub.subscription_plans?.name,
+            unlimited_access: sub.subscription_plans?.unlimited_access
+          });
+        });
+      }
+
+      // Transform the data - include all confirmed participants regardless of subscription status
       const participantsWithSubs = bookingsData.map((booking: any) => ({
         ...booking,
         user: booking.profiles || {
@@ -122,15 +154,15 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           last_name: '',
           email: 'Email non trovata'
         },
-        subscription: booking.user_subscriptions?.[0]?.subscription_plans ? {
-          plan_name: booking.user_subscriptions[0].subscription_plans.name,
-          unlimited_access: booking.user_subscriptions[0].subscription_plans.unlimited_access
-        } : undefined
+        subscription: subscriptionsMap.get(booking.user_id),
+        courses: booking.courses
       }));
 
+      console.log('Final participants:', participantsWithSubs);
       setParticipants(participantsWithSubs);
     } catch (error) {
       console.error('Error loading participants:', error);
+      setParticipants([]);
     } finally {
       setLoading(false);
     }
