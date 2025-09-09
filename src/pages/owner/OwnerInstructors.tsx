@@ -51,18 +51,36 @@ const OwnerInstructors: React.FC = () => {
         .eq("gym_id", selectedGym.id)
         .eq("is_active", true);
 
-      if (assignmentsError || !assignments || assignments.length === 0) {
+      // Also load instructors with direct gym_id (legacy method)
+      const { data: directInstructors, error: directError } = await supabase
+        .from("instructors")
+        .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active, gym_id")
+        .eq("gym_id", selectedGym.id)
+        .eq("is_active", true);
+
+      if (assignmentsError || directError) {
+        console.error("Error loading instructors:", { assignmentsError, directError });
         setInstructors([]);
         setLoading(false);
         return;
       }
 
-      // Load instructor details
-      const instructorIds = assignments.map(a => a.instructor_id);
+      // Combine instructor IDs from both sources
+      const assignmentInstructorIds = assignments?.map(a => a.instructor_id) || [];
+      const directInstructorIds = directInstructors?.map(i => i.id) || [];
+      const allInstructorIds = [...new Set([...assignmentInstructorIds, ...directInstructorIds])];
+
+      if (allInstructorIds.length === 0) {
+        setInstructors([]);
+        setLoading(false);
+        return;
+      }
+
+      // Load instructor details for all instructors
       const { data: instructorsData, error: instructorsError } = await supabase
         .from("instructors")
         .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active")
-        .in("id", instructorIds)
+        .in("id", allInstructorIds)
         .eq("is_active", true);
 
       if (instructorsError || !instructorsData) {
@@ -96,7 +114,10 @@ const OwnerInstructors: React.FC = () => {
 
       // Create maps for efficient merging
       const assignmentsByInstructorId = new Map(
-        assignments.map(a => [a.instructor_id, a])
+        (assignments || []).map(a => [a.instructor_id, a])
+      );
+      const directInstructorsByUserId = new Map(
+        (directInstructors || []).map(i => [i.user_id, i])
       );
       const profilesByUserId = new Map(
         (profilesData || []).map(p => [p.user_id, p])
@@ -105,6 +126,7 @@ const OwnerInstructors: React.FC = () => {
       // Merge all data with comprehensive debugging
       const mergedInstructors: Instructor[] = instructorsData.map(instructor => {
         const assignment = assignmentsByInstructorId.get(instructor.id);
+        const directInstructor = directInstructorsByUserId.get(instructor.user_id);
         const profile = profilesByUserId.get(instructor.user_id);
         
         // Debug missing profile data
@@ -121,6 +143,13 @@ const OwnerInstructors: React.FC = () => {
         const firstName = profile?.first_name || instructor.first_name || "Nome non disponibile";
         const lastName = profile?.last_name || instructor.last_name || "Cognome non disponibile";
         
+        // Determine owner privileges: check assignment first, then if it's a direct gym owner
+        let hasOwnerPrivileges = assignment?.has_owner_privileges ?? false;
+        if (!hasOwnerPrivileges && directInstructor) {
+          // Check if this instructor is also a gym owner for this gym
+          hasOwnerPrivileges = false; // Will be updated by privilege toggle if needed
+        }
+        
         return {
           id: instructor.id,
           user_id: instructor.user_id,
@@ -130,7 +159,7 @@ const OwnerInstructors: React.FC = () => {
           experience_years: instructor.experience_years || null,
           hourly_rate: instructor.hourly_rate || null,
           is_active: instructor.is_active ?? true,
-          has_owner_privileges: assignment?.has_owner_privileges ?? false,
+          has_owner_privileges: hasOwnerPrivileges,
           created_at: instructor.created_at,
           profile: {
             first_name: firstName,
