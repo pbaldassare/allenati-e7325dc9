@@ -68,74 +68,103 @@ const OwnerUsers = () => {
     document.title = 'Utenti Palestra | Gym Manager';
   }, []);
 
-  useEffect(() => {
-    const loadMembers = async () => {
-      console.log('👥 OwnerUsers - DEBUG START:', {
-        selectedGym: selectedGym?.id,
-        selectedGymName: selectedGym?.name,
-        timestamp: new Date().toISOString()
-      });
+  const loadMembers = async () => {
+    console.log('👥 OwnerUsers - DEBUG START:', {
+      selectedGym: selectedGym?.id,
+      selectedGymName: selectedGym?.name,
+      timestamp: new Date().toISOString()
+    });
 
-      if (!selectedGym?.id) {
-        console.log('❌ No selectedGym, clearing members');
+    if (!selectedGym?.id) {
+      console.log('❌ No selectedGym, clearing members');
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: userRes, error: authError } = await supabase.auth.getUser();
+      const userId = userRes?.user?.id;
+      
+      console.log('🔐 Auth check:', { userId, authError });
+      
+      setAuthUserId(userId ?? null);
+      if (!userId) {
+        console.log('❌ No authenticated user');
         setMembers([]);
-        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      try {
-        const { data: userRes, error: authError } = await supabase.auth.getUser();
-        const userId = userRes?.user?.id;
-        
-        console.log('🔐 Auth check:', { userId, authError });
-        
-        setAuthUserId(userId ?? null);
-        if (!userId) {
-          console.log('❌ No authenticated user');
-          setMembers([]);
-          return;
-        }
+      console.log('🔍 Loading members for gym:', selectedGym.id, selectedGym.name);
 
-        console.log('🔍 Loading members for gym:', selectedGym.id, selectedGym.name);
+      // Cache-busting timestamp
+      const cacheBuster = Date.now();
+      
+      const { data: memberships, error: memErr } = await supabase
+        .from('user_gym_memberships')
+        .select('user_id, status, membership_type')
+        .eq('gym_id', selectedGym.id)
+        .gte('created_at', '1970-01-01T00:00:00.000Z'); // Cache buster
+      
+      console.log('📊 Memberships query result:', {
+        count: memberships?.length || 0,
+        error: memErr,
+        sample: memberships?.slice(0, 3),
+        cacheBuster
+      });
+      
+      if (memErr) throw memErr;
 
-        const { data: memberships, error: memErr } = await supabase
-          .from('user_gym_memberships')
-          .select('user_id, status, membership_type')
-          .eq('gym_id', selectedGym.id);
-        
-        console.log('📊 Memberships query result:', {
-          count: memberships?.length || 0,
-          error: memErr,
-          sample: memberships?.slice(0, 3)
-        });
-        
-        if (memErr) throw memErr;
+      const userIds = (memberships || []).map((m: { user_id: string }) => m.user_id);
+      if (userIds.length === 0) {
+        setMembers([]);
+        return;
+      }
 
-        const userIds = (memberships || []).map((m: { user_id: string }) => m.user_id);
-        if (userIds.length === 0) {
-          setMembers([]);
-          return;
-        }
+      const membershipByUser = new Map(
+        (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
+      );
 
-        const membershipByUser = new Map(
-          (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
-        );
-
-        // Get profiles - using correct user_id join
-        const { data: profiles, error: profErr } = await supabase
+      // Get profiles with retry logic and detailed debugging
+      let profiles, profErr;
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        const result = await supabase
           .from('profiles')
           .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
-          .in('user_id', userIds);
+          .in('user_id', userIds)
+          .gte('created_at', '1970-01-01T00:00:00.000Z'); // Cache buster
         
-        console.log('👤 Profiles query result:', {
+        profiles = result.data;
+        profErr = result.error;
+        
+        console.log(`👤 Profiles query attempt ${retryCount + 1}:`, {
           requestedUserIds: userIds.length,
           foundProfiles: profiles?.length || 0,
           error: profErr,
+          userIds: userIds,
+          foundUserIds: profiles?.map(p => p.user_id) || [],
+          missingUserIds: userIds.filter(id => !profiles?.find(p => p.user_id === id)),
           sample: profiles?.slice(0, 3)
         });
         
-        if (profErr) throw profErr;
+        if (!profErr && profiles && profiles.length === userIds.length) {
+          break; // Success - all profiles found
+        }
+        
+        if (retryCount < maxRetries) {
+          console.log(`⚠️ Retry ${retryCount + 1}: Only ${profiles?.length || 0}/${userIds.length} profiles found`);
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+        } else {
+          break;
+        }
+      }
+      
+      if (profErr) throw profErr;
 
         // Get user roles
         const { data: userRoles, error: rolesErr } = await supabase
@@ -192,11 +221,18 @@ const OwnerUsers = () => {
           const profile = (profiles || []).find((p: any) => p.user_id === userId);
           const cert = latestCertByUser.get(userId);
           
+          // Debug missing profile data
+          if (!profile) {
+            console.error(`❌ Missing profile for user_id: ${userId}`);
+          } else if (!profile.first_name || !profile.last_name) {
+            console.warn(`⚠️ Incomplete profile for user_id: ${userId}`, profile);
+          }
+          
           return {
             user_id: userId,
-            first_name: profile?.first_name || 'Nome',
-            last_name: profile?.last_name || 'Non Disponibile',
-            email: profile?.email || null,
+            first_name: profile?.first_name || 'Nome Non Disponibile',
+            last_name: profile?.last_name || 'Dati Mancanti',
+            email: profile?.email || 'Email Non Disponibile',
             phone: profile?.phone || null,
             fiscal_code: profile?.fiscal_code || null,
             profile_picture_url: profile?.profile_picture_url || null,
@@ -210,12 +246,22 @@ const OwnerUsers = () => {
           } as MemberProfile;
         });
 
+        // Final validation check
+        const missingProfiles = combined.filter(m => 
+          m.first_name === 'Nome Non Disponibile' || 
+          m.last_name === 'Dati Mancanti' ||
+          m.email === 'Email Non Disponibile'
+        );
+
         console.log('✅ Members loaded successfully:', {
           totalMembers: combined.length,
           activeMembers: combined.filter(m => m.membership_status === 'active').length,
           instructors: combined.filter(m => m.is_instructor).length,
+          missingProfiles: missingProfiles.length,
+          missingProfileUserIds: missingProfiles.map(m => m.user_id),
           sample: combined.slice(0, 3).map(m => ({ 
             name: `${m.first_name} ${m.last_name}`, 
+            email: m.email,
             status: m.membership_status,
             isInstructor: m.is_instructor 
           }))
@@ -231,6 +277,7 @@ const OwnerUsers = () => {
       }
     };
 
+  useEffect(() => {
     // Add a small delay to ensure gym context is fully loaded
     const timer = setTimeout(() => {
       loadMembers();
@@ -249,15 +296,8 @@ const OwnerUsers = () => {
 
   const reloadMembers = async () => {
     if (!selectedGym?.id) return;
-    
-    // Re-trigger the data loading effect by updating the dependency
-    const timer = setTimeout(() => {
-      // Force re-fetch by updating the key state or calling the load function directly
-      const loadEvent = new CustomEvent('reload-members');
-      window.dispatchEvent(loadEvent);
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    console.log('🔄 Manual reload triggered');
+    await loadMembers();
   };
 
   const handlePromoteClick = (userId: string) => {
@@ -410,13 +450,17 @@ const OwnerUsers = () => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Elenco Membri</CardTitle>
-            <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Membro
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={reloadMembers} disabled={loading}>
+                🔄 Aggiorna
+              </Button>
+              <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Aggiungi Membro
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Aggiungi Nuovo Membro</DialogTitle>
@@ -448,6 +492,7 @@ const OwnerUsers = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
