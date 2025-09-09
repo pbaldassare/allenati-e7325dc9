@@ -1997,7 +1997,7 @@ export type Database = {
         Returns: boolean
       }
       demote_super_instructor: {
-        Args: { _gym_id?: string; _user_id: string } | { _user_id: string }
+        Args: { _user_id: string }
         Returns: boolean
       }
       fix_missing_owner_instructors: {
@@ -2078,7 +2078,7 @@ export type Database = {
         Returns: string
       }
       promote_instructor_to_super: {
-        Args: { _gym_id?: string; _user_id: string } | { _user_id: string }
+        Args: { _user_id: string }
         Returns: boolean
       }
       promote_user_to_instructor: {

@@ -71,12 +71,28 @@ const OwnerInstructors: React.FC = () => {
         return;
       }
 
-      // Load user profiles
+      // Load user profiles with comprehensive debugging
       const userIds = instructorsData.map(i => i.user_id);
-      const { data: profilesData } = await supabase
+      console.log('🔍 DEBUG: Loading profiles for instructor user_ids:', userIds);
+      
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("user_id, first_name, last_name, phone, profile_picture_url")
+        .select("user_id, first_name, last_name, phone, profile_picture_url, email")
         .in("user_id", userIds);
+
+      if (profilesError) {
+        console.error('🚨 ERROR loading profiles:', profilesError);
+      }
+      console.log('📋 DEBUG: Profiles loaded:', profilesData?.length || 0, 'out of', userIds.length, 'requested');
+      
+      // Debug missing profiles
+      if (profilesData) {
+        const foundUserIds = new Set(profilesData.map(p => p.user_id));
+        const missingUserIds = userIds.filter(id => !foundUserIds.has(id));
+        if (missingUserIds.length > 0) {
+          console.error('🚨 MISSING PROFILES for user_ids:', missingUserIds);
+        }
+      }
 
       // Create maps for efficient merging
       const assignmentsByInstructorId = new Map(
@@ -86,13 +102,24 @@ const OwnerInstructors: React.FC = () => {
         (profilesData || []).map(p => [p.user_id, p])
       );
 
-      // Merge all data
+      // Merge all data with comprehensive debugging
       const mergedInstructors: Instructor[] = instructorsData.map(instructor => {
         const assignment = assignmentsByInstructorId.get(instructor.id);
         const profile = profilesByUserId.get(instructor.user_id);
         
-        const firstName = profile?.first_name || instructor.first_name || "Nome";
-        const lastName = profile?.last_name || instructor.last_name || "Cognome";
+        // Debug missing profile data
+        if (!profile) {
+          console.error(`🚨 CRITICAL: No profile found for instructor user_id: ${instructor.user_id} (instructor_id: ${instructor.id})`);
+        } else if (!profile.first_name || !profile.last_name) {
+          console.error(`🚨 MISSING DATA for instructor user_id: ${instructor.user_id}:`, {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            email: profile.email
+          });
+        }
+        
+        const firstName = profile?.first_name || instructor.first_name || "Nome non disponibile";
+        const lastName = profile?.last_name || instructor.last_name || "Cognome non disponibile";
         
         return {
           id: instructor.id,

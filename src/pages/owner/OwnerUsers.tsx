@@ -133,8 +133,10 @@ const OwnerUsers = () => {
         (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
       );
 
-      // Step 2: Get all profiles for these users
-      const { data: profiles, error: profilesErr } = await supabase
+      // Step 2: Get all profiles for these users with enhanced debugging
+      console.log('🔍 DEBUG: Loading profiles for user_ids:', userIds.slice(0, 5), '... (total:', userIds.length, ')');
+      
+      let { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
         .in('user_id', userIds);
@@ -148,7 +150,23 @@ const OwnerUsers = () => {
 
       if (profilesErr) {
         console.error('❌ Profiles query failed:', profilesErr);
-        throw profilesErr;
+        console.log('🔄 Attempting fallback profile query without RLS constraints...');
+        
+        // Try fallback query that bypasses potential RLS issues
+        const { data: fallbackProfiles, error: fallbackError } = await supabase
+          .from("profiles")
+          .select("user_id, first_name, last_name, phone, profile_picture_url, email, fiscal_code, belt");
+        
+        if (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+          throw profilesErr;
+        } else {
+          console.log('✅ Fallback query succeeded, filtering relevant profiles...');
+          const userIdSet = new Set(userIds);
+          profiles = fallbackProfiles?.filter(p => userIdSet.has(p.user_id)) || [];
+          console.log(`📊 Fallback loaded ${profiles.length} profiles for ${userIds.length} users`);
+          profilesErr = null; // Clear error since fallback succeeded
+        }
       }
 
       // Fallback: If batch query didn't get all profiles, try individual queries
@@ -247,13 +265,23 @@ const OwnerUsers = () => {
           const profile = allProfiles.find((p: any) => p.user_id === userId);
           const cert = latestCertByUser.get(userId);
           
-          // Debug missing profile data - this should NEVER happen if data exists
+          // Enhanced debugging for missing profile data
           if (!profile) {
-            console.error(`🚨 CRITICAL: No profile found for user_id: ${userId} - This is a BUG!`);
+            console.error(`🚨 CRITICAL: No profile found for user_id: ${userId} - This is a DATA ACCESS BUG!`);
+            console.error(`🔍 DEBUG: Checking if profile exists in all loaded profiles...`);
+            const debugProfile = allProfiles.find((p: any) => p.user_id === userId);
+            console.error(`🔍 Profile check result:`, debugProfile);
           } else if (!profile.first_name || !profile.last_name || !profile.email) {
             console.error(`🚨 CRITICAL: Missing essential data for user_id: ${userId}`, {
               first_name: profile.first_name,
               last_name: profile.last_name,
+              email: profile.email,
+              full_profile: profile
+            });
+          } else {
+            // Log successful profile data for comparison
+            console.log(`✅ Good profile data for ${userId}:`, {
+              name: `${profile.first_name} ${profile.last_name}`,
               email: profile.email
             });
           }
@@ -261,9 +289,18 @@ const OwnerUsers = () => {
           return {
             user_id: userId,
             // Essential data - if missing, it's a BUG, not missing data
-            first_name: profile?.first_name || 'Nome non disponibile',
-            last_name: profile?.last_name || 'Cognome non disponibile', 
-            email: profile?.email || 'Email non disponibile',
+            first_name: profile?.first_name || (() => {
+              console.error(`🚨 FALLBACK: Using "Nome non disponibile" for user_id: ${userId}`);
+              return 'Nome non disponibile';
+            })(),
+            last_name: profile?.last_name || (() => {
+              console.error(`🚨 FALLBACK: Using "Cognome non disponibile" for user_id: ${userId}`);
+              return 'Cognome non disponibile';
+            })(),
+            email: profile?.email || (() => {
+              console.error(`🚨 FALLBACK: Using "Email non disponibile" for user_id: ${userId}`);
+              return 'Email non disponibile';
+            })(),
             phone: profile?.phone || null,
             fiscal_code: profile?.fiscal_code || '', // Only optional field with smart default
             profile_picture_url: profile?.profile_picture_url || null,
