@@ -146,7 +146,44 @@ const OwnerUsers = () => {
         missingUserIds: userIds.filter(id => !profiles?.find(p => p.user_id === id))
       });
 
-      if (profilesErr) throw profilesErr;
+      if (profilesErr) {
+        console.error('❌ Profiles query failed:', profilesErr);
+        throw profilesErr;
+      }
+
+      // Fallback: If batch query didn't get all profiles, try individual queries
+      const missingUserIds = userIds.filter(id => !profiles?.find(p => p.user_id === id));
+      let allProfiles = profiles || [];
+
+      if (missingUserIds.length > 0) {
+        console.log('🔍 CRITICAL: Missing profiles detected, fetching individually:', missingUserIds);
+        
+        for (const userId of missingUserIds) {
+          try {
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
+              .eq('user_id', userId)
+              .maybeSingle();
+            
+            if (!error && profile) {
+              allProfiles.push(profile);
+              console.log(`✅ Recovered individual profile for ${userId}:`, profile);
+            } else {
+              console.error(`🚨 FAILED to find profile for ${userId}:`, error);
+              // This should NEVER happen if data exists - it's a bug
+            }
+          } catch (err) {
+            console.error(`🚨 Exception fetching profile for ${userId}:`, err);
+          }
+        }
+        
+        console.log('📊 Final profiles after individual recovery:', {
+          total: allProfiles.length,
+          recovered: allProfiles.length - (profiles?.length || 0),
+          stillMissing: userIds.length - allProfiles.length
+        });
+      }
 
         // Get user roles
         const { data: userRoles, error: rolesErr } = await supabase
@@ -200,23 +237,28 @@ const OwnerUsers = () => {
 
         // Create combined member data - ensure all users from memberships are included
         const combined = userIds.map((userId: string) => {
-          const profile = (profiles || []).find((p: any) => p.user_id === userId);
+          const profile = allProfiles.find((p: any) => p.user_id === userId);
           const cert = latestCertByUser.get(userId);
           
-          // Debug missing profile data
+          // Debug missing profile data - this should NEVER happen if data exists
           if (!profile) {
-            console.error(`❌ Missing profile for user_id: ${userId}`);
-          } else if (!profile.first_name || !profile.last_name) {
-            console.warn(`⚠️ Incomplete profile for user_id: ${userId}`, profile);
+            console.error(`🚨 CRITICAL: No profile found for user_id: ${userId} - This is a BUG!`);
+          } else if (!profile.first_name || !profile.last_name || !profile.email) {
+            console.error(`🚨 CRITICAL: Missing essential data for user_id: ${userId}`, {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email
+            });
           }
           
           return {
             user_id: userId,
-            first_name: profile?.first_name || 'Nome Non Disponibile',
-            last_name: profile?.last_name || 'Dati Mancanti',
-            email: profile?.email || 'Email Non Disponibile',
+            // Essential data - if missing, it's a BUG, not missing data
+            first_name: profile?.first_name || '❌ ERRORE CARICAMENTO',
+            last_name: profile?.last_name || '❌ ERRORE CARICAMENTO',
+            email: profile?.email || '❌ ERRORE CARICAMENTO',
             phone: profile?.phone || null,
-            fiscal_code: profile?.fiscal_code || null,
+            fiscal_code: profile?.fiscal_code || 'Da completare', // Only optional field with smart default
             profile_picture_url: profile?.profile_picture_url || null,
             membership_status: membershipByUser.get(userId)?.status ?? 'unknown',
             membership_type: membershipByUser.get(userId)?.membership_type ?? 'member',
@@ -228,19 +270,19 @@ const OwnerUsers = () => {
           } as MemberProfile;
         });
 
-        // Final validation check
-        const missingProfiles = combined.filter(m => 
-          m.first_name === 'Nome Non Disponibile' || 
-          m.last_name === 'Dati Mancanti' ||
-          m.email === 'Email Non Disponibile'
+        // Final validation check for BUG detection
+        const errorProfiles = combined.filter(m => 
+          m.first_name === '❌ ERRORE CARICAMENTO' || 
+          m.last_name === '❌ ERRORE CARICAMENTO' ||
+          m.email === '❌ ERRORE CARICAMENTO'
         );
 
         console.log('✅ Members loaded successfully:', {
           totalMembers: combined.length,
           activeMembers: combined.filter(m => m.membership_status === 'active').length,
           instructors: combined.filter(m => m.is_instructor).length,
-          missingProfiles: missingProfiles.length,
-          missingProfileUserIds: missingProfiles.map(m => m.user_id),
+          errorProfiles: errorProfiles.length,
+          errorProfileUserIds: errorProfiles.map(m => m.user_id),
           sample: combined.slice(0, 3).map(m => ({ 
             name: `${m.first_name} ${m.last_name}`, 
             email: m.email,
