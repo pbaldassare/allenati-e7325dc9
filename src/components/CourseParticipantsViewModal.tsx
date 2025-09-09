@@ -95,7 +95,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           courses!inner(
             name,
             course_categories!inner(
-              main_categories!inner(requires_belt)
+              main_categories(requires_belt)
             )
           ),
           profiles!inner(user_id, first_name, last_name, email, profile_picture_url, belt)
