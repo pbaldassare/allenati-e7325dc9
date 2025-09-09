@@ -70,18 +70,14 @@ const OwnerInstructors: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      console.log("🏋️ OwnerInstructors - DEBUG START:", {
+    const loadInstructors = async () => {
+      console.log("🏋️ OwnerInstructors - Loading START:", {
         gymLoading,
         selectedGym: selectedGym?.id,
         selectedGymName: selectedGym?.name,
         ownedGyms: ownedGyms?.length,
         timestamp: new Date().toISOString()
       });
-
-      // Test authentication first
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log("🔐 Auth check:", { userId: user?.id, error: authError });
 
       // Early return if no gym selected or still loading
       if (gymLoading) {
@@ -102,117 +98,136 @@ const OwnerInstructors: React.FC = () => {
 
       try {
         setLoading(true);
-        console.log("🔍 Fetching instructors for gym:", selectedGym.id);
-        
-        // TEMPORANEO: Prima proviamo senza filtro per vedere se ci sono istruttori
-        const { data: allInstructors, error: allError } = await supabase
-          .from("instructors")
-          .select("*")
-          .eq("is_active", true);
-        
-        console.log("📊 All active instructors:", allInstructors?.length || 0, allInstructors);
+        console.log("🔍 Loading instructors for gym:", {
+          gymId: selectedGym.id,
+          gymName: selectedGym.name
+        });
 
-        // 1) Carica gli istruttori usando instructor_gym_assignments
-        const { data: instData, error: instError } = await supabase
+        // STEP 1: Carica prima gli assignments per questa palestra
+        const { data: assignments, error: assignmentsError } = await supabase
           .from("instructor_gym_assignments")
-          .select(`
-            instructor_id,
-            gym_id,
-            has_owner_privileges,
-            is_active,
-            instructors!inner (
-              id, user_id, bio, created_at,
-              specializations, certifications, experience_years, hourly_rate,
-              first_name, last_name, is_active
-            )
-          `)
+          .select("instructor_id, gym_id, has_owner_privileges, is_active")
           .eq("gym_id", selectedGym.id)
-          .eq("is_active", true)
-          .eq("instructors.is_active", true);
+          .eq("is_active", true);
 
-        console.log("🎯 Instructors for gym:", instData?.length || 0, instData);
+        console.log("📋 Assignments loaded:", {
+          count: assignments?.length || 0,
+          error: assignmentsError,
+          data: assignments
+        });
 
-        if (instError) {
-          console.error("Errore nel caricamento degli istruttori:", instError);
+        if (assignmentsError) {
+          console.error("❌ Error loading assignments:", assignmentsError);
           setInstructors([]);
           setLoading(false);
           return;
         }
 
-        const instructorsList = (instData || []) as any[];
-        const userIds = instructorsList.map((i) => i.instructors?.user_id).filter(Boolean);
-
-        // 2) Carica i profili collegati
-        let profilesById = new Map<string, any>();
-        if (userIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from("profiles")
-            .select("user_id, first_name, last_name, phone, profile_picture_url")
-            .in("user_id", userIds);
-
-          console.log('👤 Profiles loaded:', {
-            requestedUserIds: userIds,
-            foundProfiles: profilesData?.length || 0,
-            error: profilesError,
-            data: profilesData
-          });
-
-          if (!profilesError && profilesData) {
-            profilesById = new Map(
-              profilesData.map((p: any) => [p.user_id as string, p])
-            );
-          } else if (profilesError) {
-            console.warn("Errore caricamento profili:", profilesError);
-          }
+        if (!assignments || assignments.length === 0) {
+          console.log("📋 No assignments found for gym");
+          setInstructors([]);
+          setLoading(false);
+          return;
         }
 
-        // 3) Merge dei dati con fallback migliorato
-        const merged: Instructor[] = instructorsList.map((assignment: any) => {
-          const ins = assignment.instructors;
-          const existingProfile = profilesById.get(ins.user_id);
+        // STEP 2: Carica i dettagli degli istruttori
+        const instructorIds = assignments.map(a => a.instructor_id);
+        const { data: instructorsData, error: instructorsError } = await supabase
+          .from("instructors")
+          .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active")
+          .in("id", instructorIds)
+          .eq("is_active", true);
+
+        console.log("👨‍🏫 Instructors loaded:", {
+          count: instructorsData?.length || 0,
+          error: instructorsError,
+          data: instructorsData
+        });
+
+        if (instructorsError) {
+          console.error("❌ Error loading instructors:", instructorsError);
+          setInstructors([]);
+          setLoading(false);
+          return;
+        }
+
+        if (!instructorsData || instructorsData.length === 0) {
+          console.log("👨‍🏫 No instructors found");
+          setInstructors([]);
+          setLoading(false);
+          return;
+        }
+
+        // STEP 3: Carica i profili utente
+        const userIds = instructorsData.map(i => i.user_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, first_name, last_name, phone, profile_picture_url")
+          .in("user_id", userIds);
+
+        console.log("👤 Profiles loaded:", {
+          requestedUserIds: userIds,
+          foundProfiles: profilesData?.length || 0,
+          error: profilesError,
+          data: profilesData
+        });
+
+        // STEP 4: Crea mappe per un merge efficiente
+        const assignmentsByInstructorId = new Map(
+          assignments.map(a => [a.instructor_id, a])
+        );
+        const profilesByUserId = new Map(
+          (profilesData || []).map(p => [p.user_id, p])
+        );
+
+        // STEP 5: Merge tutti i dati
+        const mergedInstructors: Instructor[] = instructorsData.map(instructor => {
+          const assignment = assignmentsByInstructorId.get(instructor.id);
+          const profile = profilesByUserId.get(instructor.user_id);
           
           // Usa i dati dal profilo se disponibili, altrimenti fallback ai dati dell'istruttore
-          const firstName = existingProfile?.first_name || ins.first_name || "Nome";
-          const lastName = existingProfile?.last_name || ins.last_name || "Non Disponibile";
+          const firstName = profile?.first_name || instructor.first_name || "Nome";
+          const lastName = profile?.last_name || instructor.last_name || "Cognome";
           
           return {
-            id: ins.id,
-            user_id: ins.user_id,
-            bio: ins.bio || null,
-            specializations: ins.specializations || [],
-            certifications: ins.certifications || [],
-            experience_years: ins.experience_years || null,
-            hourly_rate: ins.hourly_rate || null,
-            is_active: ins.is_active ?? true,
-            has_owner_privileges: assignment.has_owner_privileges ?? false,
-            created_at: ins.created_at,
+            id: instructor.id,
+            user_id: instructor.user_id,
+            bio: instructor.bio || null,
+            specializations: instructor.specializations || [],
+            certifications: instructor.certifications || [],
+            experience_years: instructor.experience_years || null,
+            hourly_rate: instructor.hourly_rate || null,
+            is_active: instructor.is_active ?? true,
+            has_owner_privileges: assignment?.has_owner_privileges ?? false,
+            created_at: instructor.created_at,
             profile: {
               first_name: firstName,
               last_name: lastName,
-              phone: existingProfile?.phone || null,
-              profile_picture_url: existingProfile?.profile_picture_url || null,
+              phone: profile?.phone || null,
+              profile_picture_url: profile?.profile_picture_url || null,
             },
           };
         });
 
-        // Ordina gli istruttori per data di creazione (più recenti prima)
-        const sortedMerged = merged.sort((a, b) => 
+        // STEP 6: Ordina per data di creazione (più recenti prima)
+        const sortedInstructors = mergedInstructors.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
-        console.log('✅ Instructors loaded successfully:', {
-          totalInstructors: sortedMerged.length,
-          instructorsWithProfiles: sortedMerged.filter(i => i.profile?.first_name).length,
-          sample: sortedMerged.slice(0, 3).map(i => ({ 
+        console.log('✅ Instructors merged and sorted:', {
+          totalInstructors: sortedInstructors.length,
+          instructorsWithPrivileges: sortedInstructors.filter(i => i.has_owner_privileges).length,
+          sample: sortedInstructors.slice(0, 3).map(i => ({ 
             name: `${i.profile?.first_name} ${i.profile?.last_name}`, 
             hasPrivileges: i.has_owner_privileges,
             userId: i.user_id
           }))
         });
 
-        setInstructors(sortedMerged);
-      } catch (e) {
-        console.error("❌ Errore imprevisto nel caricamento istruttori:", e);
+        setInstructors(sortedInstructors);
+        
+      } catch (error) {
+        console.error("❌ Unexpected error loading instructors:", error);
         setInstructors([]);
         toast.error('Errore nel caricamento degli istruttori');
       } finally {
@@ -220,88 +235,94 @@ const OwnerInstructors: React.FC = () => {
       }
     };
 
-    // Add small delay to ensure gym context is fully ready
-    const timer = setTimeout(() => {
-      load();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Load instructors when gym context is ready
+    loadInstructors();
   }, [selectedGym?.id, gymLoading]);
 
   useEffect(() => {
     const channel = supabase
-      .channel('owner-instructors')
+      .channel('owner-instructors-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'instructor_gym_assignments' },
         async (payload: any) => {
-          // Reload the entire list when assignments change
+          console.log("🔄 Real-time update received:", payload);
+          // Reload using the same logic as the main useEffect
           if (selectedGym?.id) {
-            const { data: instData } = await supabase
-              .from("instructor_gym_assignments")
-              .select(`
-                instructor_id,
-                gym_id,
-                has_owner_privileges,
-                is_active,
-                instructors!inner (
-                  id, user_id, bio, created_at,
-                  specializations, certifications, experience_years, hourly_rate,
-                  first_name, last_name, is_active
-                )
-              `)
-              .eq("gym_id", selectedGym.id)
-              .eq("is_active", true)
-              .eq("instructors.is_active", true);
+            try {
+              // STEP 1: Reload assignments
+              const { data: assignments } = await supabase
+                .from("instructor_gym_assignments")
+                .select("instructor_id, gym_id, has_owner_privileges, is_active")
+                .eq("gym_id", selectedGym.id)
+                .eq("is_active", true);
 
-            if (instData) {
-              const userIds = instData.map((i: any) => i.instructors?.user_id).filter(Boolean);
-              let profilesById = new Map<string, any>();
-              
-              if (userIds.length > 0) {
-                const { data: profilesData } = await supabase
-                  .from("profiles")
-                  .select("user_id, first_name, last_name, phone, profile_picture_url")
-                  .in("user_id", userIds);
-
-                if (profilesData) {
-                  profilesById = new Map(profilesData.map((p: any) => [p.user_id, p]));
-                }
+              if (!assignments || assignments.length === 0) {
+                setInstructors([]);
+                return;
               }
 
-              const merged: Instructor[] = instData.map((assignment: any) => {
-                const ins = assignment.instructors;
-                const existingProfile = profilesById.get(ins.user_id);
+              // STEP 2: Reload instructors
+              const instructorIds = assignments.map(a => a.instructor_id);
+              const { data: instructorsData } = await supabase
+                .from("instructors")
+                .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active")
+                .in("id", instructorIds)
+                .eq("is_active", true);
+
+              if (!instructorsData) return;
+
+              // STEP 3: Reload profiles
+              const userIds = instructorsData.map(i => i.user_id);
+              const { data: profilesData } = await supabase
+                .from("profiles")
+                .select("user_id, first_name, last_name, phone, profile_picture_url")
+                .in("user_id", userIds);
+
+              // STEP 4: Create maps and merge
+              const assignmentsByInstructorId = new Map(
+                assignments.map(a => [a.instructor_id, a])
+              );
+              const profilesByUserId = new Map(
+                (profilesData || []).map(p => [p.user_id, p])
+              );
+
+              const mergedInstructors: Instructor[] = instructorsData.map(instructor => {
+                const assignment = assignmentsByInstructorId.get(instructor.id);
+                const profile = profilesByUserId.get(instructor.user_id);
                 
-                const firstName = existingProfile?.first_name || ins.first_name || "Nome";
-                const lastName = existingProfile?.last_name || ins.last_name || "Non Disponibile";
+                const firstName = profile?.first_name || instructor.first_name || "Nome";
+                const lastName = profile?.last_name || instructor.last_name || "Cognome";
                 
                 return {
-                  id: ins.id,
-                  user_id: ins.user_id,
-                  bio: ins.bio || null,
-                  specializations: ins.specializations || [],
-                  certifications: ins.certifications || [],
-                  experience_years: ins.experience_years || null,
-                  hourly_rate: ins.hourly_rate || null,
-                  is_active: ins.is_active ?? true,
-                  has_owner_privileges: assignment.has_owner_privileges ?? false,
-                  created_at: ins.created_at,
+                  id: instructor.id,
+                  user_id: instructor.user_id,
+                  bio: instructor.bio || null,
+                  specializations: instructor.specializations || [],
+                  certifications: instructor.certifications || [],
+                  experience_years: instructor.experience_years || null,
+                  hourly_rate: instructor.hourly_rate || null,
+                  is_active: instructor.is_active ?? true,
+                  has_owner_privileges: assignment?.has_owner_privileges ?? false,
+                  created_at: instructor.created_at,
                   profile: {
                     first_name: firstName,
                     last_name: lastName,
-                    phone: existingProfile?.phone || null,
-                    profile_picture_url: existingProfile?.profile_picture_url || null,
+                    phone: profile?.phone || null,
+                    profile_picture_url: profile?.profile_picture_url || null,
                   },
                 };
               });
 
-              // Ordina gli istruttori per data di creazione (più recenti prima) 
-              const sortedMerged = merged.sort((a, b) => 
+              // Sort and update
+              const sortedInstructors = mergedInstructors.sort((a, b) => 
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
 
-              setInstructors(sortedMerged);
+              console.log("🔄 Real-time update completed:", sortedInstructors.length, "instructors");
+              setInstructors(sortedInstructors);
+            } catch (error) {
+              console.error("❌ Error in real-time update:", error);
             }
           }
         }
