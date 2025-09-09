@@ -258,7 +258,7 @@ const OwnerUsers = () => {
             last_name: profile?.last_name || '❌ ERRORE CARICAMENTO',
             email: profile?.email || '❌ ERRORE CARICAMENTO',
             phone: profile?.phone || null,
-            fiscal_code: profile?.fiscal_code || 'Da completare', // Only optional field with smart default
+            fiscal_code: profile?.fiscal_code || '', // Only optional field with smart default
             profile_picture_url: profile?.profile_picture_url || null,
             membership_status: membershipByUser.get(userId)?.status ?? 'unknown',
             membership_type: membershipByUser.get(userId)?.membership_type ?? 'member',
