@@ -156,14 +156,56 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         sessionId: session.id
       });
 
-      if (bookingsError) throw bookingsError;
+      if (bookingsError) {
+        console.error('❌ [MOBILE DEBUG] Bookings query failed:', {
+          error: bookingsError,
+          message: bookingsError.message,
+          details: bookingsError.details,
+          code: bookingsError.code,
+          hint: bookingsError.hint,
+          sessionId: session.id,
+          isMobile
+        });
+        throw bookingsError;
+      }
 
       if (!bookings || bookings.length === 0) {
         console.log('ℹ️ [MOBILE DEBUG] No confirmed bookings found for session:', {
           sessionId: session.id,
           isMobile,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          bookingsData: bookings,
+          bookingsType: typeof bookings,
+          bookingsIsArray: Array.isArray(bookings)
         });
+        
+        // Let's also check if there are ANY bookings for this session
+        const { data: allBookings, error: allBookingsError } = await supabase
+          .from('bookings')
+          .select('id, user_id, status, created_at')
+          .eq('session_id', session.id);
+        
+        console.log('🔍 [MOBILE DEBUG] All bookings for session (any status):', {
+          sessionId: session.id,
+          allBookings,
+          count: allBookings?.length || 0,
+          error: allBookingsError,
+          isMobile
+        });
+
+        // Also check if session_id field exists in bookings table and has correct format
+        const { data: sampleBookings } = await supabase
+          .from('bookings')
+          .select('id, session_id')
+          .limit(3);
+        
+        console.log('🔍 [MOBILE DEBUG] Sample bookings to check session_id format:', {
+          sampleBookings,
+          targetSessionId: session.id,
+          targetSessionIdType: typeof session.id,
+          isMobile
+        });
+        
         setParticipants([]);
         return;
       }
@@ -736,6 +778,35 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'}</p>
                 <p className="text-xs">Session: {session.id}</p>
                 <p className="text-xs">Course: {session.course_name}</p>
+                {isMobile && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="mt-3 text-xs"
+                    onClick={() => {
+                      // Add mock data for testing
+                      const mockParticipant: Participant = {
+                        id: 'test-booking-' + Date.now(),
+                        user_id: 'test-user-' + Date.now(),
+                        status: 'confirmed',
+                        credits_used: 1,
+                        user: {
+                          first_name: 'Test',
+                          last_name: 'User',
+                          email: 'test@test.com',
+                          profile_picture_url: null,
+                          current_credits: 10
+                        },
+                        subscription: null,
+                        medical_certificate: null
+                      };
+                      setParticipants([mockParticipant]);
+                      console.log('🧪 [MOBILE DEBUG] Added mock participant for testing');
+                    }}
+                  >
+                    🧪 Test con dati mock
+                  </Button>
+                )}
               </div>
             ) : (
               <div className={cn(
