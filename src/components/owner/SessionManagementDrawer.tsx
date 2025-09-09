@@ -129,162 +129,153 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
   const loadParticipants = async () => {
     setLoading(true);
+    
+    const startTime = Date.now();
+    console.log('🚀 [UNIFIED] Starting unified participants query:', {
+      sessionId: session.id,
+      isMobile,
+      timestamp: new Date().toISOString()
+    });
+
     try {
-      console.log('🔄 [MOBILE DEBUG] Loading participants for session:', {
-        sessionId: session.id,
-        courseId: session.course_id,
-        isMobile,
-        userAgent: navigator.userAgent,
-        screenWidth: window.screen.width,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        timestamp: new Date().toISOString()
-      });
-      
-      // First, get bookings for this session
-      const { data: bookings, error: bookingsError } = await supabase
+      // Simplified unified query - get bookings with profiles in one go
+      const { data: participantsData, error: unifiedError } = await supabase
         .from('bookings')
-        .select('id, user_id, status, credits_used')
+        .select(`
+          id,
+          user_id,
+          status,
+          credits_used,
+          created_at,
+          profiles!inner (
+            user_id,
+            first_name,
+            last_name,
+            email,
+            profile_picture_url,
+            current_credits
+          )
+        `)
+        .eq('status', 'confirmed')
         .eq('session_id', session.id)
-        .eq('status', 'confirmed');
+        .order('created_at', { ascending: true });
 
-      console.log('📚 [MOBILE DEBUG] Bookings query result:', { 
-        count: bookings?.length || 0,
-        bookings: bookings,
-        error: bookingsError,
-        isMobile,
-        sessionId: session.id
+      const queryTime = Date.now() - startTime;
+      
+      console.log('✅ [UNIFIED] Query completed:', {
+        success: !unifiedError,
+        queryTimeMs: queryTime,
+        dataCount: participantsData?.length || 0,
+        error: unifiedError,
+        sessionId: session.id,
+        isMobile
       });
 
-      if (bookingsError) {
-        console.error('❌ [MOBILE DEBUG] Bookings query failed:', {
-          error: bookingsError,
-          message: bookingsError.message,
-          details: bookingsError.details,
-          code: bookingsError.code,
-          hint: bookingsError.hint,
-          sessionId: session.id,
-          isMobile
-        });
-        throw bookingsError;
-      }
-
-      if (!bookings || bookings.length === 0) {
-        console.log('ℹ️ [MOBILE DEBUG] No confirmed bookings found for session:', {
-          sessionId: session.id,
-          isMobile,
-          timestamp: new Date().toISOString(),
-          bookingsData: bookings,
-          bookingsType: typeof bookings,
-          bookingsIsArray: Array.isArray(bookings)
-        });
+      if (unifiedError) {
+        console.error('❌ [UNIFIED] Query failed, trying fallback:', unifiedError);
         
-        // Let's also check if there are ANY bookings for this session
-        const { data: allBookings, error: allBookingsError } = await supabase
+        // Fallback: Simple query approach
+        const { data: simpleBookings, error: fallbackError } = await supabase
           .from('bookings')
-          .select('id, user_id, status, created_at')
+          .select('id, user_id, status, credits_used, created_at')
+          .eq('status', 'confirmed')
           .eq('session_id', session.id);
         
-        console.log('🔍 [MOBILE DEBUG] All bookings for session (any status):', {
-          sessionId: session.id,
-          allBookings,
-          count: allBookings?.length || 0,
-          error: allBookingsError,
+        if (fallbackError) {
+          throw new Error(`Unified query failed: ${unifiedError.message}. Fallback failed: ${fallbackError.message}`);
+        }
+
+        if (!simpleBookings || simpleBookings.length === 0) {
+          console.log('ℹ️ [FALLBACK] No bookings found');
+          setParticipants([]);
+          return;
+        }
+
+        // Get profiles separately for fallback
+        const userIds = simpleBookings.map(b => b.user_id);
+        const { data: fallbackProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, email, current_credits')
+          .in('user_id', userIds);
+
+        const fallbackParticipants: Participant[] = simpleBookings.map(booking => {
+          const profile = fallbackProfiles?.find(p => p.user_id === booking.user_id);
+          return {
+            id: booking.id,
+            user_id: booking.user_id,
+            status: booking.status,
+            credits_used: booking.credits_used,
+            user: profile ? {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email,
+              profile_picture_url: null,
+              current_credits: profile.current_credits
+            } : {
+              first_name: 'Utente',
+              last_name: 'Sconosciuto',
+              email: 'N/A',
+              profile_picture_url: null,
+              current_credits: 0
+            },
+            subscription: null,
+            medical_certificate: null
+          };
+        });
+
+        console.log('🔄 [FALLBACK] Using fallback participants:', {
+          count: fallbackParticipants.length,
           isMobile
         });
 
-        // Also check if session_id field exists in bookings table and has correct format
-        const { data: sampleBookings } = await supabase
-          .from('bookings')
-          .select('id, session_id')
-          .limit(3);
-        
-        console.log('🔍 [MOBILE DEBUG] Sample bookings to check session_id format:', {
-          sampleBookings,
-          targetSessionId: session.id,
-          targetSessionIdType: typeof session.id,
-          isMobile
-        });
-        
+        setParticipants(fallbackParticipants);
+        return;
+      }
+
+      if (!participantsData || participantsData.length === 0) {
+        console.log('ℹ️ [UNIFIED] No participants found');
         setParticipants([]);
         return;
       }
 
-      // Get user IDs for profile lookup
-      const userIds = bookings.map(b => b.user_id);
-      console.log('👥 User IDs for profiles:', userIds);
-
-      // Get user profiles separately
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
-        .in('user_id', userIds);
-
-      console.log('👤 [MOBILE DEBUG] Profiles query result:', { 
-        requestedCount: userIds.length,
-        receivedCount: profiles?.length || 0,
-        profiles: profiles,
-        error: profilesError,
-        isMobile,
-        userIds
-      });
-
-      if (profilesError) throw profilesError;
-
-
-      // Get subscriptions for these users
-      const { data: subscriptions } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          user_id,
-          id,
-          expires_at,
-          status,
-          subscription_plans!inner(
-            name,
-            unlimited_access
-          )
-        `)
-        .in('user_id', userIds)
-        .eq('status', 'active')
-        .gt('expires_at', new Date().toISOString());
-
-      // Get medical certificates for these users
-      const { data: certificates } = await supabase
-        .from('medical_certificates')
-        .select('user_id, id, expiry_date, status')
-        .in('user_id', userIds)
-        .eq('status', 'approved')
-        .gt('expiry_date', new Date().toISOString());
-
-      // Create maps for quick lookup
-      const profileMap = new Map(
-        profiles?.map(profile => [profile.user_id, profile]) || []
-      );
-      const subscriptionMap = new Map(
-        subscriptions?.map(sub => [sub.user_id, sub]) || []
-      );
-      const certificateMap = new Map(
-        certificates?.map(cert => [cert.user_id, cert]) || []
-      );
-
-      console.log('🗺️ [MOBILE DEBUG] Created lookup maps:', {
-        profilesCount: profileMap.size,
-        subscriptionsCount: subscriptionMap.size,
-        certificatesCount: certificateMap.size,
-        isMobile,
-        expectedProfiles: userIds.length
-      });
-
-      const participantsList = bookings.map(booking => {
-        const profile = profileMap.get(booking.user_id);
-        if (!profile) {
-          console.warn('⚠️ [MOBILE DEBUG] No profile found for user:', booking.user_id, {
-            bookingId: booking.id,
-            isMobile
-          });
-        }
+      // Get user IDs for additional data
+      const userIds = participantsData.map(booking => booking.user_id);
+      
+      // Fetch subscriptions and certificates separately for reliability
+      const [subscriptionsResult, certificatesResult] = await Promise.all([
+        supabase
+          .from('user_subscriptions')
+          .select(`
+            user_id,
+            id,
+            status,
+            expires_at,
+            subscription_plans!inner(
+              name,
+              unlimited_access
+            )
+          `)
+          .in('user_id', userIds)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString()),
         
+        supabase
+          .from('medical_certificates')
+          .select('user_id, id, status, expiry_date')
+          .in('user_id', userIds)
+          .eq('status', 'approved')
+          .gt('expiry_date', new Date().toISOString())
+      ]);
+
+      const subscriptions = subscriptionsResult.data || [];
+      const certificates = certificatesResult.data || [];
+
+      // Transform data efficiently
+      const participants: Participant[] = participantsData.map(booking => {
+        const profile = booking.profiles;
+        const subscription = subscriptions.find(sub => sub.user_id === booking.user_id);
+        const certificate = certificates.find(cert => cert.user_id === booking.user_id);
+
         return {
           id: booking.id,
           user_id: booking.user_id,
@@ -293,32 +284,67 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           user: {
             first_name: profile?.first_name || 'Utente',
             last_name: profile?.last_name || 'Sconosciuto',
-            email: profile?.email || 'email@sconosciuta.com',
+            email: profile?.email || 'N/A',
             profile_picture_url: profile?.profile_picture_url,
             current_credits: profile?.current_credits || 0
           },
-          subscription: subscriptionMap.get(booking.user_id) || null,
-          medical_certificate: certificateMap.get(booking.user_id) || null
+          subscription: subscription ? {
+            id: subscription.id,
+            status: subscription.status,
+            expires_at: subscription.expires_at,
+            subscription_plans: subscription.subscription_plans
+          } : null,
+          medical_certificate: certificate ? {
+            id: certificate.id,
+            status: certificate.status,
+            expiry_date: certificate.expiry_date
+          } : null
         };
       });
 
-      console.log('✅ [MOBILE DEBUG] Final participants list created:', {
-        count: participantsList.length,
-        participants: participantsList,
+      const totalTime = Date.now() - startTime;
+      console.log('🎉 [UNIFIED] Participants loaded successfully:', {
+        count: participants.length,
+        totalTimeMs: totalTime,
         isMobile,
-        sessionId: session.id,
-        timestamp: new Date().toISOString()
+        withProfiles: participants.filter(p => p.user.first_name !== 'Utente').length,
+        withSubscriptions: participants.filter(p => p.subscription).length,
+        withCertificates: participants.filter(p => p.medical_certificate).length
       });
 
-      setParticipants(participantsList);
+      setParticipants(participants);
     } catch (error) {
-      console.error('❌ [MOBILE DEBUG] Critical error loading participants:', {
+      const totalTime = Date.now() - startTime;
+      console.error('💥 [UNIFIED] Critical error:', {
         error,
         message: error instanceof Error ? error.message : 'Unknown error',
-        isMobile,
-        sessionId: session.id
+        totalTimeMs: totalTime,
+        sessionId: session.id,
+        isMobile
       });
-      toast.error(`Errore nel caricamento partecipanti: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+
+      // Emergency fallback for mobile: show basic structure to confirm UI works
+      if (isMobile) {
+        console.log('🆘 [EMERGENCY] Using emergency mock for mobile debug');
+        setParticipants([{
+          id: 'emergency-' + Date.now(),
+          user_id: 'emergency-user',
+          status: 'confirmed',
+          credits_used: 1,
+          user: {
+            first_name: 'Test',
+            last_name: 'Emergency',
+            email: 'emergency@test.com',
+            profile_picture_url: null,
+            current_credits: 5
+          },
+          subscription: null,
+          medical_certificate: null
+        }]);
+        toast.error('Errore caricamento partecipanti (modalità debug attiva)');
+      } else {
+        toast.error('Errore nel caricamento partecipanti');
+      }
     } finally {
       setLoading(false);
     }
