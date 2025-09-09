@@ -68,11 +68,12 @@ const OwnerUsers = () => {
     document.title = 'Utenti Palestra | Gym Manager';
   }, []);
 
-  const loadMembers = async () => {
+  const loadMembers = async (forceRefresh = false) => {
     console.log('👥 OwnerUsers - DEBUG START:', {
       selectedGym: selectedGym?.id,
       selectedGymName: selectedGym?.name,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      forceRefresh
     });
 
     if (!selectedGym?.id) {
@@ -84,6 +85,15 @@ const OwnerUsers = () => {
 
     setLoading(true);
     try {
+      // Force cache clear if requested
+      if (forceRefresh) {
+        console.log('🔄 Force refreshing Supabase connection...');
+        // Force a new connection to clear any cached data
+        await supabase.removeAllChannels();
+        // Small delay to ensure cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       const { data: userRes, error: authError } = await supabase.auth.getUser();
       const userId = userRes?.user?.id;
       
@@ -98,20 +108,32 @@ const OwnerUsers = () => {
 
       console.log('🔍 Loading members for gym:', selectedGym.id, selectedGym.name);
 
-      // Cache-busting timestamp
-      const cacheBuster = Date.now();
-      
+      // Get memberships with direct JOIN query as primary method
       const { data: memberships, error: memErr } = await supabase
         .from('user_gym_memberships')
-        .select('user_id, status, membership_type')
-        .eq('gym_id', selectedGym.id)
-        .gte('created_at', '1970-01-01T00:00:00.000Z'); // Cache buster
+        .select(`
+          user_id, 
+          status, 
+          membership_type,
+          profiles:user_id (
+            user_id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            fiscal_code,
+            profile_picture_url,
+            belt
+          )
+        `)
+        .eq('gym_id', selectedGym.id);
       
-      console.log('📊 Memberships query result:', {
+      console.log('📊 Memberships with profiles query result:', {
         count: memberships?.length || 0,
         error: memErr,
-        sample: memberships?.slice(0, 3),
-        cacheBuster
+        withProfiles: memberships?.filter(m => m.profiles).length || 0,
+        withoutProfiles: memberships?.filter(m => !m.profiles).length || 0,
+        sample: memberships?.slice(0, 3)
       });
       
       if (memErr) throw memErr;
@@ -126,45 +148,44 @@ const OwnerUsers = () => {
         (memberships || []).map((m: any) => [m.user_id, { status: m.status, membership_type: m.membership_type }])
       );
 
-      // Get profiles with retry logic and detailed debugging
-      let profiles, profErr;
-      let retryCount = 0;
-      const maxRetries = 2;
-      
-      while (retryCount <= maxRetries) {
-        const result = await supabase
-          .from('profiles')
-          .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
-          .in('user_id', userIds)
-          .gte('created_at', '1970-01-01T00:00:00.000Z'); // Cache buster
+      // Extract profiles from JOIN query
+      let profiles = (memberships || [])
+        .map((m: any) => m.profiles)
+        .filter(Boolean); // Remove null profiles
+
+      console.log('👤 Profiles from JOIN:', {
+        requestedUserIds: userIds.length,
+        foundProfiles: profiles.length,
+        missingUserIds: userIds.filter(id => !profiles.find(p => p.user_id === id))
+      });
+
+      // Fallback: If JOIN didn't get all profiles, try individual queries
+      const missingUserIds = userIds.filter(id => !profiles.find(p => p.user_id === id));
+      if (missingUserIds.length > 0) {
+        console.log('🔍 Fetching missing profiles individually:', missingUserIds);
         
-        profiles = result.data;
-        profErr = result.error;
+        const individualProfiles = [];
+        for (const userId of missingUserIds) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
+            .eq('user_id', userId)
+            .single();
+          
+          if (!error && profile) {
+            individualProfiles.push(profile);
+            console.log(`✅ Found individual profile for ${userId}:`, profile);
+          } else {
+            console.error(`❌ Failed to find profile for ${userId}:`, error);
+          }
+        }
         
-        console.log(`👤 Profiles query attempt ${retryCount + 1}:`, {
-          requestedUserIds: userIds.length,
-          foundProfiles: profiles?.length || 0,
-          error: profErr,
-          userIds: userIds,
-          foundUserIds: profiles?.map(p => p.user_id) || [],
-          missingUserIds: userIds.filter(id => !profiles?.find(p => p.user_id === id)),
-          sample: profiles?.slice(0, 3)
+        profiles = [...profiles, ...individualProfiles];
+        console.log('📊 Combined profiles after individual fetch:', {
+          total: profiles.length,
+          stillMissing: userIds.length - profiles.length
         });
-        
-        if (!profErr && profiles && profiles.length === userIds.length) {
-          break; // Success - all profiles found
-        }
-        
-        if (retryCount < maxRetries) {
-          console.log(`⚠️ Retry ${retryCount + 1}: Only ${profiles?.length || 0}/${userIds.length} profiles found`);
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
-        } else {
-          break;
-        }
       }
-      
-      if (profErr) throw profErr;
 
         // Get user roles
         const { data: userRoles, error: rolesErr } = await supabase
@@ -298,6 +319,12 @@ const OwnerUsers = () => {
     if (!selectedGym?.id) return;
     console.log('🔄 Manual reload triggered');
     await loadMembers();
+  };
+
+  const forceCacheRefresh = async () => {
+    if (!selectedGym?.id) return;
+    console.log('🚀 Force cache refresh triggered');
+    await loadMembers(true);
   };
 
   const handlePromoteClick = (userId: string) => {
@@ -453,6 +480,9 @@ const OwnerUsers = () => {
             <div className="flex gap-2">
               <Button variant="outline" onClick={reloadMembers} disabled={loading}>
                 🔄 Aggiorna
+              </Button>
+              <Button variant="outline" onClick={forceCacheRefresh} disabled={loading} className="text-primary">
+                🚀 Ricarica Cache
               </Button>
               <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
                 <DialogTrigger asChild>
