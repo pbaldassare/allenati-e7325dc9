@@ -35,6 +35,8 @@ const OwnerInstructors: React.FC = () => {
   const { selectedGym, ownedGyms, loading: gymLoading } = useOwnerGym();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   console.log('🏋️ OwnerInstructors RENDER STATE:', {
     gymLoading,
@@ -45,6 +47,13 @@ const OwnerInstructors: React.FC = () => {
     loading,
     timestamp: new Date().toISOString()
   });
+
+  const forceRefresh = () => {
+    console.log('🔄 FORCE REFRESH triggered by user');
+    setRetryCount(prev => prev + 1);
+    setLastRefresh(Date.now());
+    setLoading(true);
+  };
 
   const handlePrivilegeToggle = async (userId: string, currentPrivileges: boolean) => {
     try {
@@ -123,28 +132,58 @@ const OwnerInstructors: React.FC = () => {
           gymName: selectedGym.name
         });
 
-        // STEP 1: Carica prima gli assignments per questa palestra
+        // STEP 1: Force session refresh and load assignments with cache-busting
+        console.log('🔄 Forcing Supabase session refresh...');
+        await supabase.auth.refreshSession();
+        
+        const cacheBuster = `${Date.now()}_${Math.random()}`;
+        console.log('💥 Cache buster:', cacheBuster);
+        
         const { data: assignments, error: assignmentsError } = await supabase
           .from("instructor_gym_assignments")
           .select("instructor_id, gym_id, has_owner_privileges, is_active")
           .eq("gym_id", selectedGym.id)
-          .eq("is_active", true);
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
 
         console.log("📋 Assignments loaded:", {
           count: assignments?.length || 0,
           error: assignmentsError,
-          data: assignments
+          data: assignments,
+          retryCount,
+          gymId: selectedGym.id,
+          cacheBuster
         });
 
         if (assignmentsError) {
           console.error("❌ Error loading assignments:", assignmentsError);
+          
+          // Retry mechanism for RLS or connection issues
+          if (retryCount < 2) {
+            console.log(`🔄 Retrying assignment load (${retryCount + 1}/2)...`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 1000);
+            setLoading(false);
+            return;
+          }
+          
           setInstructors([]);
           setLoading(false);
+          toast.error('Errore nel caricamento degli assignments');
           return;
         }
 
         if (!assignments || assignments.length === 0) {
-          console.log("📋 No assignments found for gym");
+          console.log("📋 No assignments found for gym - checking if this is an RLS issue");
+          
+          // Check if user has permissions by trying a different query
+          const { data: userPerms } = await supabase.rpc('debug_user_permissions', {
+            _user_id: (await supabase.auth.getUser()).data.user?.id
+          });
+          
+          console.log("🔐 User permissions debug:", userPerms);
+          
           setInstructors([]);
           setLoading(false);
           return;
@@ -255,9 +294,9 @@ const OwnerInstructors: React.FC = () => {
       }
     };
 
-    // Load instructors when gym context is ready
+    // Load instructors when gym context is ready or retry is triggered
     loadInstructors();
-  }, [selectedGym?.id, gymLoading]);
+  }, [selectedGym?.id, gymLoading, retryCount, lastRefresh]);
 
   useEffect(() => {
     const channel = supabase
@@ -363,9 +402,28 @@ const OwnerInstructors: React.FC = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground">Caricamento…</p>
+            <div className="space-y-2">
+              <p className="text-muted-foreground">Caricamento… (tentativo {retryCount + 1})</p>
+              {retryCount > 0 && (
+                <p className="text-xs text-amber-600">Retry in corso per problemi di connessione</p>
+              )}
+            </div>
           ) : instructors.length === 0 ? (
-            <p className="text-muted-foreground">Nessun istruttore trovato.</p>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">Nessun istruttore trovato.</p>
+              <button 
+                onClick={forceRefresh}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                🔄 Ricarica Manualmente
+              </button>
+              <div className="text-xs text-muted-foreground">
+                <p>Debug info:</p>
+                <p>• Gym ID: {selectedGym?.id}</p>
+                <p>• Retry count: {retryCount}</p>
+                <p>• Last refresh: {new Date(lastRefresh).toLocaleTimeString()}</p>
+              </div>
+            </div>
           ) : (
             <Table>
               <TableHeader>
