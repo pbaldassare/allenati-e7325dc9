@@ -155,27 +155,34 @@ const OwnerUsers = () => {
       const missingUserIds = userIds.filter(id => !profiles?.find(p => p.user_id === id));
       let allProfiles = profiles || [];
 
-      if (missingUserIds.length > 0) {
-        console.log('🔍 CRITICAL: Missing profiles detected, fetching individually:', missingUserIds);
+        if (missingUserIds.length > 0) {
+        console.log('🔍 Missing profiles detected, trying alternative query:', missingUserIds);
         
-        for (const userId of missingUserIds) {
-          try {
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('user_id, first_name, last_name, email, phone, fiscal_code, profile_picture_url, belt')
-              .eq('user_id', userId)
-              .maybeSingle();
-            
-            if (!error && profile) {
-              allProfiles.push(profile);
-              console.log(`✅ Recovered individual profile for ${userId}:`, profile);
-            } else {
-              console.error(`🚨 FAILED to find profile for ${userId}:`, error);
-              // This should NEVER happen if data exists - it's a bug
-            }
-          } catch (err) {
-            console.error(`🚨 Exception fetching profile for ${userId}:`, err);
-          }
+        // Try alternative query with explicit JOIN to bypass potential RLS issues
+        const { data: altProfiles, error: altError } = await supabase
+          .from('user_gym_memberships')
+          .select(`
+            user_id,
+            profiles!inner(
+              user_id,
+              first_name,
+              last_name,
+              email,
+              phone,
+              fiscal_code,
+              profile_picture_url,
+              belt
+            )
+          `)
+          .eq('gym_id', selectedGym.id)
+          .in('user_id', missingUserIds);
+        
+        if (!altError && altProfiles) {
+          const recoveredProfiles = altProfiles.map((item: any) => item.profiles);
+          allProfiles.push(...recoveredProfiles);
+          console.log(`✅ Recovered ${recoveredProfiles.length} profiles via alternative query`);
+        } else {
+          console.error('🚨 Alternative query also failed:', altError);
         }
         
         console.log('📊 Final profiles after individual recovery:', {
@@ -254,9 +261,9 @@ const OwnerUsers = () => {
           return {
             user_id: userId,
             // Essential data - if missing, it's a BUG, not missing data
-            first_name: profile?.first_name || '❌ ERRORE CARICAMENTO',
-            last_name: profile?.last_name || '❌ ERRORE CARICAMENTO',
-            email: profile?.email || '❌ ERRORE CARICAMENTO',
+            first_name: profile?.first_name || 'Nome non disponibile',
+            last_name: profile?.last_name || 'Cognome non disponibile', 
+            email: profile?.email || 'Email non disponibile',
             phone: profile?.phone || null,
             fiscal_code: profile?.fiscal_code || '', // Only optional field with smart default
             profile_picture_url: profile?.profile_picture_url || null,
