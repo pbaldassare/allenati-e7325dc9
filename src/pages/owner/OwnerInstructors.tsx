@@ -128,8 +128,7 @@ const OwnerInstructors: React.FC = () => {
           `)
           .eq("gym_id", selectedGym.id)
           .eq("is_active", true)
-          .eq("instructors.is_active", true)
-          .order("instructors.created_at", { ascending: false });
+          .eq("instructors.is_active", true);
 
         console.log("🎯 Instructors for gym:", instData?.length || 0, instData);
 
@@ -196,17 +195,22 @@ const OwnerInstructors: React.FC = () => {
           };
         });
 
+        // Ordina gli istruttori per data di creazione (più recenti prima)
+        const sortedMerged = merged.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
         console.log('✅ Instructors loaded successfully:', {
-          totalInstructors: merged.length,
-          instructorsWithProfiles: merged.filter(i => i.profile?.first_name).length,
-          sample: merged.slice(0, 3).map(i => ({ 
+          totalInstructors: sortedMerged.length,
+          instructorsWithProfiles: sortedMerged.filter(i => i.profile?.first_name).length,
+          sample: sortedMerged.slice(0, 3).map(i => ({ 
             name: `${i.profile?.first_name} ${i.profile?.last_name}`, 
             hasPrivileges: i.has_owner_privileges,
             userId: i.user_id
           }))
         });
 
-        setInstructors(merged);
+        setInstructors(sortedMerged);
       } catch (e) {
         console.error("❌ Errore imprevisto nel caricamento istruttori:", e);
         setInstructors([]);
@@ -292,7 +296,12 @@ const OwnerInstructors: React.FC = () => {
                 };
               });
 
-              setInstructors(merged);
+              // Ordina gli istruttori per data di creazione (più recenti prima) 
+              const sortedMerged = merged.sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+
+              setInstructors(sortedMerged);
             }
           }
         }
