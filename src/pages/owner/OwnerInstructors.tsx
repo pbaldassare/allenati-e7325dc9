@@ -30,9 +30,21 @@ interface Instructor {
 }
 
 const OwnerInstructors: React.FC = () => {
+  console.log('🔥 OwnerInstructors COMPONENT MOUNT/RENDER');
+  
   const { selectedGym, ownedGyms, loading: gymLoading } = useOwnerGym();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
+
+  console.log('🏋️ OwnerInstructors RENDER STATE:', {
+    gymLoading,
+    selectedGym: selectedGym?.id,
+    selectedGymName: selectedGym?.name,
+    ownedGymsCount: ownedGyms?.length,
+    instructorsCount: instructors.length,
+    loading,
+    timestamp: new Date().toISOString()
+  });
 
   const handlePrivilegeToggle = async (userId: string, currentPrivileges: boolean) => {
     try {
@@ -67,6 +79,14 @@ const OwnerInstructors: React.FC = () => {
 
   useEffect(() => {
     document.title = "Istruttori | Area Proprietario";
+    console.log('📄 Document title set, component initialized');
+    
+    // Force a state update to trigger re-render and see logs
+    const timer = setTimeout(() => {
+      console.log('⏰ Timer triggered after 1 second');
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
