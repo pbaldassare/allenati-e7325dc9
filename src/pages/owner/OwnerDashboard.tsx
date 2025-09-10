@@ -5,11 +5,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign } from 'lucide-react';
+import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { DebugDataComponent } from '@/components/owner/DebugDataComponent';
 
 interface GymStripeData {
   id: string;
@@ -64,10 +65,26 @@ const OwnerDashboard = () => {
         }
 
         // Count active memberships for this gym
-        const { count: membersCnt } = await supabase
+        console.log('🔍 DEBUGGING - About to query user_gym_memberships for:', {
+          gymId: selectedGym.id,
+          gymName: selectedGym.name,
+          timestamp: new Date().toISOString()
+        });
+
+        const { count: membersCnt, data: debugData } = await supabase
           .from('user_gym_memberships')
-          .select('id', { count: 'exact', head: true })
-          .eq('gym_id', selectedGym.id);
+          .select('id, user_id, status', { count: 'exact' })
+          .eq('gym_id', selectedGym.id)
+          .eq('status', 'active');
+
+        console.log('🔍 DEBUGGING - Memberships query result:', {
+          count: membersCnt,
+          gymId: selectedGym.id,
+          gymName: selectedGym.name,
+          records: debugData?.slice(0, 5), // First 5 records for debugging
+          totalRecords: debugData?.length,
+          timestamp: new Date().toISOString()
+        });
 
         // Get courses for this gym only
         const { data: courses } = await supabase
@@ -108,11 +125,22 @@ const OwnerDashboard = () => {
         <div className="flex items-center gap-2 mt-2">
           <p className="text-muted-foreground">Riepilogo rapido della tua palestra</p>
           {selectedGym && (
-            <div className="flex items-center gap-2 ml-2 px-3 py-1 bg-primary/10 rounded-full">
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-primary">
-                Visualizzando: {selectedGym.name}
-              </span>
+            <div className="flex items-center gap-2 ml-2">
+              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-primary">
+                  Visualizzando: {selectedGym.name}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.reload()}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Refresh
+              </Button>
             </div>
           )}
         </div>
@@ -136,6 +164,9 @@ const OwnerDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Debug Component */}
+      <DebugDataComponent />
 
       {/* Stripe Configuration Alert */}
       {gymStripeData && !gymStripeData.stripe_credentials_configured && (
@@ -182,6 +213,16 @@ const OwnerDashboard = () => {
                 {membersCount >= 10 && membersCount < 50 && "Buona base di membri"}
                 {membersCount >= 50 && "Palestra ben popolata"}
               </p>
+            )}
+            {/* DEBUG INFO */}
+            {selectedGym && (
+              <div className="mt-2 p-2 bg-muted/20 rounded text-xs border">
+                <div className="font-mono text-xs space-y-1">
+                  <div>🏢 Gym ID: {selectedGym.id}</div>
+                  <div>📊 Count: {membersCount}</div>
+                  <div>⏰ {new Date().toLocaleTimeString()}</div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
