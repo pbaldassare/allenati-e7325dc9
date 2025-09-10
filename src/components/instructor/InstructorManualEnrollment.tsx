@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale/it';
-import { Search, Users, UserPlus, Clock, MapPin, Calendar } from 'lucide-react';
+import { Search, Users, UserPlus, Clock, MapPin, Calendar, CreditCard, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorGym } from '@/contexts/InstructorGymContext';
+import { getUserActiveSubscription } from '@/lib/subscriptionHelpers';
 
 interface User {
   id: string;
@@ -20,6 +23,13 @@ interface User {
   last_name: string;
   email: string;
   current_credits: number;
+  phone?: string;
+  subscription?: {
+    id: string;
+    plan_name: string;
+    unlimited_access: boolean;
+    expires_at: string;
+  };
 }
 
 interface CourseSession {
@@ -32,6 +42,15 @@ interface CourseSession {
   available_spots: number;
 }
 
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  price: number;
+  duration_days: number;
+  unlimited_access: boolean;
+  description: string;
+}
+
 export const InstructorManualEnrollment: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -40,13 +59,34 @@ export const InstructorManualEnrollment: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [activatingSubscription, setActivatingSubscription] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
   const { courses } = useInstructorCourses();
   const { selectedGymId } = useInstructorGym();
 
-  // Search users in the gym
+  // Load subscription plans for the gym
+  const loadSubscriptionPlans = async () => {
+    if (!selectedGymId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('gym_id', selectedGymId)
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (error) throw error;
+      setSubscriptionPlans(data || []);
+    } catch (error) {
+      console.error('Error loading subscription plans:', error);
+    }
+  };
+
+  // Search users in the gym with subscription info
   const searchUsers = async () => {
     if (!searchTerm.trim() || !selectedGymId) {
       setUsers([]);
@@ -55,7 +95,9 @@ export const InstructorManualEnrollment: React.FC = () => {
 
     setLoading(true);
     try {
-      // Only search users who are members of the selected gym
+      console.log('🔍 Searching users with term:', searchTerm, 'in gym:', selectedGymId);
+      
+      // Search users who are members of the selected gym
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -63,6 +105,7 @@ export const InstructorManualEnrollment: React.FC = () => {
           first_name, 
           last_name, 
           email, 
+          phone,
           current_credits,
           user_gym_memberships!inner(gym_id, status)
         `)
@@ -73,15 +116,30 @@ export const InstructorManualEnrollment: React.FC = () => {
 
       if (error) throw error;
 
-      const mappedUsers = data?.map(profile => ({
-        id: profile.user_id,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        current_credits: profile.current_credits || 0,
-      })) || [];
+      console.log('🔍 Found profiles:', data?.length || 0);
 
-      setUsers(mappedUsers);
+      // Enhance users with subscription info
+      const enhancedUsers = await Promise.all(
+        (data || []).map(async (profile) => {
+          const subscription = await getUserActiveSubscription(profile.user_id, selectedGymId);
+          return {
+            id: profile.user_id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            current_credits: profile.current_credits || 0,
+            subscription: subscription ? {
+              id: subscription.id,
+              plan_name: subscription.subscription_plans.name,
+              unlimited_access: subscription.subscription_plans.unlimited_access,
+              expires_at: subscription.expires_at
+            } : undefined
+          };
+        })
+      );
+
+      setUsers(enhancedUsers);
     } catch (error) {
       console.error('Error searching users:', error);
       toast({
@@ -164,9 +222,66 @@ export const InstructorManualEnrollment: React.FC = () => {
     }
   };
 
+  // Activate subscription for user
+  const activateSubscription = async (userId: string, planId: string) => {
+    setActivatingSubscription(true);
+    try {
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      if (!plan) throw new Error('Piano non trovato');
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: userId,
+          plan_id: planId,
+          gym_id: selectedGymId,
+          status: 'active',
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Abbonamento attivato con successo!"
+      });
+      
+      // Refresh user data
+      if (selectedUser?.id === userId) {
+        const subscription = await getUserActiveSubscription(userId, selectedGymId!);
+        setSelectedUser({
+          ...selectedUser,
+          subscription: subscription ? {
+            id: subscription.id,
+            plan_name: subscription.subscription_plans.name,
+            unlimited_access: subscription.subscription_plans.unlimited_access,
+            expires_at: subscription.expires_at
+          } : undefined
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('Error activating subscription:', error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: error.message || "Errore nell'attivazione dell'abbonamento"
+      });
+    } finally {
+      setActivatingSubscription(false);
+    }
+  };
+
   useEffect(() => {
     loadSessions();
   }, [selectedCourse]);
+
+  useEffect(() => {
+    loadSubscriptionPlans();
+  }, [selectedGymId]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -185,179 +300,351 @@ export const InstructorManualEnrollment: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Iscrivi Nuovo Partecipante
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Course Selection */}
-          <div className="space-y-2">
-            <Label>Seleziona Corso</Label>
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-              <SelectTrigger>
-                <SelectValue placeholder="Scegli un corso..." />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name} ({course.credits_required} crediti)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Tabs defaultValue="enrollment" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="enrollment">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Iscrizione Corsi
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions">
+            <CreditCard className="w-4 h-4 mr-2" />
+            Gestione Abbonamenti
+          </TabsTrigger>
+        </TabsList>
 
-          {/* User Search */}
-          {selectedCourse && (
-            <div className="space-y-2">
-              <Label>Cerca Utente</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cerca per nome, cognome o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        <TabsContent value="enrollment" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Iscrivi Nuovo Partecipante
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Course Selection */}
+              <div className="space-y-2">
+                <Label>Seleziona Corso</Label>
+                <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Scegli un corso..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.name} ({course.credits_required} crediti)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-          )}
 
-          {/* Search Results */}
-          {loading && selectedCourse && (
-            <div className="text-center py-4 text-muted-foreground">
-              Ricerca in corso...
-            </div>
-          )}
+              {/* User Search */}
+              {selectedCourse && (
+                <div className="space-y-2">
+                  <Label>Cerca Utente</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cerca per nome, cognome o email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              )}
 
-          {users.length > 0 && selectedCourse && (
-            <div className="space-y-2">
-              <Label>Risultati Ricerca</Label>
-              <div className="max-h-40 overflow-y-auto space-y-2">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedUser?.id === user.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                    onClick={() => setSelectedUser(user)}
-                  >
+              {/* Search Results */}
+              {loading && selectedCourse && (
+                <div className="text-center py-4 text-muted-foreground">
+                  Ricerca in corso...
+                </div>
+              )}
+
+              {users.length > 0 && selectedCourse && (
+                <div className="space-y-2">
+                  <Label>Risultati Ricerca</Label>
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedUser?.id === user.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => setSelectedUser(user)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge 
+                              variant={user.current_credits >= selectedCourseCredits ? "default" : "destructive"}
+                            >
+                              {user.current_credits} crediti
+                            </Badge>
+                            {user.subscription ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                {user.subscription.plan_name}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Nessun abbonamento</Badge>
+                            )}
+                            {!user.subscription && user.current_credits < selectedCourseCredits && (
+                              <Badge variant="outline" className="text-destructive">
+                                Crediti insufficienti
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected User Info */}
+              {selectedUser && selectedCourse && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="pt-4">
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium">
-                          {user.first_name} {user.last_name}
+                          Utente Selezionato: {selectedUser.first_name} {selectedUser.last_name}
                         </p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Corso: {selectedCourseName} ({selectedCourseCredits} crediti richiesti)
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={user.current_credits >= selectedCourseCredits ? "default" : "destructive"}
-                        >
-                          {user.current_credits} crediti
+                      <div className="flex flex-col gap-2">
+                        <Badge variant={selectedUser.current_credits >= selectedCourseCredits ? "default" : "destructive"}>
+                          {selectedUser.current_credits} crediti disponibili
                         </Badge>
-                        {user.current_credits < selectedCourseCredits && (
-                          <Badge variant="outline" className="text-destructive">
-                            Crediti insufficienti
+                        {selectedUser.subscription && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                            Abbonamento: {selectedUser.subscription.plan_name}
+                            {selectedUser.subscription.unlimited_access && " (Illimitato)"}
                           </Badge>
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  </CardContent>
+                </Card>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Selected User Info */}
+          {/* Course Sessions */}
           {selectedUser && selectedCourse && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">
-                      Utente Selezionato: {selectedUser.first_name} {selectedUser.last_name}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Sessioni Disponibili - {selectedCourseName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {sessions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nessuna sessione programmata per questo corso
                     </p>
-                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Corso: {selectedCourseName} ({selectedCourseCredits} crediti richiesti)
-                    </p>
-                  </div>
-                  <Badge variant={selectedUser.current_credits >= selectedCourseCredits ? "default" : "destructive"}>
-                    {selectedUser.current_credits} crediti disponibili
-                  </Badge>
+                  ) : (
+                    sessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex justify-between items-center p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            {format(new Date(session.session_date), 'EEEE dd MMMM yyyy', { locale: it })}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              {session.start_time} - {session.end_time}
+                            </span>
+                            {session.room_name && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                {session.room_name}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              {session.available_spots} / {session.max_participants} posti
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => enrollUser(session.id, selectedUser.id)}
+                          disabled={
+                            session.available_spots <= 0 || 
+                            enrolling === session.id || 
+                            (!selectedUser.subscription?.unlimited_access && selectedUser.current_credits < selectedCourseCredits)
+                          }
+                          size="sm"
+                        >
+                          {enrolling === session.id ? 'Iscrivendo...' : 'Iscrivi'}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Course Sessions */}
-      {selectedUser && selectedCourse && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Sessioni Disponibili - {selectedCourseName}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {sessions.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  Nessuna sessione programmata per questo corso
-                </p>
-              ) : (
-                sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="flex justify-between items-center p-4 border rounded-lg"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {format(new Date(session.session_date), 'EEEE dd MMMM yyyy', { locale: it })}
-                      </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {session.start_time} - {session.end_time}
-                        </span>
-                        {session.room_name && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {session.room_name}
-                          </span>
+        <TabsContent value="subscriptions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Gestione Abbonamenti Utenti
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* User Search for Subscriptions */}
+              <div className="space-y-2">
+                <Label>Cerca Utente per Gestire Abbonamento</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca per nome, cognome o email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Search Results for Subscriptions */}
+              {loading && (
+                <div className="text-center py-4 text-muted-foreground">
+                  Ricerca in corso...
+                </div>
+              )}
+
+              {users.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Risultati Ricerca</Label>
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedUser?.id === user.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => setSelectedUser(user)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                            {user.phone && (
+                              <p className="text-xs text-muted-foreground">{user.phone}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline">
+                              {user.current_credits} crediti
+                            </Badge>
+                            {user.subscription ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                {user.subscription.plan_name}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-orange-600 border-orange-200">
+                                Nessun abbonamento
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected User Subscription Management */}
+              {selectedUser && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Gestione Abbonamento - {selectedUser.first_name} {selectedUser.last_name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                        <p className="font-medium">Crediti attuali: {selectedUser.current_credits}</p>
+                        {selectedUser.subscription ? (
+                          <div className="mt-2">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              Abbonamento attivo: {selectedUser.subscription.plan_name}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Scade il: {format(new Date(selectedUser.subscription.expires_at), 'dd/MM/yyyy', { locale: it })}
+                            </p>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-orange-600 border-orange-200 mt-2">
+                            Nessun abbonamento attivo
+                          </Badge>
                         )}
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {session.available_spots} / {session.max_participants} posti
-                        </span>
                       </div>
                     </div>
 
-                    <Button
-                      onClick={() => enrollUser(session.id, selectedUser.id)}
-                      disabled={
-                        session.available_spots <= 0 || 
-                        enrolling === session.id || 
-                        selectedUser.current_credits < selectedCourseCredits
-                      }
-                      size="sm"
-                    >
-                      {enrolling === session.id ? 'Iscrivendo...' : 'Iscrivi'}
-                    </Button>
-                  </div>
-                ))
+                    {/* Subscription Plans */}
+                    {!selectedUser.subscription && subscriptionPlans.length > 0 && (
+                      <div className="space-y-3">
+                        <Label>Attiva Nuovo Abbonamento</Label>
+                        <div className="grid gap-3">
+                          {subscriptionPlans.map((plan) => (
+                            <div
+                              key={plan.id}
+                              className="flex items-center justify-between p-3 border rounded-lg bg-white/50"
+                            >
+                              <div>
+                                <p className="font-medium">{plan.name}</p>
+                                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Durata: {plan.duration_days} giorni - €{plan.price}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => activateSubscription(selectedUser.id, plan.id)}
+                                disabled={activatingSubscription}
+                                size="sm"
+                                variant="outline"
+                              >
+                                {activatingSubscription ? 'Attivando...' : 'Attiva'}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
