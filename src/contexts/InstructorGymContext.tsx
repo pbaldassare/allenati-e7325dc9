@@ -26,11 +26,16 @@ export const InstructorGymProvider: React.FC<{ children: ReactNode }> = ({ child
   const [loading, setLoading] = useState(false);
 
   const fetchInstructorGyms = async () => {
-    if (!user?.id || !isInstructor) {
+    if (!user?.id) {
+      console.log('InstructorGymContext: No user ID found');
       setInstructorGyms([]);
       setSelectedGymId(null);
       return;
     }
+
+    // More resilient check - try to load gyms even if isInstructor is false
+    // This handles cases where AuthContext might not have loaded instructor status yet
+    console.log('InstructorGymContext: Loading gyms for user:', user.id, 'isInstructor:', isInstructor);
 
     try {
       setLoading(true);
@@ -49,7 +54,24 @@ export const InstructorGymProvider: React.FC<{ children: ReactNode }> = ({ child
       }
 
       if (!instructors || instructors.length === 0) {
-        console.log('No instructor records found for user');
+        console.log('InstructorGymContext: No instructor records found for user:', user.id);
+        
+        // If isInstructor is false from AuthContext but we expected instructor data,
+        // it might be a timing issue. Try direct role check as fallback
+        if (!isInstructor) {
+          console.log('InstructorGymContext: AuthContext says not instructor, trying direct role check...');
+          const { data: roleData } = await supabase.rpc('get_user_role', { _user_id: user.id });
+          
+          if (roleData === 'instructor') {
+            console.log('InstructorGymContext: Direct role check confirms instructor - retrying in 1 second...');
+            // Retry after a delay to let AuthContext catch up
+            setTimeout(() => {
+              fetchInstructorGyms();
+            }, 1000);
+            return;
+          }
+        }
+        
         setInstructorGyms([]);
         return;
       }

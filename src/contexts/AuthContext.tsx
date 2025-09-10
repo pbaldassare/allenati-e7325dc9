@@ -95,28 +95,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let hasOwnerPrivileges = false;
 
       if (role === 'instructor') {
-        // Get instructor data and check owner privileges from instructor_gym_assignments
-        const { data: instructorData } = await supabase
+        console.log('AuthContext: Loading instructor data for user:', userId);
+        
+        // Get instructor data - use maybeSingle for more resilient loading
+        const { data: instructorData, error: instructorError } = await supabase
           .from('instructors')
           .select('id, gym_id, gyms(name)')
           .eq('user_id', userId)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
+
+        if (instructorError) {
+          console.error('AuthContext: Error fetching instructor data:', instructorError);
+        }
 
         if (instructorData) {
+          console.log('AuthContext: Found instructor data:', instructorData);
           gymId = instructorData.gym_id;
           gymName = instructorData.gyms?.name;
           
           // Check owner privileges from instructor_gym_assignments
-          const { data: assignmentData } = await supabase
+          const { data: assignmentData, error: assignmentError } = await supabase
             .from('instructor_gym_assignments')
             .select('has_owner_privileges')
             .eq('instructor_id', instructorData.id)
             .eq('gym_id', instructorData.gym_id)
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
+          
+          if (assignmentError) {
+            console.error('AuthContext: Error fetching assignment data:', assignmentError);
+          }
           
           hasOwnerPrivileges = assignmentData?.has_owner_privileges || false;
+          console.log('AuthContext: Instructor has owner privileges:', hasOwnerPrivileges);
+        } else {
+          console.log('AuthContext: No instructor data found for user');
         }
       } else if (role === 'gym_owner') {
         // For gym owners, set hasOwnerPrivileges = true
