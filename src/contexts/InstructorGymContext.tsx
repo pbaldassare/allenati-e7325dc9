@@ -35,27 +35,29 @@ export const InstructorGymProvider: React.FC<{ children: ReactNode }> = ({ child
     try {
       setLoading(true);
       
-      // First get the instructor record to find the instructor_id
-      const { data: instructor, error: instructorError } = await supabase
+      // Get all instructor records for this user (in case they have multiple)
+      const { data: instructors, error: instructorError } = await supabase
         .from('instructors')
         .select('id')
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
+        .eq('is_active', true);
 
       if (instructorError) {
-        console.error('Error fetching instructor record:', instructorError);
+        console.error('Error fetching instructor records:', instructorError);
         setInstructorGyms([]);
         return;
       }
 
-      if (!instructor) {
-        console.log('No instructor record found for user');
+      if (!instructors || instructors.length === 0) {
+        console.log('No instructor records found for user');
         setInstructorGyms([]);
         return;
       }
 
-      // Now fetch instructor assignments with gym details using the correct instructor_id
+      // Get all instructor IDs
+      const instructorIds = instructors.map(i => i.id);
+
+      // Now fetch instructor assignments with gym details using all instructor IDs
       const { data: assignments, error } = await supabase
         .from('instructor_gym_assignments')
         .select(`
@@ -66,7 +68,7 @@ export const InstructorGymProvider: React.FC<{ children: ReactNode }> = ({ child
             name
           )
         `)
-        .eq('instructor_id', instructor.id)
+        .in('instructor_id', instructorIds)
         .eq('is_active', true);
 
       if (error) {
