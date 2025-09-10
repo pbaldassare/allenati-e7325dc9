@@ -34,9 +34,15 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
   const [ownedGyms, setOwnedGyms] = useState<Gym[]>([]);
   const [selectedGym, setSelectedGymState] = useState<Gym | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, hasOwnerPrivileges } = useAuth();
 
   const fetchOwnerGyms = async () => {
+    // Prevent multiple concurrent calls
+    if (isRefreshing) {
+      console.log('🏢 OwnerGymContext - fetchOwnerGyms SKIPPED (already refreshing)');
+      return;
+    }
     console.log('🏢 OwnerGymContext - fetchOwnerGyms START:', {
       user: user?.id,
       hasOwnerPrivileges,
@@ -54,6 +60,7 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
 
     try {
       setLoading(true);
+      setIsRefreshing(true);
 
       // Get gym IDs owned by user (real ownership)
       const { data: ownedGymIds, error: ownedIdsError } = await supabase.rpc('get_user_owned_gyms', {
@@ -194,6 +201,7 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
       setSelectedGymState(null);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
       console.log('🏢 OwnerGymContext - fetchOwnerGyms END');
     }
   };
