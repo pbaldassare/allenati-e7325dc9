@@ -40,18 +40,10 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
   const fetchOwnerGyms = async () => {
     // Prevent multiple concurrent calls
     if (isRefreshing) {
-      console.log('🏢 OwnerGymContext - fetchOwnerGyms SKIPPED (already refreshing)');
       return;
     }
-    console.log('🏢 OwnerGymContext - fetchOwnerGyms START:', {
-      user: user?.id,
-      hasOwnerPrivileges,
-      timestamp: new Date().toISOString(),
-      userEmail: user?.email
-    });
 
     if (!user || !hasOwnerPrivileges) {
-      console.log('❌ No user or owner privileges, clearing gyms');
       setOwnedGyms([]);
       setSelectedGymState(null);
       setLoading(false);
@@ -202,7 +194,7 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
     } finally {
       setLoading(false);
       setIsRefreshing(false);
-      console.log('🏢 OwnerGymContext - fetchOwnerGyms END');
+      
     }
   };
 

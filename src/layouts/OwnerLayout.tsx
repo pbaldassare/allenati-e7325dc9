@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { HelpCircle, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
-import { OwnerGymProvider } from '@/contexts/OwnerGymContext';
+
 import { OwnerGymSelector } from '@/components/owner/OwnerGymSelector';
 
 
@@ -44,8 +44,7 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
 
   return (
     <ProtectedRoute requiredRoles={['gym_owner', 'admin', 'instructor']}>
-      <OwnerGymProvider>
-        <SidebarProvider defaultOpen={!isMobile}>
+      <SidebarProvider defaultOpen={!isMobile}>
           <div className="min-h-screen flex w-full">
             <Sidebar 
               collapsible={isMobile ? "offcanvas" : "icon"}
@@ -116,7 +115,6 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             onClose={() => setShowHowItWorksModal(false)} 
           />
         </SidebarProvider>
-      </OwnerGymProvider>
     </ProtectedRoute>
   );
 };

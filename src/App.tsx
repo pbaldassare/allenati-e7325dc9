@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import { GymProvider } from "@/contexts/GymContext";
 import { InstructorGymProvider } from "@/contexts/InstructorGymContext";
+import { OwnerGymProvider } from "@/contexts/OwnerGymContext";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -131,7 +132,7 @@ const App = () => (
                 </Route>
 
                 {/* Owner Routes */}
-                <Route path="/owner" element={<OwnerLayout />}>
+                <Route path="/owner" element={<OwnerGymProvider><OwnerLayout /></OwnerGymProvider>}>
                   <Route index element={<OwnerDashboard />} />
                   <Route path="users" element={<OwnerUsers />} />
                   <Route path="instructors" element={<OwnerInstructors />} />
