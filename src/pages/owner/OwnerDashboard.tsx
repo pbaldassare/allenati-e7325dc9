@@ -105,7 +105,36 @@ const OwnerDashboard = () => {
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Dashboard Proprietario
         </h1>
-        <p className="text-muted-foreground">Riepilogo rapido della tua palestra</p>
+        <div className="flex items-center gap-2 mt-2">
+          <p className="text-muted-foreground">Riepilogo rapido della tua palestra</p>
+          {selectedGym && (
+            <div className="flex items-center gap-2 ml-2 px-3 py-1 bg-primary/10 rounded-full">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-primary">
+                Visualizzando: {selectedGym.name}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Gym Status Info */}
+        {!selectedGym && (
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-dashed">
+            <p className="text-sm text-muted-foreground">
+              ⚠️ Nessuna palestra selezionata. Seleziona una palestra dal menu in alto per visualizzare i dati.
+            </p>
+          </div>
+        )}
+        
+        {selectedGym && membersCount !== null && membersCount < 5 && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              💡 <strong>{selectedGym.name}</strong> ha pochi utenti attivi ({membersCount}). 
+              {membersCount === 0 && " Considera di invitare nuovi membri!"}
+              {membersCount > 0 && membersCount < 5 && " Se gestisci più palestre, verifica di aver selezionato quella corretta."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Stripe Configuration Alert */}
@@ -135,19 +164,47 @@ const OwnerDashboard = () => {
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
         <Card>
           <CardHeader>
-            <CardTitle>Iscritti attivi</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>Iscritti attivi</span>
+              {selectedGym && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  {selectedGym.name}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{loading ? '—' : membersCount}</div>
+            {!loading && membersCount !== null && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {membersCount === 0 && "Inizia ad aggiungere membri"}
+                {membersCount > 0 && membersCount < 10 && "Palestra in crescita"}
+                {membersCount >= 10 && membersCount < 50 && "Buona base di membri"}
+                {membersCount >= 50 && "Palestra ben popolata"}
+              </p>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Prenotazioni imminenti</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>Prenotazioni imminenti</span>
+              {selectedGym && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  {selectedGym.name}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{loading ? '—' : upcomingBookings}</div>
+            {!loading && upcomingBookings !== null && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {upcomingBookings === 0 && "Nessuna prenotazione"}
+                {upcomingBookings > 0 && `${upcomingBookings} prenotazioni future`}
+              </p>
+            )}
           </CardContent>
         </Card>
 

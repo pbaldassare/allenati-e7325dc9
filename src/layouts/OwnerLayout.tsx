@@ -63,13 +63,21 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                       {headerTitle}
                     </h1>
                     {!isMobile && (
-                      <div className="ml-4">
+                      <div className="ml-4 flex items-center gap-3">
                         <OwnerGymSelector />
+                        <div className="hidden sm:block h-4 w-px bg-border" />
+                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
+                          <span>Multi-Gym</span>
+                        </div>
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {isMobile && <OwnerGymSelector />}
+                    {isMobile && (
+                      <div className="flex items-center gap-2">
+                        <OwnerGymSelector />
+                      </div>
+                    )}
                     {isMobile && (
                       <Button 
                         variant="ghost" 
