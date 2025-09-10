@@ -76,10 +76,10 @@ const OwnerInstructors: React.FC = () => {
         return;
       }
 
-      // Load instructor details for all instructors
+      // Load instructor details INCLUDING has_owner_privileges for synchronization
       const { data: instructorsData, error: instructorsError } = await supabase
         .from("instructors")
-        .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active")
+        .select("id, user_id, bio, created_at, specializations, certifications, experience_years, hourly_rate, first_name, last_name, is_active, has_owner_privileges")
         .in("id", allInstructorIds)
         .eq("is_active", true);
 
@@ -143,11 +143,27 @@ const OwnerInstructors: React.FC = () => {
         const firstName = profile?.first_name || instructor.first_name || "Nome non disponibile";
         const lastName = profile?.last_name || instructor.last_name || "Cognome non disponibile";
         
-        // Determine owner privileges: check assignment first, then if it's a direct gym owner
-        let hasOwnerPrivileges = assignment?.has_owner_privileges ?? false;
-        if (!hasOwnerPrivileges && directInstructor) {
-          // Check if this instructor is also a gym owner for this gym
-          hasOwnerPrivileges = false; // Will be updated by privilege toggle if needed
+        // CRITICAL: Synchronize privileges between both tables
+        const assignmentPrivileges = assignment?.has_owner_privileges ?? false;
+        const instructorPrivileges = instructor.has_owner_privileges ?? false;
+        
+        // Log discrepancies for debugging
+        if (assignmentPrivileges !== instructorPrivileges) {
+          console.warn(`🔄 PRIVILEGE SYNC ISSUE for ${firstName} ${lastName}:`, {
+            instructor_id: instructor.id,
+            user_id: instructor.user_id,
+            assignment_privileges: assignmentPrivileges,
+            instructor_privileges: instructorPrivileges,
+            gym_id: selectedGym.id
+          });
+        }
+        
+        // Use instructor table as source of truth (updated by our functions)
+        let hasOwnerPrivileges = instructorPrivileges;
+        
+        // If there's a discrepancy, log it but prefer the instructor table
+        if (assignment && assignmentPrivileges !== instructorPrivileges) {
+          console.log(`🔧 Using instructor table value (${instructorPrivileges}) over assignment (${assignmentPrivileges}) for user ${instructor.user_id}`);
         }
         
         return {
@@ -188,6 +204,9 @@ const OwnerInstructors: React.FC = () => {
   const handlePrivilegeToggle = async (userId: string, currentPrivileges: boolean) => {
     try {
       const functionName = currentPrivileges ? 'demote_super_instructor' : 'promote_instructor_to_super';
+      
+      console.log(`🔧 ${currentPrivileges ? 'Demoting' : 'Promoting'} instructor ${userId} using ${functionName}`);
+      
       const { error } = await supabase.rpc(functionName, {
         _user_id: userId,
       });
@@ -198,12 +217,10 @@ const OwnerInstructors: React.FC = () => {
         return;
       }
 
-      // Update local state
-      setInstructors(prev => prev.map(instructor => 
-        instructor.user_id === userId 
-          ? { ...instructor, has_owner_privileges: !currentPrivileges }
-          : instructor
-      ));
+      console.log(`✅ Successfully ${currentPrivileges ? 'demoted' : 'promoted'} instructor ${userId}`);
+
+      // Reload instructors to get fresh data from both tables
+      await loadInstructors();
 
       toast.success(
         currentPrivileges 
