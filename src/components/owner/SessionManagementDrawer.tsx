@@ -590,6 +590,12 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   };
 
   const handleSubscriptionBadgeClick = (participant: Participant) => {
+    console.log('🎯 Subscription badge clicked:', {
+      participant: participant.user.first_name + ' ' + participant.user.last_name,
+      user_id: participant.user_id,
+      has_subscription: !!participant.subscription
+    });
+    
     // Only handle click if user has no subscription
     if (!participant.subscription) {
       setSelectedUserForSubscription({
@@ -598,6 +604,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         email: participant.user.email
       });
       setSubscriptionDialogOpen(true);
+      console.log('✅ Opening subscription dialog for user:', participant.user_id);
     }
   };
 

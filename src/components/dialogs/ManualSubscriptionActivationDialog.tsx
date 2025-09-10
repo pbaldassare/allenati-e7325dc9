@@ -55,9 +55,12 @@ export default function ManualSubscriptionActivationDialog({
 
   useEffect(() => {
     if (isOpen) {
+      console.log('🔄 Dialog opened, loading data...');
+      console.log('🔄 Current selectedGym:', selectedGym);
+      setLoading(true);
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, selectedGym]);
 
   useEffect(() => {
     console.log('🔍 Preselection effect triggered');
@@ -99,9 +102,12 @@ export default function ManualSubscriptionActivationDialog({
       
       if (!selectedGym?.id) {
         console.error('❌ No gym selected');
-        toast.error('Nessuna palestra selezionata');
+        toast.error('Errore: Nessuna palestra selezionata. Ricarica la pagina e seleziona una palestra.');
+        setLoading(false);
         return;
       }
+
+      console.log('✅ Using gym:', selectedGym.name, 'ID:', selectedGym.id);
 
       // Load subscription plans for this gym
       console.log('🔍 Loading subscription plans for gym:', selectedGym.id);
@@ -119,7 +125,7 @@ export default function ManualSubscriptionActivationDialog({
       console.log('✅ Loaded plans:', plansData);
 
       // Load gym members - first get memberships
-      console.log('🔍 Loading gym memberships...');
+      console.log('🔍 Loading gym memberships for gym ID:', selectedGym.id);
       const { data: membershipsData, error: membershipsError } = await supabase
         .from('user_gym_memberships')
         .select('user_id')
@@ -128,14 +134,16 @@ export default function ManualSubscriptionActivationDialog({
 
       if (membershipsError) {
         console.error('❌ Error loading memberships:', membershipsError);
+        toast.error('Errore nel caricamento dei membri della palestra');
         throw membershipsError;
       }
-      console.log('✅ Loaded memberships:', membershipsData);
+      console.log('✅ Loaded memberships:', membershipsData?.length || 0, 'members');
 
       if (!membershipsData || membershipsData.length === 0) {
-        console.log('⚠️ No active memberships found');
+        console.log('⚠️ No active memberships found for gym:', selectedGym.name);
+        toast.error(`Nessun membro attivo trovato per la palestra "${selectedGym.name}". Aggiungi membri prima di attivare abbonamenti.`);
         setMembers([]);
-        setLoading(false);
+        setPlans([]);
         return;
       }
 
@@ -169,7 +177,12 @@ export default function ManualSubscriptionActivationDialog({
 
     } catch (error) {
       console.error('❌ Error loading data:', error);
-      toast.error('Errore nel caricamento dei dati');
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      toast.error(`Errore nel caricamento dei dati: ${errorMessage}`);
+      setMembers([]);
+      setPlans([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -327,6 +340,14 @@ export default function ManualSubscriptionActivationDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Debug Info */}
+          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+            <div>🏢 Palestra: {selectedGym?.name || 'Non selezionata'}</div>
+            <div>👥 Membri caricati: {members.length}</div>
+            <div>📋 Piani disponibili: {plans.length}</div>
+            {preselectedUserId && <div>🎯 Utente preselezionato: {preselectedUserId}</div>}
+          </div>
+          
           {/* Member Selection */}
           {!preselectedUserId && (
             <div className="space-y-3">
@@ -409,23 +430,31 @@ export default function ManualSubscriptionActivationDialog({
           {/* Plan Selection */}
           <div className="space-y-2">
             <Label>Piano Abbonamento</Label>
-            <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona piano abbonamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {plans.map((plan) => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>{plan.name}</span>
-                      <span className="text-muted-foreground ml-4">
-                        €{plan.price} - {plan.duration_days} giorni
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {plans.length === 0 ? (
+              <div className="p-3 border border-muted rounded-md text-sm text-muted-foreground text-center">
+                Nessun piano abbonamento disponibile per questa palestra.
+                <br />
+                Contatta l'amministratore per configurare i piani.
+              </div>
+            ) : (
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona piano abbonamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans.map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      <div className="flex justify-between items-center w-full">
+                        <span>{plan.name}</span>
+                        <span className="text-muted-foreground ml-4">
+                          €{plan.price} - {plan.duration_days} giorni
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Start Date */}
@@ -481,9 +510,13 @@ export default function ManualSubscriptionActivationDialog({
           </Button>
           <Button 
             onClick={handleActivateSubscription} 
-            disabled={loading || !selectedMember || !selectedPlan}
+            disabled={loading || !selectedMember || !selectedPlan || plans.length === 0}
           >
-            {loading ? 'Attivazione...' : 'Attiva Abbonamento'}
+            {loading ? 'Attivazione...' : 
+             plans.length === 0 ? 'Nessun piano disponibile' :
+             !selectedMember ? 'Seleziona un utente' : 
+             !selectedPlan ? 'Seleziona un piano' : 
+             'Attiva Abbonamento'}
           </Button>
         </DialogFooter>
       </DialogContent>
