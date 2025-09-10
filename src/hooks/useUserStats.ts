@@ -31,36 +31,40 @@ export const useUserStats = (userId: string | undefined) => {
         const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
-        // Classi della settimana
+        // Classi della settimana (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: weekCount } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'completed')
-          .gte('scheduled_date', oneWeekAgo.toISOString().split('T')[0]);
+          .in('status', ['completed', 'confirmed'])
+          .gte('scheduled_date', oneWeekAgo.toISOString().split('T')[0])
+          .lt('scheduled_date', now.toISOString().split('T')[0]);
 
-        // Classi del mese
+        // Classi del mese (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: monthCount } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'completed')
-          .gte('scheduled_date', oneMonthAgo.toISOString().split('T')[0]);
+          .in('status', ['completed', 'confirmed'])
+          .gte('scheduled_date', oneMonthAgo.toISOString().split('T')[0])
+          .lt('scheduled_date', now.toISOString().split('T')[0]);
 
-        // Classi dell'anno
+        // Classi dell'anno (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: yearCount } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'completed')
-          .gte('scheduled_date', oneYearAgo.toISOString().split('T')[0]);
+          .in('status', ['completed', 'confirmed'])
+          .gte('scheduled_date', oneYearAgo.toISOString().split('T')[0])
+          .lt('scheduled_date', now.toISOString().split('T')[0]);
 
-        // Classi totali
+        // Classi totali (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: totalCount } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'completed');
+          .in('status', ['completed', 'confirmed'])
+          .lt('scheduled_date', now.toISOString().split('T')[0]);
 
         setStats({
           weekClasses: weekCount || 0,
