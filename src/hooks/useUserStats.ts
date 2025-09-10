@@ -38,7 +38,7 @@ export const useUserStats = (userId: string | undefined) => {
           .eq('user_id', userId)
           .in('status', ['completed', 'confirmed'])
           .gte('scheduled_date', oneWeekAgo.toISOString().split('T')[0])
-          .lt('scheduled_date', now.toISOString().split('T')[0]);
+          .lte('scheduled_date', now.toISOString().split('T')[0]);
 
         // Classi del mese (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: monthCount } = await supabase
@@ -47,7 +47,7 @@ export const useUserStats = (userId: string | undefined) => {
           .eq('user_id', userId)
           .in('status', ['completed', 'confirmed'])
           .gte('scheduled_date', oneMonthAgo.toISOString().split('T')[0])
-          .lt('scheduled_date', now.toISOString().split('T')[0]);
+          .lte('scheduled_date', now.toISOString().split('T')[0]);
 
         // Classi dell'anno (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: yearCount } = await supabase
@@ -56,7 +56,7 @@ export const useUserStats = (userId: string | undefined) => {
           .eq('user_id', userId)
           .in('status', ['completed', 'confirmed'])
           .gte('scheduled_date', oneYearAgo.toISOString().split('T')[0])
-          .lt('scheduled_date', now.toISOString().split('T')[0]);
+          .lte('scheduled_date', now.toISOString().split('T')[0]);
 
         // Classi totali (conteggia sia 'completed' che 'confirmed' nel passato)
         const { count: totalCount } = await supabase
@@ -64,7 +64,7 @@ export const useUserStats = (userId: string | undefined) => {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
           .in('status', ['completed', 'confirmed'])
-          .lt('scheduled_date', now.toISOString().split('T')[0]);
+          .lte('scheduled_date', now.toISOString().split('T')[0]);
 
         setStats({
           weekClasses: weekCount || 0,
