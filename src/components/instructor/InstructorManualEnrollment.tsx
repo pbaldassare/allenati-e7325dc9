@@ -121,11 +121,13 @@ export const InstructorManualEnrollment: React.FC = () => {
       // Enhance users with subscription info
       const enhancedUsers = await Promise.all(
         (data || []).map(async (profile) => {
+          console.log('🔍 Checking subscription for user:', profile.email);
           const subscription = await getUserActiveSubscription(profile.user_id, selectedGymId);
-          return {
+          
+          const userObj = {
             id: profile.user_id,
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
+            first_name: profile.first_name || 'Nome',
+            last_name: profile.last_name || 'Cognome',
             email: profile.email || '',
             phone: profile.phone || '',
             current_credits: profile.current_credits || 0,
@@ -136,6 +138,9 @@ export const InstructorManualEnrollment: React.FC = () => {
               expires_at: subscription.expires_at
             } : undefined
           };
+          
+          console.log('🔍 Enhanced user:', userObj.email, 'has subscription:', !!userObj.subscription);
+          return userObj;
         })
       );
 
@@ -149,6 +154,46 @@ export const InstructorManualEnrollment: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Force refresh user data
+  const refreshUserData = async (userId: string) => {
+    if (!selectedGymId) return;
+    
+    console.log('🔄 Refreshing user data for:', userId);
+    try {
+      const subscription = await getUserActiveSubscription(userId, selectedGymId);
+      
+      if (selectedUser?.id === userId) {
+        setSelectedUser({
+          ...selectedUser,
+          subscription: subscription ? {
+            id: subscription.id,
+            plan_name: subscription.subscription_plans.name,
+            unlimited_access: subscription.subscription_plans.unlimited_access,
+            expires_at: subscription.expires_at
+          } : undefined
+        });
+      }
+      
+      // Also refresh the users list if the user is in it
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? {
+            ...user,
+            subscription: subscription ? {
+              id: subscription.id,
+              plan_name: subscription.subscription_plans.name,
+              unlimited_access: subscription.subscription_plans.unlimited_access,
+              expires_at: subscription.expires_at
+            } : undefined
+          } : user
+        )
+      );
+      
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
     }
   };
 
@@ -226,13 +271,31 @@ export const InstructorManualEnrollment: React.FC = () => {
   const activateSubscription = async (userId: string, planId: string) => {
     setActivatingSubscription(true);
     try {
+      console.log('🔄 Activating subscription for user:', userId, 'plan:', planId);
+      
       const plan = subscriptionPlans.find(p => p.id === planId);
       if (!plan) throw new Error('Piano non trovato');
+
+      // First, cancel any existing active subscriptions
+      console.log('🔄 Cancelling existing subscriptions...');
+      await supabase
+        .from('user_subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('user_id', userId)
+        .eq('gym_id', selectedGymId)
+        .eq('status', 'active');
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
 
-      const { error } = await supabase
+      console.log('🔄 Creating new subscription...', {
+        user_id: userId,
+        plan_id: planId,
+        gym_id: selectedGymId,
+        expires_at: expiresAt.toISOString()
+      });
+
+      const { error: insertError } = await supabase
         .from('user_subscriptions')
         .insert({
           user_id: userId,
@@ -242,29 +305,25 @@ export const InstructorManualEnrollment: React.FC = () => {
           expires_at: expiresAt.toISOString()
         });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('🔄 Insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('🔄 Subscription created successfully');
 
       toast({
         title: "Successo",
         description: "Abbonamento attivato con successo!"
       });
       
-      // Refresh user data
-      if (selectedUser?.id === userId) {
-        const subscription = await getUserActiveSubscription(userId, selectedGymId!);
-        setSelectedUser({
-          ...selectedUser,
-          subscription: subscription ? {
-            id: subscription.id,
-            plan_name: subscription.subscription_plans.name,
-            unlimited_access: subscription.subscription_plans.unlimited_access,
-            expires_at: subscription.expires_at
-          } : undefined
-        });
-      }
+      // Force refresh user data after a short delay to allow DB to update
+      setTimeout(async () => {
+        await refreshUserData(userId);
+      }, 500);
       
     } catch (error: any) {
-      console.error('Error activating subscription:', error);
+      console.error('🔄 Error activating subscription:', error);
       toast({
         variant: "destructive",
         title: "Errore",
@@ -587,57 +646,106 @@ export const InstructorManualEnrollment: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                        <p className="font-medium">Crediti attuali: {selectedUser.current_credits}</p>
-                        {selectedUser.subscription ? (
-                          <div className="mt-2">
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                              Abbonamento attivo: {selectedUser.subscription.plan_name}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Scade il: {format(new Date(selectedUser.subscription.expires_at), 'dd/MM/yyyy', { locale: it })}
-                            </p>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-orange-600 border-orange-200 mt-2">
-                            Nessun abbonamento attivo
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                     <div className="flex items-center justify-between">
+                       <div className="flex-1">
+                         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                         <p className="font-medium">Crediti attuali: {selectedUser.current_credits}</p>
+                         {selectedUser.subscription ? (
+                           <div className="mt-2">
+                             <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                               Abbonamento attivo: {selectedUser.subscription.plan_name}
+                             </Badge>
+                             <p className="text-xs text-muted-foreground mt-1">
+                               Scade il: {format(new Date(selectedUser.subscription.expires_at), 'dd/MM/yyyy', { locale: it })}
+                             </p>
+                             {selectedUser.subscription.unlimited_access && (
+                               <Badge variant="outline" className="text-green-600 border-green-200 mt-1">
+                                 Accesso illimitato
+                               </Badge>
+                             )}
+                           </div>
+                         ) : (
+                           <Badge variant="outline" className="text-orange-600 border-orange-200 mt-2">
+                             Nessun abbonamento attivo
+                           </Badge>
+                         )}
+                       </div>
+                       <div className="flex gap-2">
+                         <Button
+                           onClick={() => refreshUserData(selectedUser.id)}
+                           variant="outline"
+                           size="sm"
+                         >
+                           <Settings className="w-4 h-4 mr-1" />
+                           Aggiorna
+                         </Button>
+                       </div>
+                     </div>
 
-                    {/* Subscription Plans */}
-                    {!selectedUser.subscription && subscriptionPlans.length > 0 && (
-                      <div className="space-y-3">
-                        <Label>Attiva Nuovo Abbonamento</Label>
-                        <div className="grid gap-3">
-                          {subscriptionPlans.map((plan) => (
-                            <div
-                              key={plan.id}
-                              className="flex items-center justify-between p-3 border rounded-lg bg-white/50"
-                            >
-                              <div>
-                                <p className="font-medium">{plan.name}</p>
-                                <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Durata: {plan.duration_days} giorni - €{plan.price}
-                                </p>
-                              </div>
-                              <Button
-                                onClick={() => activateSubscription(selectedUser.id, plan.id)}
-                                disabled={activatingSubscription}
-                                size="sm"
-                                variant="outline"
-                              >
-                                {activatingSubscription ? 'Attivando...' : 'Attiva'}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                     {/* Debug Information */}
+                     <details className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                       <summary className="cursor-pointer font-medium">Debug Info (Clicca per espandere)</summary>
+                       <div className="mt-2 space-y-1">
+                         <p>User ID: {selectedUser.id}</p>
+                         <p>Gym ID: {selectedGymId}</p>
+                         <p>Has Subscription: {selectedUser.subscription ? 'Sì' : 'No'}</p>
+                         {selectedUser.subscription && (
+                           <>
+                             <p>Subscription ID: {selectedUser.subscription.id}</p>
+                             <p>Plan: {selectedUser.subscription.plan_name}</p>
+                             <p>Expires: {selectedUser.subscription.expires_at}</p>
+                             <p>Unlimited: {selectedUser.subscription.unlimited_access ? 'Sì' : 'No'}</p>
+                           </>
+                         )}
+                         <p>Available Plans: {subscriptionPlans.length}</p>
+                       </div>
+                     </details>
+
+                     {/* Subscription Plans */}
+                     <div className="space-y-3">
+                       <div className="flex items-center justify-between">
+                         <Label>Gestione Abbonamenti</Label>
+                         {selectedUser.subscription && (
+                           <Badge variant="outline" className="text-blue-600">
+                             Utente già abbonato
+                           </Badge>
+                         )}
+                       </div>
+                       
+                       {subscriptionPlans.length > 0 ? (
+                         <div className="grid gap-3">
+                           {subscriptionPlans.map((plan) => (
+                             <div
+                               key={plan.id}
+                               className="flex items-center justify-between p-3 border rounded-lg bg-white/50"
+                             >
+                               <div>
+                                 <p className="font-medium">{plan.name}</p>
+                                 <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                 <p className="text-xs text-muted-foreground">
+                                   Durata: {plan.duration_days} giorni - €{plan.price}
+                                   {plan.unlimited_access && ' - Accesso illimitato'}
+                                 </p>
+                               </div>
+                               <Button
+                                 onClick={() => activateSubscription(selectedUser.id, plan.id)}
+                                 disabled={activatingSubscription || (selectedUser.subscription?.unlimited_access && plan.unlimited_access)}
+                                 size="sm"
+                                 variant={selectedUser.subscription ? "outline" : "default"}
+                               >
+                                 {activatingSubscription ? 'Attivando...' : 
+                                  selectedUser.subscription ? 'Sostituisci' : 'Attiva'}
+                               </Button>
+                             </div>
+                           ))}
+                         </div>
+                       ) : (
+                         <div className="text-center py-4 text-muted-foreground">
+                           <p>Nessun piano abbonamento disponibile per questa palestra</p>
+                           <p className="text-xs">Contatta l'amministratore per configurare i piani</p>
+                         </div>
+                       )}
+                     </div>
                   </CardContent>
                 </Card>
               )}

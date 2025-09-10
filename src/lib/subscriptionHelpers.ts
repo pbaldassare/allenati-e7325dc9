@@ -50,6 +50,8 @@ export const hasActiveUnlimitedSubscription = async (userId: string, gymId: stri
  */
 export const getUserActiveSubscription = async (userId: string, gymId: string): Promise<ActiveSubscription | null> => {
   try {
+    console.log('🔍 [getUserActiveSubscription] Checking subscription for user:', userId, 'gym:', gymId);
+    
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select(`
@@ -57,6 +59,7 @@ export const getUserActiveSubscription = async (userId: string, gymId: string): 
         plan_id,
         gym_id,
         expires_at,
+        status,
         subscription_plans!inner(
           unlimited_access,
           credits_included,
@@ -64,15 +67,40 @@ export const getUserActiveSubscription = async (userId: string, gymId: string): 
         )
       `)
       .eq('user_id', userId)
-      .eq('status', 'active')
       .eq('gym_id', gymId)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+      .order('created_at', { ascending: false });
 
-    if (error) return null;
-    return data as ActiveSubscription;
+    console.log('🔍 [getUserActiveSubscription] All subscriptions for user:', data);
+
+    if (error) {
+      console.error('🔍 [getUserActiveSubscription] Error:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('🔍 [getUserActiveSubscription] No subscriptions found');
+      return null;
+    }
+
+    // Filter for active and non-expired subscriptions
+    const now = new Date().toISOString();
+    const activeSubscriptions = data.filter(sub => 
+      sub.status === 'active' && 
+      new Date(sub.expires_at) > new Date(now)
+    );
+
+    console.log('🔍 [getUserActiveSubscription] Active subscriptions:', activeSubscriptions);
+
+    if (activeSubscriptions.length === 0) {
+      console.log('🔍 [getUserActiveSubscription] No active/valid subscriptions found');
+      return null;
+    }
+
+    const result = activeSubscriptions[0] as ActiveSubscription;
+    console.log('🔍 [getUserActiveSubscription] Returning subscription:', result);
+    return result;
   } catch (error) {
-    console.error('Error getting active subscription:', error);
+    console.error('🔍 [getUserActiveSubscription] Error getting active subscription:', error);
     return null;
   }
 };
