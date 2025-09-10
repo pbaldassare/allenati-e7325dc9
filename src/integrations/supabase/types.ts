@@ -2097,6 +2097,17 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      validate_instructor_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          assignment_privileges: boolean
+          gym_name: string
+          instructor_privileges: boolean
+          issue_type: string
+          membership_type: string
+          user_email: string
+        }[]
+      }
     }
     Enums: {
       access_level: "backoffice" | "mobile" | "both"
