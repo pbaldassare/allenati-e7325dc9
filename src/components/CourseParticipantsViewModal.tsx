@@ -85,7 +85,8 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
   const loadParticipants = async () => {
     try {
       setLoading(true);
-      console.log('Loading participants for session:', sessionId);
+      console.log('🔍 Loading participants for session:', sessionId);
+      const startTime = Date.now();
       
       // First, get all confirmed bookings for this session with basic user info
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -150,15 +151,22 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
       const participantsWithSubs = bookingsData.map((booking: any) => ({
         ...booking,
         user: booking.profiles || {
-          first_name: 'Nome non trovato',
-          last_name: '',
-          email: 'Email non trovata'
+          first_name: booking.profiles?.first_name || 'Nome mancante',
+          last_name: booking.profiles?.last_name || '',
+          email: booking.profiles?.email || 'Email mancante'
         },
         subscription: subscriptionsMap.get(booking.user_id),
         courses: booking.courses
       }));
 
-      console.log('Final participants:', participantsWithSubs);
+      const loadTime = Date.now() - startTime;
+      console.log(`✅ Participants loaded: ${participantsWithSubs.length} participants (${loadTime}ms)`);
+      console.log('📊 Participant details:', participantsWithSubs.map(p => ({
+        id: p.user_id,
+        name: `${p.user.first_name} ${p.user.last_name}`,
+        email: p.user.email
+      })));
+      
       setParticipants(participantsWithSubs);
     } catch (error) {
       console.error('Error loading participants:', error);
@@ -280,10 +288,13 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
                           </Avatar>
                           
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">
-                                {participant.user.first_name} {participant.user.last_name}
-                              </h4>
+                             <div className="flex items-center gap-2">
+                               <h4 className="font-medium">
+                                 {participant.user.first_name || 'Nome'} {participant.user.last_name || 'mancante'}
+                                 {(!participant.user.first_name || !participant.user.last_name) && (
+                                   <span className="text-xs text-muted-foreground ml-1">(Profilo incompleto)</span>
+                                 )}
+                               </h4>
                               {getBeltBadge(participant.user.belt, participant.courses?.course_categories)}
                               {isStaff && getSubscriptionBadge(participant)}
                             </div>

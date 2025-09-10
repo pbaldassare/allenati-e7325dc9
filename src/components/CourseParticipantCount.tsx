@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Users } from 'lucide-react';
+import { Users, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
@@ -20,13 +20,39 @@ export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({
   const [participantCount, setParticipantCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [showParticipantsList, setShowParticipantsList] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     loadParticipantCount();
+
+    // Set up real-time subscription for booking changes
+    const channel = supabase
+      .channel('booking-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Real-time booking change detected:', payload);
+          loadParticipantCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [sessionId]);
 
   const loadParticipantCount = async () => {
     try {
+      console.log(`🔄 Loading participant count for session ${sessionId}...`);
+      const startTime = Date.now();
+      
       const { count, error } = await supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
@@ -34,9 +60,17 @@ export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({
         .eq('status', 'confirmed');
 
       if (error) throw error;
-      setParticipantCount(count || 0);
+      
+      const newCount = count || 0;
+      const loadTime = Date.now() - startTime;
+      const timestamp = new Date();
+      
+      console.log(`✅ Participant count loaded: ${newCount} participants (${loadTime}ms) at ${timestamp.toLocaleTimeString()}`);
+      
+      setParticipantCount(newCount);
+      setLastUpdated(timestamp);
     } catch (error) {
-      console.error('Error loading participant count:', error);
+      console.error('❌ Error loading participant count:', error);
       setParticipantCount(0);
     } finally {
       setLoading(false);
@@ -66,6 +100,18 @@ export const CourseParticipantCount: React.FC<CourseParticipantCountProps> = ({
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Users className="h-3 w-3" />
           <span>{participantCount}/{maxParticipants} partecipanti</span>
+          {lastUpdated && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                loadParticipantCount();
+              }}
+              className="ml-1 p-0.5 hover:bg-muted rounded"
+              title={`Ultimo aggiornamento: ${lastUpdated.toLocaleTimeString()}`}
+            >
+              <RefreshCw className="h-3 w-3" />
+            </button>
+          )}
         </div>
         
         {showProgressBar && (

@@ -35,6 +35,44 @@ const SessionCalendarMobile: React.FC = () => {
 
   useEffect(() => {
     fetchSessions();
+
+    // Set up real-time subscription for booking and session changes
+    const bookingChannel = supabase
+      .channel('mobile-booking-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('📱 Real-time booking change detected:', payload);
+          fetchSessions();
+        }
+      )
+      .subscribe();
+
+    const sessionChannel = supabase
+      .channel('mobile-session-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'course_sessions'
+        },
+        (payload) => {
+          console.log('📱 Real-time session change detected:', payload);
+          fetchSessions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingChannel);
+      supabase.removeChannel(sessionChannel);
+    };
   }, [currentDate, selectedGym]);
 
   const fetchSessions = async () => {
@@ -42,11 +80,14 @@ const SessionCalendarMobile: React.FC = () => {
     
     try {
       if (!selectedGym?.id) {
-        console.log('SessionCalendarMobile - No selected gym found');
+        console.log('📱 SessionCalendarMobile - No selected gym found');
         setSessions([]);
         setLoading(false);
         return;
       }
+
+      console.log(`📱 Loading sessions for ${format(currentDate, 'yyyy-MM-dd')} at gym ${selectedGym.name}...`);
+      const startTime = Date.now();
 
       const dayStart = startOfDay(currentDate);
       const dayEnd = new Date(dayStart);
@@ -108,6 +149,16 @@ const SessionCalendarMobile: React.FC = () => {
         status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
         credits: session.courses.credits_required
       }));
+
+      const loadTime = Date.now() - startTime;
+      console.log(`📱✅ Sessions loaded: ${transformedSessions.length} sessions (${loadTime}ms)`);
+      console.log('📱📊 Session details:', transformedSessions.map(s => ({
+        id: s.id,
+        name: s.courseName,
+        time: s.time,
+        participants: s.participants,
+        maxParticipants: s.maxParticipants
+      })));
 
       setSessions(transformedSessions);
     } catch (error) {

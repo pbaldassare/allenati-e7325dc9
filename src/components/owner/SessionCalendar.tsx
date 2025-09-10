@@ -44,6 +44,44 @@ const SessionCalendar: React.FC = () => {
   useEffect(() => {
     if (!isMobile) {
       fetchSessions();
+
+      // Set up real-time subscription for booking and session changes
+      const bookingChannel = supabase
+        .channel('desktop-booking-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bookings'
+          },
+          (payload) => {
+            console.log('🖥️ Real-time booking change detected:', payload);
+            fetchSessions();
+          }
+        )
+        .subscribe();
+
+      const sessionChannel = supabase
+        .channel('desktop-session-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'course_sessions'
+          },
+          (payload) => {
+            console.log('🖥️ Real-time session change detected:', payload);
+            fetchSessions();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(bookingChannel);
+        supabase.removeChannel(sessionChannel);
+      };
     }
   }, [currentWeek, currentMonth, viewMode, isMobile, selectedGym]);
 
@@ -57,10 +95,18 @@ const SessionCalendar: React.FC = () => {
     
     try {
       if (!selectedGym?.id) {
+        console.log('🖥️ SessionCalendar - No selected gym found');
         setSessions([]);
         setLoading(false);
         return;
       }
+
+      const dateRange = viewMode === 'week' 
+        ? `${format(startOfWeek(currentWeek), 'yyyy-MM-dd')} to ${format(endOfWeek(currentWeek), 'yyyy-MM-dd')}`
+        : `${format(startOfMonth(currentMonth), 'yyyy-MM-dd')} to ${format(endOfMonth(currentMonth), 'yyyy-MM-dd')}`;
+        
+      console.log(`🖥️ Loading sessions for ${dateRange} at gym ${selectedGym.name}...`);
+      const startTime = Date.now();
 
       // Get date range based on view mode
       let startDate: Date, endDate: Date;
@@ -131,6 +177,16 @@ const SessionCalendar: React.FC = () => {
         status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
         credits: session.courses.credits_required
       }));
+
+      const loadTime = Date.now() - startTime;
+      console.log(`🖥️✅ Sessions loaded: ${transformedSessions.length} sessions (${loadTime}ms)`);
+      console.log('🖥️📊 Session details:', transformedSessions.map(s => ({
+        id: s.id,
+        name: s.courseName,
+        time: s.time,
+        participants: s.participants,
+        maxParticipants: s.maxParticipants
+      })));
 
       setSessions(transformedSessions);
     } catch (error) {
