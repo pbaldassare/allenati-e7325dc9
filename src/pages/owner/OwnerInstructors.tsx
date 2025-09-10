@@ -33,6 +33,7 @@ const OwnerInstructors: React.FC = () => {
   const { selectedGym, loading: gymLoading } = useOwnerGym();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
 
   const loadInstructors = async () => {
     if (gymLoading || !selectedGym?.id) {
@@ -203,6 +204,7 @@ const OwnerInstructors: React.FC = () => {
 
   const handlePrivilegeToggle = async (userId: string, currentPrivileges: boolean) => {
     try {
+      setToggleLoading(userId);
       const functionName = currentPrivileges ? 'demote_super_instructor' : 'promote_instructor_to_super';
       
       console.log(`🔧 ${currentPrivileges ? 'Demoting' : 'Promoting'} instructor ${userId} using ${functionName}`);
@@ -213,23 +215,62 @@ const OwnerInstructors: React.FC = () => {
 
       if (error) {
         console.error('Error updating instructor privileges:', error);
-        toast.error('Errore nell\'aggiornamento dei privilegi');
+        toast.error(`Errore durante la modifica dei privilegi: ${error.message}`);
+        setToggleLoading(null);
         return;
       }
 
       console.log(`✅ Successfully ${currentPrivileges ? 'demoted' : 'promoted'} instructor ${userId}`);
 
-      // Reload instructors to get fresh data from both tables
-      await loadInstructors();
+      // Wait a moment to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      toast.success(
-        currentPrivileges 
-          ? 'Privilegi da proprietario rimossi' 
-          : 'Privilegi da proprietario assegnati'
-      );
+      // Reload instructors with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      let reloadSuccess = false;
+      
+      while (retryCount < maxRetries && !reloadSuccess) {
+        try {
+          await loadInstructors();
+          
+          // Verify the change was persisted by checking current state
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const updatedInstructor = instructors.find(i => i.user_id === userId);
+          if (updatedInstructor && updatedInstructor.has_owner_privileges !== currentPrivileges) {
+            reloadSuccess = true;
+          } else {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.log(`🔄 Retry ${retryCount}/${maxRetries} - waiting for database sync...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (error) {
+          retryCount++;
+          console.error(`Error during reload attempt ${retryCount}:`, error);
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+
+      if (!reloadSuccess) {
+        console.warn('⚠️ Could not verify privilege change persistence - forcing page reload...');
+        // Force a complete page reload as last resort
+        window.location.reload();
+      } else {
+        toast.success(
+          currentPrivileges 
+            ? 'Privilegi da proprietario rimossi' 
+            : 'Privilegi da proprietario assegnati'
+        );
+      }
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error('Errore imprevisto');
+    } finally {
+      setToggleLoading(null);
     }
   };
 
@@ -351,9 +392,13 @@ const OwnerInstructors: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={instructor.has_owner_privileges}
+                          disabled={toggleLoading === instructor.user_id}
                           onCheckedChange={() => handlePrivilegeToggle(instructor.user_id, instructor.has_owner_privileges)}
                           id={`privileges-${instructor.id}`}
                         />
+                        {toggleLoading === instructor.user_id && (
+                          <div className="ml-2 animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        )}
                         <Label htmlFor={`privileges-${instructor.id}`} className="text-sm">
                           {instructor.has_owner_privileges ? (
                             <div className="flex items-center gap-1 text-amber-600">
