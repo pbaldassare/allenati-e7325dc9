@@ -40,7 +40,8 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
     console.log('🏢 OwnerGymContext - fetchOwnerGyms START:', {
       user: user?.id,
       hasOwnerPrivileges,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      userEmail: user?.email
     });
 
     if (!user || !hasOwnerPrivileges) {
@@ -93,7 +94,9 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
 
       console.log('✅ Gyms loaded successfully:', {
         count: gyms?.length || 0,
-        gyms: gyms?.map(g => ({ id: g.id, name: g.name }))
+        gyms: gyms?.map(g => ({ id: g.id, name: g.name })),
+        currentSelectedGym: selectedGym?.name,
+        currentSelectedGymId: selectedGym?.id
       });
 
       setOwnedGyms(gyms || []);
@@ -143,6 +146,12 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
   };
 
   const setSelectedGym = (gym: Gym) => {
+    console.log('🔄 Changing selected gym:', {
+      from: selectedGym?.name,
+      to: gym.name,
+      fromId: selectedGym?.id,
+      toId: gym.id
+    });
     setSelectedGymState(gym);
     localStorage.setItem(SELECTED_GYM_KEY, gym.id);
   };
