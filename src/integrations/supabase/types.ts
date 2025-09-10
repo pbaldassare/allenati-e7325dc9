@@ -2000,6 +2000,15 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      fix_instructor_privilege_inconsistencies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_taken: string
+          fixed_user_id: string
+          gym_id: string
+          instructor_id: string
+        }[]
+      }
       fix_missing_owner_instructors: {
         Args: Record<PropertyKey, never>
         Returns: {
