@@ -55,24 +55,77 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
     try {
       setLoading(true);
 
-      // Get gym IDs owned by user
-      const { data: gymIds, error: idsError } = await supabase.rpc('get_user_owned_gyms', {
+      // Get gym IDs owned by user (real ownership)
+      const { data: ownedGymIds, error: ownedIdsError } = await supabase.rpc('get_user_owned_gyms', {
         _user_id: user.id
       });
 
       console.log('🔍 Owned gym IDs query:', {
-        gymIds,
-        error: idsError,
-        count: gymIds?.length || 0
+        ownedGymIds,
+        error: ownedIdsError,
+        count: ownedGymIds?.length || 0
       });
 
-      if (idsError) {
-        console.error('❌ Error fetching owned gym IDs:', idsError);
+      // Get gym IDs where user has instructor owner privileges
+      const { data: instructorGymIds, error: instructorIdsError } = await supabase.rpc('get_instructor_gyms', {
+        _user_id: user.id
+      });
+
+      console.log('🔍 Instructor gym IDs query:', {
+        instructorGymIds,
+        error: instructorIdsError,
+        count: instructorGymIds?.length || 0
+      });
+
+      // Check which instructor gyms have owner privileges
+      let superInstructorGymIds: string[] = [];
+      if (instructorGymIds && instructorGymIds.length > 0) {
+        for (const gymId of instructorGymIds) {
+          const { data: hasPrivileges } = await supabase.rpc('instructor_has_owner_privileges_for_gym', {
+            _user_id: user.id,
+            _gym_id: gymId
+          });
+          
+          if (hasPrivileges) {
+            superInstructorGymIds.push(gymId);
+          }
+        }
+      }
+
+      console.log('🔍 Super instructor gym IDs:', {
+        superInstructorGymIds,
+        count: superInstructorGymIds.length
+      });
+
+      // Combine both types of gym access
+      const allGymIds = [
+        ...(ownedGymIds || []),
+        ...superInstructorGymIds
+      ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
+
+      console.log('🔍 Combined gym IDs:', {
+        allGymIds,
+        count: allGymIds.length,
+        breakdown: {
+          owned: ownedGymIds?.length || 0,
+          superInstructor: superInstructorGymIds.length,
+          total: allGymIds.length
+        }
+      });
+
+      if (ownedIdsError) {
+        console.error('❌ Error fetching owned gym IDs:', ownedIdsError);
         toast.error('Errore nel caricamento delle palestre');
         return;
       }
 
-      if (!gymIds || gymIds.length === 0) {
+      if (instructorIdsError) {
+        console.error('❌ Error fetching instructor gym IDs:', instructorIdsError);
+        // Don't return here, continue with owned gyms only
+      }
+
+      if (!allGymIds || allGymIds.length === 0) {
+        console.log('❌ No gyms available for user');
         setOwnedGyms([]);
         setSelectedGymState(null);
         return;
@@ -82,7 +135,7 @@ export const OwnerGymProvider: React.FC<OwnerGymProviderProps> = ({ children }) 
       const { data: gyms, error: gymsError } = await supabase
         .from('gyms')
         .select('id, name, description, logo_url, address, city, phone, email')
-        .in('id', gymIds)
+        .in('id', allGymIds)
         .eq('is_active', true)
         .order('name');
 
