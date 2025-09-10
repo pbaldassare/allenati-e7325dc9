@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
-import { InstructorGymProvider } from '@/contexts/InstructorGymContext';
+
 import { Button } from '@/components/ui/button';
 import { HelpCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,8 +22,7 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
 
   return (
     <ProtectedRoute requiredRoles={['instructor', 'admin']}>
-      <InstructorGymProvider>
-        <SidebarProvider defaultOpen={!isMobile}>
+      <SidebarProvider defaultOpen={!isMobile}>
           <div className="min-h-screen flex w-full">
             <Sidebar 
               collapsible={isMobile ? "offcanvas" : "icon"}
@@ -60,7 +59,6 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
           </SidebarInset>
         </div>
       </SidebarProvider>
-      </InstructorGymProvider>
     </ProtectedRoute>
   );
 };

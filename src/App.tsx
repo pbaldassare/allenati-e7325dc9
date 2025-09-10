@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import { GymProvider } from "@/contexts/GymContext";
+import { InstructorGymProvider } from "@/contexts/InstructorGymContext";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -84,7 +85,8 @@ const App = () => (
     >
       <AuthProvider>
         <GymProvider>
-          <AppDataProvider>
+          <InstructorGymProvider>
+            <AppDataProvider>
             <MobileOptimizations>
               <TooltipProvider>
               <Toaster />
@@ -174,6 +176,7 @@ const App = () => (
           </TooltipProvider>
             </MobileOptimizations>
           </AppDataProvider>
+          </InstructorGymProvider>
         </GymProvider>
       </AuthProvider>
     </ThemeProvider>
