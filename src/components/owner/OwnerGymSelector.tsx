@@ -1,27 +1,71 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building, Crown } from 'lucide-react';
+import { Building, Crown, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 interface OwnerGymSelectorProps {
   className?: string;
 }
 
 export const OwnerGymSelector: React.FC<OwnerGymSelectorProps> = ({ className }) => {
-  const { ownedGyms, selectedGym, setSelectedGym, loading } = useOwnerGym();
+  const { ownedGyms, selectedGym, setSelectedGym, loading, refreshOwnerGyms } = useOwnerGym();
+
+  // Debug logging per tracciare i valori del context
+  useEffect(() => {
+    console.log('🏢 OwnerGymSelector - Context state changed:', {
+      loading,
+      ownedGymsCount: ownedGyms?.length || 0,
+      ownedGyms: ownedGyms?.map(g => ({ id: g.id, name: g.name })) || [],
+      selectedGym: selectedGym ? { id: selectedGym.id, name: selectedGym.name } : null,
+      timestamp: new Date().toISOString()
+    });
+  }, [loading, ownedGyms, selectedGym]);
+
+  // Log iniziale al mount del componente
+  useEffect(() => {
+    console.log('🏢 OwnerGymSelector - Component mounted with initial state:', {
+      loading,
+      ownedGymsCount: ownedGyms?.length || 0,
+      hasRefreshFunction: !!refreshOwnerGyms
+    });
+  }, []);
 
   if (loading) {
     return <Skeleton className="h-8 w-32" />;
   }
 
   if (ownedGyms.length === 0) {
+    console.warn('⚠️ OwnerGymSelector - Showing "Nessuna palestra" state:', {
+      loading,
+      ownedGymsLength: ownedGyms.length,
+      ownedGymsArray: ownedGyms,
+      selectedGym,
+      hasRefreshFunction: !!refreshOwnerGyms
+    });
+    
     return (
-      <Badge variant="outline" className="gap-2">
-        <Building className="w-4 h-4" />
-        Nessuna palestra
-      </Badge>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="gap-2">
+          <Building className="w-4 h-4" />
+          Nessuna palestra
+        </Badge>
+        {refreshOwnerGyms && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              console.log('🔄 Manual refresh triggered');
+              refreshOwnerGyms();
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
     );
   }
 
