@@ -73,7 +73,10 @@ const OwnerUsers = () => {
       selectedGym: selectedGym?.id,
       selectedGymName: selectedGym?.name,
       timestamp: new Date().toISOString(),
-      forceRefresh
+      forceRefresh,
+      isMobile,
+      userAgent: navigator.userAgent,
+      screenSize: { width: window.innerWidth, height: window.innerHeight }
     });
 
     if (!selectedGym?.id) {
@@ -327,6 +330,8 @@ const OwnerUsers = () => {
           instructors: combined.filter(m => m.is_instructor).length,
           errorProfiles: errorProfiles.length,
           errorProfileUserIds: errorProfiles.map(m => m.user_id),
+          isMobile,
+          deviceInfo: { userAgent: navigator.userAgent, screen: { width: window.innerWidth, height: window.innerHeight } },
           sample: combined.slice(0, 3).map(m => ({ 
             name: `${m.first_name} ${m.last_name}`, 
             email: m.email,
@@ -336,23 +341,66 @@ const OwnerUsers = () => {
         });
 
         setMembers(combined as MemberProfile[]);
+        
+        // Mobile-specific validation
+        if (isMobile) {
+          console.log('📱 MOBILE DEBUG - Final member count after setState:', combined.length);
+          console.log('📱 MOBILE DEBUG - First 3 members:', combined.slice(0, 3).map(m => ({
+            name: `${m.first_name} ${m.last_name}`,
+            email: m.email,
+            status: m.membership_status
+          })));
+        }
       } catch (e: any) {
         console.error('❌ loadMembers error:', e);
+        if (isMobile) {
+          console.error('📱 MOBILE ERROR:', {
+            error: e.message,
+            stack: e.stack,
+            selectedGym: selectedGym?.id,
+            timestamp: new Date().toISOString()
+          });
+        }
         toast({ title: 'Errore caricamento utenti', description: e?.message ?? 'Qualcosa è andato storto', variant: 'destructive' });
         setMembers([]); // Ensure we clear members on error
       } finally {
         setLoading(false);
+        if (isMobile) {
+          console.log('📱 MOBILE DEBUG - loadMembers completed, loading set to false');
+        }
       }
     };
 
   useEffect(() => {
     // Add a small delay to ensure gym context is fully loaded
     const timer = setTimeout(() => {
+      if (isMobile) {
+        console.log('📱 MOBILE DEBUG - useEffect triggered loadMembers:', {
+          selectedGymId: selectedGym?.id,
+          selectedGymName: selectedGym?.name,
+          currentMembersCount: members.length,
+          timestamp: new Date().toISOString()
+        });
+      }
       loadMembers();
     }, 100);
 
     return () => clearTimeout(timer);
   }, [selectedGym?.id, toast]);
+
+  // Debug effect to track members state changes on mobile
+  useEffect(() => {
+    if (isMobile) {
+      console.log('📱 MOBILE DEBUG - members state changed:', {
+        count: members.length,
+        hasData: members.length > 0,
+        firstMember: members.length > 0 ? `${members[0].first_name} ${members[0].last_name}` : 'none',
+        loading,
+        selectedGym: selectedGym?.name,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [members, isMobile, loading, selectedGym?.name]);
 
   // Helper function to get the highest priority role
   const getHighestRole = (roles: string[]) => {
@@ -529,7 +577,7 @@ const OwnerUsers = () => {
                 🔄 Aggiorna
               </Button>
               <Button variant="outline" onClick={forceCacheRefresh} disabled={loading} className="text-primary">
-                🚀 Ricarica Cache
+                🚀 {isMobile ? 'Cache' : 'Ricarica Cache'}
               </Button>
               <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
                 <DialogTrigger asChild>
@@ -601,17 +649,27 @@ const OwnerUsers = () => {
                       <p className="text-muted-foreground">Caricamento...</p>
                     </CardContent>
                   </Card>
-                ) : listToShow.length === 0 ? (
+                 ) : listToShow.length === 0 ? (
                   <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 space-y-3">
                       <p className="text-muted-foreground">
                         {members.length === 0
                           ? 'Nessun membro nella palestra.'
                           : 'Nessun risultato per la ricerca.'}
                       </p>
+                      {isMobile && (
+                        <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                          <div>📱 DEBUG MOBILE:</div>
+                          <div>• Palestra: {selectedGym?.name || 'Non selezionata'}</div>
+                          <div>• Membri totali: {members.length}</div>
+                          <div>• Filtrati: {listToShow.length}</div>
+                          <div>• Query: "{query}"</div>
+                          <div>• Ora: {new Date().toLocaleTimeString()}</div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ) : (
+                 ) : (
                   listToShow.map((m) => {
                     const roleInfo = getHighestRole(m.user_roles);
                     const RoleIcon = roleInfo.icon;
