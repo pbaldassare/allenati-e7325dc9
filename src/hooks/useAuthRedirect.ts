@@ -46,16 +46,15 @@ export const useAuthRedirect = () => {
       if (user?.role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (user?.role === 'gym_owner') {
-        // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        const targetRoute = isMobile ? '/owner/schedule' : '/owner';
+        // Redirect alla dashboard owner sia su mobile che desktop
+        const targetRoute = '/owner';
         console.log('AuthRedirect: Redirecting gym_owner to', targetRoute);
         navigate(targetRoute, { replace: true });
       } else if (user?.role === 'instructor') {
-        // Super-istruttori vanno su owner/schedule su mobile, istruttori normali su instructor/schedule
+        // Super-istruttori vanno alla dashboard owner, istruttori normali su instructor
         const hasOwnerPrivileges = user?.has_owner_privileges;
-        const targetRoute = isMobile 
-          ? (hasOwnerPrivileges ? '/owner/schedule' : '/instructor/schedule')
-          : (hasOwnerPrivileges ? '/owner' : '/instructor');
+        const targetRoute = hasOwnerPrivileges ? '/owner' : 
+          (isMobile ? '/instructor/schedule' : '/instructor');
         console.log('AuthRedirect: Redirecting instructor to', targetRoute, { hasOwnerPrivileges, isMobile });
         navigate(targetRoute, { replace: true });
       } else {
@@ -70,17 +69,16 @@ export const useAuthRedirect = () => {
         navigate('/admin', { replace: true });
         return;
       } else if (user?.role === 'gym_owner') {
-        // Su mobile vai direttamente al calendario, su desktop alla dashboard
-        const targetRoute = isMobile ? '/owner/schedule' : '/owner';
+        // Redirect alla dashboard owner sia su mobile che desktop
+        const targetRoute = '/owner';
         console.log('AuthRedirect: Redirecting gym_owner from homepage to', targetRoute);
         navigate(targetRoute, { replace: true });
         return;
       } else if (user?.role === 'instructor') {
-        // Super-istruttori vanno su owner/schedule su mobile, istruttori normali su instructor/schedule
+        // Super-istruttori vanno alla dashboard owner, istruttori normali su instructor
         const hasOwnerPrivileges = user?.has_owner_privileges;
-        const targetRoute = isMobile 
-          ? (hasOwnerPrivileges ? '/owner/schedule' : '/instructor/schedule')
-          : (hasOwnerPrivileges ? '/owner' : '/instructor');
+        const targetRoute = hasOwnerPrivileges ? '/owner' : 
+          (isMobile ? '/instructor/schedule' : '/instructor');
         console.log('AuthRedirect: Redirecting instructor from homepage to', targetRoute, { hasOwnerPrivileges, isMobile });
         navigate(targetRoute, { replace: true });
         return;
