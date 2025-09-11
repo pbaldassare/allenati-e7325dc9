@@ -11,13 +11,13 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
-  const { isAdmin, isGymOwner, isInstructor } = useAuth();
+  const { isAdmin, isGymOwner, isInstructor, hasOwnerPrivileges } = useAuth();
   const scrollDirection = useScrollDirection();
   const { isVisible: keyboardVisible } = useVirtualKeyboard();
   
   const tabs = isAdmin
     ? [{ id: "admin", icon: Settings, label: "Admin" }]
-    : isGymOwner
+    : hasOwnerPrivileges
     ? [
         { id: "home", icon: Home, label: "Home" },
         { id: "owner", icon: Settings, label: "Owner" }
