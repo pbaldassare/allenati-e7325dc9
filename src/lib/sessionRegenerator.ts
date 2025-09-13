@@ -226,18 +226,13 @@ export async function regenerateCourseSessions(
 
     console.log(`✅ Eliminate ${sessionsToDelete || 0} sessioni future`);
 
-    // 5. Rigenera le sessioni usando la funzione database
-    const endDateStr = endDate 
-      ? endDate.toISOString().split('T')[0]
-      : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 3 mesi
-
-    console.log(`🔄 Rigenerazione sessioni dal ${today} al ${endDateStr}`);
+    // 5. Rigenera le sessioni usando la nuova funzione con durata
+    console.log(`🔄 Rigenerazione sessioni con durata automatica dal ${today}`);
 
     const { data: generatedCount, error: generateError } = await supabase
-      .rpc('generate_course_sessions', {
+      .rpc('generate_course_sessions_with_duration', {
         _course_id: courseId,
-        _start_date: today,
-        _end_date: endDateStr
+        _start_date: today
       });
 
     if (generateError) {
