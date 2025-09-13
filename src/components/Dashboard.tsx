@@ -575,30 +575,41 @@ export const Dashboard = () => {
                            />
                          </div>
                         
-                        {/* Action button - Mobile: Full width, Desktop: Compact */}
-                        <div className="flex justify-center sm:justify-end mt-2 sm:mt-0">
-                           {isAlreadyBooked ? (
-                             <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none">
-                               ✓ Prenotato
-                             </Badge>
-                           ) : (
-                             <Button
-                               onClick={() => openBookingDialog(session)}
-                               disabled={isLoading || isFull}
-                               size="sm"
-                               className={cn(
-                                 "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
-                                 isFull 
-                                   ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                   : isAlmostFull
-                                     ? "bg-gradient-warm text-white hover:opacity-90 border-none"
-                                     : "bg-gradient-primary text-white hover:opacity-90 border-none"
-                               )}
-                             >
-                               {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
-                             </Button>
-                           )}
-                        </div>
+                         {/* Action button - Mobile: Full width, Desktop: Compact */}
+                         <div className="flex flex-col sm:flex-row justify-center sm:justify-end gap-2 mt-2 sm:mt-0">
+                            {isAlreadyBooked ? (
+                              <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none">
+                                ✓ Prenotato
+                              </Badge>
+                            ) : (
+                              <Button
+                                onClick={() => openBookingDialog(session)}
+                                disabled={isLoading || isFull}
+                                size="sm"
+                                className={cn(
+                                  "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
+                                  isFull 
+                                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                    : isAlmostFull
+                                      ? "bg-gradient-warm text-white hover:opacity-90 border-none"
+                                      : "bg-gradient-primary text-white hover:opacity-90 border-none"
+                                )}
+                              >
+                                {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                              </Button>
+                            )}
+                            
+                            {/* Subscription/Credits Link */}
+                            <Button
+                              onClick={() => navigate('/subscriptions')}
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Coins className="h-3 w-3 mr-1" />
+                              Crediti
+                            </Button>
+                         </div>
                       </div>
                     </CardContent>
                    </Card>

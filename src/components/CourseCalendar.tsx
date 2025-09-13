@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X, Sparkles, Zap, Star, Trophy, Activity } from "lucide-react";
+import { Calendar, Clock, User, Users, MapPin, Filter, ChevronLeft, ChevronRight, X, Sparkles, Zap, Star, Trophy, Activity, Coins } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGym } from "@/contexts/GymContext";
@@ -73,6 +74,7 @@ export const CourseCalendar = () => {
   const { user } = useAuth();
   const { selectedGym } = useGym();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Load data from Supabase - using course_sessions for exact sessions
   useEffect(() => {
@@ -710,21 +712,31 @@ export const CourseCalendar = () => {
                             </p>
                           </div>
                           
-                            {/* Status and Action */}
-                            <div className="flex flex-col items-end gap-2">
-                              {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
-                                <Badge className="bg-gradient-accent text-white animate-pulse shadow-glow">
-                                  <Star className="w-3 h-3 mr-1" />
-                                  Prenotato
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-gradient-secondary text-white">
-                                  <Sparkles className="w-3 h-3 mr-1" />
-                                  Disponibile
-                                </Badge>
-                              )}
-                              {getActionButton(course)}
-                            </div>
+                             {/* Status and Action */}
+                             <div className="flex flex-col items-end gap-2">
+                               {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
+                                 <Badge className="bg-gradient-accent text-white animate-pulse shadow-glow">
+                                   <Star className="w-3 h-3 mr-1" />
+                                   Prenotato
+                                 </Badge>
+                               ) : (
+                                 <Badge className="bg-gradient-secondary text-white">
+                                   <Sparkles className="w-3 h-3 mr-1" />
+                                   Disponibile
+                                 </Badge>
+                               )}
+                               <div className="flex gap-2 items-center">
+                                 {getActionButton(course)}
+                                 <Button
+                                   onClick={() => navigate('/subscriptions')}
+                                   variant="ghost"
+                                   size="sm"
+                                   className="text-xs text-muted-foreground hover:text-primary transition-colors p-1"
+                                 >
+                                   <Coins className="h-3 w-3" />
+                                 </Button>
+                               </div>
+                             </div>
                         </div>
                       </CardContent>
                     </Card>
