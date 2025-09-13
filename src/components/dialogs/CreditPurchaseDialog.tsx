@@ -28,7 +28,7 @@ export function CreditPurchaseDialog({
 }: CreditPurchaseDialogProps) {
   const handleGoToSubscriptions = () => {
     onOpenChange(false);
-    window.location.href = '/abbonamenti';
+    window.location.href = '/subscriptions';
   };
 
   const formatPrice = (price?: number) => {
