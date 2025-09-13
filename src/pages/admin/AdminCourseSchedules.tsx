@@ -103,14 +103,30 @@ const AdminCourseSchedules = () => {
       setSchedules(newSchedules);
       
       if (result.success) {
+        let description = result.message;
+        
+        // Aggiungi informazioni aggiuntive
+        if (result.orphanSessionsDeleted > 0) {
+          description += ` (${result.orphanSessionsDeleted} sessioni orfane eliminate)`;
+        }
+        if (result.affectedBookings > 0) {
+          description += ` - ${result.affectedBookings} prenotazioni riassegnate`;
+        }
+        
+        // Aggiungi avvisi se presenti
+        if (result.warnings && result.warnings.length > 0) {
+          description += '\n\n⚠️ ' + result.warnings.join('\n⚠️ ');
+        }
+
         toast({
           title: 'Orari e sessioni aggiornati',
-          description: `${result.message}. ${result.affectedBookings > 0 ? `${result.affectedBookings} prenotazioni mantenute.` : ''}`
+          description,
+          duration: result.warnings && result.warnings.length > 0 ? 10000 : 5000,
         });
       } else {
         toast({
-          title: 'Orari aggiornati',
-          description: 'Orari salvati ma errore nella rigenerazione delle sessioni: ' + result.message,
+          title: 'Errore nella rigenerazione',
+          description: result.message,
           variant: 'destructive'
         });
       }
@@ -167,7 +183,7 @@ const AdminCourseSchedules = () => {
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground">
-                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future senza prenotazioni confermate verranno automaticamente rigenerate con i nuovi orari. Le sessioni con prenotazioni esistenti rimarranno invariate.
+                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, TUTTE le sessioni future dalla data odierna verranno eliminate e rigenerate con i nuovi orari. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
               </p>
             </div>
             <CourseScheduleManager
