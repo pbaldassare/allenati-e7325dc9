@@ -40,7 +40,7 @@ const courseSchema = z.object({
   benefits: z.array(z.string()).optional(),
   requirements: z.array(z.string()).optional(),
   startDate: z.date({ required_error: "Seleziona la data di inizio" }),
-  endDate: z.date({ required_error: "Seleziona la data di fine" }),
+  durationWeeks: z.coerce.number().min(1, 'La durata deve essere almeno 1 settimana').max(52, 'La durata massima è 52 settimane').default(12),
   autoGenerateSessions: z.boolean().default(true),
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
@@ -102,6 +102,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       image: course.image,
       benefits: course.benefits,
       requirements: course.requirements || [],
+      startDate: (course as any).start_date ? new Date((course as any).start_date) : new Date(),
+      durationWeeks: (course as any).duration_weeks || 12,
       schedule: course.schedule?.map(s => ({
         dayOfWeek: s.dayOfWeek,
         time: s.time,
@@ -124,6 +126,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       image: '',
       benefits: [],
       requirements: [''],
+      startDate: new Date(),
+      durationWeeks: 12,
       schedule: [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }],
     },
   });
@@ -150,7 +154,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             image_url: data.image,
             benefits: data.benefits.filter(b => b.trim() !== ''),
             requirements: data.requirements?.filter(r => r.trim() !== '') || [],
-            credits_required: 1 // Default value
+            credits_required: 1, // Default value
+            start_date: data.startDate.toISOString().split('T')[0],
+            duration_weeks: data.durationWeeks
           })
           .select()
           .single();
@@ -174,8 +180,11 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
           if (scheduleError) throw scheduleError;
         }
 
-        // Genera automaticamente le sessioni se necessario
-        await autoGenerateSessionsIfNeeded(courseData.id);
+        // Genera automaticamente le sessioni con la nuova funzione
+        await supabase.rpc('generate_course_sessions_with_duration', {
+          _course_id: courseData.id,
+          _start_date: data.startDate.toISOString().split('T')[0]
+        });
 
         toast({
           title: 'Corso creato',
@@ -199,6 +208,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             image_url: data.image,
             benefits: data.benefits.filter(b => b.trim() !== ''),
             requirements: data.requirements?.filter(r => r.trim() !== '') || [],
+            start_date: data.startDate.toISOString().split('T')[0],
+            duration_weeks: data.durationWeeks
           })
           .eq('id', course?.id);
 
@@ -230,8 +241,11 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
           }
         }
 
-        // Genera automaticamente le sessioni se necessario
-        await autoGenerateSessionsIfNeeded(course.id);
+        // Rigenera sessioni con la nuova funzione
+        await supabase.rpc('generate_course_sessions_with_duration', {
+          _course_id: course.id,
+          _start_date: data.startDate.toISOString().split('T')[0]
+        });
 
         toast({
           title: 'Corso aggiornato',
@@ -441,6 +455,47 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
                 </FormControl>
                 <FormDescription>
                   Ore prima dell'inizio del corso entro cui gli utenti possono prenotare/cancellare. Admin, proprietari palestra e istruttori non hanno limiti.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data Inizio Corso</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="date" 
+                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                    onChange={(e) => field.onChange(new Date(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="durationWeeks"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Durata Corso (settimane)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="52" 
+                    placeholder="12" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormDescription>
+                  Il corso durerà {field.value || 12} settimane dalla data di inizio
                 </FormDescription>
                 <FormMessage />
               </FormItem>

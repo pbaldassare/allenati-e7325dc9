@@ -37,7 +37,7 @@ interface CourseFormData {
   reserved_spots: number;
   is_active: boolean;
   start_date: Date;
-  end_date: Date;
+  duration_weeks: number;
   schedules: Array<{
     day_of_week: number;
     start_time: string;
@@ -63,7 +63,7 @@ const formSchema = z.object({
   reserved_spots: z.number().min(0, 'Posti riservati >= 0'),
   is_active: z.boolean(),
   start_date: z.date(),
-  end_date: z.date(),
+  duration_weeks: z.number().min(1, 'Minimo 1 settimana').max(52, 'Massimo 52 settimane').default(12),
 });
 
 interface OwnerCourseFormProps {
@@ -122,7 +122,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       reserved_spots: course?.reserved_spots || 0,
       is_active: course?.is_active ?? true,
       start_date: course?.start_date ? new Date(course.start_date) : new Date(),
-      end_date: course?.end_date ? new Date(course.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      duration_weeks: (course as any)?.duration_weeks || 12,
     },
   });
 
@@ -289,7 +289,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         reserved_spots: data.reserved_spots,
         is_active: data.is_active,
         start_date: format(data.start_date, 'yyyy-MM-dd'),
-        end_date: format(data.end_date, 'yyyy-MM-dd'),
+        duration_weeks: data.duration_weeks,
       };
 
       if (mode === 'create') {
@@ -301,8 +301,11 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         
         if (error) throw error;
         
-        // Genera automaticamente le sessioni se necessario
-        await autoGenerateSessionsIfNeeded(insertedData.id);
+        // Genera automaticamente le sessioni con la nuova funzione
+        await supabase.rpc('generate_course_sessions_with_duration', {
+          _course_id: insertedData.id,
+          _start_date: format(data.start_date, 'yyyy-MM-dd')
+        });
         
         // Call the callback if provided
         if (onCourseCreated && insertedData) {
@@ -323,7 +326,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
             reserved_spots: data.reserved_spots,
             is_active: data.is_active,
             start_date: data.start_date,
-            end_date: data.end_date,
+            duration_weeks: data.duration_weeks,
             schedules: []
           });
           return; // Don't navigate automatically
@@ -346,8 +349,11 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         
         if (error) throw error;
         
-        // Genera automaticamente le sessioni se necessario
-        await autoGenerateSessionsIfNeeded(course.id);
+        // Rigenera sessioni con la nuova funzione
+        await supabase.rpc('generate_course_sessions_with_duration', {
+          _course_id: course.id,
+          _start_date: format(data.start_date, 'yyyy-MM-dd')
+        });
         
         toast({
           title: 'Successo',
@@ -658,40 +664,23 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
 
               <FormField
                 control={form.control}
-                name="end_date"
+                name="duration_weeks"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data Fine</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Seleziona data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < form.getValues('start_date')}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <FormItem>
+                    <FormLabel>Durata Corso (settimane)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max="52" 
+                        placeholder="12"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 12)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Il corso durerà {field.value || 12} settimane dalla data di inizio
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

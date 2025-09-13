@@ -117,53 +117,18 @@ export async function saveGeneratedSessions(
  */
 export async function autoGenerateSessionsIfNeeded(courseId: string): Promise<boolean> {
   try {
-    // Recupera i dati del corso
-    const { data: course, error: courseError } = await supabase
-      .from('courses')
-      .select(`
-        id,
-        auto_generate_sessions,
-        start_date,
-        end_date,
-        max_participants,
-        course_schedules (
-          day_of_week,
-          start_time,
-          end_time,
-          room_id,
-          room_name
-        )
-      `)
-      .eq('id', courseId)
-      .single();
+    // Use the new database function for automatic session generation
+    const { data, error } = await supabase.rpc('generate_course_sessions_with_duration', {
+      _course_id: courseId
+    });
     
-    if (courseError || !course) {
-      console.error('Error fetching course:', courseError);
+    if (error) {
+      console.error('Error generating sessions:', error);
       return false;
     }
     
-    // Controlla se deve generare automaticamente
-    if (!course.auto_generate_sessions || !course.start_date || !course.end_date) {
-      return true; // Non è un errore, semplicemente non deve generare
-    }
-    
-    // Controlla se ha schedules
-    if (!course.course_schedules || course.course_schedules.length === 0) {
-      console.log('Course has no schedules, skipping session generation');
-      return true;
-    }
-    
-    // Genera le sessioni
-    const sessions = await generateSessionsForCourse(
-      courseId,
-      new Date(course.start_date),
-      new Date(course.end_date),
-      course.course_schedules,
-      course.max_participants
-    );
-    
-    // Salva le sessioni
-    return await saveGeneratedSessions(courseId, sessions);
+    console.log(`Generated ${data || 0} sessions for course ${courseId}`);
+    return true;
     
   } catch (error) {
     console.error('Error in autoGenerateSessionsIfNeeded:', error);

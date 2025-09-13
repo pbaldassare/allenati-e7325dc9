@@ -32,7 +32,7 @@ interface CourseBasicData {
   reserved_spots: number;
   is_active: boolean;
   start_date: Date;
-  end_date: Date;
+  duration_weeks: number;
 }
 
 
@@ -311,7 +311,7 @@ const OwnerCourseNew: React.FC = () => {
               <CourseSessionManager
                 courseId={courseData?.id}
                 startDate={courseData?.start_date}
-                endDate={courseData?.end_date}
+                endDate={courseData?.start_date ? new Date(courseData.start_date.getTime() + (courseData.duration_weeks || 12) * 7 * 24 * 60 * 60 * 1000) : undefined}
                 schedules={schedules.map(s => ({
                   day_of_week: s.dayOfWeek,
                   start_time: s.time,

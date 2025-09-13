@@ -10,7 +10,7 @@ import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
-import { RepairCoursesButton } from '@/components/RepairCoursesButton';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
@@ -396,7 +396,6 @@ const OwnerCoursesList: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <RepairCoursesButton />
           <Button onClick={() => navigate("/owner/courses/new")}>
             Nuovo Corso
           </Button>

@@ -609,6 +609,7 @@ export type Database = {
           description: string | null
           difficulty_level: number | null
           duration_minutes: number
+          duration_weeks: number
           end_date: string | null
           equipment_needed: string[] | null
           gym_id: string | null
@@ -634,6 +635,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number
+          duration_weeks?: number
           end_date?: string | null
           equipment_needed?: string[] | null
           gym_id?: string | null
@@ -659,6 +661,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number
+          duration_weeks?: number
           end_date?: string | null
           equipment_needed?: string[] | null
           gym_id?: string | null
@@ -2021,6 +2024,10 @@ export type Database = {
       }
       generate_course_sessions: {
         Args: { _course_id: string; _end_date: string; _start_date: string }
+        Returns: number
+      }
+      generate_course_sessions_with_duration: {
+        Args: { _course_id: string; _start_date?: string }
         Returns: number
       }
       generate_course_sessions_with_exceptions: {
