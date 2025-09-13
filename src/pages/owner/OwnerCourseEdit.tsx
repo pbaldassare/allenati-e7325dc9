@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Calendar, Clock, Ban } from 'lucide-react';
+import { ArrowLeft, Settings, Calendar, Clock, Ban, Trash2 } from 'lucide-react';
 import { SupabaseCourse } from '@/types/course';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
 import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
 import { useToast } from '@/hooks/use-toast';
+import { forceDeleteAllFutureSessions } from '@/lib/sessionRegenerator';
 
 const OwnerCourseEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ const OwnerCourseEdit = () => {
   const [gymRooms, setGymRooms] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [exceptions, setExceptions] = useState<any[]>([]);
+  const [isForceDeleting, setIsForceDeleting] = useState(false);
 
   const handleBack = () => {
     // Smart navigation for owner pages
@@ -284,6 +286,47 @@ const OwnerCourseEdit = () => {
     }
   };
 
+  // Force delete all future sessions
+  const handleForceDeleteAllSessions = async () => {
+    if (!id) return;
+    
+    setIsForceDeleting(true);
+    try {
+      const result = await forceDeleteAllFutureSessions(id);
+      
+      if (result.success) {
+        toast({
+          title: "Sessioni eliminate",
+          description: result.message,
+        });
+        
+        // Refresh sessions data
+        const { data: newSessions } = await supabase
+          .from('course_sessions')
+          .select('*')
+          .eq('course_id', id)
+          .order('session_date', { ascending: true });
+        
+        setSessions(newSessions || []);
+      } else {
+        toast({
+          title: "Errore",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error force deleting sessions:', error);
+      toast({
+        title: "Errore",
+        description: "Errore durante l'eliminazione delle sessioni",
+        variant: "destructive",
+      });
+    } finally {
+      setIsForceDeleting(false);
+    }
+  };
+
   // Helper function to add hours to time
   const addHoursToTime = (time: string, minutes: number) => {
     const [hours, mins] = time.split(':').map(Number);
@@ -347,9 +390,21 @@ const OwnerCourseEdit = () => {
         <TabsContent value="schedules">
           <Card>
             <CardHeader>
-              <CardTitle>Orari Settimanali</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Orari Settimanali</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleForceDeleteAllSessions}
+                  disabled={isForceDeleting}
+                  className="ml-4"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isForceDeleting ? "Eliminando..." : "🚨 Pulizia Forzata Sessioni Future"}
+                </Button>
+              </CardTitle>
               <CardDescription>
-                Configura gli orari ricorrenti del corso
+                Configura gli orari ricorrenti del corso. Usa il bottone di pulizia forzata per eliminare tutte le sessioni future se necessario.
               </CardDescription>
             </CardHeader>
             <CardContent>
