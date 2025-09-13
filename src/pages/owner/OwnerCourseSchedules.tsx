@@ -79,62 +79,24 @@ const OwnerCourseSchedules = () => {
     if (!id) return;
 
     try {
-      // Delete existing schedules
-      await supabase
+      // Get current schedules before making changes
+      const { data: currentSchedules } = await supabase
         .from('course_schedules')
-        .delete()
+        .select('*')
         .eq('course_id', id);
 
-      // Insert new schedules
-      if (schedules.length > 0) {
-        const schedulesToInsert = schedules.map(schedule => ({
-          course_id: id,
-          day_of_week: schedule.dayOfWeek,
-          start_time: schedule.time,
-          end_time: schedule.end_time,
-          room_id: schedule.roomId,
-          room_name: schedule.room_name,
-        }));
-
-        const { error } = await supabase
-          .from('course_schedules')
-          .insert(schedulesToInsert);
-
-        if (error) throw error;
-      }
-
-      // Rigenera automaticamente le sessioni future
-      const { regenerateCourseSessions } = await import('@/lib/sessionRegenerator');
-      const result = await regenerateCourseSessions(id);
-
-      if (result.success) {
-        let description = result.message;
-        
-        // Aggiungi informazioni aggiuntive
-        if (result.deletedOrphanSessions > 0) {
-          description += ` (${result.deletedOrphanSessions} sessioni orfane eliminate)`;
-        }
-        if (result.affectedBookings > 0) {
-          description += ` - ${result.affectedBookings} prenotazioni riassegnate`;
-        }
-        
-        // Aggiungi avvisi se presenti
-        if (result.warnings && result.warnings.length > 0) {
-          description += '\n\n⚠️ ' + result.warnings.join('\n⚠️ ');
-        }
-
-        toast({
-          title: 'Orari e sessioni aggiornati',
-          description,
-          duration: result.warnings && result.warnings.length > 0 ? 10000 : 5000,
-        });
-      } else {
-        toast({
-          title: 'Errore nella rigenerazione',
-          description: result.message,
-          variant: 'destructive'
-        });
-      }
+      // Use smart update that only affects changed schedules
+      const { smartUpdateCourseSchedules, getScheduleChangeSummary } = await import('@/lib/smartSessionManager');
+      
+      const comparison = await smartUpdateCourseSchedules(id, schedules, currentSchedules || []);
+      
+      const summary = getScheduleChangeSummary(comparison);
+      
+      toast({
+        title: 'Orari e sessioni aggiornati intelligentemente',
+        description: summary || "Nessuna modifica rilevata",
+        duration: comparison.affectedBookings > 0 ? 10000 : 5000,
+      });
     } catch (error) {
       console.error('Error updating schedules:', error);
       toast({

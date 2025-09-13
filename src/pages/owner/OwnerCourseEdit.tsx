@@ -160,36 +160,37 @@ const OwnerCourseEdit = () => {
     );
   }
 
-  // Handle schedule changes
+  // Handle schedule changes with smart session management
   const handleScheduleChange = async (newSchedules: any[]) => {
     if (!id) return;
     
     try {
-      // Delete existing schedules
-      await supabase
+      // Get current schedules before making changes
+      const { data: currentSchedules } = await supabase
         .from('course_schedules')
-        .delete()
+        .select('*')
         .eq('course_id', id);
+
+      // Use smart update that only affects changed schedules
+      const { smartUpdateCourseSchedules, getScheduleChangeSummary } = await import('@/lib/smartSessionManager');
       
-      // Insert new schedules
-      if (newSchedules.length > 0) {
-        const schedulesToInsert = newSchedules.map(schedule => ({
-          course_id: id,
-          day_of_week: schedule.dayOfWeek,
-          start_time: schedule.time,
-          end_time: addHoursToTime(schedule.time, course?.duration_minutes || 60),
-          room_id: schedule.roomId,
-          room_name: gymRooms.find(r => r.id === schedule.roomId)?.name
-        }));
-        
-        await supabase
-          .from('course_schedules')
-          .insert(schedulesToInsert);
-      }
+      // Prepare new schedules with proper format
+      const formattedNewSchedules = newSchedules.map(schedule => ({
+        dayOfWeek: schedule.dayOfWeek,
+        time: schedule.time,
+        end_time: addHoursToTime(schedule.time, course?.duration_minutes || 60),
+        roomId: schedule.roomId,
+        room_name: gymRooms.find(r => r.id === schedule.roomId)?.name
+      }));
+
+      const comparison = await smartUpdateCourseSchedules(id, formattedNewSchedules, currentSchedules || []);
+      
+      const summary = getScheduleChangeSummary(comparison);
       
       toast({
-        title: "Successo",
-        description: "Orari aggiornati con successo",
+        title: "Orari aggiornati con successo",
+        description: summary || "Nessuna modifica rilevata",
+        duration: comparison.affectedBookings > 0 ? 10000 : 5000,
       });
     } catch (error) {
       console.error('Error updating schedules:', error);
