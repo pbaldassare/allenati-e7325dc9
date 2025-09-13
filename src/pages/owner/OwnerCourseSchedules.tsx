@@ -111,8 +111,8 @@ const OwnerCourseSchedules = () => {
         let description = result.message;
         
         // Aggiungi informazioni aggiuntive
-        if (result.orphanSessionsDeleted > 0) {
-          description += ` (${result.orphanSessionsDeleted} sessioni orfane eliminate)`;
+        if (result.deletedOrphanSessions > 0) {
+          description += ` (${result.deletedOrphanSessions} sessioni orfane eliminate)`;
         }
         if (result.affectedBookings > 0) {
           description += ` - ${result.affectedBookings} prenotazioni riassegnate`;
@@ -198,6 +198,42 @@ const OwnerCourseSchedules = () => {
               <p className="text-sm text-muted-foreground">
                 ⚠️ <strong>Nota importante:</strong> Modificando gli orari, TUTTE le sessioni future dalla data odierna verranno eliminate e rigenerate con i nuovi orari. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
               </p>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!window.confirm('⚠️ ATTENZIONE: Questa azione eliminerà TUTTE le sessioni future del corso. Sei sicuro di voler continuare?')) {
+                    return;
+                  }
+                  
+                  try {
+                    const { forceDeleteAllFutureSessions } = await import('@/lib/sessionRegenerator');
+                    const result = await forceDeleteAllFutureSessions(id!);
+                    
+                    toast({
+                      title: result.success ? 'Pulizia completata' : 'Errore nella pulizia',
+                      description: result.message,
+                      variant: result.success ? 'default' : 'destructive',
+                    });
+                    
+                    if (result.success) {
+                      // Reload dopo 2 secondi per mostrare i risultati
+                      setTimeout(() => window.location.reload(), 2000);
+                    }
+                  } catch (error) {
+                    toast({
+                      title: 'Errore',
+                      description: 'Errore durante la pulizia forzata',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              >
+                🚨 Pulizia Forzata Sessioni Future
+              </Button>
             </div>
             <CourseScheduleManager
               schedule={course.course_schedules || []}

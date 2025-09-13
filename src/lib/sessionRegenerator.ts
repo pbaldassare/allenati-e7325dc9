@@ -4,10 +4,76 @@ export interface SessionRegenerationResult {
   deletedSessions: number;
   createdSessions: number;
   affectedBookings: number;
-  orphanSessionsDeleted: number;
+  deletedOrphanSessions: number;
   success: boolean;
   message: string;
   warnings: string[];
+}
+
+// Function to forcefully delete all future sessions for emergency cleanup
+export async function forceDeleteAllFutureSessions(courseId: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
+  console.log(`🚨 FORCE DELETE: Eliminazione forzata di tutte le sessioni future per corso ${courseId}`);
+  
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split('T')[0];
+
+    // Count sessions to be deleted
+    const { count: sessionsCount, error: countError } = await supabase
+      .from('course_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .gte('session_date', todayString);
+
+    if (countError) {
+      throw new Error(`Failed to count sessions: ${countError.message}`);
+    }
+
+    const sessionsToDelete = sessionsCount || 0;
+    console.log(`🗑️ FORCE DELETE: Eliminerò ${sessionsToDelete} sessioni future`);
+
+    // Force delete all future sessions
+    const { error: deleteError } = await supabase
+      .from('course_sessions')
+      .delete()
+      .eq('course_id', courseId)
+      .gte('session_date', todayString);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete sessions: ${deleteError.message}`);
+    }
+
+    // Verify deletion
+    const { count: remainingCount, error: verifyError } = await supabase
+      .from('course_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .gte('session_date', todayString);
+
+    if (verifyError) {
+      console.error('⚠️ Errore nella verifica eliminazione:', verifyError);
+    }
+
+    const remainingSessions = remainingCount || 0;
+    console.log(`✅ FORCE DELETE: Sessioni rimanenti dopo eliminazione: ${remainingSessions}`);
+
+    return {
+      success: remainingSessions === 0,
+      deletedCount: sessionsToDelete,
+      message: remainingSessions === 0 
+        ? `✅ Eliminate con successo ${sessionsToDelete} sessioni future`
+        : `⚠️ Eliminate ${sessionsToDelete} sessioni ma ne rimangono ancora ${remainingSessions}`
+    };
+
+  } catch (error) {
+    console.error('❌ FORCE DELETE fallito:', error);
+    return {
+      success: false,
+      deletedCount: 0,
+      message: `❌ Errore nell'eliminazione forzata: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+    };
+  }
 }
 
 /**
@@ -192,7 +258,7 @@ export async function regenerateCourseSessions(
       deletedSessions: sessionsToDelete || 0,
       createdSessions: generatedCount || 0,
       affectedBookings: bookingsCount,
-      orphanSessionsDeleted,
+      deletedOrphanSessions: orphanSessionsDeleted,
       success: true,
       message,
       warnings
@@ -204,7 +270,7 @@ export async function regenerateCourseSessions(
       deletedSessions: 0,
       createdSessions: 0,
       affectedBookings: 0,
-      orphanSessionsDeleted: 0,
+      deletedOrphanSessions: 0,
       success: false,
       message: `Errore nella rigenerazione delle sessioni: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
       warnings: []

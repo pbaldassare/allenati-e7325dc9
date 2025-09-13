@@ -106,8 +106,8 @@ const AdminCourseSchedules = () => {
         let description = result.message;
         
         // Aggiungi informazioni aggiuntive
-        if (result.orphanSessionsDeleted > 0) {
-          description += ` (${result.orphanSessionsDeleted} sessioni orfane eliminate)`;
+        if (result.deletedOrphanSessions > 0) {
+          description += ` (${result.deletedOrphanSessions} sessioni orfane eliminate)`;
         }
         if (result.affectedBookings > 0) {
           description += ` - ${result.affectedBookings} prenotazioni riassegnate`;
