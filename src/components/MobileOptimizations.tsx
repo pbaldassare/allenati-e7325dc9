@@ -8,8 +8,11 @@ interface MobileOptimizationsProps {
 export const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ children }) => {
   const isMobile = useIsMobile();
 
-  // Prevent zoom on input focus for iOS
+  // Detect Safari and add specific optimizations
   React.useEffect(() => {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    console.log('Browser detection:', { isSafari, userAgent: navigator.userAgent });
+    
     if (isMobile && 'ontouchstart' in window) {
       // Prevent double-tap zoom
       let lastTouchEnd = 0;
@@ -26,7 +29,7 @@ export const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ childr
         e.preventDefault();
       });
 
-      // Add safe area CSS variables for notched devices
+      // Add safe area CSS variables for notched devices and Safari fixes
       const safeAreaCSS = `
         :root {
           --safe-area-inset-top: env(safe-area-inset-top);
@@ -49,6 +52,26 @@ export const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ childr
         
         .safe-area-right {
           padding-right: max(1rem, env(safe-area-inset-right));
+        }
+        
+        /* Safari-specific fixes */
+        @supports (-webkit-backdrop-filter: blur(10px)) {
+          .backdrop-blur {
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+          }
+        }
+        
+        /* Prevent elastic scrolling on iOS Safari */
+        body {
+          overscroll-behavior: none;
+        }
+        
+        /* Fix for Safari viewport height issues */
+        @supports (-webkit-touch-callout: none) {
+          .min-h-screen {
+            min-height: -webkit-fill-available;
+          }
         }
       `;
       

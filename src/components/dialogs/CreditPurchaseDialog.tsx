@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { CreditCard, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface CreditPurchaseDialogProps {
   open: boolean;
@@ -26,9 +27,11 @@ export function CreditPurchaseDialog({
   coursePrice,
   creditsNeeded,
 }: CreditPurchaseDialogProps) {
+  const navigate = useNavigate();
+  
   const handleGoToSubscriptions = () => {
     onOpenChange(false);
-    window.location.href = '/subscriptions';
+    navigate('/subscriptions');
   };
 
   const formatPrice = (price?: number) => {
