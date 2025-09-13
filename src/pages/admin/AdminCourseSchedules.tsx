@@ -96,11 +96,24 @@ const AdminCourseSchedules = () => {
         if (error) throw error;
       }
 
+      // Rigenera automaticamente le sessioni future
+      const { regenerateCourseSessions } = await import('@/lib/sessionRegenerator');
+      const result = await regenerateCourseSessions(id);
+
       setSchedules(newSchedules);
-      toast({
-        title: 'Orari aggiornati',
-        description: 'Gli orari del corso sono stati aggiornati con successo'
-      });
+      
+      if (result.success) {
+        toast({
+          title: 'Orari e sessioni aggiornati',
+          description: `${result.message}. ${result.affectedBookings > 0 ? `${result.affectedBookings} prenotazioni mantenute.` : ''}`
+        });
+      } else {
+        toast({
+          title: 'Orari aggiornati',
+          description: 'Orari salvati ma errore nella rigenerazione delle sessioni: ' + result.message,
+          variant: 'destructive'
+        });
+      }
     } catch (error) {
       console.error('Error updating schedules:', error);
       toast({
@@ -151,11 +164,18 @@ const AdminCourseSchedules = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CourseScheduleManager
-            schedule={schedules}
-            onChange={handleScheduleChange}
-            gymRooms={gymRooms}
-          />
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg border border-border">
+              <p className="text-sm text-muted-foreground">
+                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future senza prenotazioni confermate verranno automaticamente rigenerate con i nuovi orari. Le sessioni con prenotazioni esistenti rimarranno invariate.
+              </p>
+            </div>
+            <CourseScheduleManager
+              schedule={schedules}
+              onChange={handleScheduleChange}
+              gymRooms={gymRooms}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

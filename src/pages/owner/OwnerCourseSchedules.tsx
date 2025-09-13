@@ -89,10 +89,10 @@ const OwnerCourseSchedules = () => {
       if (schedules.length > 0) {
         const schedulesToInsert = schedules.map(schedule => ({
           course_id: id,
-          day_of_week: schedule.day_of_week,
-          start_time: schedule.start_time,
+          day_of_week: schedule.dayOfWeek,
+          start_time: schedule.time,
           end_time: schedule.end_time,
-          room_id: schedule.room_id,
+          room_id: schedule.roomId,
           room_name: schedule.room_name,
         }));
 
@@ -103,10 +103,22 @@ const OwnerCourseSchedules = () => {
         if (error) throw error;
       }
 
-      toast({
-        title: 'Successo',
-        description: 'Orari corso aggiornati con successo',
-      });
+      // Rigenera automaticamente le sessioni future
+      const { regenerateCourseSessions } = await import('@/lib/sessionRegenerator');
+      const result = await regenerateCourseSessions(id);
+
+      if (result.success) {
+        toast({
+          title: 'Orari e sessioni aggiornati',
+          description: `${result.message}. ${result.affectedBookings > 0 ? `${result.affectedBookings} prenotazioni mantenute.` : ''}`
+        });
+      } else {
+        toast({
+          title: 'Orari aggiornati',
+          description: 'Orari salvati ma errore nella rigenerazione delle sessioni: ' + result.message,
+          variant: 'destructive'
+        });
+      }
     } catch (error) {
       console.error('Error updating schedules:', error);
       toast({
@@ -165,11 +177,18 @@ const OwnerCourseSchedules = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CourseScheduleManager
-            schedule={course.course_schedules || []}
-            onChange={handleScheduleChange}
-            gymRooms={gymRooms}
-          />
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg border border-border">
+              <p className="text-sm text-muted-foreground">
+                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future senza prenotazioni confermate verranno automaticamente rigenerate con i nuovi orari. Le sessioni con prenotazioni esistenti rimarranno invariate.
+              </p>
+            </div>
+            <CourseScheduleManager
+              schedule={course.course_schedules || []}
+              onChange={handleScheduleChange}
+              gymRooms={gymRooms}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
