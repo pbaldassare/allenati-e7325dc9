@@ -77,7 +77,7 @@ export async function smartUpdateCourseSchedules(
         _course_id: courseId,
         _duration_weeks: durationWeeks,
         _start_date: null,
-        _new_schedules: schedulesForRpc
+        _new_schedules: JSON.stringify(schedulesForRpc)
       });
 
     if (rpcError) {
