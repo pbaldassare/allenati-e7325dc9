@@ -50,14 +50,8 @@ export const useAuthRedirect = () => {
         const targetRoute = '/owner';
         console.log('AuthRedirect: Redirecting gym_owner to', targetRoute);
         navigate(targetRoute, { replace: true });
-      } else if (user?.role === 'instructor') {
-        // Super-istruttori vanno alla dashboard owner, istruttori normali su instructor
-        const hasOwnerPrivileges = user?.has_owner_privileges;
-        const targetRoute = hasOwnerPrivileges ? '/owner' : 
-          (isMobile ? '/instructor/schedule' : '/instructor');
-        console.log('AuthRedirect: Redirecting instructor to', targetRoute, { hasOwnerPrivileges, isMobile });
-        navigate(targetRoute, { replace: true });
       } else {
+        // Instructors and regular users go to home page
         navigate('/', { replace: true });
       }
       return;
@@ -74,16 +68,8 @@ export const useAuthRedirect = () => {
         console.log('AuthRedirect: Redirecting gym_owner from homepage to', targetRoute);
         navigate(targetRoute, { replace: true });
         return;
-      } else if (user?.role === 'instructor') {
-        // Super-istruttori vanno alla dashboard owner, istruttori normali su instructor
-        const hasOwnerPrivileges = user?.has_owner_privileges;
-        const targetRoute = hasOwnerPrivileges ? '/owner' : 
-          (isMobile ? '/instructor/schedule' : '/instructor');
-        console.log('AuthRedirect: Redirecting instructor from homepage to', targetRoute, { hasOwnerPrivileges, isMobile });
-        navigate(targetRoute, { replace: true });
-        return;
       }
-      // Gli utenti normali rimangono sulla homepage
+      // Instructors and regular users stay on homepage - no automatic redirect
     }
 
     // Se l'utente non è autenticato e non si trova su una pagina pubblica limitata

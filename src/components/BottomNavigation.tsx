@@ -20,19 +20,26 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
     : hasOwnerPrivileges
     ? [
         { id: "home", icon: Home, label: "Home" },
+        { id: "chat", icon: MessageSquare, label: "Chat" },
+        { id: "gyms", icon: Plus, label: "Palestre" },
+        { id: "ai-assistant", icon: Brain, label: "IA" },
         { id: "owner", icon: Settings, label: "Owner" }
+      ]
+    : isInstructor
+    ? [
+        { id: "home", icon: Home, label: "Home" },
+        { id: "chat", icon: MessageSquare, label: "Chat" },
+        { id: "gyms", icon: Plus, label: "Palestre" },
+        { id: "ai-assistant", icon: Brain, label: "IA" },
+        { id: "instructor", icon: Settings, label: "Istruttore" }
       ]
     : [
         { id: "home", icon: Home, label: "Home" },
         { id: "chat", icon: MessageSquare, label: "Chat" },
         { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
-        // Add gym join button for regular users only
-        ...(!isInstructor ? [{ id: "gyms", icon: Plus, label: "Palestre" }] : []),
-        // Add AI assistant for regular users only
-        ...(!isInstructor ? [{ id: "ai-assistant", icon: Brain, label: "IA" }] : []),
-        ...(isInstructor
-          ? [{ id: "instructor", icon: Settings, label: "Istruttore" }]
-          : [{ id: "profile", icon: User, label: "Profilo" }]),
+        { id: "gyms", icon: Plus, label: "Palestre" },
+        { id: "ai-assistant", icon: Brain, label: "IA" },
+        { id: "profile", icon: User, label: "Profilo" }
       ];
 
   return (
