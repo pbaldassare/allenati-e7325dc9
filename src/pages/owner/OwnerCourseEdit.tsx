@@ -434,7 +434,7 @@ const OwnerCourseEdit = () => {
             <CardContent>
               <CourseSessionManager
                 courseId={id}
-                startDate={course?.start_date ? new Date(course.start_date) : undefined}
+                startDate={course?.start_date ? new Date(course.start_date) : new Date()}
                 endDate={course?.end_date ? new Date(course.end_date) : undefined}
                 schedules={course?.schedules?.map(s => ({
                   day_of_week: s.day_of_week,
@@ -446,6 +446,22 @@ const OwnerCourseEdit = () => {
                 maxParticipants={course?.max_participants || 20}
                 onSessionsChange={handleSessionsChange}
                 initialSessions={sessions}
+                durationWeeks={course?.duration_weeks || 12}
+                onDurationWeeksChange={async (weeks) => {
+                  // Update course duration_weeks in database
+                  await supabase
+                    .from('courses')
+                    .update({ duration_weeks: weeks })
+                    .eq('id', id);
+                  
+                  // Update local state
+                  setCourse(prev => ({ ...prev, duration_weeks: weeks }));
+                  
+                  toast({
+                    title: "Durata aggiornata",
+                    description: `Corso impostato a ${weeks} settimane`,
+                  });
+                }}
               />
             </CardContent>
           </Card>

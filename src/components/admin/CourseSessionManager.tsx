@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { WeeksSelector } from '@/components/ui/weeks-selector';
 
 interface CourseSession {
   id?: string;
@@ -38,6 +39,8 @@ interface CourseSessionManagerProps {
   onSessionsChange: (sessions: CourseSession[]) => void;
   autoGenerate?: boolean;
   initialSessions?: CourseSession[];
+  durationWeeks?: number;
+  onDurationWeeksChange?: (weeks: number) => void;
 }
 
 const getDayName = (dayOfWeek: number): string => {
@@ -53,28 +56,35 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
   maxParticipants,
   onSessionsChange,
   autoGenerate = true,
-  initialSessions = []
+  initialSessions = [],
+  durationWeeks = 12,
+  onDurationWeeksChange
 }) => {
   const [sessions, setSessions] = useState<CourseSession[]>(initialSessions);
   const [generatedSessions, setGeneratedSessions] = useState<CourseSession[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [currentDurationWeeks, setCurrentDurationWeeks] = useState(durationWeeks);
 
-  // Generate sessions automatically based on schedules and date range
+  // Generate sessions automatically based on schedules and duration weeks
   const generateSessions = () => {
-    if (!startDate || !endDate || !schedules.length) {
+    if (!startDate || !schedules.length) {
       setGeneratedSessions([]);
       return;
     }
 
-    console.log('🔄 Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+    // Calculate end date based on duration weeks
+    const calculatedEndDate = addWeeks(startDate, currentDurationWeeks);
+
+    console.log('🔄 Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(calculatedEndDate, 'yyyy-MM-dd'));
     console.log('📋 Schedules:', schedules.length);
+    console.log('⏱️ Duration:', currentDurationWeeks, 'weeks');
 
     // Use Map to prevent duplicates more efficiently
     const sessionMap = new Map<string, CourseSession>();
     let currentDate = new Date(startDate);
 
-    while (currentDate <= endDate) {
+    while (currentDate <= calculatedEndDate) {
       schedules.forEach(schedule => {
         if (currentDate.getDay() === schedule.day_of_week) {
           const sessionDate = format(currentDate, 'yyyy-MM-dd');
@@ -102,6 +112,12 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
     console.log('✅ Generated', uniqueSessions.length, 'unique sessions');
     setGeneratedSessions(uniqueSessions);
     setShowPreview(true);
+  };
+
+  // Handle duration weeks change
+  const handleDurationWeeksChange = (weeks: number) => {
+    setCurrentDurationWeeks(weeks);
+    onDurationWeeksChange?.(weeks);
   };
 
   // Apply generated sessions
@@ -150,15 +166,19 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
 
   // Auto generate when dependencies change
   useEffect(() => {
-    if (autoGenerate && startDate && endDate && schedules.length > 0) {
+    if (autoGenerate && startDate && schedules.length > 0) {
       generateSessions();
     }
-  }, [startDate, endDate, schedules, maxParticipants, autoGenerate]);
+  }, [startDate, schedules, maxParticipants, autoGenerate, currentDurationWeeks]);
+
+  // Sync duration weeks with prop
+  useEffect(() => {
+    setCurrentDurationWeeks(durationWeeks);
+  }, [durationWeeks]);
 
   const sessionCount = sessions.length;
   const weeklySessionCount = schedules.length;
-  const totalWeeks = startDate && endDate ? 
-    Math.ceil((endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) : 0;
+  const calculatedEndDate = startDate ? addWeeks(startDate, currentDurationWeeks) : undefined;
 
   return (
     <div className="space-y-6">
@@ -174,27 +194,36 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {startDate && endDate && schedules.length > 0 && (
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">
-                  Periodo: {format(startDate, 'dd/MM/yyyy')} - {format(endDate, 'dd/MM/yyyy')}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {weeklySessionCount} sessioni settimanali × {totalWeeks} settimane = {weeklySessionCount * totalWeeks} sessioni totali
-                </p>
+          {/* Duration Selector */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <WeeksSelector
+              value={currentDurationWeeks}
+              onChange={handleDurationWeeksChange}
+              startDate={startDate}
+              disabled={saving}
+            />
+            {startDate && calculatedEndDate && schedules.length > 0 && (
+              <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium">
+                    {weeklySessionCount} sessioni/settimana × {currentDurationWeeks} settimane
+                  </p>
+                  <p className="text-lg font-bold text-primary">
+                    = {weeklySessionCount * currentDurationWeeks} sessioni totali
+                  </p>
+                  <Button onClick={generateSessions} variant="outline" size="sm" className="mt-2">
+                    Genera Sessioni
+                  </Button>
+                </div>
               </div>
-              <Button onClick={generateSessions} variant="outline">
-                Genera Sessioni
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {!startDate || !endDate ? (
+          {!startDate ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Imposta le date di inizio e fine del corso per generare le sessioni automaticamente.
+                Imposta la data di inizio del corso per generare le sessioni automaticamente.
               </AlertDescription>
             </Alert>
           ) : !schedules.length ? (
