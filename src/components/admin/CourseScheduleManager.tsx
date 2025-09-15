@@ -173,39 +173,39 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                   </div>
                 </div>
 
-                 <div>
-                   <label className="text-sm font-medium">Sala <span className="text-destructive">*</span></label>
-                   <Select
-                     value={item.roomId}
-                     onValueChange={(value) => 
-                       updateScheduleItem(index, 'roomId', value)
-                     }
-                   >
-                     <SelectTrigger className={!item.roomId ? 'border-destructive' : ''}>
-                       <SelectValue placeholder="Seleziona sala">
-                         {item.roomId && (
-                           <div className="flex items-center">
-                             <MapPin className="mr-2 h-4 w-4" />
-                             {getRoomName(item.roomId)}
-                           </div>
-                         )}
-                       </SelectValue>
-                     </SelectTrigger>
-                     <SelectContent>
-                       {gymRooms.map(room => (
-                         <SelectItem key={room.id} value={room.id}>
-                           <div className="flex items-center">
-                             <MapPin className="mr-2 h-4 w-4" />
-                             {room.name}
-                           </div>
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                   {!item.roomId && (
-                     <p className="text-xs text-destructive mt-1">Sala obbligatoria</p>
-                   )}
-                 </div>
+                <div>
+                  <label className="text-sm font-medium">Sala <span className="text-destructive">*</span></label>
+                  <Select
+                    value={item.roomId}
+                    onValueChange={(value) => 
+                      updateScheduleItem(index, 'roomId', value)
+                    }
+                  >
+                    <SelectTrigger className={!item.roomId ? 'border-destructive' : ''}>
+                      <SelectValue placeholder="Seleziona sala">
+                        {item.roomId && (
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4" />
+                            {getRoomName(item.roomId)}
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gymRooms.map(room => (
+                        <SelectItem key={room.id} value={room.id}>
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4" />
+                            {room.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!item.roomId && (
+                    <p className="text-xs text-destructive mt-1">Sala obbligatoria</p>
+                  )}
+                </div>
 
                 <div>
                   <Button
