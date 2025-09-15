@@ -144,7 +144,12 @@ export async function smartUpdateCourseSchedules(
 
       if (insertSchedulesError) {
         console.error('❌ Error inserting new course schedules:', insertSchedulesError);
-        throw insertSchedulesError;
+        // Enhanced RLS error handling
+        if (insertSchedulesError.message?.includes('row-level security')) {
+          console.error('🔒 RLS Error - Check user permissions and authentication');
+          throw new Error('Permission denied: Cannot update course schedules. Please check your access rights.');
+        }
+        throw new Error(`Failed to insert new schedules: ${insertSchedulesError.message}`);
       }
 
       console.log(`✅ Inserted ${schedulesToInsert.length} new course schedules`);
@@ -162,6 +167,11 @@ export async function smartUpdateCourseSchedules(
 
     if (rpcError) {
       console.error('❌ Error calling smart_generate_sessions_with_weeks:', rpcError);
+      // Enhanced RLS error handling for RPC
+      if (rpcError.message?.includes('row-level security')) {
+        console.error('🔒 RLS Error in RPC - Function should now bypass RLS with SECURITY DEFINER');
+        throw new Error('Database permission error: RPC function failed to access course schedules. This should be resolved with the latest fix.');
+      }
       throw new Error(`RPC function failed: ${rpcError.message}`);
     }
 
