@@ -49,7 +49,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       roomId: '',
       day: 'Lunedì'
     };
-    const newSchedule = [...scheduleItems, newItem];
+    const newSchedule = [newItem, ...scheduleItems];
     setScheduleItems(newSchedule);
     onChange(newSchedule);
   };
