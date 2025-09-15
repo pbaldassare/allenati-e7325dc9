@@ -81,7 +81,19 @@ export async function smartUpdateCourseSchedules(
         .insert(schedulesToInsert);
     }
 
-    // 2. Use the new smart generation function for comprehensive session management
+    // 2. Delete existing future sessions first to avoid duplicates
+    const { error: deleteError } = await supabase
+      .from('course_sessions')
+      .delete()
+      .eq('course_id', courseId)
+      .gte('session_date', new Date().toISOString().split('T')[0]);
+
+    if (deleteError) {
+      console.error('Error deleting existing sessions:', deleteError);
+      // Continue anyway, the RPC function will handle duplicates
+    }
+
+    // 3. Use the new smart generation function for comprehensive session management
     const { data: result, error } = await supabase.rpc('smart_generate_sessions_with_weeks', {
       _course_id: courseId,
       _duration_weeks: durationWeeks

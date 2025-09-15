@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Clock, MapPin } from 'lucide-react';
 import type { ScheduleItem, GymRoom } from '@/types/schedule';
+import { DeleteScheduleConfirmDialog } from '@/components/dialogs/DeleteScheduleConfirmDialog';
 
 interface CourseScheduleManagerProps {
   schedule: ScheduleItem[];
@@ -31,6 +32,14 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(
     schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }]
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState<{
+    index: number;
+    day: string;
+    time: string;
+    end_time: string;
+    roomName?: string;
+  } | null>(null);
 
   const addScheduleItem = () => {
     const newItem: ScheduleItem = {
@@ -45,11 +54,28 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
     onChange(newSchedule);
   };
 
-  const removeScheduleItem = (index: number) => {
+  const confirmRemoveScheduleItem = (index: number) => {
     if (scheduleItems.length > 1) {
-      const newSchedule = scheduleItems.filter((_, i) => i !== index);
+      const item = scheduleItems[index];
+      const roomName = getRoomName(item.roomId);
+      setScheduleToDelete({
+        index,
+        day: item.day || '',
+        time: item.time,
+        end_time: item.end_time,
+        roomName: roomName !== 'Sala non selezionata' ? roomName : undefined
+      });
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const removeScheduleItem = () => {
+    if (scheduleToDelete && scheduleItems.length > 1) {
+      const newSchedule = scheduleItems.filter((_, i) => i !== scheduleToDelete.index);
       setScheduleItems(newSchedule);
       onChange(newSchedule);
+      setDeleteDialogOpen(false);
+      setScheduleToDelete(null);
     }
   };
 
@@ -181,7 +207,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => removeScheduleItem(index)}
+                    onClick={() => confirmRemoveScheduleItem(index)}
                     disabled={scheduleItems.length === 1}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -219,6 +245,13 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
           )}
         </CardContent>
       </Card>
+
+      <DeleteScheduleConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={removeScheduleItem}
+        scheduleToDelete={scheduleToDelete}
+      />
     </div>
   );
 };
