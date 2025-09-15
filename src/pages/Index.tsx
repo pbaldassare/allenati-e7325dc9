@@ -19,7 +19,7 @@ import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
-import { AuthDebug } from "@/components/AuthDebug";
+
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -138,7 +138,6 @@ const Index = () => {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
-        <AuthDebug />
         {renderActiveTab()}
         <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
         

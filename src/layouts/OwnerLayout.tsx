@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { OwnerSidebar } from '@/components/owner/OwnerSidebar';
 import { HowItWorksModal } from '@/components/modals/HowItWorksModal';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, LogOut } from 'lucide-react';
+import { HelpCircle, LogOut, Home } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,6 +17,7 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isMobile = useIsMobile();
   const { hasOwnerPrivileges, isInstructor, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Determina il titolo in base al tipo di utente
   const isSuperInstructor = isInstructor && hasOwnerPrivileges;
@@ -77,6 +78,15 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                         <OwnerGymSelector />
                       </div>
                     )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => navigate('/')}
+                    >
+                      <Home className="w-4 h-4" />
+                      {!isMobile && "Vista Utente"}
+                    </Button>
                     {isMobile && (
                       <Button 
                         variant="ghost" 

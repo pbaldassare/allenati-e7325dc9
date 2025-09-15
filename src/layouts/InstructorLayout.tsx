@@ -5,13 +5,15 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/compon
 import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
 
 import { Button } from '@/components/ui/button';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const isMobile = useIsMobile();
   const { hasOwnerPrivileges } = useAuth();
+  const navigate = useNavigate();
 
   const title = hasOwnerPrivileges ? 'Area Super Istruttore' : 'Area Istruttore';
   const mobileTitle = hasOwnerPrivileges ? 'Super Istruttore' : 'Istruttore';
@@ -40,16 +42,27 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
                     {isMobile ? mobileTitle : title}
                   </h1>
                 </div>
-                {!isMobile && (
+                <div className="flex items-center gap-2">
                   <Button 
                     variant="ghost" 
                     size="sm"
                     className="flex items-center gap-2"
+                    onClick={() => navigate('/')}
                   >
-                    <HelpCircle className="w-4 h-4" />
-                    Guida
+                    <Home className="w-4 h-4" />
+                    {!isMobile && "Vista Utente"}
                   </Button>
-                )}
+                  {!isMobile && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Guida
+                    </Button>
+                  )}
+                </div>
               </div>
             </header>
 
