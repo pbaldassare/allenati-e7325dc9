@@ -17,6 +17,7 @@ import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploa
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDetailsModal from '@/components/owner/UserDetailsModal';
+import { ManualCreditAssignmentDialog } from '@/components/owner/ManualCreditAssignmentDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface MemberProfile {
@@ -63,6 +64,10 @@ const OwnerUsers = () => {
   // User details modal state
   const [userDetailsModalOpen, setUserDetailsModalOpen] = useState(false);
   const [selectedUserForDetails, setSelectedUserForDetails] = useState<string | null>(null);
+  
+  // Credit assignment dialog state
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const [selectedUserForCredits, setSelectedUserForCredits] = useState<MemberProfile | null>(null);
 
   useEffect(() => {
     document.title = 'Utenti Palestra | Gym Manager';
@@ -891,9 +896,24 @@ const OwnerUsers = () => {
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                              <Button variant="ghost" size="sm" className="h-6 px-2">
-                                <Plus className="h-3 w-3" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2"
+                                     onClick={() => {
+                                       setSelectedUserForCredits(m);
+                                       setCreditDialogOpen(true);
+                                     }}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Aggiungi crediti</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1029,6 +1049,22 @@ const OwnerUsers = () => {
         }}
         userId={selectedUserForDetails}
       />
+
+      {/* Manual Credit Assignment Dialog */}
+      {selectedUserForCredits && selectedGym && (
+        <ManualCreditAssignmentDialog
+          open={creditDialogOpen}
+          onOpenChange={setCreditDialogOpen}
+          userId={selectedUserForCredits.user_id}
+          userName={`${selectedUserForCredits.first_name} ${selectedUserForCredits.last_name}`}
+          gymId={selectedGym.id}
+          onSuccess={() => {
+            loadMembers();
+            setCreditDialogOpen(false);
+            setSelectedUserForCredits(null);
+          }}
+        />
+      )}
     </div>
   );
 };
