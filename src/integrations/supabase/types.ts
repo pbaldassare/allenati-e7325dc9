@@ -2105,6 +2105,7 @@ export type Database = {
         Args: {
           _course_id: string
           _duration_weeks?: number
+          _new_schedules?: Json
           _start_date?: string
         }
         Returns: {

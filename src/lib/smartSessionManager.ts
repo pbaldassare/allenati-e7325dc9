@@ -53,184 +53,62 @@ export async function smartUpdateCourseSchedules(
   currentSchedules: any[],
   durationWeeks: number = 12
 ): Promise<ScheduleComparison> {
-  const comparison = compareSchedules(currentSchedules, newSchedules);
-  
-  let deletedSessionsCount = 0;
-  let createdSessionsCount = 0;
-  let affectedBookings = 0;
-
-  console.log('🔄 Starting smart schedule update for course:', courseId);
-  console.log('📅 Current schedules count:', currentSchedules.length);
-  console.log('📅 New schedules count:', newSchedules.length);
-  console.log('⏱️ Duration weeks:', durationWeeks);
-
   try {
-    // 1. CRITICAL: Delete ALL existing future sessions FIRST with verification
-    console.log('🗑️ Step 1: Deleting all future sessions...');
-    const todayDate = new Date().toISOString().split('T')[0];
+    console.log(`🔄 Starting smart schedule update for course ${courseId} with ${newSchedules.length} schedules`);
     
-    // First, count how many sessions we're about to delete
-    const { count: existingSessionsCount, error: countError } = await supabase
-      .from('course_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('course_id', courseId)
-      .gte('session_date', todayDate);
+    // Compare schedules to understand changes
+    const comparison = compareSchedules(currentSchedules, newSchedules);
+    console.log('📊 Schedule comparison result:', comparison);
+    
+    // Prepare schedules for RPC function - convert to the format expected by the function
+    const schedulesForRpc = newSchedules.map(schedule => ({
+      day_of_week: schedule.dayOfWeek,
+      start_time: schedule.time,
+      end_time: schedule.end_time,
+      room_id: schedule.roomId,
+      room_name: schedule.room_name
+    }));
 
-    if (countError) {
-      console.error('❌ Error counting existing sessions:', countError);
-      throw countError;
-    }
+    console.log('📋 Schedules prepared for RPC:', schedulesForRpc);
 
-    console.log(`📊 Found ${existingSessionsCount} existing future sessions to delete`);
-
-    // Delete all future sessions with proper error handling
-    const { error: deleteError, count: deletedCount } = await supabase
-      .from('course_sessions')
-      .delete({ count: 'exact' })
-      .eq('course_id', courseId)
-      .gte('session_date', todayDate);
-
-    if (deleteError) {
-      console.error('❌ CRITICAL: Failed to delete existing sessions:', deleteError);
-      throw new Error(`Failed to delete existing sessions: ${deleteError.message}`);
-    }
-
-    console.log(`✅ Successfully deleted ${deletedCount} future sessions`);
-
-    // Verify deletion was successful
-    const { count: remainingSessions, error: verifyError } = await supabase
-      .from('course_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('course_id', courseId)
-      .gte('session_date', todayDate);
-
-    if (verifyError) {
-      console.error('❌ Error verifying deletion:', verifyError);
-      throw verifyError;
-    }
-
-    if (remainingSessions && remainingSessions > 0) {
-      console.error('❌ CRITICAL: Some sessions were not deleted. Remaining:', remainingSessions);
-      throw new Error(`Failed to delete all sessions. ${remainingSessions} sessions remaining.`);
-    }
-
-    console.log('✅ Verified: All future sessions deleted successfully');
-
-    // 2. Update course schedules table
-    console.log('📝 Step 2: Updating course schedules...');
-    const { error: deleteSchedulesError } = await supabase
-      .from('course_schedules')
-      .delete()
-      .eq('course_id', courseId);
-
-    if (deleteSchedulesError) {
-      console.error('❌ Error deleting course schedules:', deleteSchedulesError);
-      throw deleteSchedulesError;
-    }
-
-    if (newSchedules.length > 0) {
-      const schedulesToInsert = newSchedules.map(schedule => ({
-        course_id: courseId,
-        day_of_week: schedule.dayOfWeek,
-        start_time: schedule.time,
-        end_time: schedule.end_time,
-        room_id: schedule.roomId,
-        room_name: schedule.room_name,
-      }));
-
-      const { error: insertSchedulesError } = await supabase
-        .from('course_schedules')
-        .insert(schedulesToInsert);
-
-      if (insertSchedulesError) {
-        console.error('❌ Error inserting new course schedules:', insertSchedulesError);
-        // Enhanced RLS error handling
-        if (insertSchedulesError.message?.includes('row-level security')) {
-          console.error('🔒 RLS Error - Check user permissions and authentication');
-          throw new Error('Permission denied: Cannot update course schedules. Please check your access rights.');
-        }
-        throw new Error(`Failed to insert new schedules: ${insertSchedulesError.message}`);
-      }
-
-      console.log(`✅ Inserted ${schedulesToInsert.length} new course schedules`);
-    }
-
-    // 3. Wait a brief moment to ensure database consistency
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // 4. Generate new sessions with the improved RPC function
-    console.log('🔧 Step 3: Generating new sessions with RPC...');
-    const { data: result, error: rpcError } = await supabase.rpc('smart_generate_sessions_with_weeks', {
-      _course_id: courseId,
-      _duration_weeks: durationWeeks
-    });
+    // Call the RPC function with new schedules - this handles everything internally
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('smart_generate_sessions_with_weeks', {
+        _course_id: courseId,
+        _duration_weeks: durationWeeks,
+        _start_date: null,
+        _new_schedules: schedulesForRpc
+      });
 
     if (rpcError) {
-      console.error('❌ Error calling smart_generate_sessions_with_weeks:', rpcError);
-      // Enhanced RLS error handling for RPC
-      if (rpcError.message?.includes('row-level security')) {
-        console.error('🔒 RLS Error in RPC - Function should now bypass RLS with SECURITY DEFINER');
-        throw new Error('Database permission error: RPC function failed to access course schedules. This should be resolved with the latest fix.');
-      }
-      throw new Error(`RPC function failed: ${rpcError.message}`);
-    }
-
-    if (result && result.length > 0) {
-      const firstResult = result[0];
-      deletedSessionsCount = firstResult.sessions_deleted || 0;
-      createdSessionsCount = firstResult.sessions_created || 0;
-      affectedBookings = firstResult.affected_bookings || 0;
+      console.error('❌ RPC function error:', rpcError);
       
-      console.log('✅ Smart session generation result:', firstResult);
-      console.log(`📊 Summary: ${deletedCount} deleted manually + ${deletedSessionsCount} by RPC, ${createdSessionsCount} created, ${affectedBookings} bookings affected`);
+      // Enhanced error handling for RPC calls
+      if (rpcError.message?.toLowerCase().includes('policy')) {
+        throw new Error('Errore di sicurezza nella generazione delle sessioni. Contatta l\'amministratore.');
+      } else if (rpcError.message?.toLowerCase().includes('permission denied')) {
+        throw new Error('Permesso negato durante la generazione delle sessioni.');
+      }
+      
+      throw new Error(`Errore nella generazione delle sessioni: ${rpcError.message}`);
     }
 
+    console.log('✅ RPC function completed successfully:', rpcResult);
+
+    const result = rpcResult?.[0];
+    
+    // Return detailed comparison with RPC results
     return {
       removed: comparison.removed,
       added: comparison.added,
       unchanged: comparison.unchanged,
-      deletedSessionsCount: deletedCount || 0,
-      createdSessionsCount,
-      affectedBookings
+      deletedSessionsCount: result?.sessions_deleted || 0,
+      createdSessionsCount: result?.sessions_created || 0,
+      affectedBookings: result?.affected_bookings || 0
     };
 
   } catch (error) {
-    console.error('❌ FATAL ERROR in smart schedule update:', error);
-    console.error('🔧 Error details:', {
-      courseId,
-      newSchedulesCount: newSchedules.length,
-      currentSchedulesCount: currentSchedules.length,
-      durationWeeks,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error'
-    });
-    
-    // Enhanced error handling for specific cases
-    if (error instanceof Error) {
-      if (error.message.includes('row-level security policy')) {
-        console.error('🔒 RLS Policy Error detected in smartUpdateCourseSchedules:', {
-          error: error.message,
-          context: 'This should be resolved with the updated RPC function that has SET search_path = public'
-        });
-        throw new Error(`Security policy error: The database function has been updated to fix this. If this error persists, please contact support. Original error: ${error.message}`);
-      }
-      
-      if (error.message.includes('duplicate key value')) {
-        console.error('🔄 Duplicate key error detected:', {
-          error: error.message,
-          context: 'Session duplication despite conflict handling - may need retry'
-        });
-        throw new Error(`Duplicate session error: ${error.message}. This has been addressed with improved conflict handling. Please try again.`);
-      }
-      
-      if (error.message.includes('permission denied') || error.message.includes('insufficient privilege')) {
-        console.error('🚫 Permission error detected:', {
-          error: error.message,
-          context: 'User may lack proper permissions for this operation'
-        });
-        throw new Error(`Permission denied: You don't have sufficient permissions to update course schedules. Please check your role and permissions.`);
-      }
-    }
-    
+    console.error('💥 Fatal error in smartUpdateCourseSchedules:', error);
     throw error;
   }
 }
