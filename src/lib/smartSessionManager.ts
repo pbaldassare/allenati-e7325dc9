@@ -203,6 +203,34 @@ export async function smartUpdateCourseSchedules(
       durationWeeks,
       errorMessage: error instanceof Error ? error.message : 'Unknown error'
     });
+    
+    // Enhanced error handling for specific cases
+    if (error instanceof Error) {
+      if (error.message.includes('row-level security policy')) {
+        console.error('🔒 RLS Policy Error detected in smartUpdateCourseSchedules:', {
+          error: error.message,
+          context: 'This should be resolved with the updated RPC function that has SET search_path = public'
+        });
+        throw new Error(`Security policy error: The database function has been updated to fix this. If this error persists, please contact support. Original error: ${error.message}`);
+      }
+      
+      if (error.message.includes('duplicate key value')) {
+        console.error('🔄 Duplicate key error detected:', {
+          error: error.message,
+          context: 'Session duplication despite conflict handling - may need retry'
+        });
+        throw new Error(`Duplicate session error: ${error.message}. This has been addressed with improved conflict handling. Please try again.`);
+      }
+      
+      if (error.message.includes('permission denied') || error.message.includes('insufficient privilege')) {
+        console.error('🚫 Permission error detected:', {
+          error: error.message,
+          context: 'User may lack proper permissions for this operation'
+        });
+        throw new Error(`Permission denied: You don't have sufficient permissions to update course schedules. Please check your role and permissions.`);
+      }
+    }
+    
     throw error;
   }
 }
