@@ -110,6 +110,33 @@ const OwnerCourseSchedules = () => {
     }
   };
 
+  const handleDurationWeeksChange = async (weeks: number) => {
+    setDurationWeeks(weeks);
+    if (!id) return;
+
+    try {
+      // Update course duration_weeks in database
+      const { error } = await supabase
+        .from('courses')
+        .update({ duration_weeks: weeks })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Durata corso aggiornata',
+        description: `Il corso ora ha una durata di ${weeks} settimane`,
+      });
+    } catch (error) {
+      console.error('Error updating course duration:', error);
+      toast({
+        title: 'Errore',
+        description: 'Errore nell\'aggiornamento della durata',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -158,18 +185,21 @@ const OwnerCourseSchedules = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="bg-muted/50 p-4 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground">
-                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future verranno intelligentemente aggiornate. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
+                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future verranno automaticamente rigenterate per il periodo specificato. Le prenotazioni esistenti saranno riassegnate quando possibile.
               </p>
             </div>
+
+            <div className="border rounded-lg p-4 bg-card">
+              <WeeksSelector
+                value={durationWeeks}
+                onChange={handleDurationWeeksChange}
+                startDate={course?.start_date ? new Date(course.start_date) : new Date()}
+              />
+            </div>
             
-            <WeeksSelector
-              value={durationWeeks}
-              onChange={setDurationWeeks}
-              startDate={course.start_date ? new Date(course.start_date) : new Date()}
-            />
             <CourseScheduleManager
               schedule={course.course_schedules || []}
               onChange={handleScheduleChange}
