@@ -92,7 +92,15 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       return item;
     });
     setScheduleItems(newSchedule);
-    onChange(newSchedule);
+    
+    // Verifica che tutti gli orari abbiano una sala prima di chiamare onChange
+    const hasIncompleteSchedules = newSchedule.some(item => 
+      item.dayOfWeek && item.time && item.end_time && !item.roomId
+    );
+    
+    if (!hasIncompleteSchedules) {
+      onChange(newSchedule);
+    }
   };
 
   const hasInvalidSchedules = scheduleItems.some(item => !item.roomId || item.roomId === '');

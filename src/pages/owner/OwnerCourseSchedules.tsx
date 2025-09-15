@@ -102,9 +102,10 @@ const OwnerCourseSchedules = () => {
       });
     } catch (error) {
       console.error('Error updating schedules:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore nell\'aggiornamento degli orari';
       toast({
         title: 'Errore',
-        description: 'Errore nell\'aggiornamento degli orari',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
