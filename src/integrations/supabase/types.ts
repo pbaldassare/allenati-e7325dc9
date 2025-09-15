@@ -2101,6 +2101,14 @@ export type Database = {
         Args: { bio?: string; target_user_id: string }
         Returns: string
       }
+      smart_generate_sessions_with_weeks: {
+        Args: {
+          _course_id: string
+          _duration_weeks?: number
+          _start_date?: string
+        }
+        Returns: Json
+      }
       toggle_session_visibility: {
         Args: { _new_status: string; _session_id: string }
         Returns: boolean

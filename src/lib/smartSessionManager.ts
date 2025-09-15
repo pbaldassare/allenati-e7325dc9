@@ -45,12 +45,13 @@ export function compareSchedules(oldSchedules: any[], newSchedules: any[]): {
 }
 
 /**
- * Smart schedule update that only affects sessions for changed schedules
+ * Smart schedule update with intelligent session management
  */
 export async function smartUpdateCourseSchedules(
   courseId: string, 
   newSchedules: any[],
-  currentSchedules: any[]
+  currentSchedules: any[],
+  durationWeeks: number = 12
 ): Promise<ScheduleComparison> {
   const comparison = compareSchedules(currentSchedules, newSchedules);
   
@@ -59,43 +60,7 @@ export async function smartUpdateCourseSchedules(
   let affectedBookings = 0;
 
   try {
-    // 1. Delete sessions for removed schedules
-    if (comparison.removed.length > 0) {
-      for (const removedSchedule of comparison.removed) {
-        // Count affected bookings before deletion
-        const { data: bookingsToCount } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('course_id', courseId)
-          .eq('status', 'confirmed')
-          .gte('scheduled_date', new Date().toISOString().split('T')[0])
-          .in('session_id', 
-            (await supabase
-              .from('course_sessions')
-              .select('id')
-              .eq('course_id', courseId)
-              .eq('session_date', removedSchedule.session_date)
-              .eq('start_time', removedSchedule.start_time)
-              .gte('session_date', new Date().toISOString().split('T')[0])
-            ).data?.map(s => s.id) || []
-          );
-        
-        affectedBookings += bookingsToCount?.length || 0;
-
-        // Delete future sessions for this specific schedule
-        const { data: deletedSessions } = await supabase
-          .from('course_sessions')
-          .delete()
-          .eq('course_id', courseId)
-          .eq('start_time', removedSchedule.start_time)
-          .gte('session_date', new Date().toISOString().split('T')[0])
-          .select('id');
-        
-        deletedSessionsCount += deletedSessions?.length || 0;
-      }
-    }
-
-    // 2. Update course schedules table
+    // 1. Update course schedules table first
     await supabase
       .from('course_schedules')
       .delete()
@@ -116,14 +81,23 @@ export async function smartUpdateCourseSchedules(
         .insert(schedulesToInsert);
     }
 
-    // 3. Generate sessions only for new schedules
-    if (comparison.added.length > 0) {
-      const { regenerateCourseSessions } = await import('@/lib/sessionRegenerator');
-      const result = await regenerateCourseSessions(courseId);
+    // 2. Use the new smart generation function for comprehensive session management
+    const { data: result, error } = await supabase.rpc('smart_generate_sessions_with_weeks', {
+      _course_id: courseId,
+      _duration_weeks: durationWeeks
+    });
+
+    if (error) {
+      console.error('Error calling smart_generate_sessions_with_weeks:', error);
+      throw error;
+    }
+
+    if (result && typeof result === 'object') {
+      deletedSessionsCount = (result as any).sessions_deleted || 0;
+      createdSessionsCount = (result as any).sessions_created || 0;
+      affectedBookings = (result as any).affected_bookings || 0;
       
-      if (result.success) {
-        createdSessionsCount = result.createdSessions || 0;
-      }
+      console.log('✅ Smart session generation result:', result);
     }
 
     return {
