@@ -5,13 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Calendar, Clock, Ban, Trash2 } from 'lucide-react';
+import { ArrowLeft, Settings, Calendar, Clock, Ban } from 'lucide-react';
 import { SupabaseCourse } from '@/types/course';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
 import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
 import { useToast } from '@/hooks/use-toast';
-import { forceDeleteAllFutureSessions } from '@/lib/sessionRegenerator';
+import { WeeksSelector } from '@/components/ui/weeks-selector';
 
 const OwnerCourseEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +23,7 @@ const OwnerCourseEdit = () => {
   const [gymRooms, setGymRooms] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [exceptions, setExceptions] = useState<any[]>([]);
-  const [isForceDeleting, setIsForceDeleting] = useState(false);
+  const [durationWeeks, setDurationWeeks] = useState(12);
 
   const handleBack = () => {
     // Smart navigation for owner pages
@@ -125,6 +125,7 @@ const OwnerCourseEdit = () => {
           start_date: new Date(exc.start_date),
           end_date: new Date(exc.end_date)
         })));
+        setDurationWeeks(mappedCourse.duration_weeks || 12);
         
       } catch (err) {
         console.error('Error loading course:', err);
@@ -183,7 +184,7 @@ const OwnerCourseEdit = () => {
         room_name: gymRooms.find(r => r.id === schedule.roomId)?.name
       }));
 
-      const comparison = await smartUpdateCourseSchedules(id, formattedNewSchedules, currentSchedules || []);
+      const comparison = await smartUpdateCourseSchedules(id, formattedNewSchedules, currentSchedules || [], durationWeeks);
       
       const summary = getScheduleChangeSummary(comparison);
       
@@ -197,6 +198,34 @@ const OwnerCourseEdit = () => {
       toast({
         title: "Errore",
         description: "Errore nell'aggiornamento degli orari",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle duration weeks change
+  const handleDurationWeeksChange = async (weeks: number) => {
+    setDurationWeeks(weeks);
+    
+    try {
+      // Update course duration_weeks in database
+      await supabase
+        .from('courses')
+        .update({ duration_weeks: weeks })
+        .eq('id', id);
+      
+      // Update local state
+      setCourse(prev => ({ ...prev, duration_weeks: weeks }));
+      
+      toast({
+        title: "Durata aggiornata",
+        description: `Corso impostato a ${weeks} settimane`,
+      });
+    } catch (error) {
+      console.error('Error updating duration weeks:', error);
+      toast({
+        title: "Errore",
+        description: "Errore nell'aggiornamento della durata",
         variant: "destructive",
       });
     }
@@ -287,46 +316,6 @@ const OwnerCourseEdit = () => {
     }
   };
 
-  // Force delete all future sessions
-  const handleForceDeleteAllSessions = async () => {
-    if (!id) return;
-    
-    setIsForceDeleting(true);
-    try {
-      const result = await forceDeleteAllFutureSessions(id);
-      
-      if (result.success) {
-        toast({
-          title: "Sessioni eliminate",
-          description: result.message,
-        });
-        
-        // Refresh sessions data
-        const { data: newSessions } = await supabase
-          .from('course_sessions')
-          .select('*')
-          .eq('course_id', id)
-          .order('session_date', { ascending: true });
-        
-        setSessions(newSessions || []);
-      } else {
-        toast({
-          title: "Errore",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error force deleting sessions:', error);
-      toast({
-        title: "Errore",
-        description: "Errore durante l'eliminazione delle sessioni",
-        variant: "destructive",
-      });
-    } finally {
-      setIsForceDeleting(false);
-    }
-  };
 
   // Helper function to add hours to time
   const addHoursToTime = (time: string, minutes: number) => {
@@ -393,19 +382,14 @@ const OwnerCourseEdit = () => {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Orari Settimanali</span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleForceDeleteAllSessions}
-                  disabled={isForceDeleting}
-                  className="ml-4"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isForceDeleting ? "Eliminando..." : "🚨 Pulizia Forzata Sessioni Future"}
-                </Button>
+                <WeeksSelector
+                  value={durationWeeks}
+                  onChange={handleDurationWeeksChange}
+                  className="w-auto"
+                />
               </CardTitle>
               <CardDescription>
-                Configura gli orari ricorrenti del corso. Usa il bottone di pulizia forzata per eliminare tutte le sessioni future se necessario.
+                Configura gli orari ricorrenti del corso. Il sistema gestisce automaticamente le sessioni future in modo intelligente.
               </CardDescription>
             </CardHeader>
             <CardContent>
