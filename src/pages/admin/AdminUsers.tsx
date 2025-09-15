@@ -8,6 +8,7 @@ import { Edit, Download, Calendar, Mail, MapPin } from 'lucide-react';
 import RoleAssignmentDialog from '@/components/admin/RoleAssignmentDialog';
 import { AdminUserStats } from '@/components/admin/AdminUserStats';
 import { AdminUserFilters, UserFilters } from '@/components/admin/AdminUserFilters';
+import { AssignWelcomeCreditsButton } from '@/components/admin/AssignWelcomeCreditsButton';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -249,10 +250,13 @@ const AdminUsers = () => {
               Visualizza e gestisci gli utenti del sistema
             </p>
           </div>
-          <Button onClick={exportToCSV} disabled={filteredUsers.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Esporta CSV ({filteredUsers.length})
-          </Button>
+          <div className="flex gap-2">
+            <AssignWelcomeCreditsButton />
+            <Button onClick={exportToCSV} disabled={filteredUsers.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Esporta CSV ({filteredUsers.length})
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Dashboard */}

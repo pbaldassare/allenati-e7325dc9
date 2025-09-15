@@ -202,6 +202,51 @@ serve(async (req) => {
       }
     }
 
+    // Assign welcome credit if user doesn't have it
+    if (!userExists) {
+      // For new users, the handle_new_user trigger will assign the credit
+      console.log('New user - welcome credit will be assigned by trigger');
+    } else {
+      // For existing users, check if they have a welcome bonus transaction
+      const { data: existingWelcomeCredit } = await supabaseAdmin
+        .from('credits_transactions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('transaction_type', 'welcome_bonus')
+        .limit(1);
+
+      if (!existingWelcomeCredit || existingWelcomeCredit.length === 0) {
+        // Get current credits
+        const { data: profileData } = await supabaseAdmin
+          .from('profiles')
+          .select('current_credits')
+          .eq('user_id', userId)
+          .single();
+
+        const currentCredits = profileData?.current_credits || 0;
+        const newBalance = currentCredits + 1;
+
+        // Create welcome credit transaction
+        const { error: creditError } = await supabaseAdmin
+          .from('credits_transactions')
+          .insert({
+            user_id: userId,
+            amount: 1,
+            balance_after: newBalance,
+            transaction_type: 'welcome_bonus',
+            description: 'Credito di benvenuto per gym owner'
+          });
+
+        if (creditError) {
+          console.error('Error creating welcome credit:', creditError);
+        } else {
+          console.log('Assigned welcome credit to existing user:', userId);
+        }
+      } else {
+        console.log('User already has welcome credit:', userId);
+      }
+    }
+
     console.log('Successfully set up gym user:', userId, 'for gym:', gymId);
 
     return new Response(
