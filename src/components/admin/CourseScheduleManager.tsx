@@ -95,6 +95,8 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
     onChange(newSchedule);
   };
 
+  const hasInvalidSchedules = scheduleItems.some(item => !item.roomId || item.roomId === '');
+
   const getRoomName = (roomId: string) => {
     return gymRooms.find(room => room.id === roomId)?.name || 'Sala non selezionata';
   };
@@ -171,36 +173,39 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium">Sala</label>
-                  <Select
-                    value={item.roomId}
-                    onValueChange={(value) => 
-                      updateScheduleItem(index, 'roomId', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona sala">
-                        {item.roomId && (
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4" />
-                            {getRoomName(item.roomId)}
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gymRooms.map(room => (
-                        <SelectItem key={room.id} value={room.id}>
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4" />
-                            {room.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                 <div>
+                   <label className="text-sm font-medium">Sala <span className="text-destructive">*</span></label>
+                   <Select
+                     value={item.roomId}
+                     onValueChange={(value) => 
+                       updateScheduleItem(index, 'roomId', value)
+                     }
+                   >
+                     <SelectTrigger className={!item.roomId ? 'border-destructive' : ''}>
+                       <SelectValue placeholder="Seleziona sala">
+                         {item.roomId && (
+                           <div className="flex items-center">
+                             <MapPin className="mr-2 h-4 w-4" />
+                             {getRoomName(item.roomId)}
+                           </div>
+                         )}
+                       </SelectValue>
+                     </SelectTrigger>
+                     <SelectContent>
+                       {gymRooms.map(room => (
+                         <SelectItem key={room.id} value={room.id}>
+                           <div className="flex items-center">
+                             <MapPin className="mr-2 h-4 w-4" />
+                             {room.name}
+                           </div>
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                   {!item.roomId && (
+                     <p className="text-xs text-destructive mt-1">Sala obbligatoria</p>
+                   )}
+                 </div>
 
                 <div>
                   <Button
@@ -238,10 +243,12 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
               );
             })}
           </div>
-          {scheduleItems.some(item => !item.roomId) && (
-            <p className="text-sm text-amber-600 mt-2">
-              ⚠️ Alcune sale non sono state selezionate
-            </p>
+          {hasInvalidSchedules && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 mt-2">
+              <p className="text-sm text-destructive font-medium">
+                ⚠️ Tutti gli orari devono avere una sala selezionata prima del salvataggio
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

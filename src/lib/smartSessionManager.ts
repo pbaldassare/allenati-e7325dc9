@@ -56,6 +56,12 @@ export async function smartUpdateCourseSchedules(
   try {
     console.log(`🔄 Starting smart schedule update for course ${courseId} with ${newSchedules.length} schedules`);
     
+    // Validate schedules before processing
+    const invalidSchedules = newSchedules.filter(schedule => !schedule.roomId || schedule.roomId === '');
+    if (invalidSchedules.length > 0) {
+      throw new Error(`Tutti gli orari devono avere una sala selezionata. ${invalidSchedules.length} orario/i senza sala.`);
+    }
+    
     // Compare schedules to understand changes
     const comparison = compareSchedules(currentSchedules, newSchedules);
     console.log('📊 Schedule comparison result:', comparison);
