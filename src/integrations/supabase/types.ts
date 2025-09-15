@@ -2107,7 +2107,16 @@ export type Database = {
           _duration_weeks?: number
           _start_date?: string
         }
-        Returns: Json
+        Returns: {
+          affected_bookings: number
+          duration_weeks: number
+          end_date: string
+          message: string
+          sessions_created: number
+          sessions_deleted: number
+          start_date: string
+          success: boolean
+        }[]
       }
       toggle_session_visibility: {
         Args: { _new_status: string; _session_id: string }

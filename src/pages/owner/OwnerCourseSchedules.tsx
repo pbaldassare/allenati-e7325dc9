@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
+import { WeeksSelector } from '@/components/ui/weeks-selector';
 import { useToast } from '@/hooks/use-toast';
 
 const OwnerCourseSchedules = () => {
@@ -15,6 +16,7 @@ const OwnerCourseSchedules = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gymRooms, setGymRooms] = useState<any[]>([]);
+  const [durationWeeks, setDurationWeeks] = useState<number>(12);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -50,6 +52,7 @@ const OwnerCourseSchedules = () => {
 
         if (courseError) throw courseError;
         setCourse(courseData);
+        setDurationWeeks(courseData.duration_weeks || 12);
 
         // Load gym rooms
         if (courseData.gym_id) {
@@ -88,7 +91,7 @@ const OwnerCourseSchedules = () => {
       // Use smart update that only affects changed schedules
       const { smartUpdateCourseSchedules, getScheduleChangeSummary } = await import('@/lib/smartSessionManager');
       
-      const comparison = await smartUpdateCourseSchedules(id, schedules, currentSchedules || []);
+      const comparison = await smartUpdateCourseSchedules(id, schedules, currentSchedules || [], durationWeeks);
       
       const summary = getScheduleChangeSummary(comparison);
       
@@ -158,45 +161,15 @@ const OwnerCourseSchedules = () => {
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground">
-                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, TUTTE le sessioni future dalla data odierna verranno eliminate e rigenerate con i nuovi orari. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
+                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, le sessioni future verranno intelligentemente aggiornate. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
               </p>
             </div>
             
-            <div className="flex justify-end">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={async () => {
-                  if (!window.confirm('⚠️ ATTENZIONE: Questa azione eliminerà TUTTE le sessioni future del corso. Sei sicuro di voler continuare?')) {
-                    return;
-                  }
-                  
-                  try {
-                    const { forceDeleteAllFutureSessions } = await import('@/lib/sessionRegenerator');
-                    const result = await forceDeleteAllFutureSessions(id!);
-                    
-                    toast({
-                      title: result.success ? 'Pulizia completata' : 'Errore nella pulizia',
-                      description: result.message,
-                      variant: result.success ? 'default' : 'destructive',
-                    });
-                    
-                    if (result.success) {
-                      // Reload dopo 2 secondi per mostrare i risultati
-                      setTimeout(() => window.location.reload(), 2000);
-                    }
-                  } catch (error) {
-                    toast({
-                      title: 'Errore',
-                      description: 'Errore durante la pulizia forzata',
-                      variant: 'destructive',
-                    });
-                  }
-                }}
-              >
-                🚨 Pulizia Forzata Sessioni Future
-              </Button>
-            </div>
+            <WeeksSelector
+              value={durationWeeks}
+              onChange={setDurationWeeks}
+              startDate={course.start_date ? new Date(course.start_date) : new Date()}
+            />
             <CourseScheduleManager
               schedule={course.course_schedules || []}
               onChange={handleScheduleChange}

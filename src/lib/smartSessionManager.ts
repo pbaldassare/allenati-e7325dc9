@@ -92,12 +92,13 @@ export async function smartUpdateCourseSchedules(
       throw error;
     }
 
-    if (result && typeof result === 'object') {
-      deletedSessionsCount = (result as any).sessions_deleted || 0;
-      createdSessionsCount = (result as any).sessions_created || 0;
-      affectedBookings = (result as any).affected_bookings || 0;
+    if (result && Array.isArray(result) && result.length > 0) {
+      const resultData = result[0];
+      deletedSessionsCount = resultData.sessions_deleted || 0;
+      createdSessionsCount = resultData.sessions_created || 0;
+      affectedBookings = resultData.affected_bookings || 0;
       
-      console.log('✅ Smart session generation result:', result);
+      console.log('✅ Smart session generation result:', resultData);
     }
 
     return {
