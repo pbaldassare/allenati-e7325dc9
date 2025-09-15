@@ -59,12 +59,74 @@ export async function smartUpdateCourseSchedules(
   let createdSessionsCount = 0;
   let affectedBookings = 0;
 
+  console.log('🔄 Starting smart schedule update for course:', courseId);
+  console.log('📅 Current schedules count:', currentSchedules.length);
+  console.log('📅 New schedules count:', newSchedules.length);
+  console.log('⏱️ Duration weeks:', durationWeeks);
+
   try {
-    // 1. Update course schedules table first
-    await supabase
+    // 1. CRITICAL: Delete ALL existing future sessions FIRST with verification
+    console.log('🗑️ Step 1: Deleting all future sessions...');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // First, count how many sessions we're about to delete
+    const { count: existingSessionsCount, error: countError } = await supabase
+      .from('course_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .gte('session_date', todayDate);
+
+    if (countError) {
+      console.error('❌ Error counting existing sessions:', countError);
+      throw countError;
+    }
+
+    console.log(`📊 Found ${existingSessionsCount} existing future sessions to delete`);
+
+    // Delete all future sessions with proper error handling
+    const { error: deleteError, count: deletedCount } = await supabase
+      .from('course_sessions')
+      .delete({ count: 'exact' })
+      .eq('course_id', courseId)
+      .gte('session_date', todayDate);
+
+    if (deleteError) {
+      console.error('❌ CRITICAL: Failed to delete existing sessions:', deleteError);
+      throw new Error(`Failed to delete existing sessions: ${deleteError.message}`);
+    }
+
+    console.log(`✅ Successfully deleted ${deletedCount} future sessions`);
+
+    // Verify deletion was successful
+    const { count: remainingSessions, error: verifyError } = await supabase
+      .from('course_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .gte('session_date', todayDate);
+
+    if (verifyError) {
+      console.error('❌ Error verifying deletion:', verifyError);
+      throw verifyError;
+    }
+
+    if (remainingSessions && remainingSessions > 0) {
+      console.error('❌ CRITICAL: Some sessions were not deleted. Remaining:', remainingSessions);
+      throw new Error(`Failed to delete all sessions. ${remainingSessions} sessions remaining.`);
+    }
+
+    console.log('✅ Verified: All future sessions deleted successfully');
+
+    // 2. Update course schedules table
+    console.log('📝 Step 2: Updating course schedules...');
+    const { error: deleteSchedulesError } = await supabase
       .from('course_schedules')
       .delete()
       .eq('course_id', courseId);
+
+    if (deleteSchedulesError) {
+      console.error('❌ Error deleting course schedules:', deleteSchedulesError);
+      throw deleteSchedulesError;
+    }
 
     if (newSchedules.length > 0) {
       const schedulesToInsert = newSchedules.map(schedule => ({
@@ -76,32 +138,31 @@ export async function smartUpdateCourseSchedules(
         room_name: schedule.room_name,
       }));
 
-      await supabase
+      const { error: insertSchedulesError } = await supabase
         .from('course_schedules')
         .insert(schedulesToInsert);
+
+      if (insertSchedulesError) {
+        console.error('❌ Error inserting new course schedules:', insertSchedulesError);
+        throw insertSchedulesError;
+      }
+
+      console.log(`✅ Inserted ${schedulesToInsert.length} new course schedules`);
     }
 
-    // 2. Delete existing future sessions first to avoid duplicates
-    const { error: deleteError } = await supabase
-      .from('course_sessions')
-      .delete()
-      .eq('course_id', courseId)
-      .gte('session_date', new Date().toISOString().split('T')[0]);
+    // 3. Wait a brief moment to ensure database consistency
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    if (deleteError) {
-      console.error('Error deleting existing sessions:', deleteError);
-      // Continue anyway, the RPC function will handle duplicates
-    }
-
-    // 3. Use the new smart generation function for comprehensive session management
-    const { data: result, error } = await supabase.rpc('smart_generate_sessions_with_weeks', {
+    // 4. Generate new sessions with the improved RPC function
+    console.log('🔧 Step 3: Generating new sessions with RPC...');
+    const { data: result, error: rpcError } = await supabase.rpc('smart_generate_sessions_with_weeks', {
       _course_id: courseId,
       _duration_weeks: durationWeeks
     });
 
-    if (error) {
-      console.error('Error calling smart_generate_sessions_with_weeks:', error);
-      throw error;
+    if (rpcError) {
+      console.error('❌ Error calling smart_generate_sessions_with_weeks:', rpcError);
+      throw new Error(`RPC function failed: ${rpcError.message}`);
     }
 
     if (result && result.length > 0) {
@@ -111,19 +172,27 @@ export async function smartUpdateCourseSchedules(
       affectedBookings = firstResult.affected_bookings || 0;
       
       console.log('✅ Smart session generation result:', firstResult);
+      console.log(`📊 Summary: ${deletedCount} deleted manually + ${deletedSessionsCount} by RPC, ${createdSessionsCount} created, ${affectedBookings} bookings affected`);
     }
 
     return {
       removed: comparison.removed,
       added: comparison.added,
       unchanged: comparison.unchanged,
-      deletedSessionsCount,
+      deletedSessionsCount: deletedCount || 0,
       createdSessionsCount,
       affectedBookings
     };
 
   } catch (error) {
-    console.error('Error in smart schedule update:', error);
+    console.error('❌ FATAL ERROR in smart schedule update:', error);
+    console.error('🔧 Error details:', {
+      courseId,
+      newSchedulesCount: newSchedules.length,
+      currentSchedulesCount: currentSchedules.length,
+      durationWeeks,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
     throw error;
   }
 }
