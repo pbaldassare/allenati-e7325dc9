@@ -143,7 +143,7 @@ export const UnsubscribeConfirmDialog: React.FC<UnsubscribeConfirmDialogProps> =
         <div className="space-y-4">
           <div className="text-sm space-y-2">
             <p><strong>Email:</strong> {participant.user.email}</p>
-            <p><strong>Data lezione:</strong> {new Date(participant.scheduled_date).toLocaleDateString('it-IT')} alle {participant.scheduled_time}</p>
+            <p><strong>Data lezione:</strong> {new Date(participant.scheduled_date).toLocaleDateString('it-IT')} alle {participant.scheduled_time.slice(0, 5)}</p>
             <p><strong>Crediti utilizzati:</strong> {participant.credits_used}</p>
           </div>
 

@@ -209,9 +209,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             <TableCell>
                               {new Date(booking.scheduled_date).toLocaleDateString('it-IT')}
                             </TableCell>
-                            <TableCell>
-                              {booking.scheduled_time}
-                            </TableCell>
+                             <TableCell>
+                               {booking.scheduled_time.slice(0, 5)}
+                             </TableCell>
                             <TableCell>
                               {getStatusBadge(booking.status)}
                             </TableCell>

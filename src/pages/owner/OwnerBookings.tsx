@@ -445,7 +445,7 @@ const OwnerBookings: React.FC = () => {
                       <TableCell>
                         <div>
                           <div>{new Date(booking.scheduled_date).toLocaleDateString('it-IT')}</div>
-                          <div className="text-sm text-muted-foreground">{booking.scheduled_time}</div>
+                          <div className="text-sm text-muted-foreground">{booking.scheduled_time.slice(0, 5)}</div>
                         </div>
                       </TableCell>
                       <TableCell>

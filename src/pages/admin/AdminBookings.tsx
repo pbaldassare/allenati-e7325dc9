@@ -266,7 +266,7 @@ const AdminBookings = () => {
                     <TableCell>
                       {new Date(booking.scheduled_date).toLocaleDateString('it-IT')}
                     </TableCell>
-                    <TableCell>{booking.scheduled_time}</TableCell>
+                    <TableCell>{booking.scheduled_time.slice(0, 5)}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(booking.status)}>
                         {getStatusLabel(booking.status)}
