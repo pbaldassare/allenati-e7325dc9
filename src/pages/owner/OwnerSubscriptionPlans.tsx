@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import SubscriptionPlanForm from '@/components/owner/SubscriptionPlanForm';
+import { SubscriptionPlanDeleteConfirmDialog } from '@/components/dialogs/SubscriptionPlanDeleteConfirmDialog';
 
 interface SubscriptionPlan {
   id: string;
@@ -30,6 +31,9 @@ const OwnerSubscriptionPlans: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     document.title = 'Gestione Piani Abbonamento | Area Proprietario';
@@ -86,22 +90,30 @@ const OwnerSubscriptionPlans: React.FC = () => {
     setFormOpen(true);
   };
 
-  const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo piano?')) return;
+  const handleDeletePlan = (plan: SubscriptionPlan) => {
+    setPlanToDelete(plan);
+    setDeleteDialogOpen(true);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!planToDelete) return;
+
+    setDeleteLoading(true);
     try {
       const { error } = await supabase
         .from('subscription_plans')
-        .update({ is_active: false })
-        .eq('id', planId);
+        .delete()
+        .eq('id', planToDelete.id);
 
       if (error) throw error;
 
       toast({
         title: 'Piano eliminato',
-        description: 'Il piano è stato disattivato con successo',
+        description: 'Il piano è stato eliminato definitivamente',
       });
 
+      setDeleteDialogOpen(false);
+      setPlanToDelete(null);
       loadPlans();
     } catch (error) {
       console.error('Error deleting plan:', error);
@@ -110,6 +122,8 @@ const OwnerSubscriptionPlans: React.FC = () => {
         description: 'Impossibile eliminare il piano',
         variant: 'destructive',
       });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -234,7 +248,7 @@ const OwnerSubscriptionPlans: React.FC = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDeletePlan(plan.id)}
+                          onClick={() => handleDeletePlan(plan)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -272,6 +286,15 @@ const OwnerSubscriptionPlans: React.FC = () => {
         onClose={() => setFormOpen(false)}
         onSuccess={handleFormSuccess}
         editingPlan={editingPlan}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <SubscriptionPlanDeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        planToDelete={planToDelete}
+        isLoading={deleteLoading}
       />
     </div>
   );
