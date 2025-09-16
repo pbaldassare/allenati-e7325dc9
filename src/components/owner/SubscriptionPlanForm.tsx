@@ -171,27 +171,54 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
     setLoading(true);
 
     try {
-      if (!selectedGym?.id) throw new Error('Nessuna palestra selezionata');
+      // Debug logging
+      console.log('🔍 DEBUG - Form submission started');
+      console.log('📍 User auth state:', { uid: (await supabase.auth.getUser()).data.user?.id });
+      console.log('🏃 Selected gym:', selectedGym);
+      console.log('📋 Form data:', formData);
+      
+      if (!selectedGym?.id) {
+        console.error('❌ No gym selected');
+        throw new Error('Nessuna palestra selezionata');
+      }
 
       const planData = {
         ...formData,
         gym_id: selectedGym.id,
         features: formData.features,
       };
+      
+      console.log('📦 Plan data to be sent:', planData);
 
-      let error;
+      let error, data;
       if (editingPlan) {
-        ({ error } = await supabase
+        console.log('✏️ Updating existing plan:', editingPlan.id);
+        ({ error, data } = await supabase
           .from('subscription_plans')
           .update(planData)
-          .eq('id', editingPlan.id));
+          .eq('id', editingPlan.id)
+          .select());
       } else {
-        ({ error } = await supabase
+        console.log('🆕 Creating new plan');
+        ({ error, data } = await supabase
           .from('subscription_plans')
-          .insert([planData]));
+          .insert([planData])
+          .select());
       }
 
-      if (error) throw error;
+      console.log('📤 Supabase response:', { error, data });
+
+      if (error) {
+        console.error('❌ Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+
+      console.log('✅ Plan saved successfully:', data);
 
       toast({
         title: editingPlan ? 'Piano aggiornato' : 'Piano creato',
@@ -200,10 +227,17 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
 
       onSuccess();
     } catch (error) {
-      console.error('Error saving plan:', error);
+      console.error('💥 Error saving plan:', error);
+      
+      // More detailed error message
+      let errorMessage = `Impossibile ${editingPlan ? 'aggiornare' : 'creare'} il piano`;
+      if (error instanceof Error) {
+        errorMessage += `: ${error.message}`;
+      }
+      
       toast({
         title: 'Errore',
-        description: `Impossibile ${editingPlan ? 'aggiornare' : 'creare'} il piano`,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
