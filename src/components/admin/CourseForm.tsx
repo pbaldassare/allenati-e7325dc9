@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CourseScheduleManager } from './CourseScheduleManager';
+import { DateRangeSelector } from '@/components/ui/date-range-selector';
 import {
   Form,
   FormControl,
@@ -40,7 +41,7 @@ const courseSchema = z.object({
   benefits: z.array(z.string()).optional(),
   requirements: z.array(z.string()).optional(),
   startDate: z.date({ required_error: "Seleziona la data di inizio" }),
-  durationWeeks: z.coerce.number().min(1, 'La durata deve essere almeno 1 settimana').max(52, 'La durata massima è 52 settimane').default(12),
+  endDate: z.date({ required_error: "Seleziona la data di fine" }),
   autoGenerateSessions: z.boolean().default(true),
   schedule: z.array(z.object({
     dayOfWeek: z.number(),
@@ -50,6 +51,9 @@ const courseSchema = z.object({
     date: z.string().optional(),
     day: z.string().optional()
   })).min(1, 'È necessario inserire almeno un orario'),
+}).refine((data) => data.endDate > data.startDate, {
+  message: "La data di fine deve essere successiva alla data di inizio",
+  path: ["endDate"]
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -103,7 +107,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       benefits: course.benefits,
       requirements: course.requirements || [],
       startDate: (course as any).start_date ? new Date((course as any).start_date) : new Date(),
-      durationWeeks: (course as any).duration_weeks || 12,
+      endDate: (course as any).end_date ? new Date((course as any).end_date) : new Date(new Date().getTime() + 12 * 7 * 24 * 60 * 60 * 1000),
       schedule: course.schedule?.map(s => ({
         dayOfWeek: s.dayOfWeek,
         time: s.time,
@@ -127,7 +131,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
       benefits: [],
       requirements: [''],
       startDate: new Date(),
-      durationWeeks: 12,
+      endDate: new Date(new Date().getTime() + 12 * 7 * 24 * 60 * 60 * 1000),
       schedule: [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }],
     },
   });
@@ -156,7 +160,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             requirements: data.requirements?.filter(r => r.trim() !== '') || [],
             credits_required: 1, // Default value
             start_date: data.startDate.toISOString().split('T')[0],
-            duration_weeks: data.durationWeeks
+            end_date: data.endDate.toISOString().split('T')[0]
           })
           .select()
           .single();
@@ -181,9 +185,10 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
         }
 
         // Genera automaticamente le sessioni con la nuova funzione
-        await supabase.rpc('generate_course_sessions_with_duration', {
+        await supabase.rpc('smart_generate_sessions_with_dates', {
           _course_id: courseData.id,
-          _start_date: data.startDate.toISOString().split('T')[0]
+          _start_date: data.startDate.toISOString().split('T')[0],
+          _end_date: data.endDate.toISOString().split('T')[0]
         });
 
         toast({
@@ -209,7 +214,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             benefits: data.benefits.filter(b => b.trim() !== ''),
             requirements: data.requirements?.filter(r => r.trim() !== '') || [],
             start_date: data.startDate.toISOString().split('T')[0],
-            duration_weeks: data.durationWeeks
+            end_date: data.endDate.toISOString().split('T')[0]
           })
           .eq('id', course?.id);
 
@@ -242,9 +247,10 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
         }
 
         // Rigenera sessioni con la nuova funzione
-        await supabase.rpc('generate_course_sessions_with_duration', {
+        await supabase.rpc('smart_generate_sessions_with_dates', {
           _course_id: course.id,
-          _start_date: data.startDate.toISOString().split('T')[0]
+          _start_date: data.startDate.toISOString().split('T')[0],
+          _end_date: data.endDate.toISOString().split('T')[0]
         });
 
         toast({
@@ -479,28 +485,14 @@ export const CourseForm: React.FC<CourseFormProps> = ({ mode, course }) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="durationWeeks"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Durata Corso (settimane)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    max="52" 
-                    placeholder="12" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormDescription>
-                  Il corso durerà {field.value || 12} settimane dalla data di inizio
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="md:col-span-2">
+            <DateRangeSelector
+              startDate={form.watch('startDate')}
+              endDate={form.watch('endDate')}
+              onStartDateChange={(date) => form.setValue('startDate', date || new Date())}
+              onEndDateChange={(date) => form.setValue('endDate', date || new Date())}
+            />
+          </div>
 
           <FormField
             control={form.control}

@@ -215,7 +215,6 @@ const AdminCourseSessions = () => {
             startDate={course.start_date ? new Date(course.start_date) : undefined}
             endDate={course.end_date ? new Date(course.end_date) : undefined}
             onSessionsChange={handleSessionsChange}
-            initialSessions={sessions}
           />
         </CardContent>
       </Card>

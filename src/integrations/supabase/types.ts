@@ -2101,6 +2101,23 @@ export type Database = {
         Args: { bio?: string; target_user_id: string }
         Returns: string
       }
+      smart_generate_sessions_with_dates: {
+        Args: {
+          _course_id: string
+          _end_date: string
+          _new_schedules?: Json
+          _start_date: string
+        }
+        Returns: {
+          affected_bookings: number
+          end_date: string
+          message: string
+          sessions_created: number
+          sessions_deleted: number
+          start_date: string
+          success: boolean
+        }[]
+      }
       smart_generate_sessions_with_weeks: {
         Args: {
           _course_id: string

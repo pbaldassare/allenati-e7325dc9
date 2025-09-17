@@ -429,23 +429,6 @@ const OwnerCourseEdit = () => {
                 })) || []}
                 maxParticipants={course?.max_participants || 20}
                 onSessionsChange={handleSessionsChange}
-                initialSessions={sessions}
-                durationWeeks={course?.duration_weeks || 12}
-                onDurationWeeksChange={async (weeks) => {
-                  // Update course duration_weeks in database
-                  await supabase
-                    .from('courses')
-                    .update({ duration_weeks: weeks })
-                    .eq('id', id);
-                  
-                  // Update local state
-                  setCourse(prev => ({ ...prev, duration_weeks: weeks }));
-                  
-                  toast({
-                    title: "Durata aggiornata",
-                    description: `Corso impostato a ${weeks} settimane`,
-                  });
-                }}
               />
             </CardContent>
           </Card>

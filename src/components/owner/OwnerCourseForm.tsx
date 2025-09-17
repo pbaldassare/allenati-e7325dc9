@@ -20,6 +20,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
+import { DateRangeSelector } from '@/components/ui/date-range-selector';
 
 interface CourseFormData {
   name: string;
@@ -37,7 +38,7 @@ interface CourseFormData {
   reserved_spots: number;
   is_active: boolean;
   start_date: Date;
-  duration_weeks: number;
+  end_date: Date;
   schedules: Array<{
     day_of_week: number;
     start_time: string;
@@ -63,7 +64,10 @@ const formSchema = z.object({
   reserved_spots: z.number().min(0, 'Posti riservati >= 0'),
   is_active: z.boolean(),
   start_date: z.date(),
-  duration_weeks: z.number().min(1, 'Minimo 1 settimana').max(52, 'Massimo 52 settimane').default(12),
+  end_date: z.date(),
+}).refine((data) => data.end_date > data.start_date, {
+  message: "La data di fine deve essere successiva alla data di inizio",
+  path: ["end_date"]
 });
 
 interface OwnerCourseFormProps {
@@ -122,7 +126,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       reserved_spots: course?.reserved_spots || 0,
       is_active: course?.is_active ?? true,
       start_date: course?.start_date ? new Date(course.start_date) : new Date(),
-      duration_weeks: (course as any)?.duration_weeks || 12,
+      end_date: course?.end_date ? new Date(course.end_date) : new Date(new Date().getTime() + 12 * 7 * 24 * 60 * 60 * 1000),
     },
   });
 
@@ -289,7 +293,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         reserved_spots: data.reserved_spots,
         is_active: data.is_active,
         start_date: format(data.start_date, 'yyyy-MM-dd'),
-        duration_weeks: data.duration_weeks,
+        end_date: format(data.end_date, 'yyyy-MM-dd'),
       };
 
       if (mode === 'create') {
@@ -302,9 +306,10 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         if (error) throw error;
         
         // Genera automaticamente le sessioni con la nuova funzione
-        await supabase.rpc('generate_course_sessions_with_duration', {
+        await supabase.rpc('smart_generate_sessions_with_dates', {
           _course_id: insertedData.id,
-          _start_date: format(data.start_date, 'yyyy-MM-dd')
+          _start_date: format(data.start_date, 'yyyy-MM-dd'),
+          _end_date: format(data.end_date, 'yyyy-MM-dd')
         });
         
         // Call the callback if provided
@@ -326,7 +331,7 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
             reserved_spots: data.reserved_spots,
             is_active: data.is_active,
             start_date: data.start_date,
-            duration_weeks: data.duration_weeks,
+            end_date: data.end_date,
             schedules: []
           });
           return; // Don't navigate automatically
@@ -350,9 +355,10 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
         if (error) throw error;
         
         // Rigenera sessioni con la nuova funzione
-        await supabase.rpc('generate_course_sessions_with_duration', {
+        await supabase.rpc('smart_generate_sessions_with_dates', {
           _course_id: course.id,
-          _start_date: format(data.start_date, 'yyyy-MM-dd')
+          _start_date: format(data.start_date, 'yyyy-MM-dd'),
+          _end_date: format(data.end_date, 'yyyy-MM-dd')
         });
         
         toast({
@@ -662,29 +668,14 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="duration_weeks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Durata Corso (settimane)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        max="52" 
-                        placeholder="12"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 12)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Il corso durerà {field.value || 12} settimane dalla data di inizio
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="md:col-span-2">
+                <DateRangeSelector
+                  startDate={form.watch('start_date')}
+                  endDate={form.watch('end_date')}
+                  onStartDateChange={(date) => form.setValue('start_date', date || new Date())}
+                  onEndDateChange={(date) => form.setValue('end_date', date || new Date())}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

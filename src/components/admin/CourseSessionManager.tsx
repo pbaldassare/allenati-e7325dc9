@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Trash2, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { WeeksSelector } from '@/components/ui/weeks-selector';
+import { CalendarIcon, Plus, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { DateRangeSelector } from '@/components/ui/date-range-selector';
 
 interface CourseSession {
   id?: string;
@@ -36,11 +34,8 @@ interface CourseSessionManagerProps {
   endDate?: Date;
   schedules: CourseSchedule[];
   maxParticipants: number;
-  onSessionsChange: (sessions: CourseSession[]) => void;
-  autoGenerate?: boolean;
-  initialSessions?: CourseSession[];
-  durationWeeks?: number;
-  onDurationWeeksChange?: (weeks: number) => void;
+  onSessionsChange?: (sessions: CourseSession[]) => void;
+  onDateRangeChange?: (startDate: Date, endDate: Date) => void;
 }
 
 const getDayName = (dayOfWeek: number): string => {
@@ -55,85 +50,66 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
   schedules,
   maxParticipants,
   onSessionsChange,
-  autoGenerate = true,
-  initialSessions = [],
-  durationWeeks = 12,
-  onDurationWeeksChange
+  onDateRangeChange
 }) => {
-  const [sessions, setSessions] = useState<CourseSession[]>(initialSessions);
+  const [sessions, setSessions] = useState<CourseSession[]>([]);
   const [generatedSessions, setGeneratedSessions] = useState<CourseSession[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [currentDurationWeeks, setCurrentDurationWeeks] = useState(durationWeeks);
+  const [currentStartDate, setCurrentStartDate] = useState(startDate);
+  const [currentEndDate, setCurrentEndDate] = useState(endDate);
 
-  // Generate sessions automatically based on schedules and duration weeks
   const generateSessions = () => {
-    if (!startDate || !schedules.length) {
-      setGeneratedSessions([]);
-      return;
-    }
-
-    // Calculate end date based on duration weeks
-    const calculatedEndDate = addWeeks(startDate, currentDurationWeeks);
-
-    console.log('🔄 Generating sessions from', format(startDate, 'yyyy-MM-dd'), 'to', format(calculatedEndDate, 'yyyy-MM-dd'));
-    console.log('📋 Schedules:', schedules.length);
-    console.log('⏱️ Duration:', currentDurationWeeks, 'weeks');
-
-    // Use Map to prevent duplicates more efficiently
-    const sessionMap = new Map<string, CourseSession>();
-    let currentDate = new Date(startDate);
-
-    while (currentDate <= calculatedEndDate) {
-      schedules.forEach(schedule => {
-        if (currentDate.getDay() === schedule.day_of_week) {
-          const sessionDate = format(currentDate, 'yyyy-MM-dd');
-          const sessionKey = `${sessionDate}-${schedule.start_time}`;
-          
-          // Only create if not already exists
-          if (!sessionMap.has(sessionKey)) {
-            sessionMap.set(sessionKey, {
-              session_date: sessionDate,
-              start_time: schedule.start_time,
-              end_time: schedule.end_time,
-              room_id: schedule.room_id,
-              room_name: schedule.room_name,
-              max_participants: maxParticipants,
-              available_spots: maxParticipants,
-              status: 'scheduled'
-            });
-          }
-        }
-      });
-      currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
-    }
-
-    const uniqueSessions = Array.from(sessionMap.values());
-    console.log('✅ Generated', uniqueSessions.length, 'unique sessions');
-    setGeneratedSessions(uniqueSessions);
-    setShowPreview(true);
+    if (!currentStartDate || !currentEndDate || schedules.length === 0) return [];
+    
+    const sessions: CourseSession[] = [];
+    
+    schedules.forEach(schedule => {
+      let currentDate = new Date(currentStartDate);
+      
+      // Find the first occurrence of the target day of week
+      while (currentDate.getDay() !== schedule.day_of_week) {
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      // Generate sessions weekly until end date
+      while (currentDate <= currentEndDate) {
+        sessions.push({
+          session_date: currentDate.toISOString().split('T')[0],
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+          room_id: schedule.room_id,
+          room_name: schedule.room_name,
+          max_participants: maxParticipants,
+          available_spots: maxParticipants,
+          status: 'scheduled'
+        });
+        
+        // Move to next week
+        currentDate = new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+    });
+    
+    return sessions.sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime());
   };
 
-  // Handle duration weeks change
-  const handleDurationWeeksChange = (weeks: number) => {
-    setCurrentDurationWeeks(weeks);
-    onDurationWeeksChange?.(weeks);
-  };
-
-  // Apply generated sessions
-  const applyGeneratedSessions = async () => {
-    setSaving(true);
-    try {
-      setSessions(generatedSessions);
-      await onSessionsChange(generatedSessions);
-      setShowPreview(false);
-    } finally {
-      setSaving(false);
+  const handleDateRangeChange = (newStartDate: Date, newEndDate: Date) => {
+    setCurrentStartDate(newStartDate);
+    setCurrentEndDate(newEndDate);
+    if (onDateRangeChange) {
+      onDateRangeChange(newStartDate, newEndDate);
     }
   };
 
-  // Add manual session
-  const addManualSession = async () => {
+  const applyGeneratedSessions = () => {
+    setSessions(generatedSessions);
+    setShowPreview(false);
+    if (onSessionsChange) {
+      onSessionsChange(generatedSessions);
+    }
+  };
+
+  const addManualSession = () => {
     const newSession: CourseSession = {
       session_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '10:00',
@@ -145,40 +121,43 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
     
     const updatedSessions = [...sessions, newSession];
     setSessions(updatedSessions);
-    await onSessionsChange(updatedSessions);
+    if (onSessionsChange) {
+      onSessionsChange(updatedSessions);
+    }
   };
 
-  // Remove session
-  const removeSession = async (index: number) => {
+  const removeSession = (index: number) => {
     const updatedSessions = sessions.filter((_, i) => i !== index);
     setSessions(updatedSessions);
-    await onSessionsChange(updatedSessions);
+    if (onSessionsChange) {
+      onSessionsChange(updatedSessions);
+    }
   };
 
-  // Update session
-  const updateSession = async (index: number, updates: Partial<CourseSession>) => {
+  const updateSession = (index: number, updates: Partial<CourseSession>) => {
     const updatedSessions = sessions.map((session, i) => 
       i === index ? { ...session, ...updates } : session
     );
     setSessions(updatedSessions);
-    await onSessionsChange(updatedSessions);
+    if (onSessionsChange) {
+      onSessionsChange(updatedSessions);
+    }
   };
 
-  // Auto generate when dependencies change
+  // Auto-generate sessions when dependencies change
   useEffect(() => {
-    if (autoGenerate && startDate && schedules.length > 0) {
-      generateSessions();
+    if (currentStartDate && currentEndDate && schedules.length > 0) {
+      const newGeneratedSessions = generateSessions();
+      setGeneratedSessions(newGeneratedSessions);
+      setShowPreview(true);
     }
-  }, [startDate, schedules, maxParticipants, autoGenerate, currentDurationWeeks]);
+  }, [currentStartDate, currentEndDate, schedules, maxParticipants]);
 
-  // Sync duration weeks with prop
+  // Sync dates with props
   useEffect(() => {
-    setCurrentDurationWeeks(durationWeeks);
-  }, [durationWeeks]);
-
-  const sessionCount = sessions.length;
-  const weeklySessionCount = schedules.length;
-  const calculatedEndDate = startDate ? addWeeks(startDate, currentDurationWeeks) : undefined;
+    setCurrentStartDate(startDate);
+    setCurrentEndDate(endDate);
+  }, [startDate, endDate]);
 
   return (
     <div className="space-y-6">
@@ -187,54 +166,56 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            Gestione Sessioni Corso
+            Configurazione Date Corso
           </CardTitle>
           <CardDescription>
-            Genera automaticamente le sessioni basate sui pattern ricorrenti o aggiungi manualmente
+            Imposta le date di inizio e fine del corso per generare automaticamente le sessioni
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Duration Selector */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <WeeksSelector
-              value={currentDurationWeeks}
-              onChange={handleDurationWeeksChange}
-              startDate={startDate}
-              disabled={saving}
-            />
-            {startDate && calculatedEndDate && schedules.length > 0 && (
-              <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-medium">
-                    {weeklySessionCount} sessioni/settimana × {currentDurationWeeks} settimane
-                  </p>
-                  <p className="text-lg font-bold text-primary">
-                    = {weeklySessionCount * currentDurationWeeks} sessioni totali
-                  </p>
-                  <Button onClick={generateSessions} variant="outline" size="sm" className="mt-2">
-                    Genera Sessioni
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {!startDate ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Imposta la data di inizio del corso per generare le sessioni automaticamente.
-              </AlertDescription>
-            </Alert>
-          ) : !schedules.length ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Configura almeno un pattern di orario ricorrente per generare le sessioni.
-              </AlertDescription>
-            </Alert>
-          ) : null}
+          <DateRangeSelector
+            startDate={currentStartDate}
+            endDate={currentEndDate}
+            onStartDateChange={(date) => {
+              setCurrentStartDate(date || new Date());
+              if (date && currentEndDate) {
+                handleDateRangeChange(date, currentEndDate);
+              }
+            }}
+            onEndDateChange={(date) => {
+              setCurrentEndDate(date || new Date());
+              if (currentStartDate && date) {
+                handleDateRangeChange(currentStartDate, date);
+              }
+            }}
+          />
+          
+          <Button 
+            onClick={() => {
+              const newGeneratedSessions = generateSessions();
+              setGeneratedSessions(newGeneratedSessions);
+              setShowPreview(true);
+            }}
+            disabled={!currentStartDate || !currentEndDate || schedules.length === 0}
+            className="w-full"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Genera Sessioni Automaticamente
+          </Button>
         </CardContent>
+
+        {(!currentStartDate || !currentEndDate || schedules.length === 0) && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Configurazione Incompleta</AlertTitle>
+            <AlertDescription>
+              {!currentStartDate && "Data di inizio del corso non specificata. "}
+              {!currentEndDate && "Data di fine del corso non specificata. "}
+              {schedules.length === 0 && "Nessun orario configurato. "}
+              Completa la configurazione per generare le sessioni.
+            </AlertDescription>
+          </Alert>
+        )}
       </Card>
 
       {/* Preview Generated Sessions */}
@@ -288,7 +269,7 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
             <div>
               <CardTitle>Sessioni Programmate</CardTitle>
               <CardDescription>
-                {sessionCount} sessioni totali configurate
+                {sessions.length} sessioni totali configurate
               </CardDescription>
             </div>
             <Button onClick={addManualSession} size="sm" variant="outline">

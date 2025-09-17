@@ -741,7 +741,6 @@ export const CourseFormWithSessions: React.FC<CourseFormProps> = ({ mode, course
           }))}
           maxParticipants={form.watch('maxParticipants')}
           onSessionsChange={setSessions}
-          autoGenerate={form.watch('autoGenerateSessions')}
         />
 
         {/* Submit Buttons */}
