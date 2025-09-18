@@ -2101,6 +2101,10 @@ export type Database = {
         Args: { bio?: string; target_user_id: string }
         Returns: string
       }
+      recalculate_all_gym_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       smart_generate_sessions_with_dates: {
         Args: {
           _course_id: string
