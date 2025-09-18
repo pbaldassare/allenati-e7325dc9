@@ -73,6 +73,7 @@ import InstructorParticipants from "./pages/instructor/InstructorParticipants";
 import InstructorSchedule from "./pages/instructor/InstructorSchedule";
 import { PaymentVerification } from "./components/PaymentVerification";
 import { MobileOptimizations } from "./components/MobileOptimizations";
+import GymLanding from "./pages/GymLanding";
 
 const queryClient = new QueryClient();
 
@@ -171,6 +172,7 @@ const App = () => (
                 <Route path="/gyms" element={<Gyms />} />
                 <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />
+                <Route path="/landing" element={<GymLanding />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
