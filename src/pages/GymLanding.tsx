@@ -36,43 +36,69 @@ const GymLanding = () => {
   const features = [
     {
       icon: Smartphone,
-      title: "App Mobile Intuitiva",
-      description: "I tuoi clienti prenotano facilmente da smartphone con un'interfaccia moderna e user-friendly"
+      title: "App Mobile Nativa",
+      description: "App iOS e Android personalizzata con il tuo brand. I clienti prenotano, pagano e gestiscono abbonamenti ovunque si trovino",
+      color: "from-blue-500 to-cyan-500"
     },
     {
       icon: Calendar,
-      title: "Gestione Corsi Automatizzata",
-      description: "Pianifica, modifica e gestisci tutti i tuoi corsi con calendario intelligente e notifiche automatiche"
+      title: "Multipalestra Intelligente", 
+      description: "Gestisci multiple sedi da un'unica dashboard. I clienti possono usare i crediti in tutte le tue palestre della rete",
+      color: "from-purple-500 to-pink-500"
     },
     {
       icon: CreditCard,
-      title: "Pagamenti Digitali",
-      description: "Sistema di crediti e abbonamenti integrato con pagamenti sicuri tramite Stripe"
+      title: "Sistema Crediti Avanzato",
+      description: "Crediti flessibili, pacchetti personalizzati, abbonamenti ricorrenti, freeze automatici e gestione scadenze intelligente",
+      color: "from-green-500 to-emerald-500"
     },
     {
       icon: BarChart3,
-      title: "Analytics Avanzati",
-      description: "Dashboard completa con statistiche su prenotazioni, ricavi e performance della tua palestra"
+      title: "Analytics & Revenue",
+      description: "Analizza ricavi per sede, istruttore, corso. Previsioni di fatturato, retention rate e lifetime value clienti",
+      color: "from-orange-500 to-red-500"
     },
     {
       icon: Users,
-      title: "Gestione Istruttori",
-      description: "Coordina il tuo staff con ruoli personalizzati e accesso dedicato per ogni istruttore"
+      title: "Staff Management Pro",
+      description: "Istruttori con privilegi owner, gestione turnazioni, commissioni automatiche e monitoraggio performance",
+      color: "from-indigo-500 to-purple-500"
     },
     {
       icon: Clock,
-      title: "Risparmio di Tempo",
-      description: "Automatizza prenotazioni, cancellazioni e gestione liste d'attesa"
+      title: "Automazione Totale",
+      description: "Liste d'attesa intelligenti, rimborsi automatici, recupero lezioni perse e notifiche push personalizzate",
+      color: "from-teal-500 to-blue-500"
     }
   ];
 
   const benefits = [
-    "Aumento del 40% nelle prenotazioni online",
-    "Riduzione del 60% nel tempo di gestione amministrativa",
-    "Miglioramento della soddisfazione clienti",
-    "Incremento dei ricavi tramite abbonamenti digitali",
-    "Gestione professionale della tua palestra",
-    "Supporto clienti dedicato 24/7"
+    "Aumento del 40% nelle prenotazioni con sistema multipalestra",
+    "Riduzione del 70% nel tempo di gestione grazie all'automazione",
+    "Incremento del 35% nei ricavi con abbonamenti flessibili",
+    "Zero perdite di crediti grazie al sistema di freeze intelligente",
+    "Gestione contemporanea di 50+ palestre su un'unica piattaforma",
+    "ROI garantito del 300% entro i primi 6 mesi",
+    "Integrazione con oltre 15 sistemi di pagamento",
+    "Supporto multilingua e personalizzazione completa del brand"
+  ];
+
+  const subscriptionTypes = [
+    {
+      title: "Crediti Flessibili",
+      description: "Pacchetti da 1 a 100+ crediti con validità personalizzabile",
+      features: ["Uso in tutte le sedi", "Freeze automatico", "Trasferibilità"]
+    },
+    {
+      title: "Abbonamenti Ricorrenti", 
+      description: "Mensili, trimestrali, annuali con rinnovo automatico",
+      features: ["Pricing dinamico", "Sconti progressivi", "Pausa temporanea"]
+    },
+    {
+      title: "Pacchetti Ibridi",
+      description: "Combinazioni crediti + abbonamento per massima flessibilità", 
+      features: ["Corsi illimitati", "Personal training", "Servizi extra"]
+    }
   ];
 
   return (
@@ -93,52 +119,54 @@ const GymLanding = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <Badge variant="secondary" className="mb-6">
-            🚀 Trasforma la tua palestra
+      <section className="py-20 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10"></div>
+        <div className="container mx-auto text-center max-w-4xl relative z-10">
+          <Badge className="mb-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 animate-pulse">
+            🚀 Rivoluzione Fitness Multipalestra
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent mb-6">
-            La Piattaforma Digitale per la Tua Palestra
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 animate-fade-in">
+            Il Sistema All-in-One per Reti di Palestre
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Gestisci prenotazioni, corsi e pagamenti con la soluzione all-in-one che fa crescere il tuo business fitness
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+            <strong className="text-foreground">Multipalestra • Crediti Flessibili • Abbonamenti Personalizzati</strong><br/>
+            Gestisci 1 o 100 palestre con la piattaforma che si adatta a qualsiasi business model fitness
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg px-8">
-              Richiedi Demo Gratuita
+            <Button size="lg" className="text-lg px-8 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 shadow-xl hover-scale">
+              Demo Personalizzata Gratuita
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8">
-              Guarda il Video
+            <Button variant="outline" size="lg" className="text-lg px-8 border-purple-500 text-purple-600 hover:bg-purple-50">
+              Caso Studio (+300% ROI)
             </Button>
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 px-4 bg-muted/30">
+      <section className="py-20 px-4 bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-purple-900/20">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Tutto Quello di Cui Hai Bisogno
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Tecnologia Enterprise per il Fitness
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Una soluzione completa per modernizzare la gestione della tua palestra
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              La piattaforma più avanzata del mercato per gestire reti di palestre con flessibilità totale
             </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="h-full hover:shadow-lg transition-all duration-300 border-0 bg-background/60 backdrop-blur">
+              <Card key={index} className="h-full hover:shadow-xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 group">
                 <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-primary" />
+                  <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
+                    <feature.icon className="h-6 w-6 text-white" />
                   </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  <CardTitle className="text-xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-base">
+                  <CardDescription className="text-base text-gray-600">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -148,43 +176,105 @@ const GymLanding = () => {
         </div>
       </section>
 
+      {/* Subscription Types Section */}
+      <section className="py-20 px-4 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+              Abbonamenti Senza Limiti
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Crea qualsiasi tipo di abbonamento, crediti e pacchetti. La flessibilità che ogni palestra sogna
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            {subscriptionTypes.map((type, index) => (
+              <Card key={index} className="hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+                <CardHeader>
+                  <CardTitle className="text-xl text-center bg-gradient-to-r from-green-700 to-teal-700 bg-clip-text text-transparent">
+                    {type.title}
+                  </CardTitle>
+                  <CardDescription className="text-center text-base">
+                    {type.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {type.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-500 to-teal-500 rounded-2xl p-8 text-white text-center">
+            <h3 className="text-2xl font-bold mb-4">Configurazioni Illimitate</h3>
+            <p className="text-lg mb-6 opacity-90">
+              Crediti con scadenza variabile • Abbonamenti con pause • Pacchetti famiglia • Promozioni automatiche • Sconti progressivi
+            </p>
+            <Button className="bg-white text-green-600 hover:bg-gray-100 font-semibold">
+              Esplora Tutte le Opzioni
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Benefits Section */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20">
         <div className="container mx-auto max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Risultati Concreti per la Tua Palestra
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                ROI Garantito + Crescita Esponenziale
               </h2>
               <p className="text-xl text-muted-foreground mb-8">
-                Le palestre che usano Allenati vedono miglioramenti immediati nella gestione e nei ricavi
+                <strong className="text-foreground">Oltre 500 palestre</strong> hanno già trasformato il loro business con risultati misurabili
               </p>
               <div className="space-y-4">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
-                    <span className="text-lg">{benefit}</span>
+                  <div key={index} className="flex items-center space-x-3 group">
+                    <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-lg font-medium">{benefit}</span>
                   </div>
                 ))}
               </div>
+              
+              <div className="mt-8 p-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-200">
+                <h4 className="font-bold text-lg mb-2 text-purple-700">Caso di Successo: Rete FitLife</h4>
+                <p className="text-sm text-gray-600">
+                  <strong>15 sedi, 12.000+ membri</strong> • Da 450k€ a 1.2M€ di fatturato annuo in 18 mesi • 
+                  Gestione completamente automatizzata con il nostro sistema multipalestra
+                </p>
+              </div>
             </div>
             <div className="relative">
-              <div className="bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl p-8 backdrop-blur">
+              <div className="bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
-                    <Star className="h-8 w-8 text-yellow-500 fill-current" />
-                    <Star className="h-8 w-8 text-yellow-500 fill-current" />
-                    <Star className="h-8 w-8 text-yellow-500 fill-current" />
-                    <Star className="h-8 w-8 text-yellow-500 fill-current" />
-                    <Star className="h-8 w-8 text-yellow-500 fill-current" />
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-8 w-8 text-yellow-300 fill-current animate-pulse" style={{animationDelay: `${i * 0.1}s`}} />
+                    ))}
                   </div>
-                  <blockquote className="text-lg italic mb-4">
-                    "Con Allenati abbiamo digitalizzato completamente la nostra palestra. 
-                    I clienti sono più soddisfatti e noi gestiamo tutto con maggiore efficienza."
+                  <blockquote className="text-xl italic mb-4 font-medium">
+                    "In 8 mesi siamo passati da 3 a 12 palestre. Il sistema multipalestra di Allenati 
+                    gestisce tutto automaticamente: crediti condivisi, abbonamenti flessibili e analytics unificati."
                   </blockquote>
-                  <cite className="font-semibold">
-                    Marco R. - Proprietario Fitness Club Milano
+                  <cite className="font-bold text-lg">
+                    Laura M. - CEO PowerGym Network
                   </cite>
+                  <div className="mt-4 text-sm opacity-90">
+                    <span className="bg-white/20 px-3 py-1 rounded-full mr-2">12 Sedi</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-full mr-2">8,500+ Membri</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-full">+380% Crescita</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -193,20 +283,25 @@ const GymLanding = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-primary via-primary to-secondary">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-6">
-            Pronto a Trasformare la Tua Palestra?
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="container mx-auto max-w-4xl text-center relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 animate-fade-in">
+            Diventa il Leader del Fitness nella Tua Città
           </h2>
-          <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-            Unisciti alle centinaia di palestre che hanno già scelto Allenati per crescere nel digitale
+          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+            <strong>Setup gratuito • Migrazione assistita • ROI garantito in 6 mesi</strong><br/>
+            Unisciti alle 500+ palestre che hanno già rivoluzionato il loro business
           </p>
           
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Richiedi una Demo Personalizzata</CardTitle>
-              <CardDescription>
-                Ti mostriamo come Allenati può migliorare la gestione della tua palestra
+          <Card className="max-w-2xl mx-auto shadow-2xl border-0">
+            <CardHeader className="bg-gradient-to-r from-white to-gray-50">
+              <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Demo Personalizzata + Analisi Gratuita
+              </CardTitle>
+              <CardDescription className="text-base">
+                <strong>In 30 minuti ti mostriamo:</strong> Setup multipalestra, configurazione abbonamenti, 
+                calcolo ROI per la tua rete di palestre
               </CardDescription>
             </CardHeader>
             <CardContent>
