@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useToast } from '@/hooks/use-toast';
-import { Refresh, AlertCircle, CheckCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface UserCreditsData {
   user_id: string;
@@ -29,63 +29,16 @@ export const UserCreditsDebugPanel = () => {
     if (!selectedGym) return;
     
     setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_gym_users_credits_debug', {
-        p_gym_id: selectedGym.id
-      });
-
-      if (error) {
-        console.error('Error fetching user credits data:', error);
-        toast({
-          title: "Errore",
-          description: "Impossibile caricare i dati dei crediti",
-          variant: "destructive"
-        });
-      } else {
-        setUsersData(data || []);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Errore",
-        description: "Errore durante il caricamento dei dati",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Temporarily disabled - needs proper RPC function setup
+    setLoading(false);
   };
 
   const fixUserCredits = async (userId: string) => {
-    if (!selectedGym) return;
-
-    try {
-      const { error } = await supabase.rpc('fix_user_gym_credits', {
-        p_user_id: userId,
-        p_gym_id: selectedGym.id
-      });
-
-      if (error) {
-        toast({
-          title: "Errore",
-          description: "Impossibile correggere i crediti",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Successo",
-          description: "Crediti corretti con successo"
-        });
-        fetchUserCreditsData();
-      }
-    } catch (error) {
-      console.error('Error fixing credits:', error);
-      toast({
-        title: "Errore",
-        description: "Errore durante la correzione",
-        variant: "destructive"
-      });
-    }
+    // Temporarily disabled - needs proper RPC function setup
+    toast({
+      title: "Info",
+      description: "Funzione temporaneamente disabilitata"
+    });
   };
 
   useEffect(() => {
@@ -110,7 +63,7 @@ export const UserCreditsDebugPanel = () => {
             size="sm"
             variant="outline"
           >
-            <Refresh className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Aggiorna
           </Button>
         </div>
