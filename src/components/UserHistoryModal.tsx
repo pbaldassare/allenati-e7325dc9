@@ -21,6 +21,7 @@ interface BookingHistory {
   scheduled_time: string;
   status: string;
   created_at: string;
+  course_name_snapshot?: string;
   course: {
     name: string;
   };
@@ -68,7 +69,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const loadUserHistory = async () => {
     setLoading(true);
     try {
-      // Load booking history
+      // Load booking history with consolidated data preference
       let bookingsQuery = supabase
         .from('bookings')
         .select(`
@@ -204,7 +205,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         {bookings.map((booking) => (
                           <TableRow key={booking.id}>
                             <TableCell className="font-medium">
-                              {booking.course.name}
+                              {booking.course_name_snapshot || booking.course?.name || 'Corso non disponibile'}
                             </TableCell>
                             <TableCell>
                               {new Date(booking.scheduled_date).toLocaleDateString('it-IT')}

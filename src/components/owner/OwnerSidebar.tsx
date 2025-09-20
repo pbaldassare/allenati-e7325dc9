@@ -30,6 +30,7 @@ import {
   ShoppingBag,
   User,
   HelpCircle,
+  TrendingUp,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -65,6 +66,7 @@ export const OwnerSidebar: React.FC = () => {
     { title: "Nuovo Corso", url: "/owner/courses/new", icon: PlusCircle },
     { title: "Calendario", url: "/owner/schedule", icon: CalendarClock },
     { title: "Prenotazioni", url: "/owner/bookings", icon: ClipboardList },
+    { title: "Analytics", url: "/owner/bookings-analytics", icon: TrendingUp },
     { title: "Stripe Connect", url: "/owner/stripe", icon: CreditCard },
     { title: "Abbonamenti", url: "/owner/subscriptions", icon: ShoppingBag },
     { title: "Piani Abbonamento", url: "/owner/subscription-plans", icon: Settings },

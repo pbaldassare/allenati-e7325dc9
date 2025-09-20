@@ -51,6 +51,7 @@ import OwnerSubscriptions from "./pages/owner/OwnerSubscriptions";
 import OwnerSubscriptionPlans from "./pages/owner/OwnerSubscriptionPlans";
 import OwnerSchedule from "./pages/owner/OwnerSchedule";
 import OwnerBookings from "./pages/owner/OwnerBookings";
+import OwnerBookingsAnalytics from "./pages/owner/OwnerBookingsAnalytics";
 import OwnerReports from "./pages/owner/OwnerReports";
 import OwnerChat from "./pages/owner/OwnerChat";
 import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
@@ -147,6 +148,7 @@ const App = () => (
                   <Route path="courses/:id/exceptions" element={<OwnerCourseExceptions />} />
                   <Route path="schedule" element={<OwnerSchedule />} />
                   <Route path="bookings" element={<OwnerBookings />} />
+                  <Route path="bookings-analytics" element={<OwnerBookingsAnalytics />} />
                   <Route path="subscriptions" element={<OwnerSubscriptions />} />
                   <Route path="subscription-plans" element={<OwnerSubscriptionPlans />} />
                   <Route path="stripe" element={<OwnerStripeSetup />} />
