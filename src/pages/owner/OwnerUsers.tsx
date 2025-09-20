@@ -68,6 +68,9 @@ const OwnerUsers = () => {
   // Credit assignment dialog state
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [selectedUserForCredits, setSelectedUserForCredits] = useState<MemberProfile | null>(null);
+  
+  // User credits state
+  const [userCredits, setUserCredits] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     document.title = 'Utenti Palestra | Gym Manager';
@@ -407,6 +410,13 @@ const OwnerUsers = () => {
     }
   }, [members, isMobile, loading, selectedGym?.name]);
 
+  // Load credits when members are loaded
+  useEffect(() => {
+    if (members.length > 0 && selectedGym?.id) {
+      loadUserCredits();
+    }
+  }, [members, selectedGym?.id]);
+
   // Helper function to get the highest priority role
   const getHighestRole = (roles: string[]) => {
     if (roles.includes('admin')) return { role: 'admin', label: 'Admin', icon: Crown, variant: 'destructive' as const };
@@ -419,6 +429,37 @@ const OwnerUsers = () => {
     if (!selectedGym?.id) return;
     console.log('🔄 Manual reload triggered');
     await loadMembers();
+    await loadUserCredits();
+  };
+
+  // Load user credits for the selected gym
+  const loadUserCredits = async () => {
+    if (!selectedGym?.id || members.length === 0) return;
+    
+    try {
+      const userIds = members.map(m => m.user_id);
+      const { data: credits, error } = await supabase
+        .from('gym_credits')
+        .select('user_id, credits')
+        .eq('gym_id', selectedGym.id)
+        .in('user_id', userIds);
+      
+      if (error) throw error;
+      
+      const creditsMap = new Map<string, number>();
+      credits?.forEach(c => creditsMap.set(c.user_id, c.credits || 0));
+      
+      // Set 0 credits for users not in the gym_credits table
+      userIds.forEach(userId => {
+        if (!creditsMap.has(userId)) {
+          creditsMap.set(userId, 0);
+        }
+      });
+      
+      setUserCredits(creditsMap);
+    } catch (error) {
+      console.error('Error loading user credits:', error);
+    }
   };
 
   const forceCacheRefresh = async () => {
@@ -725,6 +766,12 @@ const OwnerUsers = () => {
                                 {m.belt || 'N/D'}
                               </div>
                             </div>
+                            <div>
+                              <span className="font-medium">Crediti:</span>
+                              <div className="text-muted-foreground font-semibold">
+                                {userCredits.get(m.user_id) || 0}
+                              </div>
+                            </div>
                           </div>
                           
                           <div>
@@ -755,6 +802,17 @@ const OwnerUsers = () => {
                             >
                               <Eye className="mr-2 h-3 w-3" />
                               Dettagli
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedUserForCredits(m);
+                                setCreditDialogOpen(true);
+                              }}
+                              title="Gestisci crediti"
+                            >
+                              <CreditCard className="h-3 w-3" />
                             </Button>
                             {!isAdminOrOwner && !m.is_instructor && (
                               <Button 
@@ -1060,11 +1118,22 @@ const OwnerUsers = () => {
           gymId={selectedGym.id}
           onSuccess={() => {
             loadMembers();
+            loadUserCredits();
             setCreditDialogOpen(false);
             setSelectedUserForCredits(null);
           }}
         />
       )}
+
+      {/* Medical Certificate Upload Dialog */}
+      <MedicalCertificateUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUploaded={() => {
+          loadMembers();
+          setUploadDialogOpen(false);
+        }}
+      />
     </div>
   );
 };
