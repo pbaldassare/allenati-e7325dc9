@@ -169,31 +169,43 @@ export type Database = {
           booking_id: string
           change_reason: string | null
           changed_by: string | null
+          course_name_snapshot: string | null
           created_at: string
+          gym_name_snapshot: string | null
           id: string
+          instructor_name_snapshot: string | null
           metadata: Json | null
           new_status: Database["public"]["Enums"]["booking_status"]
           old_status: Database["public"]["Enums"]["booking_status"] | null
+          original_booking_data: Json | null
         }
         Insert: {
           booking_id: string
           change_reason?: string | null
           changed_by?: string | null
+          course_name_snapshot?: string | null
           created_at?: string
+          gym_name_snapshot?: string | null
           id?: string
+          instructor_name_snapshot?: string | null
           metadata?: Json | null
           new_status: Database["public"]["Enums"]["booking_status"]
           old_status?: Database["public"]["Enums"]["booking_status"] | null
+          original_booking_data?: Json | null
         }
         Update: {
           booking_id?: string
           change_reason?: string | null
           changed_by?: string | null
+          course_name_snapshot?: string | null
           created_at?: string
+          gym_name_snapshot?: string | null
           id?: string
+          instructor_name_snapshot?: string | null
           metadata?: Json | null
           new_status?: Database["public"]["Enums"]["booking_status"]
           old_status?: Database["public"]["Enums"]["booking_status"] | null
+          original_booking_data?: Json | null
         }
         Relationships: [
           {
@@ -211,10 +223,15 @@ export type Database = {
           cancelled_at: string | null
           checked_in_at: string | null
           course_id: string
+          course_name_snapshot: string | null
           created_at: string
           credits_used: number
+          gym_name_snapshot: string | null
           id: string
+          instructor_name_snapshot: string | null
+          is_consolidated: boolean | null
           notes: string | null
+          room_name_snapshot: string | null
           scheduled_date: string
           scheduled_time: string
           session_id: string | null
@@ -227,10 +244,15 @@ export type Database = {
           cancelled_at?: string | null
           checked_in_at?: string | null
           course_id: string
+          course_name_snapshot?: string | null
           created_at?: string
           credits_used?: number
+          gym_name_snapshot?: string | null
           id?: string
+          instructor_name_snapshot?: string | null
+          is_consolidated?: boolean | null
           notes?: string | null
+          room_name_snapshot?: string | null
           scheduled_date: string
           scheduled_time: string
           session_id?: string | null
@@ -243,10 +265,15 @@ export type Database = {
           cancelled_at?: string | null
           checked_in_at?: string | null
           course_id?: string
+          course_name_snapshot?: string | null
           created_at?: string
           credits_used?: number
+          gym_name_snapshot?: string | null
           id?: string
+          instructor_name_snapshot?: string | null
+          is_consolidated?: boolean | null
           notes?: string | null
+          room_name_snapshot?: string | null
           scheduled_date?: string
           scheduled_time?: string
           session_id?: string | null
