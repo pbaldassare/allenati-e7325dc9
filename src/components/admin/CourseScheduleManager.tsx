@@ -188,9 +188,10 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                     onValueChange={(value) => 
                       updateScheduleItem(index, 'roomId', value)
                     }
+                    disabled={gymRooms.length === 0}
                   >
                     <SelectTrigger className={!item.roomId ? 'border-destructive' : ''}>
-                      <SelectValue placeholder="Seleziona sala">
+                      <SelectValue placeholder={gymRooms.length === 0 ? "Nessuna sala disponibile" : "Seleziona sala"}>
                         {item.roomId && (
                           <div className="flex items-center">
                             <MapPin className="mr-2 h-4 w-4" />
@@ -200,18 +201,26 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {gymRooms.map(room => (
-                        <SelectItem key={room.id} value={room.id}>
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4" />
-                            {room.name}
-                          </div>
+                      {gymRooms.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          Nessuna sala configurata
                         </SelectItem>
-                      ))}
+                      ) : (
+                        gymRooms.map(room => (
+                          <SelectItem key={room.id} value={room.id}>
+                            <div className="flex items-center">
+                              <MapPin className="mr-2 h-4 w-4" />
+                              {room.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {!item.roomId && (
-                    <p className="text-xs text-destructive mt-1">Sala obbligatoria</p>
+                    <p className="text-xs text-destructive mt-1">
+                      {gymRooms.length === 0 ? 'Nessuna sala disponibile' : 'Sala obbligatoria'}
+                    </p>
                   )}
                 </div>
 

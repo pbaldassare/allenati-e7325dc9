@@ -9,7 +9,7 @@ import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager'
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
 import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
 import { supabase } from '@/integrations/supabase/client';
-import { useGym } from '@/contexts/GymContext';
+import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { ScheduleItem, GymRoom, CourseSession } from '@/types/schedule';
@@ -44,7 +44,7 @@ interface ScheduleException {
 
 const OwnerCourseNew: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedGym } = useGym();
+  const { selectedGym } = useOwnerGym();
   const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState('basic');
@@ -54,16 +54,27 @@ const OwnerCourseNew: React.FC = () => {
   const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
   const [gymRooms, setGymRooms] = useState<GymRoom[]>([]);
   const [loading, setLoading] = useState(false);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
   
   useEffect(() => {
     document.title = "Nuovo Corso | Area Proprietario";
     loadGymRooms();
-  }, []);
+  }, [selectedGym?.id]);
 
   const loadGymRooms = async () => {
-    if (!selectedGym?.id) return;
+    if (!selectedGym?.id) {
+      setRoomsLoading(false);
+      setRoomsError('Nessuna palestra selezionata');
+      return;
+    }
+    
+    setRoomsLoading(true);
+    setRoomsError(null);
     
     try {
+      console.log('Loading rooms for gym:', selectedGym.id, selectedGym.name);
+      
       const { data, error } = await supabase
         .from('gym_rooms')
         .select('id, name')
@@ -72,9 +83,23 @@ const OwnerCourseNew: React.FC = () => {
         .order('name');
       
       if (error) throw error;
+      
+      console.log('Loaded rooms:', data);
       setGymRooms(data || []);
+      
+      if (!data || data.length === 0) {
+        setRoomsError('Nessuna sala configurata per questa palestra');
+      }
     } catch (error) {
       console.error('Error loading gym rooms:', error);
+      setRoomsError('Errore nel caricamento delle sale');
+      toast({
+        title: 'Errore',
+        description: 'Impossibile caricare le sale della palestra',
+        variant: 'destructive',
+      });
+    } finally {
+      setRoomsLoading(false);
     }
   };
 
@@ -276,11 +301,50 @@ const OwnerCourseNew: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CourseScheduleManager
-                schedule={schedules}
-                onChange={handleSchedulesChange}
-                gymRooms={gymRooms}
-              />
+              {roomsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center space-y-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground">Caricamento sale...</p>
+                  </div>
+                </div>
+              ) : roomsError ? (
+                <div className="text-center py-8 space-y-4">
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
+                    <p className="text-destructive font-medium">{roomsError}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={loadGymRooms}
+                    className="mx-auto"
+                  >
+                    Ricarica Sale
+                  </Button>
+                </div>
+              ) : gymRooms.length === 0 ? (
+                <div className="text-center py-8 space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                    <p className="text-amber-800 font-medium">
+                      Nessuna sala disponibile per questa palestra
+                    </p>
+                    <p className="text-amber-700 text-sm mt-1">
+                      Aggiungi delle sale dalla sezione "Sale" prima di creare un corso
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/owner/rooms')}
+                  >
+                    Gestisci Sale
+                  </Button>
+                </div>
+              ) : (
+                <CourseScheduleManager
+                  schedule={schedules}
+                  onChange={handleSchedulesChange}
+                  gymRooms={gymRooms}
+                />
+              )}
               <div className="mt-6 flex justify-between">
                 <Button 
                   variant="outline" 
