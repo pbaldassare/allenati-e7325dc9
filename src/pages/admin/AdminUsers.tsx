@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Edit, Download, Calendar, Mail, MapPin } from 'lucide-react';
+import { Edit, Download, Calendar, Mail, MapPin, Trash2 } from 'lucide-react';
 import RoleAssignmentDialog from '@/components/admin/RoleAssignmentDialog';
 import { AdminUserStats } from '@/components/admin/AdminUserStats';
 import { AdminUserFilters, UserFilters } from '@/components/admin/AdminUserFilters';
 import { AssignWelcomeCreditsButton } from '@/components/admin/AssignWelcomeCreditsButton';
+import { DeleteUserConfirmDialog } from '@/components/dialogs/DeleteUserConfirmDialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -344,6 +345,11 @@ const AdminUsers = () => {
                           userName={`${user.first_name} ${user.last_name}`}
                           currentRole={user.role}
                           onRoleAssigned={loadData}
+                        />
+                        <DeleteUserConfirmDialog
+                          userEmail={user.email}
+                          userName={`${user.first_name} ${user.last_name}`}
+                          onUserDeleted={loadData}
                         />
                       </div>
                     </div>

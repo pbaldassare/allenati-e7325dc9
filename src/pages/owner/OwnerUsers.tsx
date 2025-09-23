@@ -11,13 +11,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard, Eye } from 'lucide-react';
+import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard, Eye, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDetailsModal from '@/components/owner/UserDetailsModal';
 import { ManualCreditAssignmentDialog } from '@/components/owner/ManualCreditAssignmentDialog';
+import { DeleteUserConfirmDialog } from '@/components/dialogs/DeleteUserConfirmDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 interface MemberProfile {
@@ -844,6 +845,13 @@ const OwnerUsers = () => {
                             >
                               <FileText className="h-3 w-3" />
                             </Button>
+                            {!isAdminOrOwner && (
+                              <DeleteUserConfirmDialog
+                                userEmail={m.email || ''}
+                                userName={`${m.first_name} ${m.last_name}`}
+                                onUserDeleted={() => reloadMembers()}
+                              />
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -1053,10 +1061,17 @@ const OwnerUsers = () => {
                                       Promuovi Istruttore
                                     </>
                                   )}
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
+                                 </Button>
+                               )}
+                               {!isAdminOrOwner && (
+                                 <DeleteUserConfirmDialog
+                                   userEmail={m.email || ''}
+                                   userName={`${m.first_name} ${m.last_name}`}
+                                   onUserDeleted={() => reloadMembers()}
+                                 />
+                               )}
+                             </div>
+                           </TableCell>
                         </TableRow>
                       );
                     })
