@@ -30,11 +30,12 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
 
     const fetchCreditsData = async () => {
       try {
-        // Get current credits from profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('current_credits')
+        // Get gym-specific credits
+        const { data: gymCredits } = await supabase
+          .from('gym_credits')
+          .select('credits')
           .eq('user_id', user.id)
+          .eq('gym_id', selectedGym.id)
           .single();
 
         // Get active subscription for selected gym
@@ -54,7 +55,7 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .single();
 
         setCreditsData({
-          current_credits: profile?.current_credits || 0,
+          current_credits: gymCredits?.credits || 0,
           active_subscription: subscription ? {
             plan_name: subscription.subscription_plans.name,
             expires_at: subscription.expires_at,
