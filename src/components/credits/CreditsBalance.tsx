@@ -91,7 +91,7 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Current Credits */}
+        {/* Crediti Disponibili */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Crediti disponibili</span>
           <Badge variant="secondary" className="text-lg font-bold px-3 py-1">

@@ -56,7 +56,7 @@ export function ManualCreditAssignmentDialog({
     
     setIsLoadingInfo(true);
     try {
-      // Fetch current credits
+      // Fetch crediti disponibili
       const { data: creditsData } = await supabase
         .from('gym_credits')
         .select('credits')
