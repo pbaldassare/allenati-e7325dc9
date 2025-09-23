@@ -231,7 +231,7 @@ export default function Subscriptions() {
           </div>
         </div>
 
-        {/* Crediti attuali per palestra */}
+        {/* Crediti disponibili per palestra */}
         <Card className="border-primary/20 bg-gradient-primary">
           <CardHeader className="text-center text-primary-foreground">
             <CardTitle className="text-xl">I tuoi Crediti</CardTitle>

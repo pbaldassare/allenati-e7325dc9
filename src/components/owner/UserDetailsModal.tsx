@@ -358,7 +358,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                   <CardContent className="space-y-4">
                     <div className="space-y-3 text-sm">
                       <div>
-                        <div className="font-medium mb-1">Crediti Attuali</div>
+                        <div className="font-medium mb-1">Crediti Disponibili</div>
                         <Badge variant="outline" className="text-lg px-3 py-1">
                           {userDetails.current_credits || 0} crediti
                         </Badge>

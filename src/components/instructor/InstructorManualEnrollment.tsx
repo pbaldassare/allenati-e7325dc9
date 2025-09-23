@@ -656,7 +656,7 @@ export const InstructorManualEnrollment: React.FC = () => {
                      <div className="flex items-center justify-between">
                        <div className="flex-1">
                          <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                         <p className="font-medium">Crediti attuali: {selectedUser.current_credits}</p>
+                         <p className="font-medium">Crediti disponibili: {selectedUser.current_credits}</p>
                          {selectedUser.subscription ? (
                            <div className="mt-2">
                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
