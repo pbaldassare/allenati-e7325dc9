@@ -137,7 +137,7 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
         .from('bookings')
         .select(`
           *,
-          profiles!inner(user_id, first_name, last_name, email, profile_picture_url, current_credits, belt),
+          profiles!inner(user_id, first_name, last_name, email, profile_picture_url, belt),
           user_subscriptions(
             subscription_plans!inner(name, unlimited_access)
           ),
@@ -161,21 +161,35 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
         return;
       }
 
+      // Get gym-specific credits for each participant
+      const userIds = bookingsData.map(booking => booking.user_id);
+      const { data: gymCreditsData } = await supabase
+        .from('gym_credits')
+        .select('user_id, credits')
+        .in('user_id', userIds);
+
       // Transform the data
-      const participantsWithSubs = bookingsData.map((booking: any) => ({
-        ...booking,
-        user_id: booking.user_id, // Ensure user_id is available for UnsubscribeDialog
-        user: booking.profiles || {
-          first_name: 'Nome non trovato',
-          last_name: '',
-          email: 'Email non trovata',
-          current_credits: 0
-        },
-        subscription: booking.user_subscriptions?.[0]?.subscription_plans ? {
-          plan_name: booking.user_subscriptions[0].subscription_plans.name,
-          unlimited_access: booking.user_subscriptions[0].subscription_plans.unlimited_access
-        } : undefined
-      }));
+      const participantsWithSubs = bookingsData.map((booking: any) => {
+        const userGymCredits = gymCreditsData?.find(gc => gc.user_id === booking.user_id);
+        
+        return {
+          ...booking,
+          user_id: booking.user_id, // Ensure user_id is available for UnsubscribeDialog
+          user: booking.profiles ? {
+            ...booking.profiles,
+            current_credits: userGymCredits?.credits || 0 // Use gym-specific credits
+          } : {
+            first_name: 'Nome non trovato',
+            last_name: '',
+            email: 'Email non trovata',
+            current_credits: 0
+          },
+          subscription: booking.user_subscriptions?.[0]?.subscription_plans ? {
+            plan_name: booking.user_subscriptions[0].subscription_plans.name,
+            unlimited_access: booking.user_subscriptions[0].subscription_plans.unlimited_access
+          } : undefined
+        };
+      });
 
       console.log('Final participants:', participantsWithSubs);
       setParticipants(participantsWithSubs);
@@ -195,20 +209,32 @@ export const CourseParticipantsList: React.FC<CourseParticipantsListProps> = ({
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, current_credits, profile_picture_url')
+        .select('user_id, first_name, last_name, email, profile_picture_url')
         .or(`first_name.ilike.%${searchUsers}%,last_name.ilike.%${searchUsers}%,email.ilike.%${searchUsers}%`)
         .limit(10);
 
       if (error) throw error;
 
-      const mappedUsers: User[] = (profiles || []).map(profile => ({
-        id: profile.user_id,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        current_credits: profile.current_credits || 0,
-        profile_picture_url: profile.profile_picture_url
-      }));
+      // Get gym-specific credits for each user
+      const mappedUsers: User[] = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          // Get gym-specific credits - we'd need gym context here
+          const { data: gymCredits } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', profile.user_id)
+            .maybeSingle();
+          
+          return {
+            id: profile.user_id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            email: profile.email || '',
+            current_credits: gymCredits?.credits || 0,
+            profile_picture_url: profile.profile_picture_url
+          };
+        })
+      );
 
       setUsers(mappedUsers);
     } catch (error) {

@@ -241,8 +241,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       // Get user IDs for additional data
       const userIds = participantsData.map(booking => booking.user_id);
       
-      // Fetch subscriptions and certificates separately for reliability
-      const [subscriptionsResult, certificatesResult] = await Promise.all([
+      // Fetch subscriptions, certificates and gym credits separately for reliability
+      const [subscriptionsResult, certificatesResult, gymCreditsResult] = await Promise.all([
         supabase
           .from('user_subscriptions')
           .select(`
@@ -264,17 +264,24 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           .select('user_id, id, status, expiry_date')
           .in('user_id', userIds)
           .eq('status', 'approved')
-          .gt('expiry_date', new Date().toISOString())
+          .gt('expiry_date', new Date().toISOString()),
+          
+        supabase
+          .from('gym_credits')
+          .select('user_id, credits')
+          .in('user_id', userIds)
       ]);
 
       const subscriptions = subscriptionsResult.data || [];
       const certificates = certificatesResult.data || [];
+      const gymCredits = gymCreditsResult.data || [];
 
       // Transform data efficiently
       const participants: Participant[] = participantsData.map(booking => {
         const profile = booking.profiles;
         const subscription = subscriptions.find(sub => sub.user_id === booking.user_id);
         const certificate = certificates.find(cert => cert.user_id === booking.user_id);
+        const userGymCredits = gymCredits.find(gc => gc.user_id === booking.user_id);
 
         return {
           id: booking.id,
@@ -286,7 +293,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
             last_name: profile?.last_name || 'Sconosciuto',
             email: profile?.email || 'N/A',
             profile_picture_url: profile?.profile_picture_url,
-            current_credits: profile?.current_credits || 0
+            current_credits: userGymCredits?.credits || 0 // Use gym-specific credits
           },
           subscription: subscription ? {
             id: subscription.id,
@@ -352,22 +359,35 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
   const searchUsers = async () => {
     try {
+      // First get profiles, then get gym-specific credits
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, current_credits, profile_picture_url')
+        .select('user_id, first_name, last_name, email, profile_picture_url')
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
         .limit(8);
 
       if (error) throw error;
 
-      const users = data?.map(profile => ({
-        id: profile.user_id,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        current_credits: profile.current_credits || 0,
-        profile_picture_url: profile.profile_picture_url
-      })) || [];
+      // Get gym-specific credits for each user
+      const users = await Promise.all(
+        (data || []).map(async (profile) => {
+          // Get gym-specific credits - we'd need gym context here
+          const { data: gymCredits } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', profile.user_id)
+            .maybeSingle();
+          
+          return {
+            id: profile.user_id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            email: profile.email || '',
+            current_credits: gymCredits?.credits || 0,
+            profile_picture_url: profile.profile_picture_url
+          };
+        })
+      );
 
       // Filter out already enrolled users
       const enrolledUserIds = participants.map(p => p.user_id);

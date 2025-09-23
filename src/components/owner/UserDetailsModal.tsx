@@ -91,6 +91,16 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
       
       if (profileErr) throw profileErr;
 
+      // Get gym-specific credits
+      const { data: gymCredits, error: gymCreditsErr } = await supabase
+        .from('gym_credits')
+        .select('credits')
+        .eq('user_id', userId)
+        .eq('gym_id', selectedGym.id)
+        .maybeSingle();
+      
+      if (gymCreditsErr) throw gymCreditsErr;
+
       // Get membership data
       const { data: membership, error: membershipErr } = await supabase
         .from('user_gym_memberships')
@@ -135,6 +145,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
 
       const fullProfile: FullUserProfile = {
         ...profile,
+        current_credits: gymCredits?.credits || 0, // Use gym-specific credits
         membership_status: membership?.status || 'inactive',
         membership_type: membership?.membership_type || 'member',
         user_roles: userRoles?.map(ur => ur.role) || ['basic_user'],

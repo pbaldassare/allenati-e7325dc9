@@ -106,7 +106,6 @@ export const InstructorManualEnrollment: React.FC = () => {
           last_name, 
           email, 
           phone,
-          current_credits,
           user_gym_memberships!inner(gym_id, status)
         `)
         .eq('user_gym_memberships.gym_id', selectedGymId)
@@ -118,11 +117,19 @@ export const InstructorManualEnrollment: React.FC = () => {
 
       console.log('🔍 Found profiles:', data?.length || 0);
 
-      // Enhance users with subscription info
+      // Enhance users with subscription and gym credits info
       const enhancedUsers = await Promise.all(
         (data || []).map(async (profile) => {
           console.log('🔍 Checking subscription for user:', profile.email);
           const subscription = await getUserActiveSubscription(profile.user_id, selectedGymId);
+          
+          // Get gym-specific credits
+          const { data: gymCredits } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', profile.user_id)
+            .eq('gym_id', selectedGymId)
+            .maybeSingle();
           
           const userObj = {
             id: profile.user_id,
@@ -130,7 +137,7 @@ export const InstructorManualEnrollment: React.FC = () => {
             last_name: profile.last_name || 'Cognome',
             email: profile.email || '',
             phone: profile.phone || '',
-            current_credits: profile.current_credits || 0,
+            current_credits: gymCredits?.credits || 0,
             subscription: subscription ? {
               id: subscription.id,
               plan_name: subscription.subscription_plans.name,

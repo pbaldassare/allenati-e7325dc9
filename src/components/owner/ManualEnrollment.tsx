@@ -54,19 +54,31 @@ export const ManualEnrollment: React.FC<ManualEnrollmentProps> = ({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, current_credits')
+        .select('user_id, first_name, last_name, email')
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
         .limit(10);
 
       if (error) throw error;
 
-      const mappedUsers = data?.map(profile => ({
-        id: profile.user_id,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        current_credits: profile.current_credits || 0,
-      })) || [];
+      // Get gym credits for each user
+      const mappedUsers = await Promise.all(
+        (data || []).map(async (profile) => {
+          // Get gym-specific credits (this would need gym context)
+          const { data: gymCredits } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', profile.user_id)
+            .maybeSingle();
+          
+          return {
+            id: profile.user_id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            email: profile.email || '',
+            current_credits: gymCredits?.credits || 0,
+          };
+        })
+      );
 
       setUsers(mappedUsers);
     } catch (error) {
