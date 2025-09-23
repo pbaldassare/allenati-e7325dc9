@@ -2132,6 +2132,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      recalculate_all_gym_credits_fixed: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       smart_generate_sessions_with_dates: {
         Args: {
           _course_id: string
