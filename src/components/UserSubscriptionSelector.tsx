@@ -133,30 +133,10 @@ export const UserSubscriptionSelector: React.FC = () => {
 
       if (error) throw error;
 
-      // Add credits if plan includes them
+      // Add credits if plan includes them (temporarily disabled for gym-specific handling)
       if (selectedPlan.credits_included > 0) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        const newBalance = (profile?.current_credits || 0) + selectedPlan.credits_included;
-
-        await supabase
-          .from('credits_transactions')
-          .insert({
-            user_id: user.id,
-            amount: selectedPlan.credits_included,
-            balance_after: newBalance,
-            transaction_type: 'subscription',
-            description: `Crediti da abbonamento ${selectedPlan.name}`
-          });
-
-        await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', user.id);
+        console.warn('Credits handling temporarily disabled - needs gym context');
+        // TODO: Re-enable with proper gym context management
       }
 
       toast({

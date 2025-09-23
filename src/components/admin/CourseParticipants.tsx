@@ -55,33 +55,55 @@ export const CourseParticipants: React.FC<CourseParticipantsProps> = ({ courseId
       // Get unique user IDs
       const userIds = [...new Set(bookings.map(b => b.user_id))];
       
+      // Get course gym_id
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('gym_id')
+        .eq('id', courseId)
+        .single();
+
+      if (courseError) throw courseError;
+
       // Fetch profiles for all users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name, email, profile_picture_url, current_credits')
+        .select('user_id, first_name, last_name, email, profile_picture_url')
         .in('user_id', userIds);
 
       if (profilesError) throw profilesError;
 
-      // Get subscription data for each user
+      // Get subscription and credits data for each user
       const participantsWithData = await Promise.all(
         bookings.map(async (booking: any) => {
           const userProfile = profiles?.find(p => p.user_id === booking.user_id);
           
+          // Get gym-specific subscription
           const { data: subData } = await supabase
             .from('user_subscriptions')
             .select('subscription_plans!inner(name, unlimited_access)')
             .eq('user_id', booking.user_id)
+            .eq('gym_id', courseData.gym_id)
             .eq('status', 'active')
+            .gte('expires_at', new Date().toISOString())
+            .maybeSingle();
+
+          // Get gym-specific credits
+          const { data: gymCredits } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', booking.user_id)
+            .eq('gym_id', courseData.gym_id)
             .maybeSingle();
 
           return {
             ...booking,
-            user: userProfile || {
-              first_name: 'Nome non trovato',
-              last_name: '',
-              email: 'Email non trovata',
-              current_credits: 0
+            user: {
+              ...(userProfile || {
+                first_name: 'Nome non trovato',
+                last_name: '',
+                email: 'Email non trovata',
+              }),
+              current_credits: gymCredits?.credits || 0
             },
             subscription: subData?.subscription_plans ? {
               plan_name: subData.subscription_plans.name,

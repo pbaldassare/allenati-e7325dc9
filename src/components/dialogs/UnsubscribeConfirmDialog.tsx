@@ -67,22 +67,33 @@ export const UnsubscribeConfirmDialog: React.FC<UnsubscribeConfirmDialogProps> =
 
       // If refundable, add credits back
       if (isRefundable && participant.credits_used > 0) {
-        // Get current user credits
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('current_credits')
-          .eq('user_id', participant.user_id)
+        // Get course gym_id
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .select('gym_id')
+          .eq('id', courseId)
           .single();
 
-        if (profileError) throw profileError;
+        if (courseError) throw courseError;
 
-        const newBalance = (profileData.current_credits || 0) + participant.credits_used;
+        // Get current gym credits
+        const { data: gymCreditsData, error: gymCreditsError } = await supabase
+          .from('gym_credits')
+          .select('credits')
+          .eq('user_id', participant.user_id)
+          .eq('gym_id', courseData.gym_id)
+          .single();
 
-        // Update credits
+        if (gymCreditsError) throw gymCreditsError;
+
+        const newBalance = (gymCreditsData.credits || 0) + participant.credits_used;
+
+        // Update gym credits
         const { error: creditsError } = await supabase
-          .from('profiles')
-          .update({ current_credits: newBalance })
-          .eq('user_id', participant.user_id);
+          .from('gym_credits')
+          .update({ credits: newBalance })
+          .eq('user_id', participant.user_id)
+          .eq('gym_id', courseData.gym_id);
 
         if (creditsError) throw creditsError;
 
@@ -91,6 +102,7 @@ export const UnsubscribeConfirmDialog: React.FC<UnsubscribeConfirmDialogProps> =
           .from('credits_transactions')
           .insert({
             user_id: participant.user_id,
+            gym_id: courseData.gym_id,
             amount: participant.credits_used,
             balance_after: newBalance,
             transaction_type: 'refund',
