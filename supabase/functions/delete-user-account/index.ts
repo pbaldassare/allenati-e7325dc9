@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     console.error('Error deleting user account:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Errore durante l\'eliminazione dell\'account' 
+        error: (error as Error).message || 'Errore durante l\'eliminazione dell\'account' 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

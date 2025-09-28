@@ -153,7 +153,7 @@ Disponibili solo 2 funzioni:
       
       return new Response(JSON.stringify({
         response: functionResult.response,
-        actionRequired: functionResult.actionRequired
+        actionRequired: false
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -172,7 +172,7 @@ Disponibili solo 2 funzioni:
   } catch (error) {
     console.error('❌ AI Assistant Error:', error);
     return new Response(JSON.stringify({
-      error: error.message || 'Errore interno del server',
+      error: (error as Error).message || 'Errore interno del server',
       response: 'Mi dispiace, c\'è stato un errore. Riprova tra qualche istante.'
     }), {
       status: 500,
@@ -236,7 +236,7 @@ async function handleFunctionCall(functionName: string, args: any, userId: strin
     }
   } catch (error) {
     console.error(`❌ Error in ${functionName}:`, error);
-    return { response: `Errore nell'eseguire l'operazione: ${error.message}` };
+    return { response: `Errore nell'eseguire l'operazione: ${(error as Error).message}` };
   }
 }
 

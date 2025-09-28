@@ -327,7 +327,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating receipt:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Errore nella generazione della ricevuta' 
+      error: (error as Error).message || 'Errore nella generazione della ricevuta' 
     }), {
       status: 500,
       headers: { 
