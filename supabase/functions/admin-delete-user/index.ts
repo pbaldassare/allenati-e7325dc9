@@ -76,8 +76,9 @@ Deno.serve(async (req) => {
 
     let targetUserId = null
     let userToDelete = null
+    let isOrphanedProfile = false
 
-    // Get all auth users
+    // Get all auth users with enhanced logging
     const { data: authUsers, error: findUserError } = await supabaseClient.auth.admin.listUsers()
     
     if (findUserError) {
@@ -88,13 +89,41 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Strategy 1: Search by user_id (most reliable)
+    console.log('Total auth users available:', authUsers.users.length)
+    console.log('Sample auth user IDs:', authUsers.users.slice(0, 3).map(u => ({ id: u.id, email: u.email })))
+
+    // Strategy 1: Search by user_id (most reliable) with enhanced debugging
     if (user_id) {
       console.log('Searching by user_id:', user_id)
+      
+      // Check if user_id exists in auth users
+      const userExists = authUsers.users.some(u => u.id === user_id)
+      console.log('User exists in auth.users:', userExists)
+      
       userToDelete = authUsers.users.find(u => u.id === user_id)
       if (userToDelete) {
         targetUserId = userToDelete.id
         console.log('Found user with user_id match:', targetUserId)
+      } else {
+        console.log('User not found in auth.users, checking for orphaned profile...')
+        
+        // Check if this is an orphaned profile (exists in profiles but not in auth.users)
+        const { data: orphanedProfile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('user_id, email, first_name, last_name')
+          .eq('user_id', user_id)
+          .maybeSingle()
+        
+        if (!profileError && orphanedProfile) {
+          console.log('Found orphaned profile:', orphanedProfile)
+          targetUserId = user_id
+          isOrphanedProfile = true
+          // Create a mock userToDelete object for orphaned profiles
+          userToDelete = { 
+            id: user_id, 
+            email: orphanedProfile.email || `orphaned-${user_id}@example.com` 
+          }
+        }
       }
     }
     
@@ -137,6 +166,15 @@ Deno.serve(async (req) => {
             userToDelete = authUser
             console.log('Found user via name search:', targetUserId, profileMatch.first_name, profileMatch.last_name)
             break
+          } else {
+            console.log('Found orphaned profile via name search:', profileMatch)
+            targetUserId = profileMatch.user_id
+            isOrphanedProfile = true
+            userToDelete = { 
+              id: profileMatch.user_id, 
+              email: profileMatch.email || `orphaned-${profileMatch.user_id}@example.com` 
+            }
+            break
           }
         }
       }
@@ -160,6 +198,15 @@ Deno.serve(async (req) => {
             userToDelete = authUser
             console.log('Found user via profiles email search:', targetUserId, profileMatch.email)
             break
+          } else {
+            console.log('Found orphaned profile via email search:', profileMatch)
+            targetUserId = profileMatch.user_id
+            isOrphanedProfile = true
+            userToDelete = { 
+              id: profileMatch.user_id, 
+              email: profileMatch.email || `orphaned-${profileMatch.user_id}@example.com` 
+            }
+            break
           }
         }
       }
@@ -167,6 +214,17 @@ Deno.serve(async (req) => {
 
     if (!targetUserId || !userToDelete) {
       console.error('User not found with provided parameters')
+      console.error('Search debug info:', {
+        email_provided: !!email,
+        user_id_provided: !!user_id,
+        name_provided: !!(firstName && lastName),
+        total_auth_users: authUsers.users.length,
+        search_attempts: {
+          by_user_id: !!user_id,
+          by_email: !!email,
+          by_name: !!(firstName && lastName)
+        }
+      })
       
       // Show debugging info
       let similarUsers: Array<{email: string, id: string}> = []
@@ -183,12 +241,22 @@ Deno.serve(async (req) => {
         : 'User not found with provided parameters'
       
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify({ 
+          error: errorMessage,
+          debug: {
+            searchParams: { email, user_id, firstName, lastName },
+            authUsersCount: authUsers.users.length,
+            similarUsers
+          }
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('Found user to delete:', targetUserId, 'with email:', userToDelete.email)
+    if (isOrphanedProfile) {
+      console.log('Deleting orphaned profile (no corresponding auth user)')
+    }
 
     // Start deletion process - Anonymize chat messages (keep for referential integrity)
     const { error: chatError } = await supabaseClient
@@ -296,15 +364,19 @@ Deno.serve(async (req) => {
       console.error('Error deleting profile:', profileError)
     }
 
-    // Delete the user from auth
-    const { error: deleteAuthError } = await supabaseClient.auth.admin.deleteUser(targetUserId)
-    
-    if (deleteAuthError) {
-      console.error('Error deleting user from auth:', deleteAuthError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete user from authentication system' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Delete the user from auth (skip for orphaned profiles)
+    if (!isOrphanedProfile) {
+      const { error: deleteAuthError } = await supabaseClient.auth.admin.deleteUser(targetUserId)
+      
+      if (deleteAuthError) {
+        console.error('Error deleting user from auth:', deleteAuthError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to delete user from authentication system' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } else {
+      console.log('Skipping auth deletion for orphaned profile')
     }
 
     console.log('User successfully deleted:', email)
