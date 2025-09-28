@@ -62,21 +62,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Parse request body
-    const { email } = await req.json()
+    // Parse request body - support multiple search parameters
+    const { email, user_id, firstName, lastName } = await req.json()
     
-    if (!email) {
+    if (!email && !user_id && (!firstName || !lastName)) {
       return new Response(
-        JSON.stringify({ error: 'Email is required' }),
+        JSON.stringify({ error: 'Email, user_id, or firstName+lastName is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Admin deleting user with email:', email)
+    console.log('Admin deleting user with params:', { email, user_id, firstName, lastName })
 
     let targetUserId = null
     let userToDelete = null
-    const normalizedEmail = email.toLowerCase().trim()
 
     // Get all auth users
     const { data: authUsers, error: findUserError } = await supabaseClient.auth.admin.listUsers()
@@ -89,54 +88,99 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Strategy 1: Exact email match in auth.users
-    userToDelete = authUsers.users.find(u => u.email === email)
-    if (userToDelete) {
-      targetUserId = userToDelete.id
-      console.log('Found user with exact email match:', targetUserId)
-    } 
-    
-    // Strategy 2: Case-insensitive email match in auth.users
-    if (!userToDelete) {
-      userToDelete = authUsers.users.find(u => u.email?.toLowerCase().trim() === normalizedEmail)
+    // Strategy 1: Search by user_id (most reliable)
+    if (user_id) {
+      console.log('Searching by user_id:', user_id)
+      userToDelete = authUsers.users.find(u => u.id === user_id)
       if (userToDelete) {
         targetUserId = userToDelete.id
-        console.log('Found user with case-insensitive email match:', targetUserId)
+        console.log('Found user with user_id match:', targetUserId)
+      }
+    }
+    
+    // Strategy 2: Search by email if user_id failed or not provided
+    if (!userToDelete && email) {
+      const normalizedEmail = email.toLowerCase().trim()
+      console.log('Searching by email:', email)
+      
+      // Exact email match
+      userToDelete = authUsers.users.find(u => u.email === email)
+      if (userToDelete) {
+        targetUserId = userToDelete.id
+        console.log('Found user with exact email match:', targetUserId)
+      } else {
+        // Case-insensitive email match
+        userToDelete = authUsers.users.find(u => u.email?.toLowerCase().trim() === normalizedEmail)
+        if (userToDelete) {
+          targetUserId = userToDelete.id
+          console.log('Found user with case-insensitive email match:', targetUserId)
+        }
       }
     }
 
-    // Strategy 3: Search via profiles table
-    if (!userToDelete) {
-      console.log('Trying profiles table search...')
+    // Strategy 3: Search by firstName + lastName in profiles
+    if (!userToDelete && firstName && lastName) {
+      console.log('Searching by name:', firstName, lastName)
       const { data: profileMatches, error: profileError } = await supabaseClient
         .from('profiles')
         .select('user_id, email, first_name, last_name')
-        .eq('email', email)
-        .limit(1)
+        .ilike('first_name', firstName.trim())
+        .ilike('last_name', lastName.trim())
+        .limit(5)
       
       if (!profileError && profileMatches && profileMatches.length > 0) {
-        const profileMatch = profileMatches[0]
-        const authUser = authUsers.users.find(u => u.id === profileMatch.user_id)
-        if (authUser) {
-          targetUserId = profileMatch.user_id
-          userToDelete = authUser
-          console.log('Found user via profiles table:', targetUserId)
+        console.log('Found profile matches:', profileMatches.length)
+        for (const profileMatch of profileMatches) {
+          const authUser = authUsers.users.find(u => u.id === profileMatch.user_id)
+          if (authUser) {
+            targetUserId = profileMatch.user_id
+            userToDelete = authUser
+            console.log('Found user via name search:', targetUserId, profileMatch.first_name, profileMatch.last_name)
+            break
+          }
+        }
+      }
+    }
+
+    // Strategy 4: Fallback email search in profiles table
+    if (!userToDelete && email) {
+      console.log('Trying profiles table email search...')
+      const { data: profileMatches, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('user_id, email, first_name, last_name')
+        .ilike('email', `%${email.toLowerCase().trim()}%`)
+        .limit(5)
+      
+      if (!profileError && profileMatches && profileMatches.length > 0) {
+        console.log('Found profile email matches:', profileMatches.length)
+        for (const profileMatch of profileMatches) {
+          const authUser = authUsers.users.find(u => u.id === profileMatch.user_id)
+          if (authUser) {
+            targetUserId = profileMatch.user_id
+            userToDelete = authUser
+            console.log('Found user via profiles email search:', targetUserId, profileMatch.email)
+            break
+          }
         }
       }
     }
 
     if (!targetUserId || !userToDelete) {
-      console.error('User not found with email:', email)
+      console.error('User not found with provided parameters')
       
-      // Show similar emails for debugging
-      const similarEmails = authUsers.users
-        .filter(u => u.email && u.email.toLowerCase().includes(email.toLowerCase().split('@')[0]))
-        .map(u => u.email)
-        .slice(0, 3)
+      // Show debugging info
+      let similarUsers: Array<{email: string, id: string}> = []
+      if (email) {
+        const emailLocal = email.toLowerCase().split('@')[0]
+        similarUsers = authUsers.users
+          .filter(u => u.email && u.email.toLowerCase().includes(emailLocal))
+          .map(u => ({ email: u.email || '', id: u.id }))
+          .slice(0, 3)
+      }
       
-      const errorMessage = similarEmails.length > 0 
-        ? `User not found. Similar emails: ${similarEmails.join(', ')}`
-        : 'User not found'
+      const errorMessage = similarUsers.length > 0 
+        ? `User not found. Similar users: ${similarUsers.map(u => `${u.email} (${u.id})`).join(', ')}`
+        : 'User not found with provided parameters'
       
       return new Response(
         JSON.stringify({ error: errorMessage }),

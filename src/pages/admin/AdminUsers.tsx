@@ -349,6 +349,7 @@ const AdminUsers = () => {
                         <DeleteUserConfirmDialog
                           userEmail={user.email}
                           userName={`${user.first_name} ${user.last_name}`}
+                          userId={user.user_id}
                           onUserDeleted={loadData}
                         />
                       </div>

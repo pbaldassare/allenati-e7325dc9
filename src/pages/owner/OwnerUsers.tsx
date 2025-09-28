@@ -849,6 +849,7 @@ const OwnerUsers = () => {
                               <DeleteUserConfirmDialog
                                 userEmail={m.email || ''}
                                 userName={`${m.first_name} ${m.last_name}`}
+                                userId={m.user_id}
                                 onUserDeleted={() => reloadMembers()}
                               />
                             )}
@@ -1064,11 +1065,12 @@ const OwnerUsers = () => {
                                  </Button>
                                )}
                                {!isAdminOrOwner && (
-                                 <DeleteUserConfirmDialog
-                                   userEmail={m.email || ''}
-                                   userName={`${m.first_name} ${m.last_name}`}
-                                   onUserDeleted={() => reloadMembers()}
-                                 />
+                                  <DeleteUserConfirmDialog
+                                    userEmail={m.email || ''}
+                                    userName={`${m.first_name} ${m.last_name}`}
+                                    userId={m.user_id}
+                                    onUserDeleted={() => reloadMembers()}
+                                  />
                                )}
                              </div>
                            </TableCell>

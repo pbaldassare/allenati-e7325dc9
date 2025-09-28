@@ -18,12 +18,14 @@ import { useToast } from '@/hooks/use-toast';
 interface DeleteUserConfirmDialogProps {
   userEmail: string;
   userName: string;
+  userId?: string;
   onUserDeleted: () => void;
 }
 
 export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = ({
   userEmail,
   userName,
+  userId,
   onUserDeleted,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -34,8 +36,25 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
     try {
       setIsDeleting(true);
 
+      // Build flexible search parameters - prefer user_id, fallback to email and name
+      const [firstName, lastName] = userName.split(' ');
+      const searchParams: any = {};
+      
+      if (userId) {
+        searchParams.user_id = userId;
+      }
+      if (userEmail) {
+        searchParams.email = userEmail;
+      }
+      if (firstName && lastName) {
+        searchParams.firstName = firstName;
+        searchParams.lastName = lastName;
+      }
+
+      console.log('Deleting user with params:', searchParams);
+
       const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { email: userEmail }
+        body: searchParams
       });
 
       if (error) {
