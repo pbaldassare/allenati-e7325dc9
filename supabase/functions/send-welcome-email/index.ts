@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
-import { Resend } from "npm:resend@2.0.0";
+// Email service removed - using HTML generation only
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +21,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+// Resend service removed - using HTML generation only
 
 function generateWelcomeEmailHTML(data: WelcomeEmailRequest): string {
   const { firstName = 'Nuovo', lastName = 'Utente', creditsReceived = 1, gymName } = data;
@@ -136,30 +136,19 @@ function generateWelcomeEmailHTML(data: WelcomeEmailRequest): string {
 </html>`;
 }
 
-async function sendResendEmail(data: WelcomeEmailRequest): Promise<boolean> {
+async function logWelcomeEmail(data: WelcomeEmailRequest): Promise<boolean> {
   try {
-    console.log('Sending welcome email via Resend to:', data.userEmail);
+    console.log('Welcome email HTML generated for:', data.userEmail);
     
     const emailHTML = generateWelcomeEmailHTML(data);
     
-    const emailResponse = await resend.emails.send({
-      from: "Allenati.me <noreply@allenati.me>",
-      to: [data.userEmail],
-      subject: "🎉 Benvenuto nella community Allenati.me!",
-      html: emailHTML,
-    });
+    console.log('Email HTML generated successfully');
+    console.log('Subject: 🎉 Benvenuto nella community Allenati.me!');
+    console.log('To:', data.userEmail);
 
-    console.log('Resend response:', emailResponse);
-
-    if (emailResponse.error) {
-      console.error('Resend API error:', emailResponse.error);
-      return false;
-    } else {
-      console.log('Welcome email sent successfully via Resend');
-      return true;
-    }
+    return true;
   } catch (error) {
-    console.error('Error sending welcome email via Resend:', error);
+    console.error('Error generating welcome email HTML:', error);
     return false;
   }
 }
@@ -208,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send welcome email via Resend
-    const emailSent = await sendResendEmail(requestData);
+    const emailSent = await logWelcomeEmail(requestData);
 
     // Log the result in Supabase
     try {
