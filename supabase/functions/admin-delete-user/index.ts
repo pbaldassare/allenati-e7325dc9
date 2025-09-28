@@ -258,7 +258,27 @@ Deno.serve(async (req) => {
       console.log('Deleting orphaned profile (no corresponding auth user)')
     }
 
-    // Start deletion process - Anonymize chat messages (keep for referential integrity)
+    // === CRITICAL: DELETE BOOKINGS FIRST TO PREVENT FOREIGN KEY VIOLATIONS ===
+    console.log('STEP 1: Deleting user bookings to prevent foreign key constraints...')
+    const { error: bookingsDeleteError } = await supabaseClient
+      .from('bookings')
+      .delete()
+      .eq('user_id', targetUserId)
+    
+    if (bookingsDeleteError) {
+      console.error('CRITICAL ERROR: Failed to delete bookings:', bookingsDeleteError)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to delete user bookings - this prevents profile deletion',
+          details: bookingsDeleteError 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    console.log('✅ Bookings deleted successfully')
+
+    // Anonymize chat messages (keep for referential integrity)
     const { error: chatError } = await supabaseClient
       .from('chat_messages')
       .update({ 
@@ -269,16 +289,6 @@ Deno.serve(async (req) => {
 
     if (chatError) {
       console.error('Error anonymizing chat messages:', chatError)
-    }
-
-    // Anonymize bookings (keep for historical data)
-    const { error: bookingError } = await supabaseClient
-      .from('bookings')
-      .update({ notes: '[Utente cancellato]' })
-      .eq('user_id', targetUserId)
-
-    if (bookingError) {
-      console.error('Error anonymizing bookings:', bookingError)
     }
 
     // Deactivate chat participants
@@ -354,27 +364,43 @@ Deno.serve(async (req) => {
       console.error('Storage deletion error:', storageError)
     }
 
-    // Finally delete the profile
+    // NOW delete the profile (should work since bookings are gone)
+    console.log('STEP 2: Deleting user profile...')
     const { error: profileError } = await supabaseClient
       .from('profiles')
       .delete()
       .eq('user_id', targetUserId)
 
     if (profileError) {
-      console.error('Error deleting profile:', profileError)
+      console.error('CRITICAL ERROR: Failed to delete profile even after bookings cleanup:', profileError)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to delete user profile even after cleaning up foreign keys',
+          details: profileError 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
+    console.log('✅ Profile deleted successfully')
 
     // Delete the user from auth (skip for orphaned profiles)
     if (!isOrphanedProfile) {
+      console.log('STEP 3: Deleting user from authentication system...')
       const { error: deleteAuthError } = await supabaseClient.auth.admin.deleteUser(targetUserId)
       
       if (deleteAuthError) {
-        console.error('Error deleting user from auth:', deleteAuthError)
+        console.error('ERROR: Failed to delete user from auth:', deleteAuthError)
         return new Response(
-          JSON.stringify({ error: 'Failed to delete user from authentication system' }),
+          JSON.stringify({ 
+            success: false, 
+            error: 'Failed to delete user from authentication system',
+            details: deleteAuthError 
+          }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      console.log('✅ Auth user deleted successfully')
     } else {
       console.log('Skipping auth deletion for orphaned profile')
     }
