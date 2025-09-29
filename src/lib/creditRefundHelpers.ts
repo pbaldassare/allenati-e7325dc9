@@ -80,8 +80,11 @@ export const processRefund = async (
   cancellationReason?: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
+    console.log('Processing refund for booking:', booking.id, 'user:', booking.user_id, 'role:', userRole);
+    
     // Check if refund is eligible
     const eligibility = await checkRefundEligibility(booking, userRole);
+    console.log('Refund eligibility:', eligibility);
     
     if (!eligibility.shouldRefund) {
       return {
@@ -92,21 +95,52 @@ export const processRefund = async (
 
     // Don't refund if no credits were used (e.g., unlimited subscription)
     if (!booking.credits_used || booking.credits_used <= 0) {
+      console.log('No credits used, skipping refund');
       return {
         success: true,
         message: 'Booking cancelled - no credits to refund'
       };
     }
 
-    // Check if user had unlimited subscription at booking time
+    // Get gym_id - try multiple sources
+    let gymId = booking.gym_id;
     const course = booking.courses || booking.course;
+    
+    if (!gymId && course?.gym_id) {
+      gymId = course.gym_id;
+    }
+    
+    // If still no gym_id, fetch it from the course
+    if (!gymId && booking.course_id) {
+      console.log('Fetching gym_id from course_id:', booking.course_id);
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('gym_id, name')
+        .eq('id', booking.course_id)
+        .single();
+      
+      if (courseError) {
+        console.error('Error fetching course:', courseError);
+        throw new Error('Could not find course information');
+      }
+      
+      gymId = courseData.gym_id;
+      console.log('Found gym_id from course:', gymId);
+    }
+
+    if (!gymId) {
+      throw new Error('Could not determine gym_id for refund');
+    }
+
+    // Check if user had unlimited subscription at booking time
     const hadUnlimited = await hadUnlimitedSubscriptionAtBooking(
       booking.user_id,
-      course?.gym_id,
+      gymId,
       booking.created_at
     );
 
     if (hadUnlimited) {
+      console.log('User had unlimited subscription, no refund needed');
       return {
         success: true,
         message: 'Booking cancelled - user had unlimited access, no credits to refund'
@@ -118,22 +152,31 @@ export const processRefund = async (
       .from('gym_credits')
       .select('credits')
       .eq('user_id', booking.user_id)
-      .eq('gym_id', course?.gym_id)
+      .eq('gym_id', gymId)
       .single();
 
     if (gymCreditsError && gymCreditsError.code !== 'PGRST116') {
+      console.error('Error fetching gym credits:', gymCreditsError);
       throw gymCreditsError;
     }
 
     const currentCredits = gymCreditsData?.credits || 0;
     const newBalance = currentCredits + booking.credits_used;
+    
+    console.log('Processing refund:', {
+      user_id: booking.user_id,
+      gym_id: gymId,
+      credits_to_refund: booking.credits_used,
+      current_credits: currentCredits,
+      new_balance: newBalance
+    });
 
     // Log refund transaction
     const { error: transactionError } = await supabase
       .from('credits_transactions')
       .insert({
         user_id: booking.user_id,
-        gym_id: course?.gym_id,
+        gym_id: gymId,
         amount: booking.credits_used,
         balance_after: newBalance,
         transaction_type: 'refund',
@@ -141,8 +184,12 @@ export const processRefund = async (
         reference_id: booking.id
       });
 
-    if (transactionError) throw transactionError;
+    if (transactionError) {
+      console.error('Error creating refund transaction:', transactionError);
+      throw transactionError;
+    }
 
+    console.log('Refund processed successfully');
     return {
       success: true,
       message: `Booking cancelled - ${booking.credits_used} credits refunded`
@@ -151,7 +198,7 @@ export const processRefund = async (
     console.error('Error processing refund:', error);
     return {
       success: false,
-      message: 'Error processing refund'
+      message: `Error processing refund: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 };
