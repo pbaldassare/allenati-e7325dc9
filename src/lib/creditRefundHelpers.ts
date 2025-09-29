@@ -189,6 +189,22 @@ export const processRefund = async (
       throw transactionError;
     }
 
+    // Update/Insert gym credits balance
+    const { error: gymCreditsUpdateError } = await supabase
+      .from('gym_credits')
+      .upsert({
+        user_id: booking.user_id,
+        gym_id: gymId,
+        credits: newBalance
+      }, {
+        onConflict: 'user_id,gym_id'
+      });
+
+    if (gymCreditsUpdateError) {
+      console.error('Error updating gym credits:', gymCreditsUpdateError);
+      throw gymCreditsUpdateError;
+    }
+
     console.log('Refund processed successfully');
     return {
       success: true,
