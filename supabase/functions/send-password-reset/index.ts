@@ -83,11 +83,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Processing password reset request for:", email);
 
-    // Check if user exists
+    // Check if user exists with case-insensitive email search
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_id')
-      .eq('email', email)
+      .select('user_id, first_name')
+      .ilike('email', email.toLowerCase())
       .single();
 
     if (profileError || !profile) {
@@ -136,8 +136,37 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate HTML email content
     const emailHtml = createPasswordResetHTML(email, resetLink);
 
-    // Log that email would be sent (for now, just log)
-    console.log("Password reset email HTML generated for:", email);
+    // Send email using Resend API
+    try {
+      const resendResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Allenati.me <noreply@allenati.me>',
+          to: [email],
+          subject: '🔒 Reset Password - Allenati.me',
+          html: emailHtml,
+        }),
+      });
+
+      if (!resendResponse.ok) {
+        const errorData = await resendResponse.json();
+        console.error('Resend API error:', errorData);
+        throw new Error(`Failed to send email: ${errorData.message || 'Unknown error'}`);
+      }
+
+      const emailResult = await resendResponse.json();
+      console.log("Password reset email sent successfully:", emailResult.id);
+
+    } catch (emailError: any) {
+      console.error("Failed to send password reset email:", emailError);
+      // Still return success to not reveal if user exists, but log the error
+    }
+
+    console.log("Password reset email processed for:", email);
     console.log("Reset link:", resetLink);
 
     return new Response(
