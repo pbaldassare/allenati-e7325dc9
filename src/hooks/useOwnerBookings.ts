@@ -157,27 +157,51 @@ export const useOwnerBookings = () => {
   };
 
   const cancelOwnerBooking = async (bookingId: string, reason?: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('❌ No user ID, cannot cancel booking');
+      return;
+    }
 
     try {
-      // Get booking details first
-      const { data: booking, error: fetchError } = await supabase
+      console.log('🚀 Starting owner booking cancellation:', {
+        bookingId,
+        reason,
+        userId: user.id
+      });
+
+      // Fetch complete booking data from database
+      console.log('📋 Fetching booking data from database...');
+      const { data: bookingData, error: fetchError } = await supabase
         .from('bookings')
         .select(`
           *,
-          profiles (current_credits),
-          courses (name, deadline_hours, gym_id)
+          course:courses (
+            id,
+            name,
+            gym_id,
+            deadline_hours
+          )
         `)
         .eq('id', bookingId)
         .single();
 
-      if (fetchError || !booking) {
-        console.error('Fetch error:', fetchError);
+      if (fetchError || !bookingData) {
+        console.error('❌ Error fetching booking data:', fetchError);
         toast.error('Errore nel recupero della prenotazione');
         return;
       }
 
+      console.log('📋 Booking data fetched:', {
+        id: bookingData.id,
+        user_id: bookingData.user_id,
+        course_id: bookingData.course_id,
+        credits_used: bookingData.credits_used,
+        gym_id: bookingData.course?.gym_id,
+        status: bookingData.status
+      });
+
       // Update booking status
+      console.log('📝 Updating booking status to cancelled...');
       const { error: updateError } = await supabase
         .from('bookings')
         .update({
@@ -188,14 +212,32 @@ export const useOwnerBookings = () => {
         .eq('id', bookingId);
 
       if (updateError) {
-        console.error('Update error:', updateError);
+        console.error('❌ Error updating booking status:', updateError);
         toast.error('Errore nell\'aggiornamento della prenotazione');
         return;
       }
 
-      // Process refund using new helper (owners can always refund)
+      console.log('✅ Booking status updated successfully');
+
+      // Prepare booking data for refund with gym_id
+      const bookingForRefund = {
+        ...bookingData,
+        gym_id: bookingData.course?.gym_id,
+        course: bookingData.course
+      };
+
+      console.log('💰 Processing refund with data:', {
+        booking_id: bookingForRefund.id,
+        user_id: bookingForRefund.user_id,
+        gym_id: bookingForRefund.gym_id,
+        credits_used: bookingForRefund.credits_used
+      });
+
+      // Process refund (owners can always refund)
       const { processRefund } = await import('@/lib/creditRefundHelpers');
-      const refundResult = await processRefund(booking, booking.user_id, 'owner', reason);
+      const refundResult = await processRefund(bookingForRefund, bookingForRefund.user_id, 'owner', reason);
+
+      console.log('💰 Refund result:', refundResult);
 
       // Refresh bookings
       await fetchOwnerBookings();
@@ -207,8 +249,9 @@ export const useOwnerBookings = () => {
       );
 
     } catch (error) {
-      console.error('Error cancelling booking:', error);
-      toast.error('Errore nella cancellazione');
+      console.error('❌ Error cancelling booking:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      toast.error(`Errore nella cancellazione: ${errorMessage}`);
     }
   };
 
