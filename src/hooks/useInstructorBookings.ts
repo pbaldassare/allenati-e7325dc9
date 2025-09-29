@@ -163,13 +163,46 @@ export const useInstructorBookings = () => {
 
   const cancelBooking = async (bookingId: string, reason?: string) => {
     try {
-      // Get booking details first
-      const booking = bookings.find(b => b.id === bookingId);
-      if (!booking) {
-        throw new Error('Prenotazione non trovata');
+      console.log('🔄 Starting booking cancellation for:', bookingId);
+      
+      // Get full booking details from database with course and gym info
+      const { data: bookingData, error: fetchError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          user_id,
+          course_id,
+          scheduled_date,
+          scheduled_time,
+          status,
+          credits_used,
+          created_at,
+          course:courses(
+            id,
+            name,
+            gym_id,
+            gym:gyms(name)
+          )
+        `)
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchError || !bookingData) {
+        console.error('❌ Error fetching booking data:', fetchError);
+        throw new Error('Prenotazione non trovata nel database');
       }
 
+      console.log('📋 Booking data fetched:', {
+        id: bookingData.id,
+        user_id: bookingData.user_id,
+        course_id: bookingData.course_id,
+        credits_used: bookingData.credits_used,
+        gym_id: bookingData.course?.gym_id,
+        status: bookingData.status
+      });
+
       // Update booking status
+      console.log('📝 Updating booking status to cancelled...');
       const { error } = await supabase
         .from('bookings')
         .update({
@@ -179,27 +212,49 @@ export const useInstructorBookings = () => {
         })
         .eq('id', bookingId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error updating booking status:', error);
+        throw error;
+      }
+
+      console.log('✅ Booking status updated successfully');
+
+      // Prepare booking data for refund with gym_id
+      const bookingForRefund = {
+        ...bookingData,
+        gym_id: bookingData.course?.gym_id,
+        course: bookingData.course
+      };
+
+      console.log('💰 Processing refund with data:', {
+        booking_id: bookingForRefund.id,
+        user_id: bookingForRefund.user_id,
+        gym_id: bookingForRefund.gym_id,
+        credits_used: bookingForRefund.credits_used
+      });
 
       // Process refund (instructors can always refund)
       const { processRefund } = await import('@/lib/creditRefundHelpers');
-      const refundResult = await processRefund(booking, (booking as any).user_id, 'instructor', reason);
+      const refundResult = await processRefund(bookingForRefund, bookingForRefund.user_id, 'instructor', reason);
+
+      console.log('💰 Refund result:', refundResult);
 
       toast({
         title: "Prenotazione cancellata",
         description: refundResult.success 
           ? "La prenotazione è stata cancellata e i crediti sono stati rimborsati."
-          : "La prenotazione è stata cancellata con successo."
+          : `La prenotazione è stata cancellata ma il rimborso ha fallito: ${refundResult.message}`
       });
 
       // Refresh bookings
       await fetchInstructorBookings();
     } catch (err) {
-      console.error('Error cancelling booking:', err);
+      console.error('❌ Error cancelling booking:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
       toast({
         variant: "destructive",
         title: "Errore",
-        description: "Impossibile cancellare la prenotazione."
+        description: `Impossibile cancellare la prenotazione: ${errorMessage}`
       });
     }
   };
