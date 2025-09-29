@@ -127,8 +127,31 @@ serve(async (req) => {
 
     console.log('Found gym:', gym.name);
 
-    // Generate receipt number (timestamp-based for uniqueness)
-    const receiptNumber = `RIC-${subscription.id.substring(0, 8)}-${Date.now()}`;
+    // Generate progressive receipt number using database function
+    console.log('Generating progressive receipt number...');
+    const receiptNumberResult = await supabaseClient.rpc('get_next_receipt_number', {
+      _gym_id: subscription.gym_id,
+      _year: new Date().getFullYear()
+    });
+    
+    if (receiptNumberResult.error) {
+      console.error('Error generating receipt number:', receiptNumberResult.error);
+      throw new Error(`Failed to generate receipt number: ${receiptNumberResult.error.message}`);
+    }
+    
+    const receiptNumber = `Ricevuta Fiscale ${receiptNumberResult.data}`;
+    console.log('Generated receipt number:', receiptNumber);
+
+    // Update subscription with receipt number
+    const { error: updateError } = await supabaseClient
+      .from('user_subscriptions')
+      .update({ receipt_number: receiptNumber })
+      .eq('id', subscriptionId);
+    
+    if (updateError) {
+      console.error('Error updating subscription with receipt number:', updateError);
+      // Log but don't fail - PDF generation should continue
+    }
     
     // Format dates
     const issueDate = new Date().toLocaleDateString('it-IT');
@@ -189,7 +212,7 @@ serve(async (req) => {
     // Receipt title
     doc.setFontSize(22);
     doc.setTextColor(...textColor);
-    doc.text('RICEVUTA FISCALE', 105, yPosition, { align: 'center' });
+    doc.text(receiptNumber.toUpperCase(), 105, yPosition, { align: 'center' });
     yPosition += 15;
     
     // Receipt date (right aligned)

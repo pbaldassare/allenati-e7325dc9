@@ -1647,6 +1647,41 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_counters: {
+        Row: {
+          counter: number
+          created_at: string
+          gym_id: string
+          id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          counter?: number
+          created_at?: string
+          gym_id: string
+          id?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          counter?: number
+          created_at?: string
+          gym_id?: string
+          id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_counters_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           id: string
@@ -1943,6 +1978,7 @@ export type Database = {
           gym_id: string | null
           id: string
           plan_id: string
+          receipt_number: string | null
           starts_at: string
           status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
@@ -1955,6 +1991,7 @@ export type Database = {
           gym_id?: string | null
           id?: string
           plan_id: string
+          receipt_number?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -1967,6 +2004,7 @@ export type Database = {
           gym_id?: string | null
           id?: string
           plan_id?: string
+          receipt_number?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -2071,6 +2109,10 @@ export type Database = {
       }
       get_instructor_id_for_gym: {
         Args: { _gym_id: string; _user_id: string }
+        Returns: string
+      }
+      get_next_receipt_number: {
+        Args: { _gym_id: string; _year?: number }
         Returns: string
       }
       get_user_credits_for_gym: {
