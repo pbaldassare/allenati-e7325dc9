@@ -7,12 +7,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, UserPlus, Building2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GymApplicationForm } from '@/components/GymApplicationForm';
 import { useToast } from '@/hooks/use-toast';
 import { MinorGuardianModal } from '@/components/auth/MinorGuardianModal';
 import { useCategoriesWithMain } from '@/hooks/useCategoriesWithMain';
+import { validateEmailDomain, createEmailValidator, type EmailValidationResult } from '@/lib/emailValidation';
 
 interface Gym {
   id: string;
@@ -55,6 +56,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const { categories } = useCategoriesWithMain();
 
   const [gymsLoading, setGymsLoading] = useState(true);
+  const [emailValidation, setEmailValidation] = useState<EmailValidationResult>({ isValid: true });
+  const [emailValidator] = useState(() => createEmailValidator(setEmailValidation));
 
   useEffect(() => {
     loadGyms();
@@ -113,6 +116,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validazione dominio email
+    const emailDomainResult = validateEmailDomain(formData.email);
+    if (!emailDomainResult.isValid) {
+      setError(emailDomainResult.suggestion 
+        ? `${emailDomainResult.error}. ${emailDomainResult.suggestion}` 
+        : emailDomainResult.error || 'Dominio email non valido'
+      );
+      return;
+    }
     
     if (formData.password !== formData.confirmPassword) {
       setError('Le password non coincidono');
@@ -327,10 +340,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                   type="email"
                   placeholder="mario.rossi@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    const email = e.target.value;
+                    setFormData({ ...formData, email });
+                    emailValidator(email);
+                  }}
                   required
-                  className="h-14 sm:h-12 text-base"
+                  className={`h-14 sm:h-12 text-base ${
+                    emailValidation.isValid === false ? 'border-destructive focus:border-destructive' : ''
+                  }`}
                 />
+                {emailValidation.isValid === false && (
+                  <div className="flex items-start gap-2 mt-1 p-2 bg-destructive/10 border border-destructive/20 rounded-md">
+                    <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-destructive">
+                      <p>{emailValidation.error}</p>
+                      {emailValidation.suggestion && (
+                        <p className="font-medium mt-1">{emailValidation.suggestion}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
