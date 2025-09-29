@@ -23,7 +23,6 @@ interface User {
   role: 'admin' | 'gym_owner' | 'instructor' | 'basic_user';
   gym_id?: string;
   gym_name?: string;
-  current_credits: number;
   has_owner_privileges?: boolean;
 }
 
@@ -159,7 +158,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: role as 'admin' | 'gym_owner' | 'instructor' | 'basic_user',
         gym_id: gymId,
         gym_name: gymName,
-        current_credits: profile.current_credits || 0,
         has_owner_privileges: hasOwnerPrivileges,
       };
     } catch (error) {

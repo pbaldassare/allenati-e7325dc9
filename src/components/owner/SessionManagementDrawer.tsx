@@ -195,11 +195,18 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         const userIds = simpleBookings.map(b => b.user_id);
         const { data: fallbackProfiles } = await supabase
           .from('profiles')
-          .select('user_id, first_name, last_name, email, current_credits')
+          .select('user_id, first_name, last_name, email')
+          .in('user_id', userIds);
+
+        // Get gym-specific credits for fallback  
+        const { data: fallbackGymCredits } = await supabase
+          .from('gym_credits')
+          .select('user_id, credits')
           .in('user_id', userIds);
 
         const fallbackParticipants: Participant[] = simpleBookings.map(booking => {
           const profile = fallbackProfiles?.find(p => p.user_id === booking.user_id);
+          const userGymCredits = fallbackGymCredits?.find(gc => gc.user_id === booking.user_id);
           return {
             id: booking.id,
             user_id: booking.user_id,
@@ -210,7 +217,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               last_name: profile.last_name,
               email: profile.email,
               profile_picture_url: null,
-              current_credits: profile.current_credits
+              current_credits: userGymCredits?.credits || 0 // Use gym-specific credits
             } : {
               first_name: 'Utente',
               last_name: 'Sconosciuto',
