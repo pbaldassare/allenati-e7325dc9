@@ -183,7 +183,7 @@ export const useInstructorBookings = () => {
 
       // Process refund (instructors can always refund)
       const { processRefund } = await import('@/lib/creditRefundHelpers');
-      const refundResult = await processRefund(booking, user?.id || '', 'instructor', reason);
+      const refundResult = await processRefund(booking, (booking as any).user_id, 'instructor', reason);
 
       toast({
         title: "Prenotazione cancellata",

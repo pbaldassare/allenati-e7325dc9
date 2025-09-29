@@ -195,7 +195,7 @@ export const useOwnerBookings = () => {
 
       // Process refund using new helper (owners can always refund)
       const { processRefund } = await import('@/lib/creditRefundHelpers');
-      const refundResult = await processRefund(booking, user.id, 'owner', reason);
+      const refundResult = await processRefund(booking, booking.user_id, 'owner', reason);
 
       // Refresh bookings
       await fetchOwnerBookings();
