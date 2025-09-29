@@ -25,6 +25,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useVirtualKeyboard } from '@/hooks/useVirtualKeyboard';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
@@ -96,7 +98,9 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 }) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { isVisible: keyboardVisible, viewportHeight } = useVirtualKeyboard();
   const [open, setOpen] = useState(false);
+  const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -653,10 +657,20 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className={cn(
-        "max-h-[85vh] flex flex-col",
-        isMobile && "max-h-[90vh] min-h-[60vh]"
-      )}>
+      <DrawerContent 
+        className={cn(
+          "flex flex-col transition-all duration-300",
+          isMobile ? [
+            keyboardVisible 
+              ? "max-h-[70vh] min-h-[50vh]" 
+              : "max-h-[90vh] min-h-[60vh]",
+            "safe-area-inset-bottom"
+          ] : "max-h-[85vh]"
+        )}
+        style={isMobile ? { 
+          height: keyboardVisible ? `${viewportHeight * 0.7}px` : `${viewportHeight * 0.9}px` 
+        } : undefined}
+      >
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex items-center justify-between">
             <div>
@@ -734,10 +748,28 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
+                  ref={setSearchInputRef}
                   placeholder="Cerca utenti da iscrivere..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  onFocus={() => {
+                    if (isMobile && keyboardVisible && searchInputRef) {
+                      setTimeout(() => {
+                        searchInputRef.scrollIntoView({ 
+                          behavior: 'smooth', 
+                          block: 'center' 
+                        });
+                      }, 300);
+                    }
+                  }}
+                  className={cn(
+                    "pl-9 transition-all duration-200",
+                    isMobile && [
+                      "h-12 text-base",
+                      "focus:ring-2 focus:ring-primary/20",
+                      "touch-manipulation"
+                    ]
+                  )}
                 />
               </div>
               {searchTerm && (
@@ -781,9 +813,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                         {user.current_credits} crediti
                       </Badge>
                       <Button
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
                         onClick={() => enrollUser(user.id)}
                         disabled={enrolling === user.id || isFull}
+                        className={cn(
+                          isMobile && [
+                            "h-10 min-w-[44px]",
+                            "touch-manipulation",
+                            "active:scale-95 transition-transform"
+                          ]
+                        )}
                       >
                         {enrolling === user.id ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -799,9 +838,12 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
 
           {/* Participants List */}
-          <div className={cn(
-            "flex-1 overflow-y-auto p-4",
-            isMobile && "min-h-[300px] max-h-[60vh]"
+          <ScrollArea className={cn(
+            "flex-1 p-4",
+            isMobile && [
+              keyboardVisible ? "max-h-[30vh]" : "max-h-[50vh]",
+              "overscroll-behavior-contain"
+            ]
           )}>
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
@@ -971,7 +1013,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 ))}
               </div>
             )}
-          </div>
+          </ScrollArea>
         </div>
       </DrawerContent>
 
