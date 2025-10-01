@@ -23,6 +23,11 @@ const OwnerBookings: React.FC = () => {
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Debug log
+  React.useEffect(() => {
+    console.log('OwnerBookings - isMobile:', isMobile, 'window.innerWidth:', window.innerWidth);
+  }, [isMobile]);
 
   // Helper functions for date filtering
   const getStartOfWeek = (date = new Date()) => {
