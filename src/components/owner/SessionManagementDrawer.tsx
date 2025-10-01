@@ -438,7 +438,33 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const removeParticipant = async (bookingId: string) => {
     setRemoving(bookingId);
     try {
-      const { error } = await supabase
+      // Get full booking data with course and gym info for refund processing
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          courses(
+            id,
+            name,
+            gym_id,
+            credits_required
+          )
+        `)
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!booking) throw new Error('Booking not found');
+
+      console.log('📋 Removing participant with refund:', {
+        bookingId,
+        userId: booking.user_id,
+        creditsUsed: booking.credits_used,
+        courseName: booking.courses?.name
+      });
+
+      // Update booking status
+      const { error: updateError } = await supabase
         .from('bookings')
         .update({
           status: 'cancelled',
@@ -447,13 +473,35 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         })
         .eq('id', bookingId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      toast.success('Partecipante rimosso con successo!');
+      // Process credit refund
+      const userRole = await getUserRole(booking.user_id);
+      const refundResult = await processRefund(
+        booking,
+        booking.user_id,
+        userRole,
+        'Rimosso dallo staff dal calendario'
+      );
+
+      console.log('💰 Refund result:', refundResult);
+
+      // Show appropriate toast based on refund result
+      if (refundResult.success) {
+        toast.success(
+          `Partecipante rimosso e ${booking.credits_used} credito/i rimborsato/i`
+        );
+      } else {
+        toast.success('Partecipante rimosso con successo');
+        if (refundResult.message) {
+          console.log('ℹ️ Refund info:', refundResult.message);
+        }
+      }
+
       await loadParticipants();
       onSessionUpdate?.();
     } catch (error) {
-      console.error('Error removing participant:', error);
+      console.error('❌ Error removing participant:', error);
       toast.error('Errore nella rimozione partecipante');
     } finally {
       setRemoving(null);
