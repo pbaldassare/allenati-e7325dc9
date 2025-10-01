@@ -20,146 +20,139 @@ export default function PrivacyPolicy() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">Informativa sulla Privacy</CardTitle>
+            <CardTitle className="text-3xl">Privacy Policy</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Ultimo aggiornamento: {new Date().toLocaleDateString('it-IT')} - Versione 1.0
+              ai sensi dell'art. 13 del Regolamento europeo 679/2016
             </p>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none space-y-6">
             <section>
-              <h2 className="text-2xl font-semibold mb-4">1. Introduzione</h2>
-              <p className="text-muted-foreground">
-                La presente informativa sulla privacy descrive come raccogliamo, utilizziamo e proteggiamo 
-                i dati personali degli utenti in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR).
+              <p>
+                <strong>Allenati.me</strong> è un marchio di <strong>LEG S.r.l.</strong>, P.IVA 04231050982, con sede legale in Desenzano del Garda (BS), Viale Michelangelo n. 71. Con la presente informativa desideriamo informarla dell'uso dei Suoi dati personali e dei Suoi diritti, comunicando quanto segue:
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">2. Titolare del Trattamento</h2>
-              <p className="text-muted-foreground">
-                Il titolare del trattamento dei dati è la palestra o l'organizzazione presso cui l'utente 
-                si è registrato attraverso questa applicazione.
+              <h2 className="text-2xl font-semibold mb-4">Titolari e co-titolari del trattamento</h2>
+              <p className="mb-3">
+                Titolare del trattamento è <strong>LEG S.r.l.</strong>, marchio Allenati.me. Email di riferimento: <a href="mailto:amministrazione@allenati.me" className="text-primary hover:underline">amministrazione@allenati.me</a>
+              </p>
+              <p>
+                Considerata la natura dell'applicazione, che integra più palestre aderenti, i titolari delle singole palestre sono da considerarsi co-titolari del trattamento dei dati personali insieme a LEG S.r.l. I dati conferiti dall'utente sono quindi gestiti in un sistema condiviso, accessibile a tutte le palestre aderenti, anche diverse da quella presso la quale l'utente ha sottoscritto l'iscrizione. L'elenco aggiornato delle palestre co-titolari è disponibile su richiesta scrivendo a <a href="mailto:amministrazione@allenati.me" className="text-primary hover:underline">amministrazione@allenati.me</a>.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">3. Dati Raccolti</h2>
-              <p className="text-muted-foreground mb-2">Raccogliamo le seguenti categorie di dati personali:</p>
-              <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Dati di registrazione:</strong> nome, cognome, email, telefono, codice fiscale</li>
-                <li><strong>Dati di pagamento:</strong> informazioni sulle transazioni (tramite provider esterni sicuri)</li>
-                <li><strong>Dati di utilizzo:</strong> prenotazioni, partecipazione ai corsi, crediti utilizzati</li>
-                <li><strong>Dati medici:</strong> certificato medico sportivo (quando richiesto)</li>
-                <li><strong>Dati di contatto emergenza:</strong> nome e telefono del contatto di emergenza</li>
-                <li><strong>Dati tecnici:</strong> indirizzo IP, tipo di dispositivo, browser utilizzato</li>
+              <h2 className="text-2xl font-semibold mb-4">Tipologia di dati trattati e raccolti</h2>
+              <p className="mb-3">
+                Fra i dati personali raccolti da questa applicazione, in modo autonomo o tramite terze parti, ci sono:
+              </p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Nome, cognome, data di nascita, codice fiscale;</li>
+                <li>Indirizzo, email, numero di telefono;</li>
+                <li>Dati relativi all'iscrizione in palestra, abbonamenti e frequenza;</li>
+                <li>Dati di pagamento;</li>
+                <li>Certificato medico di idoneità sportiva (allegato caricato dall'utente e visibile ai co-titolari);</li>
+                <li>Cookie, dati di utilizzo e log di accesso (IP, data, orario, preferenze).</li>
+              </ul>
+              <p className="mt-3">
+                Tutti i dati richiesti da questa applicazione sono obbligatori. Se l'utente rifiuta di comunicarli, potrebbe essere impossibile per questa applicazione fornire il servizio.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Finalità e natura obbligatoria o facoltativa del trattamento</h2>
+              <p className="mb-3">
+                I dati sono trattati per consentire al Titolare e ai co-titolari di:
+              </p>
+              <ul className="list-disc pl-6 space-y-1 mb-4">
+                <li>erogare i servizi previsti dall'app Allenati.me;</li>
+                <li>gestire le iscrizioni e i rapporti contrattuali con le palestre;</li>
+                <li>adempiere a obblighi di legge (ad es. conservazione del certificato medico);</li>
+                <li>inviare comunicazioni tecniche e di servizio.</li>
+              </ul>
+              <p className="mb-2">
+                <strong>Finalità facoltative, previo consenso esplicito:</strong>
+              </p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>invio di comunicazioni promozionali e commerciali tramite email e notifiche push;</li>
+                <li>attività di marketing diretto e ricerche di mercato.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">4. Finalità del Trattamento</h2>
-              <p className="text-muted-foreground mb-2">I dati personali sono trattati per le seguenti finalità:</p>
-              <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li>Gestione della registrazione e dell'account utente</li>
-                <li>Prenotazione e partecipazione ai corsi</li>
-                <li>Elaborazione dei pagamenti</li>
-                <li>Comunicazioni relative ai servizi</li>
-                <li>Gestione delle emergenze</li>
-                <li>Miglioramento dei servizi offerti</li>
-                <li>Adempimento degli obblighi di legge</li>
+              <h2 className="text-2xl font-semibold mb-4">Soggetti autorizzati al trattamento</h2>
+              <p>
+                I dati possono essere trattati da dipendenti e collaboratori dei titolari e co-titolari, debitamente autorizzati e istruiti. Possono inoltre essere coinvolti fornitori esterni (società informatiche, hosting provider, agenzie di comunicazione), nominati responsabili del trattamento.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Modalità del trattamento</h2>
+              <p>
+                Il trattamento avviene mediante strumenti informatici e telematici, con logiche organizzative e misure di sicurezza idonee a garantire la protezione dei dati.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Luogo del trattamento</h2>
+              <p>
+                I dati sono trattati presso le sedi operative dei titolari e co-titolari e in ogni altro luogo in cui le parti coinvolte siano localizzate. I dati personali potrebbero essere trasferiti in Paesi diversi da quello in cui l'utente si trova, sempre nel rispetto della normativa vigente.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Periodo di conservazione</h2>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Dati contrattuali: conservati per la durata del rapporto e fino a 10 anni dalla cessazione;</li>
+                <li>Dati marketing: 24 mesi dal consenso o cessazione del rapporto;</li>
+                <li>Certificati medici: conservati per la durata di validità e poi eliminati.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">5. Base Giuridica del Trattamento</h2>
-              <p className="text-muted-foreground mb-2">Il trattamento dei dati si basa su:</p>
-              <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Esecuzione del contratto:</strong> per fornire i servizi richiesti</li>
-                <li><strong>Consenso:</strong> per comunicazioni marketing (quando applicabile)</li>
-                <li><strong>Obbligo di legge:</strong> per adempimenti fiscali e normativi</li>
-                <li><strong>Interesse legittimo:</strong> per migliorare i servizi e prevenire frodi</li>
+              <h2 className="text-2xl font-semibold mb-4">Base giuridica del trattamento</h2>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>consenso dell'utente;</li>
+                <li>esecuzione del contratto;</li>
+                <li>adempimento di obblighi legali;</li>
+                <li>legittimo interesse dei titolari.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">6. Condivisione dei Dati</h2>
-              <p className="text-muted-foreground mb-2">I dati personali possono essere condivisi con:</p>
-              <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li>Istruttori della palestra (per gestione corsi)</li>
-                <li>Provider di servizi di pagamento</li>
-                <li>Fornitori di servizi cloud (Supabase)</li>
-                <li>Autorità competenti (quando richiesto dalla legge)</li>
+              <h2 className="text-2xl font-semibold mb-4">Trasferimento dei dati all'estero</h2>
+              <p>
+                I dati personali potranno essere trasferiti verso Paesi membri dell'Unione Europea e verso Paesi al di fuori dell'UE, nel rispetto della normativa e delle garanzie previste dal GDPR.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Utenti minori di età</h2>
+              <p className="mb-3">
+                L'app non è destinata a minori di anni 18.
+              </p>
+              <p>
+                Qualora l'utente abbia meno di 18 anni, l'iscrizione e l'utilizzo dell'applicazione devono avvenire con il consenso e sotto la responsabilità di un genitore o tutore legale. I titolari si riservano la possibilità di richiedere in qualsiasi momento documenti o prove idonee a verificare l'età e il consenso del genitore/tutore.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4">Diritti dell'interessato</h2>
+              <p className="mb-3">
+                L'utente ha diritto di:
+              </p>
+              <ul className="list-disc pl-6 space-y-1 mb-4">
+                <li>accedere ai propri dati;</li>
+                <li>chiederne la rettifica o cancellazione;</li>
+                <li>limitarne il trattamento;</li>
+                <li>opporsi al trattamento;</li>
+                <li>richiedere la portabilità dei dati;</li>
+                <li>revocare il consenso in qualsiasi momento;</li>
+                <li>proporre reclamo al Garante per la Protezione dei Dati Personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.garanteprivacy.it</a>).</li>
               </ul>
-              <p className="text-muted-foreground mt-2">
-                Non vendiamo né condividiamo i dati personali con terze parti per scopi di marketing.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">7. Conservazione dei Dati</h2>
-              <p className="text-muted-foreground">
-                I dati personali sono conservati per il tempo necessario a fornire i servizi richiesti e per 
-                adempiere agli obblighi di legge. I dati contabili sono conservati per 10 anni come previsto 
-                dalla normativa fiscale italiana.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">8. Diritti dell'Utente</h2>
-              <p className="text-muted-foreground mb-2">
-                In conformità con il GDPR, l'utente ha diritto a:
-              </p>
-              <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Accesso:</strong> ottenere conferma del trattamento dei propri dati</li>
-                <li><strong>Rettifica:</strong> correggere dati inesatti o incompleti</li>
-                <li><strong>Cancellazione:</strong> richiedere la cancellazione dei dati ("diritto all'oblio")</li>
-                <li><strong>Limitazione:</strong> limitare il trattamento dei dati</li>
-                <li><strong>Portabilità:</strong> ricevere i dati in formato strutturato</li>
-                <li><strong>Opposizione:</strong> opporsi al trattamento dei dati</li>
-                <li><strong>Revoca del consenso:</strong> revocare il consenso in qualsiasi momento</li>
-              </ul>
-              <p className="text-muted-foreground mt-2">
-                Per esercitare questi diritti, contattare il supporto attraverso l'applicazione.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">9. Sicurezza dei Dati</h2>
-              <p className="text-muted-foreground">
-                Implementiamo misure tecniche e organizzative appropriate per proteggere i dati personali 
-                da accessi non autorizzati, perdita o distruzione. I dati sono crittografati durante la 
-                trasmissione e l'archiviazione.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">10. Cookie e Tecnologie Simili</h2>
-              <p className="text-muted-foreground">
-                L'applicazione utilizza cookie tecnici necessari per il funzionamento del servizio. 
-                Non utilizziamo cookie di profilazione senza il consenso dell'utente.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">11. Modifiche all'Informativa</h2>
-              <p className="text-muted-foreground">
-                Ci riserviamo il diritto di modificare questa informativa sulla privacy. 
-                Le modifiche saranno pubblicate nell'applicazione con indicazione della data di aggiornamento.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">12. Reclami</h2>
-              <p className="text-muted-foreground">
-                L'utente ha il diritto di presentare un reclamo all'Autorità Garante per la Protezione 
-                dei Dati Personali (www.garanteprivacy.it) in caso di violazione della normativa sulla privacy.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold mb-4">13. Contatti</h2>
-              <p className="text-muted-foreground">
-                Per qualsiasi domanda riguardante questa informativa sulla privacy o per esercitare i propri diritti, 
-                contattare il supporto attraverso l'applicazione.
+              <p>
+                Le richieste vanno inviate a: <a href="mailto:amministrazione@allenati.me" className="text-primary hover:underline">amministrazione@allenati.me</a>.
               </p>
             </section>
           </CardContent>
