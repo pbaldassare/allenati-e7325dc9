@@ -205,6 +205,15 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
         </Button>
         
         <Button 
+          variant="outline" 
+          className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:bg-gradient-secondary hover:text-white hover:border-secondary hover:shadow-glow group"
+          onClick={() => navigate('/documenti')}
+        >
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:scale-110 transition-transform" />
+          Documenti Palestra
+        </Button>
+        
+        <Button 
           onClick={handleLogout}
           variant="destructive" 
           className="w-full justify-start text-sm sm:text-base h-12 transition-all duration-300 min-h-[44px] hover:shadow-glow group"

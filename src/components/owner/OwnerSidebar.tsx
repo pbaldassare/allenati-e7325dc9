@@ -31,6 +31,7 @@ import {
   User,
   HelpCircle,
   TrendingUp,
+  FileText,
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
@@ -72,6 +73,7 @@ export const OwnerSidebar: React.FC = () => {
     { title: "Piani Abbonamento", url: "/owner/subscription-plans", icon: Settings },
     { title: "Chat", url: "/owner/chat", icon: MessageSquare },
     { title: "Report", url: "/owner/reports", icon: BarChart3 },
+    { title: "Documenti", url: "/owner/documents", icon: FileText },
     { title: "Profilo Palestra", url: "/owner/profile", icon: User },
   ];
 
