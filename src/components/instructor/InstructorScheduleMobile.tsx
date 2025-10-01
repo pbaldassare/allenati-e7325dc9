@@ -137,7 +137,11 @@ const InstructorScheduleMobile: React.FC = () => {
           courses!inner (
             name,
             description,
-            credits_required
+            credits_required,
+            instructors (
+              first_name,
+              last_name
+            )
           )
         `)
         .in('course_id', courseIds)
@@ -170,22 +174,29 @@ const InstructorScheduleMobile: React.FC = () => {
       }, {} as Record<string, number>);
 
       // Transform data
-      const transformedSessions: SessionData[] = (sessionsData || []).map(session => ({
-        id: session.id,
-        course_id: session.course_id,
-        courseName: session.courses.name,
-        course_description: session.courses.description,
-        date: session.session_date,
-        time: `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`,
-        start_time: session.start_time,
-        end_time: session.end_time,
-        room: session.room_name || 'Non specificata',
-        instructor: 'Non assegnato',
-        participants: bookingCountMap[session.id] || 0,
-        maxParticipants: session.max_participants,
-        status: session.status as 'scheduled' | 'cancelled' | 'completed',
-        credits: session.courses.credits_required
-      }));
+      const transformedSessions: SessionData[] = (sessionsData || []).map(session => {
+        const instructor = session.courses.instructors;
+        const instructorName = instructor?.first_name && instructor?.last_name
+          ? `${instructor.first_name} ${instructor.last_name}`
+          : 'Non assegnato';
+
+        return {
+          id: session.id,
+          course_id: session.course_id,
+          courseName: session.courses.name,
+          course_description: session.courses.description,
+          date: session.session_date,
+          time: `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          room: session.room_name || 'Non specificata',
+          instructor: instructorName,
+          participants: bookingCountMap[session.id] || 0,
+          maxParticipants: session.max_participants,
+          status: session.status as 'scheduled' | 'cancelled' | 'completed',
+          credits: session.courses.credits_required
+        };
+      });
 
       setSessions(transformedSessions);
     } catch (error) {
@@ -336,6 +347,9 @@ const InstructorScheduleMobile: React.FC = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         📍 {session.room}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        👤 {session.instructor}
                       </p>
                       {session.course_description && (
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-2">

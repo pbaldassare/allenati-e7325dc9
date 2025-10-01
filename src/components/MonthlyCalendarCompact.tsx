@@ -21,6 +21,10 @@ interface CourseSession {
     name: string;
     is_active: boolean;
     gym_id: string;
+    instructors?: {
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
   };
 }
 
@@ -63,7 +67,11 @@ export const MonthlyCalendarCompact: React.FC<MonthlyCalendarCompactProps> = ({
           courses!inner (
             name,
             is_active,
-            gym_id
+            gym_id,
+            instructors (
+              first_name,
+              last_name
+            )
           )
         `)
         .eq('courses.gym_id', selectedGym?.id)
@@ -90,6 +98,14 @@ export const MonthlyCalendarCompact: React.FC<MonthlyCalendarCompactProps> = ({
   const getSessionsForDay = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     return courseSessions.filter(session => session.session_date === dateString);
+  };
+
+  const getInstructorName = (session: CourseSession) => {
+    const instructor = session.courses.instructors;
+    if (instructor?.first_name && instructor?.last_name) {
+      return `${instructor.first_name} ${instructor.last_name}`;
+    }
+    return 'Non assegnato';
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -134,6 +150,7 @@ export const MonthlyCalendarCompact: React.FC<MonthlyCalendarCompactProps> = ({
           <Badge 
             variant="secondary" 
             className="text-[0.6rem] px-1 py-0 mt-0.5 cursor-pointer"
+            title={sessionsForDay.map(s => `${s.courses.name} - ${getInstructorName(s)}`).join('\n')}
             onClick={(e) => {
               e.stopPropagation();
               onDayClick?.(day);
