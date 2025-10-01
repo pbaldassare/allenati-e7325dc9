@@ -214,7 +214,6 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
                   </p>
                 )}
                 <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>Categoria: {doc.category}</span>
                   <span>Dimensione: {formatFileSize(doc.file_size)}</span>
                   <span>Caricato il: {formatDate(doc.created_at)}</span>
                 </div>

@@ -30,15 +30,6 @@ interface GymDocumentUploadDialogProps {
   onUploaded: () => void;
 }
 
-const DOCUMENT_CATEGORIES = [
-  { value: 'general', label: 'Generale' },
-  { value: 'contract', label: 'Contratti' },
-  { value: 'rules', label: 'Regolamenti' },
-  { value: 'communication', label: 'Comunicazioni' },
-  { value: 'forms', label: 'Modulistica' },
-  { value: 'other', label: 'Altro' },
-];
-
 export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = ({
   open,
   onOpenChange,
@@ -49,7 +40,6 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('general');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>(userId || '');
@@ -68,29 +58,36 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
   const fetchGymUsers = async () => {
     setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
+      // First get user_ids from memberships
+      const { data: memberships, error: memberError } = await supabase
         .from('user_gym_memberships')
-        .select(`
-          user_id,
-          profiles!user_gym_memberships_user_id_fkey (
-            user_id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('user_id')
         .eq('gym_id', gymId)
         .eq('status', 'active');
 
-      if (error) throw error;
+      if (memberError) throw memberError;
 
-      const users = data
-        ?.filter(m => m.profiles)
-        .map(m => ({
-          id: m.user_id,
-          name: `${(m.profiles as any).first_name} ${(m.profiles as any).last_name}`,
-          email: (m.profiles as any).email || '',
-        })) || [];
+      const userIds = memberships?.map(m => m.user_id) || [];
+      
+      if (userIds.length === 0) {
+        setGymUsers([]);
+        setLoadingUsers(false);
+        return;
+      }
+
+      // Then get profiles for those users
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email')
+        .in('user_id', userIds);
+
+      if (profileError) throw profileError;
+
+      const users = profiles?.map(p => ({
+        id: p.user_id,
+        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Utente',
+        email: p.email || '',
+      })) || [];
 
       setGymUsers(users);
     } catch (error) {
@@ -151,7 +148,7 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
         uploaded_by: user.id,
         title,
         description: description || null,
-        category,
+        category: 'general',
         file_name: file.name,
         file_path: fileName,
         file_size: file.size,
@@ -168,7 +165,6 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
       // Reset form
       setTitle('');
       setDescription('');
-      setCategory('general');
       setFile(null);
       setSelectedUserId(userId || '');
       onOpenChange(false);
@@ -230,22 +226,6 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
               placeholder="Descrizione opzionale"
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DOCUMENT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
