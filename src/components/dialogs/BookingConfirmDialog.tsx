@@ -1,5 +1,5 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, Award, Coins } from 'lucide-react';
+import { Calendar, Clock, Award, Coins, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { CreditPurchaseDialog } from './CreditPurchaseDialog';
 import { useGym } from '@/contexts/GymContext';
 import { getUserGymCredits } from '@/lib/bookingHelpers';
 import { hasActiveUnlimitedSubscription } from '@/lib/subscriptionHelpers';
+import { getInstructorName } from '@/types/course';
 
 interface BookingConfirmDialogProps {
   open: boolean;
@@ -159,6 +160,11 @@ export const BookingConfirmDialog = ({
               <div className="flex items-center text-foreground">
                 <Clock className="w-4 h-4 mr-2" />
                 <span className="font-medium">{formatTime(scheduledTime)}</span>
+              </div>
+              
+              <div className="flex items-center text-foreground">
+                <User className="w-4 h-4 mr-2" />
+                <span>{getInstructorName(course as any)}</span>
               </div>
               
               <div className="flex items-center text-foreground">
