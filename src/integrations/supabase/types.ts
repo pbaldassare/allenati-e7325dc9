@@ -927,6 +927,7 @@ export type Database = {
           title: string
           updated_at: string
           uploaded_by: string
+          user_id: string | null
         }
         Insert: {
           category?: string
@@ -942,6 +943,7 @@ export type Database = {
           title: string
           updated_at?: string
           uploaded_by: string
+          user_id?: string | null
         }
         Update: {
           category?: string
@@ -957,6 +959,7 @@ export type Database = {
           title?: string
           updated_at?: string
           uploaded_by?: string
+          user_id?: string | null
         }
         Relationships: [
           {

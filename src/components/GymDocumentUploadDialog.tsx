@@ -26,6 +26,7 @@ interface GymDocumentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gymId: string;
+  userId?: string; // Optional: se fornito, il documento è per questo utente specifico
   onUploaded: () => void;
 }
 
@@ -42,6 +43,7 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
   open,
   onOpenChange,
   gymId,
+  userId,
   onUploaded,
 }) => {
   const { user } = useAuth();
@@ -82,6 +84,7 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
       // Insert document record
       const { error: dbError } = await supabase.from('gym_documents').insert({
         gym_id: gymId,
+        user_id: userId, // Documento per utente specifico
         uploaded_by: user.id,
         title,
         description: description || null,

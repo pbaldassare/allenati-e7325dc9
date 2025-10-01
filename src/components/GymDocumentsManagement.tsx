@@ -22,11 +22,13 @@ interface GymDocument {
 
 interface GymDocumentsManagementProps {
   gymId: string;
+  userId?: string; // Se fornito, filtra per questo utente specifico
   isOwner?: boolean;
 }
 
 export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({ 
-  gymId, 
+  gymId,
+  userId,
   isOwner = false 
 }) => {
   const { user } = useAuth();
@@ -36,12 +38,21 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
 
   const fetchDocuments = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('gym_documents')
         .select('*')
         .eq('gym_id', gymId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .eq('is_active', true);
+      
+      // Se userId è fornito, filtra per quell'utente
+      // Altrimenti se non è owner, filtra per l'utente corrente
+      if (userId) {
+        query = query.eq('user_id', userId);
+      } else if (!isOwner && user) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setDocuments(data || []);
@@ -59,7 +70,7 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
 
   useEffect(() => {
     fetchDocuments();
-  }, [gymId]);
+  }, [gymId, userId]);
 
   const handleDownload = async (doc: GymDocument) => {
     try {
@@ -216,6 +227,7 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         gymId={gymId}
+        userId={userId}
         onUploaded={fetchDocuments}
       />
     </div>

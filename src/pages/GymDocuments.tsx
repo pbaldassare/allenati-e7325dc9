@@ -39,7 +39,11 @@ export const GymDocuments: React.FC = () => {
           Indietro
         </Button>
       </header>
-      <GymDocumentsManagement gymId={selectedGym.id} isOwner={isOwner} />
+      <GymDocumentsManagement 
+        gymId={selectedGym.id} 
+        userId={user?.id} 
+        isOwner={isOwner} 
+      />
     </div>
   );
 };
