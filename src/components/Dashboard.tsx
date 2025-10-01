@@ -113,7 +113,7 @@ export const Dashboard = () => {
               instructor_id,
               gym_id,
               course_categories(name, color_hex, icon_name),
-              instructors!courses_instructor_id_fkey(first_name, last_name),
+              instructors!courses_instructor_id_fkey(*, profiles(*)),
               gyms(name)
             )
           `)
@@ -288,20 +288,14 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    console.log('=== DEBUG SESSION ===');
-    console.log('Full session:', JSON.stringify(session, null, 2));
-    console.log('Session.courses:', session.courses);
-    console.log('Session.courses?.instructors:', session.courses?.instructors);
-    
     const instructor = session.courses?.instructors;
-    if (!instructor) {
-      console.log('❌ No instructor found');
-      return 'Istruttore non assegnato';
-    }
+    if (!instructor) return 'Istruttore non assegnato';
     
-    console.log('✅ Instructor data:', instructor);
-    const fullName = `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim();
-    console.log('Generated name:', fullName);
+    // Try profiles first (new structure), then fallback to direct fields
+    const firstName = instructor.profiles?.first_name || instructor.first_name || '';
+    const lastName = instructor.profiles?.last_name || instructor.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
     return fullName || 'Istruttore non assegnato';
   };
 
