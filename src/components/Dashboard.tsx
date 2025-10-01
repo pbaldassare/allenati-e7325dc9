@@ -113,7 +113,7 @@ export const Dashboard = () => {
               instructor_id,
               gym_id,
               course_categories(name, color_hex, icon_name),
-              instructors!courses_instructor_id_fkey(*, profiles(*)),
+              instructors(first_name, last_name),
               gyms(name)
             )
           `)
@@ -291,9 +291,8 @@ export const Dashboard = () => {
     const instructor = session.courses?.instructors;
     if (!instructor) return 'Istruttore non assegnato';
     
-    // Try profiles first (new structure), then fallback to direct fields
-    const firstName = instructor.profiles?.first_name || instructor.first_name || '';
-    const lastName = instructor.profiles?.last_name || instructor.last_name || '';
+    const firstName = instructor.first_name || '';
+    const lastName = instructor.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
     
     return fullName || 'Istruttore non assegnato';
