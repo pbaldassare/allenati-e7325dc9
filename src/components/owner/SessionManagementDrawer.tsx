@@ -438,6 +438,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const removeParticipant = async (bookingId: string) => {
     setRemoving(bookingId);
     try {
+      console.log('🔍 STEP 1: Fetching booking data for:', bookingId);
+      
       // Get full booking data with course and gym info for refund processing
       const { data: booking, error: fetchError } = await supabase
         .from('bookings')
@@ -453,30 +455,75 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .eq('id', bookingId)
         .single();
 
-      if (fetchError) throw fetchError;
-      if (!booking) throw new Error('Booking not found');
+      if (fetchError) {
+        console.error('❌ Error fetching booking:', fetchError);
+        throw fetchError;
+      }
+      if (!booking) {
+        console.error('❌ Booking not found');
+        throw new Error('Booking not found');
+      }
 
-      console.log('📋 Removing participant with refund:', {
-        bookingId,
+      console.log('✅ STEP 1 COMPLETE - Booking data:', {
+        bookingId: booking.id,
         userId: booking.user_id,
         creditsUsed: booking.credits_used,
-        courseName: booking.courses?.name
+        status: booking.status,
+        courseId: booking.course_id,
+        courseName: booking.courses?.name,
+        gymId: booking.courses?.gym_id,
+        createdAt: booking.created_at
       });
 
+      // Validate required data
+      if (!booking.user_id) {
+        throw new Error('Missing user_id in booking');
+      }
+      if (!booking.courses?.gym_id) {
+        console.warn('⚠️ No gym_id in courses object, will be fetched by processRefund');
+      }
+
+      console.log('🔍 STEP 2: Updating booking status to cancelled');
+      
       // Update booking status
       const { error: updateError } = await supabase
         .from('bookings')
         .update({
           status: 'cancelled',
-          cancellation_reason: 'Rimosso dallo staff',
+          cancellation_reason: 'Rimosso dallo staff dal calendario',
           cancelled_at: new Date().toISOString()
         })
         .eq('id', bookingId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Error updating booking status:', updateError);
+        throw updateError;
+      }
 
-      // Process credit refund
-      const userRole = await getUserRole(booking.user_id);
+      console.log('✅ STEP 2 COMPLETE - Booking status updated');
+
+      console.log('🔍 STEP 3: Getting user role for userId:', booking.user_id);
+      
+      let userRole: 'user' | 'instructor' | 'owner' | 'admin';
+      try {
+        userRole = await getUserRole(booking.user_id);
+        console.log('✅ STEP 3 COMPLETE - User role:', userRole);
+      } catch (roleError) {
+        console.error('❌ Error getting user role:', roleError);
+        // Default to 'user' if role fetch fails
+        userRole = 'user';
+        console.log('⚠️ Defaulting to user role');
+      }
+
+      console.log('🔍 STEP 4: Processing credit refund with params:', {
+        bookingId: booking.id,
+        userId: booking.user_id,
+        userRole,
+        creditsUsed: booking.credits_used,
+        gymId: booking.courses?.gym_id,
+        reason: 'Rimosso dallo staff dal calendario'
+      });
+
       const refundResult = await processRefund(
         booking,
         booking.user_id,
@@ -484,10 +531,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         'Rimosso dallo staff dal calendario'
       );
 
-      console.log('💰 Refund result:', refundResult);
+      console.log('✅ STEP 4 COMPLETE - Refund result:', {
+        success: refundResult.success,
+        message: refundResult.message
+      });
 
       // Show appropriate toast based on refund result
-      if (refundResult.success) {
+      if (refundResult.success && refundResult.message.includes('refunded')) {
         toast.success(
           `Partecipante rimosso e ${booking.credits_used} credito/i rimborsato/i`
         );
@@ -495,13 +545,24 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         toast.success('Partecipante rimosso con successo');
         if (refundResult.message) {
           console.log('ℹ️ Refund info:', refundResult.message);
+          // Show warning if refund failed
+          if (!refundResult.success) {
+            toast.warning('Attenzione: ' + refundResult.message);
+          }
         }
       }
 
+      console.log('🔍 STEP 5: Reloading participants and updating session');
       await loadParticipants();
       onSessionUpdate?.();
+      console.log('✅ STEP 5 COMPLETE - All done!');
+      
     } catch (error) {
-      console.error('❌ Error removing participant:', error);
+      console.error('❌ FATAL ERROR in removeParticipant:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       toast.error('Errore nella rimozione partecipante');
     } finally {
       setRemoving(null);
