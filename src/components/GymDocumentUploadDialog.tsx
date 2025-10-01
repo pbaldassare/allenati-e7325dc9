@@ -12,15 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface GymDocumentUploadDialogProps {
   open: boolean;
@@ -45,6 +41,8 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
   const [selectedUserId, setSelectedUserId] = useState<string>(userId || '');
   const [gymUsers, setGymUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   // Fetch gym users if owner is uploading (no userId provided)
   useEffect(() => {
@@ -202,18 +200,75 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
           {!userId && (
             <div className="space-y-2">
               <Label htmlFor="user">Utente destinatario *</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={loadingUsers}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingUsers ? "Caricamento..." : "Seleziona utente"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {gymUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {loadingUsers ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={popoverOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedUserId
+                        ? gymUsers.find((user) => user.id === selectedUserId)?.name
+                        : "Seleziona un utente..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Cerca utente..." 
+                        value={searchValue}
+                        onValueChange={setSearchValue}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Nessun utente trovato.</CommandEmpty>
+                        <CommandGroup>
+                          {gymUsers
+                            .filter((user) => {
+                              const search = searchValue.toLowerCase();
+                              return (
+                                user.name.toLowerCase().includes(search) ||
+                                user.email.toLowerCase().includes(search)
+                              );
+                            })
+                            .map((user) => (
+                              <CommandItem
+                                key={user.id}
+                                value={user.id}
+                                onSelect={() => {
+                                  setSelectedUserId(user.id);
+                                  setPopoverOpen(false);
+                                  setSearchValue('');
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedUserId === user.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{user.name}</span>
+                                  {user.email && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {user.email}
+                                    </span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
           )}
 
