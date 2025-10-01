@@ -18,7 +18,7 @@ const OwnerBookings: React.FC = () => {
   const { selectedGym } = useOwnerGym();
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('confirmed');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('today');
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
@@ -179,6 +179,58 @@ const OwnerBookings: React.FC = () => {
         </p>
       </div>
 
+      {/* Mobile Search and Controls - Top */}
+      {isMobile && (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca corso, utente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant={showFullDetails ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFullDetails(!showFullDetails)}
+              className="whitespace-nowrap"
+            >
+              {showFullDetails ? "Compatta" : "Lista"}
+            </Button>
+          </div>
+          
+          <div className="flex gap-2">
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Periodo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte</SelectItem>
+                <SelectItem value="today">Oggi</SelectItem>
+                <SelectItem value="thisWeek">Questa settimana</SelectItem>
+                <SelectItem value="nextWeek">Settimana prossima</SelectItem>
+                <SelectItem value="thisMonth">Questo mese</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Stato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="confirmed">Confermate</SelectItem>
+                <SelectItem value="completed">Completate</SelectItem>
+                <SelectItem value="cancelled">Cancellate</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -214,44 +266,8 @@ const OwnerBookings: React.FC = () => {
         </Card>
       </div>
 
-      {/* Mobile filters - simplified */}
-      {isMobile ? (
-        <div className="flex flex-col space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca corso, utente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Periodo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte</SelectItem>
-              <SelectItem value="today">Oggi</SelectItem>
-              <SelectItem value="thisWeek">Questa settimana</SelectItem>
-              <SelectItem value="nextWeek">Settimana prossima</SelectItem>
-              <SelectItem value="thisMonth">Questo mese</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Stato" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              <SelectItem value="confirmed">Confermate</SelectItem>
-              <SelectItem value="completed">Completate</SelectItem>
-              <SelectItem value="cancelled">Cancellate</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      ) : (
-        /* Desktop filters */
+      {/* Desktop filters */}
+      {!isMobile && (
         <div className="flex items-center space-x-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -375,22 +391,6 @@ const OwnerBookings: React.FC = () => {
             </Card>
           )}
 
-          {/* Quick actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Azioni Rapide</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setShowFullDetails(true)}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Vedi Lista Completa
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       ) : (
         /* Desktop view or mobile detailed view */
