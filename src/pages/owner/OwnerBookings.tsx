@@ -217,6 +217,15 @@ const OwnerBookings: React.FC = () => {
       {/* Mobile filters - simplified */}
       {isMobile ? (
         <div className="flex flex-col space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca corso, utente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <Select value={dateFilter} onValueChange={setDateFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Periodo" />
