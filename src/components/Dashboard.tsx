@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter, Infinity, Coins, ShoppingCart } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter, Infinity, Coins, ShoppingCart, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +27,7 @@ export const Dashboard = () => {
   const { userGyms, selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { bookings, isSessionBooked, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
+  const { bookings, isSessionBooked, getSessionBooking, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
   const [availableSessions, setAvailableSessions] = useState([]);
   const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -579,29 +579,45 @@ export const Dashboard = () => {
                            />
                          </div>
                         
-                         {/* Action button - Mobile: Full width, Desktop: Compact */}
-                         <div className="flex flex-col sm:flex-row justify-center sm:justify-end gap-2 mt-2 sm:mt-0">
-                            {isAlreadyBooked ? (
-                              <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none">
-                                ✓ Prenotato
-                              </Badge>
-                            ) : (
-                              <Button
-                                onClick={() => openBookingDialog(session)}
-                                disabled={isLoading || isFull}
-                                size="sm"
-                                className={cn(
-                                  "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
-                                  isFull 
-                                    ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                    : isAlmostFull
-                                      ? "bg-gradient-warm text-white hover:opacity-90 border-none"
-                                      : "bg-gradient-primary text-white hover:opacity-90 border-none"
-                                )}
-                              >
-                                {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
-                              </Button>
-                            )}
+                          {/* Action button - Mobile: Full width, Desktop: Compact */}
+                          <div className="flex flex-col sm:flex-row justify-center sm:justify-end gap-2 mt-2 sm:mt-0">
+                             {isAlreadyBooked ? (
+                               <div className="flex items-center gap-2 w-full sm:w-auto">
+                                 <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none flex-shrink-0">
+                                   ✓ Prenotato
+                                 </Badge>
+                                 <Button
+                                   onClick={() => {
+                                     const booking = getSessionBooking(session.id, session.courses?.id, session.session_date, session.start_time);
+                                     if (booking) {
+                                       openCancellationDialog(booking.course, booking);
+                                     }
+                                   }}
+                                   variant="outline"
+                                   size="sm"
+                                   className="text-sm sm:text-xs h-9 sm:h-7 px-4 sm:px-2 flex-1 sm:flex-initial"
+                                 >
+                                   <X className="w-4 h-4 sm:w-3 sm:h-3 mr-1" />
+                                   Cancella
+                                 </Button>
+                               </div>
+                             ) : (
+                               <Button
+                                 onClick={() => openBookingDialog(session)}
+                                 disabled={isLoading || isFull}
+                                 size="sm"
+                                 className={cn(
+                                   "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
+                                   isFull 
+                                     ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                     : isAlmostFull
+                                       ? "bg-gradient-warm text-white hover:opacity-90 border-none"
+                                       : "bg-gradient-primary text-white hover:opacity-90 border-none"
+                                 )}
+                               >
+                                 {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                               </Button>
+                             )}
                             
                             {/* Subscription/Credits Link */}
                             <Button
