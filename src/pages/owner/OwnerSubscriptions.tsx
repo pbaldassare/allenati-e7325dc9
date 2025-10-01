@@ -98,11 +98,12 @@ const OwnerSubscriptions: React.FC = () => {
 
       console.log('Loading subscriptions for gym members:', memberIds.map(m => m.user_id));
       
-      // Load ALL subscriptions for gym members (not just active) to see everything 
+      // Load subscriptions for gym members in the current gym only
       const { data: subscriptionsData, error } = await supabase
         .from('user_subscriptions')
         .select('*')
         .in('user_id', memberIds.map(m => m.user_id))
+        .eq('gym_id', selectedGym.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
