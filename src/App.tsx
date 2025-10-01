@@ -61,7 +61,9 @@ import OwnerCourseSessions from "./pages/owner/OwnerCourseSessions";
 import OwnerCourseExceptions from "./pages/owner/OwnerCourseExceptions";
 import OwnerStripeSetup from "./pages/owner/OwnerStripeSetup";
 import OwnerProfile from "./pages/owner/OwnerProfile";
+import OwnerDocuments from "./pages/owner/OwnerDocuments";
 import MedicalCertificate from "./pages/MedicalCertificate";
+import GymDocuments from "./pages/GymDocuments";
 import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
 import Gyms from "./pages/Gyms";
@@ -156,6 +158,7 @@ const App = () => (
                   <Route path="stripe" element={<OwnerStripeSetup />} />
                   <Route path="chat" element={<OwnerChat />} />
                   <Route path="reports" element={<OwnerReports />} />
+                  <Route path="documents" element={<OwnerDocuments />} />
                   <Route path="profile" element={<OwnerProfile />} />
                   <Route path="settings" element={<UserSettings />} />
                 </Route>
@@ -176,6 +179,7 @@ const App = () => (
                 <Route path="/gyms" element={<Gyms />} />
                 <Route path="/impostazioni" element={<UserSettings />} />
                 <Route path="/certificato-medico" element={<MedicalCertificate />} />
+                <Route path="/documenti" element={<GymDocuments />} />
                 <Route path="/landing" element={<GymLanding />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
