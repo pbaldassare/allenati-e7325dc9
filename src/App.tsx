@@ -66,6 +66,8 @@ import Subscriptions from "./pages/Subscriptions";
 import UserSettings from "./pages/UserSettings";
 import Gyms from "./pages/Gyms";
 import ResetPassword from "./pages/ResetPassword";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Instructor Pages
 import InstructorDashboard from "./pages/instructor/InstructorDashboard";
@@ -99,6 +101,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
                 
                 {/* Admin Routes with persistent sidebar */}
                 <Route path="/admin" element={<AdminLayout />}>

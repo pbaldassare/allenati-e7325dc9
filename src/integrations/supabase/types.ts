@@ -1593,7 +1593,11 @@ export type Database = {
           nickname: string | null
           phone: string | null
           postal_code: string | null
+          privacy_accepted_at: string | null
+          privacy_version: string | null
           profile_picture_url: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
           user_id: string
         }
@@ -1617,7 +1621,11 @@ export type Database = {
           nickname?: string | null
           phone?: string | null
           postal_code?: string | null
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
           profile_picture_url?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1641,7 +1649,11 @@ export type Database = {
           nickname?: string | null
           phone?: string | null
           postal_code?: string | null
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
           profile_picture_url?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_id?: string
         }

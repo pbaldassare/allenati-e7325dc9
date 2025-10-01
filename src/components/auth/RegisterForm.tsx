@@ -40,6 +40,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     guardianFirstName: '',
     guardianLastName: '',
     guardianPhone: '',
+    termsAccepted: false,
+    privacyAccepted: false,
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -117,6 +119,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validazione accettazione termini e privacy
+    if (!formData.termsAccepted) {
+      setError('Devi accettare i Termini e Condizioni per registrarti');
+      toast({
+        title: "Attenzione",
+        description: "Devi accettare i Termini e Condizioni per registrarti",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.privacyAccepted) {
+      setError("Devi accettare l'Informativa sulla Privacy per registrarti");
+      toast({
+        title: "Attenzione",
+        description: "Devi accettare l'Informativa sulla Privacy per registrarti",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Validazione dominio email
     const emailDomainResult = validateEmailDomain(formData.email);
     if (!emailDomainResult.isValid) {
@@ -180,6 +203,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -187,6 +211,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             fiscal_code: formData.fiscalCode.toUpperCase(),
             selected_gym_id: formData.gymId,
             belt: formData.belt || 'Nessuna',
+            terms_accepted: true,
+            privacy_accepted: true,
+            terms_version: '1.0',
+            privacy_version: '1.0',
             ...(isMinor
               ? {
                   is_minor: true,
@@ -222,6 +250,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
         guardianFirstName: '',
         guardianLastName: '',
         guardianPhone: '',
+        termsAccepted: false,
+        privacyAccepted: false,
       });
       setIsMinor(false);
       setIsGuardianModalOpen(false);
@@ -589,10 +619,69 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
                 </div>
               </div>
 
+              {/* Terms and Privacy Checkboxes */}
+              <div className="space-y-4 border-t pt-6 mt-6">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="terms"
+                    checked={formData.termsAccepted}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, termsAccepted: checked as boolean })
+                    }
+                    required
+                    className="mt-1"
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm leading-relaxed cursor-pointer"
+                  >
+                    Ho letto e accetto i{' '}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Termini e Condizioni
+                    </a>
+                    <span className="text-destructive ml-1">*</span>
+                  </label>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="privacy"
+                    checked={formData.privacyAccepted}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, privacyAccepted: checked as boolean })
+                    }
+                    required
+                    className="mt-1"
+                  />
+                  <label
+                    htmlFor="privacy"
+                    className="text-sm leading-relaxed cursor-pointer"
+                  >
+                    Ho letto e accetto l'
+                    <a
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Informativa sulla Privacy
+                    </a>
+                    <span className="text-destructive ml-1">*</span>
+                  </label>
+                </div>
+              </div>
+
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-primary"
-                disabled={isLoading}
+                disabled={isLoading || !formData.termsAccepted || !formData.privacyAccepted}
               >
                 {isLoading ? (
                   <>
