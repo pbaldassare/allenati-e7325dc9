@@ -113,7 +113,7 @@ export const Dashboard = () => {
               instructor_id,
               gym_id,
               course_categories(name, color_hex, icon_name),
-              instructors!courses_instructor_id_fkey(first_name, last_name),
+              instructors(first_name, last_name),
               gyms(name)
             )
           `)
