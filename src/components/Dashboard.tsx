@@ -113,7 +113,7 @@ export const Dashboard = () => {
               instructor_id,
               gym_id,
               course_categories(name, color_hex, icon_name),
-              instructors(first_name, last_name),
+              instructors!courses_instructor_id_fkey(*, profiles(*)),
               gyms(name)
             )
           `)
@@ -289,13 +289,13 @@ export const Dashboard = () => {
 
   const getInstructorName = (session: any) => {
     const instructor = session.courses?.instructors;
-    if (!instructor) return 'Istruttore non assegnato';
+    if (!instructor?.profiles) return 'Istruttore non assegnato';
     
-    const firstName = instructor.first_name || '';
-    const lastName = instructor.last_name || '';
+    const firstName = instructor.profiles.first_name || '';
+    const lastName = instructor.profiles.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
     
-    return fullName || 'Istruttore non assegnato';
+    return fullName || instructor.profiles.email?.split('@')[0] || 'Istruttore non assegnato';
   };
 
   const getInstructorAvatar = (session: any) => {
