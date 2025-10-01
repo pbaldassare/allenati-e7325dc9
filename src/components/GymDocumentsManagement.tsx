@@ -18,11 +18,12 @@ interface GymDocument {
   file_size: number | null;
   created_at: string;
   uploaded_by: string;
+  user_id: string;
 }
 
 interface GymDocumentsManagementProps {
   gymId: string;
-  userId?: string; // Se fornito, filtra per questo utente specifico
+  userId?: string; // Optional: if provided, shows documents for this specific user
   isOwner?: boolean;
 }
 
@@ -43,15 +44,13 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
         .select('*')
         .eq('gym_id', gymId)
         .eq('is_active', true);
-      
-      // Se userId è fornito, filtra per quell'utente
-      // Altrimenti se non è owner, filtra per l'utente corrente
+
+      // If userId is provided (user view), filter by user_id
       if (userId) {
         query = query.eq('user_id', userId);
-      } else if (!isOwner && user) {
-        query = query.eq('user_id', user.id);
       }
-      
+      // If owner and no specific userId, they see all documents
+
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -159,7 +158,9 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Documenti della Palestra</h2>
+        <h2 className="text-2xl font-bold">
+          {isOwner ? 'Documenti Utenti' : 'I Tuoi Documenti'}
+        </h2>
         {isOwner && (
           <Button onClick={() => setUploadDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

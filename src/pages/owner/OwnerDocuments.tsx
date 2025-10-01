@@ -1,6 +1,6 @@
 import React from 'react';
 import { OwnerLayout } from '@/layouts/OwnerLayout';
-import { OwnerDocumentsManager } from '@/components/owner/OwnerDocumentsManager';
+import { GymDocumentsManagement } from '@/components/GymDocumentsManagement';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 export const OwnerDocuments: React.FC = () => {
@@ -21,7 +21,10 @@ export const OwnerDocuments: React.FC = () => {
   return (
     <OwnerLayout>
       <div className="container mx-auto px-4 py-6">
-        <OwnerDocumentsManager gymId={selectedGym.id} />
+        <GymDocumentsManagement 
+          gymId={selectedGym.id} 
+          isOwner={true} 
+        />
       </div>
     </OwnerLayout>
   );

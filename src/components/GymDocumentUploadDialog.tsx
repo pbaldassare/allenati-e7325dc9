@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -26,15 +26,15 @@ interface GymDocumentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gymId: string;
-  userId?: string; // Optional: se fornito, il documento è per questo utente specifico
+  userId?: string; // Optional: if provided, the document is for this specific user
   onUploaded: () => void;
 }
 
 const DOCUMENT_CATEGORIES = [
   { value: 'general', label: 'Generale' },
+  { value: 'contract', label: 'Contratti' },
   { value: 'rules', label: 'Regolamenti' },
-  { value: 'schedule', label: 'Orari' },
-  { value: 'announcements', label: 'Comunicazioni' },
+  { value: 'communication', label: 'Comunicazioni' },
   { value: 'forms', label: 'Modulistica' },
   { value: 'other', label: 'Altro' },
 ];
@@ -52,6 +52,58 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
   const [category, setCategory] = useState('general');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>(userId || '');
+  const [gymUsers, setGymUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Fetch gym users if owner is uploading (no userId provided)
+  useEffect(() => {
+    if (open && !userId) {
+      fetchGymUsers();
+    } else if (userId) {
+      setSelectedUserId(userId);
+    }
+  }, [open, gymId, userId]);
+
+  const fetchGymUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_gym_memberships')
+        .select(`
+          user_id,
+          profiles!user_gym_memberships_user_id_fkey (
+            user_id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('gym_id', gymId)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      const users = data
+        ?.filter(m => m.profiles)
+        .map(m => ({
+          id: m.user_id,
+          name: `${(m.profiles as any).first_name} ${(m.profiles as any).last_name}`,
+          email: (m.profiles as any).email || '',
+        })) || [];
+
+      setGymUsers(users);
+    } catch (error) {
+      console.error('Error fetching gym users:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile caricare gli utenti della palestra',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -69,12 +121,23 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
       return;
     }
 
+    // Check if user is selected (owner uploading)
+    const targetUserId = userId || selectedUserId;
+    if (!targetUserId) {
+      toast({
+        title: 'Errore',
+        description: 'Seleziona un utente per il documento',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setUploading(true);
 
     try {
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${gymId}/${Date.now()}.${fileExt}`;
+      const fileName = `${gymId}/${targetUserId}/${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('gym-documents')
         .upload(fileName, file);
@@ -84,7 +147,7 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
       // Insert document record
       const { error: dbError } = await supabase.from('gym_documents').insert({
         gym_id: gymId,
-        user_id: userId, // Documento per utente specifico
+        user_id: targetUserId,
         uploaded_by: user.id,
         title,
         description: description || null,
@@ -107,6 +170,7 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
       setDescription('');
       setCategory('general');
       setFile(null);
+      setSelectedUserId(userId || '');
       onOpenChange(false);
       onUploaded();
     } catch (error) {
@@ -138,6 +202,24 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
               placeholder="Inserisci il titolo del documento"
             />
           </div>
+
+          {!userId && (
+            <div className="space-y-2">
+              <Label htmlFor="user">Utente destinatario *</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={loadingUsers}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingUsers ? "Caricamento..." : "Seleziona utente"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {gymUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrizione</Label>
@@ -183,10 +265,10 @@ export const GymDocumentUploadDialog: React.FC<GymDocumentUploadDialogProps> = (
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
             Annulla
           </Button>
-          <Button onClick={handleUpload} disabled={uploading}>
+          <Button onClick={handleUpload} disabled={uploading || !file || !title || (!userId && !selectedUserId)}>
             {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Carica
           </Button>
