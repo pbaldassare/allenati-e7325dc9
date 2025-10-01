@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, FileText, Download, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, FileText, Download, Trash2, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { GymDocumentUploadDialog } from './GymDocumentUploadDialog';
 
@@ -19,6 +20,9 @@ interface GymDocument {
   created_at: string;
   uploaded_by: string;
   user_id: string;
+  user_first_name?: string;
+  user_last_name?: string;
+  user_email?: string;
 }
 
 interface GymDocumentsManagementProps {
@@ -36,12 +40,20 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
   const [documents, setDocuments] = useState<GymDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchDocuments = async () => {
     try {
       let query = supabase
         .from('gym_documents')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
         .eq('gym_id', gymId)
         .eq('is_active', true);
 
@@ -54,7 +66,16 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDocuments(data || []);
+      
+      // Map the data to include user info
+      const documentsWithUserInfo = (data || []).map((doc: any) => ({
+        ...doc,
+        user_first_name: doc.profiles?.first_name,
+        user_last_name: doc.profiles?.last_name,
+        user_email: doc.profiles?.email,
+      }));
+      
+      setDocuments(documentsWithUserInfo);
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast({
@@ -151,6 +172,24 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
     });
   };
 
+  // Filter documents based on search query
+  const filteredDocuments = documents.filter((doc) => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const title = doc.title.toLowerCase();
+    const fileName = doc.file_name.toLowerCase();
+    const userName = `${doc.user_first_name || ''} ${doc.user_last_name || ''}`.toLowerCase();
+    const userEmail = (doc.user_email || '').toLowerCase();
+    
+    return (
+      title.includes(query) ||
+      fileName.includes(query) ||
+      userName.includes(query) ||
+      userEmail.includes(query)
+    );
+  });
+
   if (loading) {
     return <div className="text-center py-8">Caricamento documenti...</div>;
   }
@@ -169,16 +208,32 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
         )}
       </div>
 
-      {documents.length === 0 ? (
+      {isOwner && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca per titolo, nome file, utente o email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      )}
+
+      {filteredDocuments.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nessun documento disponibile</p>
+            <p>
+              {searchQuery 
+                ? 'Nessun documento trovato per questa ricerca' 
+                : 'Nessun documento disponibile'}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {documents.map((doc) => (
+          {filteredDocuments.map((doc) => (
             <Card key={doc.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -212,6 +267,16 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
                   <p className="text-sm text-muted-foreground mb-2">
                     {doc.description}
                   </p>
+                )}
+                {isOwner && (doc.user_first_name || doc.user_last_name || doc.user_email) && (
+                  <div className="mb-2 pb-2 border-b">
+                    <p className="text-sm font-medium">
+                      Utente: {doc.user_first_name} {doc.user_last_name}
+                    </p>
+                    {doc.user_email && (
+                      <p className="text-xs text-muted-foreground">{doc.user_email}</p>
+                    )}
+                  </div>
                 )}
                 <div className="flex gap-4 text-xs text-muted-foreground">
                   <span>Dimensione: {formatFileSize(doc.file_size)}</span>
