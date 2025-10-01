@@ -18,8 +18,8 @@ const OwnerBookings: React.FC = () => {
   const { selectedGym } = useOwnerGym();
   const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('today');
+  const [statusFilter, setStatusFilter] = useState<string>('confirmed');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
