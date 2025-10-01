@@ -288,9 +288,20 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
+    console.log('=== DEBUG SESSION ===');
+    console.log('Full session:', JSON.stringify(session, null, 2));
+    console.log('Session.courses:', session.courses);
+    console.log('Session.courses?.instructors:', session.courses?.instructors);
+    
     const instructor = session.courses?.instructors;
-    if (!instructor) return 'Istruttore non assegnato';
+    if (!instructor) {
+      console.log('❌ No instructor found');
+      return 'Istruttore non assegnato';
+    }
+    
+    console.log('✅ Instructor data:', instructor);
     const fullName = `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim();
+    console.log('Generated name:', fullName);
     return fullName || 'Istruttore non assegnato';
   };
 
