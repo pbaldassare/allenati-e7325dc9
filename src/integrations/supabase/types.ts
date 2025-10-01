@@ -1596,8 +1596,6 @@ export type Database = {
           privacy_accepted_at: string | null
           privacy_version: string | null
           profile_picture_url: string | null
-          terms_accepted_at: string | null
-          terms_version: string | null
           updated_at: string
           user_id: string
         }
@@ -1624,8 +1622,6 @@ export type Database = {
           privacy_accepted_at?: string | null
           privacy_version?: string | null
           profile_picture_url?: string | null
-          terms_accepted_at?: string | null
-          terms_version?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1652,8 +1648,6 @@ export type Database = {
           privacy_accepted_at?: string | null
           privacy_version?: string | null
           profile_picture_url?: string | null
-          terms_accepted_at?: string | null
-          terms_version?: string | null
           updated_at?: string
           user_id?: string
         }
