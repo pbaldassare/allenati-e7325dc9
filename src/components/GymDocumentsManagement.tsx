@@ -46,14 +46,7 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
     try {
       let query = supabase
         .from('gym_documents')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('gym_id', gymId)
         .eq('is_active', true);
 
@@ -63,17 +56,37 @@ export const GymDocumentsManagement: React.FC<GymDocumentsManagementProps> = ({
       }
       // If owner and no specific userId, they see all documents
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data: documents, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Get unique user IDs from documents
+      const userIds = [...new Set(documents?.map(doc => doc.user_id).filter(Boolean))];
       
-      // Map the data to include user info
-      const documentsWithUserInfo = (data || []).map((doc: any) => ({
-        ...doc,
-        user_first_name: doc.profiles?.first_name,
-        user_last_name: doc.profiles?.last_name,
-        user_email: doc.profiles?.email,
-      }));
+      let userProfiles: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, email')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        } else {
+          userProfiles = profiles || [];
+        }
+      }
+
+      // Map documents with user info
+      const documentsWithUserInfo = (documents || []).map((doc) => {
+        const userProfile = userProfiles.find(p => p.user_id === doc.user_id);
+        return {
+          ...doc,
+          user_first_name: userProfile?.first_name,
+          user_last_name: userProfile?.last_name,
+          user_email: userProfile?.email,
+        };
+      });
       
       setDocuments(documentsWithUserInfo);
     } catch (error) {
