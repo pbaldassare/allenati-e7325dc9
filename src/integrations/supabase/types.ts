@@ -2037,6 +2037,7 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          activated_at: string | null
           auto_renew: boolean
           created_at: string
           expires_at: string
@@ -2050,6 +2051,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           auto_renew?: boolean
           created_at?: string
           expires_at: string
@@ -2063,6 +2065,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           auto_renew?: boolean
           created_at?: string
           expires_at?: string
@@ -2179,6 +2182,20 @@ export type Database = {
       get_next_receipt_number: {
         Args: { _gym_id: string; _year?: number }
         Returns: string
+      }
+      get_user_active_subscriptions: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: {
+          activated_at: string
+          created_at: string
+          expires_at: string
+          gym_id: string
+          id: string
+          plan_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          user_id: string
+        }[]
       }
       get_user_credits_for_gym: {
         Args: { _gym_id: string; _user_id: string }

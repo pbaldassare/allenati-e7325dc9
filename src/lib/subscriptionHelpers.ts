@@ -5,6 +5,8 @@ export interface ActiveSubscription {
   plan_id: string;
   gym_id: string;
   expires_at: string;
+  starts_at: string;
+  activated_at?: string;
   subscription_plans: {
     unlimited_access: boolean;
     credits_included: number;
@@ -19,26 +21,11 @@ export const hasActiveUnlimitedSubscription = async (userId: string, gymId: stri
   try {
     console.log('Checking unlimited subscription for user:', userId, 'gym:', gymId);
     
-    const { data, error } = await supabase
-      .from('user_subscriptions')
-      .select(`
-        subscription_plans!inner(unlimited_access)
-      `)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .eq('gym_id', gymId)
-      .eq('subscription_plans.unlimited_access', true)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    console.log('Unlimited subscription check result:', { data, error });
+    const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+    const hasUnlimited = subscriptions.some(sub => sub.subscription_plans.unlimited_access);
     
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error checking unlimited subscription:', error);
-      return false;
-    }
-    
-    return !!data;
+    console.log('Unlimited subscription check result:', hasUnlimited);
+    return hasUnlimited;
   } catch (error) {
     console.error('Error checking unlimited subscription:', error);
     return false;
@@ -46,11 +33,11 @@ export const hasActiveUnlimitedSubscription = async (userId: string, gymId: stri
 };
 
 /**
- * Get user's active subscription for a specific gym
+ * Get ALL user's active subscriptions for a specific gym
  */
-export const getUserActiveSubscription = async (userId: string, gymId: string): Promise<ActiveSubscription | null> => {
+export const getUserActiveSubscriptions = async (userId: string, gymId: string): Promise<ActiveSubscription[]> => {
   try {
-    console.log('🔍 [getUserActiveSubscription] Checking subscription for user:', userId, 'gym:', gymId);
+    console.log('🔍 [getUserActiveSubscriptions] Checking subscriptions for user:', userId, 'gym:', gymId);
     
     const { data, error } = await supabase
       .from('user_subscriptions')
@@ -59,7 +46,9 @@ export const getUserActiveSubscription = async (userId: string, gymId: string): 
         plan_id,
         gym_id,
         expires_at,
+        starts_at,
         status,
+        activated_at,
         subscription_plans!inner(
           unlimited_access,
           credits_included,
@@ -68,41 +57,30 @@ export const getUserActiveSubscription = async (userId: string, gymId: string): 
       `)
       .eq('user_id', userId)
       .eq('gym_id', gymId)
-      .order('created_at', { ascending: false });
+      .eq('status', 'active')
+      .gt('expires_at', new Date().toISOString())
+      .order('activated_at', { ascending: false });
 
-    console.log('🔍 [getUserActiveSubscription] All subscriptions for user:', data);
+    console.log('🔍 [getUserActiveSubscriptions] Active subscriptions:', data);
 
     if (error) {
-      console.error('🔍 [getUserActiveSubscription] Error:', error);
-      return null;
+      console.error('🔍 [getUserActiveSubscriptions] Error:', error);
+      return [];
     }
 
-    if (!data || data.length === 0) {
-      console.log('🔍 [getUserActiveSubscription] No subscriptions found');
-      return null;
-    }
-
-    // Filter for active and non-expired subscriptions
-    const now = new Date().toISOString();
-    const activeSubscriptions = data.filter(sub => 
-      sub.status === 'active' && 
-      new Date(sub.expires_at) > new Date(now)
-    );
-
-    console.log('🔍 [getUserActiveSubscription] Active subscriptions:', activeSubscriptions);
-
-    if (activeSubscriptions.length === 0) {
-      console.log('🔍 [getUserActiveSubscription] No active/valid subscriptions found');
-      return null;
-    }
-
-    const result = activeSubscriptions[0] as ActiveSubscription;
-    console.log('🔍 [getUserActiveSubscription] Returning subscription:', result);
-    return result;
+    return (data || []) as ActiveSubscription[];
   } catch (error) {
-    console.error('🔍 [getUserActiveSubscription] Error getting active subscription:', error);
-    return null;
+    console.error('🔍 [getUserActiveSubscriptions] Error getting active subscriptions:', error);
+    return [];
   }
+};
+
+/**
+ * Get user's active subscription for a specific gym (returns first active subscription for compatibility)
+ */
+export const getUserActiveSubscription = async (userId: string, gymId: string): Promise<ActiveSubscription | null> => {
+  const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+  return subscriptions.length > 0 ? subscriptions[0] : null;
 };
 
 /**
@@ -113,18 +91,21 @@ export const canBookWithoutCredits = async (userId: string, gymId: string): Prom
 };
 
 /**
- * Cancel all active subscriptions for a user in a specific gym
+ * Get total available credits from all active non-unlimited subscriptions
  */
-export const cancelActiveSubscriptions = async (userId: string, gymId: string): Promise<void> => {
+export const getTotalAvailableCredits = async (userId: string, gymId: string): Promise<number> => {
   try {
-    await supabase
-      .from('user_subscriptions')
-      .update({ status: 'cancelled' })
-      .eq('user_id', userId)
-      .eq('gym_id', gymId)
-      .eq('status', 'active');
+    const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+    
+    // Sum credits from all non-unlimited subscriptions
+    const totalCredits = subscriptions
+      .filter(sub => !sub.subscription_plans.unlimited_access)
+      .reduce((total, sub) => total + (sub.subscription_plans.credits_included || 0), 0);
+    
+    console.log('Total available credits from subscriptions:', totalCredits);
+    return totalCredits;
   } catch (error) {
-    console.error('Error cancelling active subscriptions:', error);
-    throw error;
+    console.error('Error getting total available credits:', error);
+    return 0;
   }
 };

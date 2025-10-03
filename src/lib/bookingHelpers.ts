@@ -1,6 +1,37 @@
 import { supabase } from '@/integrations/supabase/client';
-import { getUserActiveSubscription, hasActiveUnlimitedSubscription } from './subscriptionHelpers';
+import { getUserActiveSubscription, hasActiveUnlimitedSubscription, getUserActiveSubscriptions, type ActiveSubscription } from './subscriptionHelpers';
 import { deductCredits } from './creditRefundHelpers';
+
+/**
+ * Determine which subscription to use for booking with priority logic
+ */
+export const determineSubscriptionToUse = (subscriptions: ActiveSubscription[]): ActiveSubscription | null => {
+  if (subscriptions.length === 0) return null;
+  
+  // PRIORITY 1: If there's an unlimited subscription, use it
+  const unlimited = subscriptions.find(sub => sub.subscription_plans.unlimited_access);
+  if (unlimited) {
+    console.log('Using unlimited subscription:', unlimited.id);
+    return unlimited;
+  }
+  
+  // PRIORITY 2: Use subscription with most credits
+  // PRIORITY 3: If credits are equal, use the one expiring sooner
+  const sorted = [...subscriptions].sort((a, b) => {
+    const creditsA = a.subscription_plans.credits_included || 0;
+    const creditsB = b.subscription_plans.credits_included || 0;
+    
+    if (creditsA !== creditsB) {
+      return creditsB - creditsA; // More credits first
+    }
+    
+    // Equal credits - use earlier expiry date
+    return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+  });
+  
+  console.log('Using subscription with priority:', sorted[0].id);
+  return sorted[0];
+};
 
 export interface BookingData {
   sessionId?: string;

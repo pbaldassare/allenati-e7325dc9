@@ -4,11 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGym } from '@/contexts/GymContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, Star, Clock, Infinity, CheckCircle, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { getUserActiveSubscriptions } from '@/lib/subscriptionHelpers';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 interface SubscriptionPlan {
   id: string;
@@ -39,10 +43,12 @@ export default function Subscriptions() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
+  const [activeSubscriptions, setActiveSubscriptions] = useState<UserSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [changing, setChanging] = useState<string | null>(null);
   const [userCredits, setUserCredits] = useState<number>(0);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<SubscriptionPlan | null>(null);
 
   useEffect(() => {
     document.title = 'Abbonamenti | FitApp';
@@ -89,9 +95,9 @@ export default function Subscriptions() {
 
       if (plansError) throw plansError;
 
-      // Carica abbonamento corrente per la palestra selezionata
-      console.log('Loading subscription for user:', user.id, 'gym:', selectedGym.id);
-      const { data: subscriptionData, error: subscriptionError } = await supabase
+      // Carica TUTTI gli abbonamenti attivi per la palestra selezionata
+      console.log('Loading subscriptions for user:', user.id, 'gym:', selectedGym.id);
+      const { data: subscriptionsData, error: subscriptionsError } = await supabase
         .from('user_subscriptions')
         .select(`
           *,
@@ -101,19 +107,16 @@ export default function Subscriptions() {
         .eq('gym_id', selectedGym.id)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('activated_at', { ascending: false });
 
-      if (subscriptionError) {
-        console.error('Subscription query error:', subscriptionError);
-        // Non lanciare errore se semplicemente non c'è abbonamento
-        if (subscriptionError.code !== 'PGRST116') {
-          throw subscriptionError;
+      if (subscriptionsError) {
+        console.error('Subscriptions query error:', subscriptionsError);
+        if (subscriptionsError.code !== 'PGRST116') {
+          throw subscriptionsError;
         }
       }
       
-      console.log('Subscription data loaded:', subscriptionData);
+      console.log('Active subscriptions loaded:', subscriptionsData);
 
       // Carica crediti utente per la palestra selezionata
       const { data: creditsData, error: creditsError } = await supabase
@@ -128,7 +131,7 @@ export default function Subscriptions() {
       }
 
       setPlans(plansData || []);
-      setCurrentSubscription(subscriptionData);
+      setActiveSubscriptions(subscriptionsData || []);
       setUserCredits(creditsData?.credits || 0);
     } catch (error) {
       console.error('Errore nel caricamento dati:', error);
@@ -145,6 +148,20 @@ export default function Subscriptions() {
   const selectPlan = async (plan: SubscriptionPlan) => {
     if (!user || !selectedGym || changing) return;
 
+    // Check if user already has active subscriptions
+    if (activeSubscriptions.length > 0) {
+      setPendingPlan(plan);
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    // No existing subscriptions - proceed directly
+    await processPurchase(plan);
+  };
+
+  const processPurchase = async (plan: SubscriptionPlan) => {
+    if (!user || !selectedGym) return;
+
     setChanging(plan.id);
 
     try {
@@ -160,7 +177,6 @@ export default function Subscriptions() {
       if (error) throw error;
       
       if (data?.url) {
-        // Open Stripe checkout in new tab
         window.open(data.url, '_blank');
         
         toast({
@@ -179,6 +195,8 @@ export default function Subscriptions() {
       });
     } finally {
       setChanging(null);
+      setShowConfirmDialog(false);
+      setPendingPlan(null);
     }
   };
 
@@ -253,7 +271,7 @@ export default function Subscriptions() {
             {/* Griglia piani */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {plans.map((plan) => {
-                const isActive = currentSubscription?.plan.id === plan.id;
+                const isActive = activeSubscriptions.some(sub => sub.plan.id === plan.id);
                 
                 return (
                   <Card 
@@ -334,74 +352,79 @@ export default function Subscriptions() {
           </TabsContent>
 
           <TabsContent value="current" className="space-y-6">
-            {currentSubscription ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    {getPlanIcon(currentSubscription.plan)}
-                    <span>{currentSubscription.plan.name}</span>
-                  </CardTitle>
-                  <CardDescription>
-                    {currentSubscription.plan.description}
-                  </CardDescription>
-                </CardHeader>
+            {activeSubscriptions.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    I Tuoi Abbonamenti Attivi ({activeSubscriptions.length})
+                  </h3>
+                </div>
                 
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground">Stato</div>
-                      <Badge variant="default" className="mt-1">
-                        {currentSubscription.status === 'active' ? 'Attivo' : currentSubscription.status}
-                      </Badge>
-                    </div>
+                {activeSubscriptions.map((subscription, index) => (
+                  <Card key={subscription.id} className={index === 0 ? 'border-primary' : ''}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          {getPlanIcon(subscription.plan)}
+                          {subscription.plan.name}
+                        </span>
+                        {index === 0 && <Badge>Più recente</Badge>}
+                      </CardTitle>
+                      <CardDescription>{subscription.plan.description}</CardDescription>
+                    </CardHeader>
                     
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground">Scadenza</div>
-                      <div className="mt-1">
-                        {new Date(currentSubscription.expires_at).toLocaleDateString('it-IT')}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground">Rinnovo automatico</div>
-                      <Badge variant="outline" className="mt-1">
-                        {currentSubscription.auto_renew ? 'Attivo' : 'Disattivato'}
-                      </Badge>
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground">Prezzo</div>
-                      <div className="mt-1 font-medium">
-                        {formatPrice(currentSubscription.plan.price)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-muted-foreground">Caratteristiche</div>
-                    <div className="space-y-1">
-                      {currentSubscription.plan.unlimited_access ? (
-                        <div className="flex items-center space-x-2">
-                          <Infinity className="w-4 h-4 text-primary" />
-                          <span className="text-sm">Accesso illimitato a tutti i corsi</span>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Attivato:</span>
+                          <p className="font-medium">
+                            {format(new Date(subscription.starts_at), 'dd MMMM yyyy', { locale: it })}
+                          </p>
                         </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-success" />
-                          <span className="text-sm">{currentSubscription.plan.credits_included} crediti inclusi</span>
+                        <div>
+                          <span className="text-muted-foreground">Scade:</span>
+                          <p className="font-medium">
+                            {format(new Date(subscription.expires_at), 'dd MMMM yyyy', { locale: it })}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {subscription.plan.unlimited_access && (
+                        <Badge variant="default" className="w-full justify-center">
+                          <Infinity className="w-4 h-4 mr-2" />
+                          Accesso Illimitato
+                        </Badge>
+                      )}
+                      
+                      {subscription.plan.credits_included > 0 && (
+                        <div className="flex items-center justify-between bg-muted p-3 rounded">
+                          <span className="text-sm">Crediti inclusi:</span>
+                          <span className="font-bold text-lg">{subscription.plan.credits_included}</span>
                         </div>
                       )}
-
-                      {currentSubscription.plan.features?.map((feature, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-success" />
-                          <span className="text-sm">{feature}</span>
+                      
+                      <div className="text-xs text-muted-foreground text-center">
+                        {(() => {
+                          const days = Math.ceil((new Date(subscription.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                          return `${days} giorni rimanenti`;
+                        })()}
+                      </div>
+                      
+                      {subscription.plan.features && subscription.plan.features.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="text-sm font-medium text-muted-foreground">Caratteristiche</div>
+                          {subscription.plan.features.map((feature, idx) => (
+                            <div key={idx} className="flex items-center space-x-2">
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="text-sm">{feature}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -419,6 +442,70 @@ export default function Subscriptions() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Dialog conferma acquisto abbonamento multiplo */}
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                Conferma Acquisto Abbonamento Aggiuntivo
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-4">
+                <p>Hai già <strong>{activeSubscriptions.length}</strong> abbonamento/i attivo/i:</p>
+                
+                <div className="space-y-2 bg-muted p-3 rounded-lg max-h-40 overflow-y-auto">
+                  {activeSubscriptions.map((sub, idx) => (
+                    <div key={sub.id} className="flex justify-between items-center text-sm">
+                      <span className="font-medium">{sub.plan.name}</span>
+                      <span className="text-muted-foreground">
+                        scade {format(new Date(sub.expires_at), 'dd/MM/yyyy')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                
+                {pendingPlan && (
+                  <>
+                    <p className="font-medium">Acquistando "{pendingPlan.name}":</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Avrai <strong>{activeSubscriptions.length + 1}</strong> abbonamenti attivi contemporaneamente</li>
+                      <li>Le date di validità si sovrapporranno</li>
+                      {activeSubscriptions.some(s => s.plan.unlimited_access) && (
+                        <li>L'accesso illimitato rimarrà attivo</li>
+                      )}
+                      {pendingPlan.unlimited_access && !activeSubscriptions.some(s => s.plan.unlimited_access) && (
+                        <li className="text-primary font-medium">Otterrai accesso illimitato</li>
+                      )}
+                    </ul>
+                  </>
+                )}
+                
+                <p className="text-sm text-muted-foreground pt-2 border-t">
+                  Vuoi procedere con l'acquisto?
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingPlan(null);
+              }}>
+                Annulla
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => {
+                  if (pendingPlan) {
+                    processPurchase(pendingPlan);
+                  }
+                }}
+                className="bg-primary"
+              >
+                Conferma Acquisto
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
