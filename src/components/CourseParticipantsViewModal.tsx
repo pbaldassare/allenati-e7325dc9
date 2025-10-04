@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Calendar, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -219,7 +220,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -235,96 +236,98 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={
-                userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor'
-                  ? "Cerca per nome o email..."
-                  : "Cerca per nome..."
-              }
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={
+                  userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor'
+                    ? "Cerca per nome o email..."
+                    : "Cerca per nome..."
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
 
-          {/* Results count */}
-          <div className="text-sm text-muted-foreground">
-            {filteredParticipants.length} risultati trovati
-          </div>
+            {/* Results count */}
+            <div className="text-sm text-muted-foreground">
+              {filteredParticipants.length} risultati trovati
+            </div>
 
-          {/* Participants List */}
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Caricamento partecipanti...
-              </div>
-            ) : filteredParticipants.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? 'Nessun partecipante trovato' : 'Nessun partecipante iscritto'}
-              </div>
-            ) : (
-              filteredParticipants.map((participant) => {
-                const { date, time } = formatDateTime(
-                  participant.scheduled_date,
-                  participant.scheduled_time
-                );
+            {/* Participants List */}
+            <div className="space-y-3">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Caricamento partecipanti...
+                </div>
+              ) : filteredParticipants.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? 'Nessun partecipante trovato' : 'Nessun partecipante iscritto'}
+                </div>
+              ) : (
+                filteredParticipants.map((participant) => {
+                  const { date, time } = formatDateTime(
+                    participant.scheduled_date,
+                    participant.scheduled_time
+                  );
 
-                const isStaff = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
+                  const isStaff = userRole === 'admin' || userRole === 'gym_owner' || userRole === 'instructor';
 
-                return (
-                  <Card key={participant.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={participant.user.profile_picture_url} />
-                            <AvatarFallback>
-                              {participant.user.first_name?.[0]}{participant.user.last_name?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          <div className="flex-1">
-                             <div className="flex items-center gap-2">
-                               <h4 className="font-medium">
-                                 {participant.user.first_name || 'Nome'} {participant.user.last_name || 'mancante'}
-                                 {(!participant.user.first_name || !participant.user.last_name) && (
-                                   <span className="text-xs text-muted-foreground ml-1">(Profilo incompleto)</span>
-                                 )}
-                               </h4>
-                              {getBeltBadge(participant.user.belt, participant.courses?.course_categories)}
-                              {isStaff && getSubscriptionBadge(participant)}
+                  return (
+                    <Card key={participant.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={participant.user.profile_picture_url} />
+                              <AvatarFallback>
+                                {participant.user.first_name?.[0]}{participant.user.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <div className="flex-1">
+                               <div className="flex items-center gap-2">
+                                 <h4 className="font-medium">
+                                   {participant.user.first_name || 'Nome'} {participant.user.last_name || 'mancante'}
+                                   {(!participant.user.first_name || !participant.user.last_name) && (
+                                     <span className="text-xs text-muted-foreground ml-1">(Profilo incompleto)</span>
+                                   )}
+                                 </h4>
+                                {getBeltBadge(participant.user.belt, participant.courses?.course_categories)}
+                                {isStaff && getSubscriptionBadge(participant)}
+                              </div>
+                              {isStaff && (
+                                <>
+                                  <div className="text-sm text-muted-foreground">
+                                    {participant.user.email}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {date} alle {time}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            {isStaff && (
-                              <>
-                                <div className="text-sm text-muted-foreground">
-                                  {participant.user.email}
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {date} alle {time}
-                                </div>
-                              </>
-                            )}
                           </div>
-                        </div>
 
-                        {isStaff && (
-                          <Badge variant="outline">
-                            {participant.status}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            )}
+                          {isStaff && (
+                            <Badge variant="outline">
+                              {participant.status}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
