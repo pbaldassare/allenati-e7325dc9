@@ -220,7 +220,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[75vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -236,7 +236,7 @@ export const CourseParticipantsViewModal: React.FC<CourseParticipantsViewModalPr
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="max-h-[50vh] pr-6">
           <div className="space-y-4">
             {/* Search */}
             <div className="relative">
