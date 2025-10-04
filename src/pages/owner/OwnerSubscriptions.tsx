@@ -8,12 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
+import { RenewSubscriptionDialog } from '@/components/dialogs/RenewSubscriptionDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -60,6 +61,8 @@ const OwnerSubscriptions: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscription | null>(null);
   const [manualActivationDialogOpen, setManualActivationDialogOpen] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
+  const [renewDialogOpen, setRenewDialogOpen] = useState(false);
+  const [selectedSubscriptionToRenew, setSelectedSubscriptionToRenew] = useState<any>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'status' | 'expires_at' | 'created_at'>('status');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -220,6 +223,11 @@ const OwnerSubscriptions: React.FC = () => {
   const handleExtendClick = (subscription: UserSubscription) => {
     setSelectedSubscription(subscription);
     setExtendDialogOpen(true);
+  };
+
+  const handleRenewClick = (subscription: UserSubscription) => {
+    setSelectedSubscriptionToRenew(subscription);
+    setRenewDialogOpen(true);
   };
 
   const handleExtensionCompleted = async (subscriptionId: string, newExpiryDate: string) => {
@@ -721,6 +729,15 @@ const OwnerSubscriptions: React.FC = () => {
                                <span>Estendi</span>
                              </Button>
                            )}
+                           <Button
+                             variant="default"
+                             size="sm"
+                             onClick={() => handleRenewClick(sub)}
+                             className="flex items-center space-x-1"
+                           >
+                             <RefreshCw className="w-3 h-3" />
+                             <span>Rinnova</span>
+                           </Button>
                            {(sub.status === 'active' || sub.status === 'expired') && (
                              <Button
                                variant="outline"
@@ -948,6 +965,23 @@ const OwnerSubscriptions: React.FC = () => {
           onClose={() => setExtendDialogOpen(false)}
           subscription={selectedSubscription}
           onExtended={handleExtensionCompleted}
+        />
+      )}
+
+      {/* Renew Subscription Dialog */}
+      {selectedSubscriptionToRenew && (
+        <RenewSubscriptionDialog
+          isOpen={renewDialogOpen}
+          onClose={() => {
+            setRenewDialogOpen(false);
+            setSelectedSubscriptionToRenew(null);
+          }}
+          subscription={selectedSubscriptionToRenew}
+          onRenewed={() => {
+            loadSubscriptionData();
+            setRenewDialogOpen(false);
+            setSelectedSubscriptionToRenew(null);
+          }}
         />
       )}
 

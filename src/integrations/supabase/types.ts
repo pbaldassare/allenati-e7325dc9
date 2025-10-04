@@ -1844,6 +1844,79 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_history: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          expires_at: string
+          gym_id: string | null
+          id: string
+          notes: string | null
+          plan_id: string
+          receipt_number: string | null
+          renewed_at: string | null
+          renewed_by: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at: string
+          gym_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          receipt_number?: string | null
+          renewed_at?: string | null
+          renewed_by?: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at?: string
+          gym_id?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          receipt_number?: string | null
+          renewed_at?: string | null
+          renewed_by?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_history_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_history_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
