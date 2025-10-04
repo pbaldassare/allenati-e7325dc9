@@ -33,13 +33,13 @@ interface RenewSubscriptionDialogProps {
     expires_at: string;
     activated_at?: string;
     receipt_number?: string;
-    subscription_plans: {
+    plan: {
       name: string;
       duration_days: number;
       credits_included: number;
       unlimited_access: boolean;
     };
-    profiles: {
+    user: {
       first_name: string;
       last_name: string;
       email: string;
@@ -246,7 +246,7 @@ export const RenewSubscriptionDialog = ({
             Rinnova Abbonamento
           </DialogTitle>
           <DialogDescription>
-            Rinnova l'abbonamento di {subscription.profiles.first_name} {subscription.profiles.last_name}
+            Rinnova l'abbonamento di {subscription.user.first_name} {subscription.user.last_name}
           </DialogDescription>
         </DialogHeader>
 
@@ -257,7 +257,7 @@ export const RenewSubscriptionDialog = ({
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Piano:</span>{" "}
-                <span className="font-medium">{subscription.subscription_plans.name}</span>
+                <span className="font-medium">{subscription.plan.name}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Stato:</span>{" "}
