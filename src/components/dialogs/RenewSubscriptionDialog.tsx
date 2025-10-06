@@ -104,8 +104,23 @@ export const RenewSubscriptionDialog = ({
     }
 
     const start = new Date(startDate);
-    const durationMonths = Math.floor(selectedPlan.duration_days / 30);
-    const expiry = addMonths(start, durationMonths);
+    
+    // Validate start date is not in the past (allow same day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (start < today) {
+      toast({
+        title: "Data non valida",
+        description: "La data di inizio non può essere nel passato",
+        variant: "destructive",
+      });
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+      return;
+    }
+    
+    // Calculate expiry using duration_days directly for accuracy
+    const expiry = new Date(start);
+    expiry.setDate(expiry.getDate() + selectedPlan.duration_days);
     setNewExpiryDate(format(expiry, "yyyy-MM-dd"));
   };
 

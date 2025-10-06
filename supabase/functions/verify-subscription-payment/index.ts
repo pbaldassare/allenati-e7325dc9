@@ -138,22 +138,30 @@ serve(async (req) => {
         .single();
 
       if (planData) {
-        // Cancel any existing active subscriptions for this gym
-        await supabaseClient
-          .from("user_subscriptions")
-          .update({ status: "cancelled" })
-          .eq("user_id", user.id)
-          .eq("gym_id", gym_id)
-          .eq("status", "active");
-
-        // Create new subscription with payment reference
+        // Calculate subscription dates based on plan duration
+        const startsAt = new Date();
         const expiresAt = new Date();
+        
+        // Calculate expiry date correctly
         if (planData.duration_months > 0) {
+          // Use months for precise date calculation
           expiresAt.setMonth(expiresAt.getMonth() + planData.duration_months);
+        } else if (planData.duration_days > 0) {
+          // Use days as fallback
+          expiresAt.setDate(expiresAt.getDate() + planData.duration_days);
         } else {
-          expiresAt.setDate(expiresAt.getDate() + (planData.duration_days || 30));
+          // Default to 30 days if no duration specified
+          expiresAt.setDate(expiresAt.getDate() + 30);
         }
+        
+        console.log("Subscription dates:", {
+          starts_at: startsAt.toISOString(),
+          expires_at: expiresAt.toISOString(),
+          duration_months: planData.duration_months,
+          duration_days: planData.duration_days,
+        });
 
+        // Create new subscription without canceling existing ones
         const { data: subscriptionData } = await supabaseClient
           .from("user_subscriptions")
           .insert({
@@ -161,7 +169,9 @@ serve(async (req) => {
             plan_id: plan_id,
             gym_id: gym_id,
             status: "active",
+            starts_at: startsAt.toISOString(),
             expires_at: expiresAt.toISOString(),
+            activated_at: startsAt.toISOString(),
           })
           .select("id")
           .single();
