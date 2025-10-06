@@ -147,15 +147,7 @@ export const RenewSubscriptionDialog = ({
 
       if (historyError) throw historyError;
 
-      // 2. Update old subscription to expired
-      const { error: updateError } = await supabase
-        .from("user_subscriptions")
-        .update({ status: "expired" })
-        .eq("id", subscription.id);
-
-      if (updateError) throw updateError;
-
-      // 3. Generate receipt number
+      // 2. Generate receipt number
       const { data: receiptData, error: receiptError } = await supabase
         .rpc("get_next_receipt_number", {
           _gym_id: subscription.gym_id,
@@ -163,7 +155,7 @@ export const RenewSubscriptionDialog = ({
 
       if (receiptError) throw receiptError;
 
-      // 4. Create new subscription
+      // 3. Create new subscription (without affecting the old one)
       const { error: newSubError } = await supabase
         .from("user_subscriptions")
         .insert({
@@ -179,7 +171,7 @@ export const RenewSubscriptionDialog = ({
 
       if (newSubError) throw newSubError;
 
-      // 5. Add credits if plan includes them
+      // 4. Add credits if plan includes them
       if (selectedPlan.credits_included > 0) {
         // Get current balance
         const { data: currentCredits } = await supabase
