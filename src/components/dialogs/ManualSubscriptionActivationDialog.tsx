@@ -227,36 +227,8 @@ export default function ManualSubscriptionActivationDialog({
         throw new Error('Nessuna palestra selezionata');
       }
 
-      // Check for existing active subscriptions
-      console.log('🔍 Checking for existing subscriptions...');
-      const { data: existingSubscriptions, error: existingError } = await supabase
-        .from('user_subscriptions')
-        .select('id')
-        .eq('user_id', selectedMember.user_id)
-        .eq('status', 'active')
-        .gt('expires_at', new Date().toISOString());
-
-      if (existingError) {
-        console.error('❌ Error checking existing subscriptions:', existingError);
-        throw existingError;
-      }
-      console.log('🔍 Existing subscriptions:', existingSubscriptions);
-
-      // Cancel existing active subscriptions
-      if (existingSubscriptions && existingSubscriptions.length > 0) {
-        console.log('🔄 Cancelling existing subscriptions...');
-        const { error: cancelError } = await supabase
-          .from('user_subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('user_id', selectedMember.user_id)
-          .eq('status', 'active');
-          
-        if (cancelError) {
-          console.error('❌ Error cancelling subscriptions:', cancelError);
-          throw cancelError;
-        }
-        console.log('✅ Existing subscriptions cancelled');
-      }
+      // Multi-subscription support: allow multiple active subscriptions
+      console.log('📝 Creating new subscription (multi-subscription enabled)...');
 
       // Create new subscription
       console.log('📝 Creating new subscription...');
