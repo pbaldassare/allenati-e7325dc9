@@ -16,6 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -61,14 +62,19 @@ export function InstructorSidebar() {
     }
   };
 
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50";
 
   return (
-    <Sidebar>
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+      <SidebarTrigger className="m-2 self-end" />
+      
       <SidebarHeader className="p-4">
-        <InstructorGymSelector />
+        {!collapsed && <InstructorGymSelector />}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -89,8 +95,8 @@ export function InstructorSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -106,23 +112,23 @@ export function InstructorSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink to="/shop" className={getNavCls}>
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    <span>Shop</span>
+                    <ShoppingBag className="h-4 w-4" />
+                    {!collapsed && <span>Shop</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink to="/instructor/settings" className={getNavCls}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profilo</span>
+                    <User className="h-4 w-4" />
+                    {!collapsed && <span>Profilo</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <LogOut className="h-4 w-4" />
+                  {!collapsed && <span>Logout</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

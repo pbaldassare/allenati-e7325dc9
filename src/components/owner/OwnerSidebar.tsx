@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
 import {
+  Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -12,6 +13,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Gauge,
@@ -35,13 +38,14 @@ import {
 } from "lucide-react";
 
 export const OwnerSidebar: React.FC = () => {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
   const location = useLocation();
   const currentPath = location.pathname;
   const navigate = useNavigate();
   const { logout } = useAuth();
   const isMobile = useIsMobile();
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
-
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -81,7 +85,9 @@ export const OwnerSidebar: React.FC = () => {
     currentPath === path || (path !== "/owner" && currentPath.startsWith(path));
 
   return (
-    <>
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+      <SidebarTrigger className="m-2 self-end" />
+      
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Area Proprietario</SidebarGroupLabel>
@@ -91,8 +97,8 @@ export const OwnerSidebar: React.FC = () => {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -108,31 +114,31 @@ export const OwnerSidebar: React.FC = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={currentPath === '/shop'}>
                   <NavLink to="/shop">
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    <span>Shop</span>
+                    <ShoppingBag className="h-4 w-4" />
+                    {!collapsed && <span>Shop</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={currentPath === '/owner/settings'}>
                   <NavLink to="/owner/settings">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profilo</span>
+                    <User className="h-4 w-4" />
+                    {!collapsed && <span>Profilo</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {isMobile && (
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => setShowHowItWorksModal(true)}>
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Come funziona</span>
+                    <HelpCircle className="h-4 w-4" />
+                    {!collapsed && <span>Come funziona</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} disabled={isLoggingOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{isLoggingOut ? 'Uscendo...' : 'Esci'}</span>
+                  <LogOut className="h-4 w-4" />
+                  {!collapsed && <span>{isLoggingOut ? 'Uscendo...' : 'Esci'}</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -146,7 +152,7 @@ export const OwnerSidebar: React.FC = () => {
           onClose={() => setShowHowItWorksModal(false)} 
         />
       )}
-    </>
+    </Sidebar>
   );
 };
 

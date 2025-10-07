@@ -12,7 +12,7 @@ interface AdminLayoutProps {
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <ProtectedRoute requireAdmin>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen>
         <div className="min-h-screen flex w-full bg-background">
           <AdminSidebar />
           <main className="flex-1 flex flex-col">

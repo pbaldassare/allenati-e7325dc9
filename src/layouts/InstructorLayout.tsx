@@ -26,12 +26,7 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
     <ProtectedRoute requiredRoles={['instructor', 'admin']}>
       <SidebarProvider defaultOpen={!isMobile}>
           <div className="min-h-screen flex w-full">
-            <Sidebar 
-              collapsible={isMobile ? "offcanvas" : "icon"}
-              className={isMobile ? "fixed inset-y-0 left-0 z-50" : ""}
-            >
-              <InstructorSidebar />
-            </Sidebar>
+            <InstructorSidebar />
 
           <SidebarInset className="w-full">
             <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
