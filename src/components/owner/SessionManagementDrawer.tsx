@@ -953,7 +953,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               keyboardVisible ? "max-h-[30vh]" : "max-h-[50vh]",
               "overscroll-behavior-contain"
             ]
-          )}>
+          )} type="always">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
