@@ -948,9 +948,9 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
           {/* Participants List */}
           <ScrollArea className={cn(
-            "flex-1 p-4",
-            // Desktop: altezza massima fissa per forzare lo scroll
-            !isMobile && "max-h-[450px]",
+            "flex-1 p-4 overflow-y-scroll",
+            // Desktop: altezza fissa per scrollbar sempre visibile
+            !isMobile && "h-[300px]",
             // Mobile: altezza dinamica basata sulla tastiera
             isMobile && [
               keyboardVisible ? "max-h-[30vh]" : "max-h-[50vh]",
