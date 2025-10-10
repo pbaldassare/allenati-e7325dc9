@@ -84,16 +84,24 @@ export const UnsubscribeConfirmDialog: React.FC<UnsubscribeConfirmDialogProps> =
           .eq('gym_id', courseData.gym_id)
           .single();
 
-        if (gymCreditsError) throw gymCreditsError;
+        // Gestisci il caso in cui il record non esiste (PGRST116)
+        if (gymCreditsError && gymCreditsError.code !== 'PGRST116') {
+          throw gymCreditsError;
+        }
 
-        const newBalance = (gymCreditsData.credits || 0) + participant.credits_used;
+        const currentCredits = gymCreditsData?.credits || 0;
+        const newBalance = currentCredits + participant.credits_used;
 
-        // Update gym credits
+        // Update gym credits con upsert per creare il record se non esiste
         const { error: creditsError } = await supabase
           .from('gym_credits')
-          .update({ credits: newBalance })
-          .eq('user_id', participant.user_id)
-          .eq('gym_id', courseData.gym_id);
+          .upsert({
+            user_id: participant.user_id,
+            gym_id: courseData.gym_id,
+            credits: newBalance
+          }, {
+            onConflict: 'user_id,gym_id'
+          });
 
         if (creditsError) throw creditsError;
 
