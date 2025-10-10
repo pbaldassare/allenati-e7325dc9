@@ -163,7 +163,7 @@ export const processRefund = async (
     const currentCredits = gymCreditsData?.credits || 0;
     const newBalance = currentCredits + booking.credits_used;
     
-    console.log('Processing refund:', {
+    console.log('📝 Processing refund:', {
       user_id: booking.user_id,
       gym_id: gymId,
       credits_to_refund: booking.credits_used,
@@ -172,6 +172,14 @@ export const processRefund = async (
     });
 
     // Log refund transaction
+    console.log('📝 Creating refund transaction:', {
+      user_id: booking.user_id,
+      gym_id: gymId,
+      amount: booking.credits_used,
+      new_balance: newBalance,
+      description: `Rimborso per cancellazione: ${course?.name || 'corso'} ${cancellationReason ? `(${cancellationReason})` : ''}`
+    });
+
     const { error: transactionError } = await supabase
       .from('credits_transactions')
       .insert({
@@ -185,11 +193,25 @@ export const processRefund = async (
       });
 
     if (transactionError) {
-      console.error('Error creating refund transaction:', transactionError);
+      console.error('❌ ERROR creating refund transaction:', transactionError);
+      console.error('Transaction error details:', {
+        code: transactionError.code,
+        message: transactionError.message,
+        details: transactionError.details,
+        hint: transactionError.hint
+      });
       throw transactionError;
     }
 
+    console.log('✅ Refund transaction created successfully');
+
     // Update/Insert gym credits balance
+    console.log('📝 Upserting gym_credits:', {
+      user_id: booking.user_id,
+      gym_id: gymId,
+      credits: newBalance
+    });
+
     const { error: gymCreditsUpdateError } = await supabase
       .from('gym_credits')
       .upsert({
@@ -201,11 +223,18 @@ export const processRefund = async (
       });
 
     if (gymCreditsUpdateError) {
-      console.error('Error updating gym credits:', gymCreditsUpdateError);
+      console.error('❌ ERROR upserting gym_credits:', gymCreditsUpdateError);
+      console.error('Upsert error details:', {
+        code: gymCreditsUpdateError.code,
+        message: gymCreditsUpdateError.message,
+        details: gymCreditsUpdateError.details,
+        hint: gymCreditsUpdateError.hint
+      });
       throw gymCreditsUpdateError;
     }
 
-    console.log('Refund processed successfully');
+    console.log('✅ Gym credits updated successfully');
+    console.log('✅ Refund processed successfully');
     return {
       success: true,
       message: `Booking cancelled - ${booking.credits_used} credits refunded`

@@ -536,20 +536,20 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         message: refundResult.message
       });
 
-      // Show appropriate toast based on refund result
-      if (refundResult.success && refundResult.message.includes('refunded')) {
+      // MIGLIORIA: Mostrare sempre il risultato del rimborso con dettagli
+      if (!refundResult.success) {
+        console.error('❌ REFUND FAILED:', refundResult.message);
+        toast.error(`Partecipante rimosso MA errore rimborso: ${refundResult.message}`);
+      } else if (refundResult.message.includes('refunded')) {
+        console.log('✅ REFUND SUCCESS - Credits refunded');
         toast.success(
           `Partecipante rimosso e ${booking.credits_used} credito/i rimborsato/i`
         );
       } else {
-        toast.success('Partecipante rimosso con successo');
-        if (refundResult.message) {
-          console.log('ℹ️ Refund info:', refundResult.message);
-          // Show warning if refund failed
-          if (!refundResult.success) {
-            toast.warning('Attenzione: ' + refundResult.message);
-          }
-        }
+        // Caso: nessun rimborso necessario (es. abbonamento illimitato)
+        console.log('ℹ️ NO REFUND NEEDED:', refundResult.message);
+        toast.success('Partecipante rimosso');
+        toast.info(refundResult.message);
       }
 
       console.log('🔍 STEP 5: Reloading participants and updating session');
