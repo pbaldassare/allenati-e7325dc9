@@ -98,7 +98,7 @@ export const OwnerSidebar: React.FC = () => {
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end>
                       <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {(isMobile || !collapsed) && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -115,7 +115,7 @@ export const OwnerSidebar: React.FC = () => {
                 <SidebarMenuButton asChild isActive={currentPath === '/shop'}>
                   <NavLink to="/shop">
                     <ShoppingBag className="h-4 w-4" />
-                    {!collapsed && <span>Shop</span>}
+                    {(isMobile || !collapsed) && <span>Shop</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -123,22 +123,22 @@ export const OwnerSidebar: React.FC = () => {
                 <SidebarMenuButton asChild isActive={currentPath === '/owner/settings'}>
                   <NavLink to="/owner/settings">
                     <User className="h-4 w-4" />
-                    {!collapsed && <span>Profilo</span>}
+                    {(isMobile || !collapsed) && <span>Profilo</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {isMobile && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setShowHowItWorksModal(true)}>
+                <SidebarMenuButton onClick={() => setShowHowItWorksModal(true)}>
                     <HelpCircle className="h-4 w-4" />
-                    {!collapsed && <span>Come funziona</span>}
+                    {(isMobile || !collapsed) && <span>Come funziona</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} disabled={isLoggingOut}>
                   <LogOut className="h-4 w-4" />
-                  {!collapsed && <span>{isLoggingOut ? 'Uscendo...' : 'Esci'}</span>}
+                  {(isMobile || !collapsed) && <span>{isLoggingOut ? 'Uscendo...' : 'Esci'}</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
