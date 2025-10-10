@@ -502,23 +502,23 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
       console.log('✅ STEP 2 COMPLETE - Booking status updated');
 
-      console.log('🔍 STEP 3: Getting user role for userId:', booking.user_id);
+      console.log('🔍 STEP 3: Getting staff role for current user:', user?.id);
       
-      let userRole: 'user' | 'instructor' | 'owner' | 'admin';
+      let staffRole: 'user' | 'instructor' | 'owner' | 'admin';
       try {
-        userRole = await getUserRole(booking.user_id);
-        console.log('✅ STEP 3 COMPLETE - User role:', userRole);
+        staffRole = await getUserRole(user!.id);
+        console.log('✅ STEP 3 COMPLETE - Staff role:', staffRole);
       } catch (roleError) {
-        console.error('❌ Error getting user role:', roleError);
-        // Default to 'user' if role fetch fails
-        userRole = 'user';
-        console.log('⚠️ Defaulting to user role');
+        console.error('❌ Error getting staff role:', roleError);
+        // Default to 'owner' since this is the owner panel
+        staffRole = 'owner';
+        console.log('⚠️ Defaulting to owner role');
       }
 
       console.log('🔍 STEP 4: Processing credit refund with params:', {
         bookingId: booking.id,
         userId: booking.user_id,
-        userRole,
+        staffRole,
         creditsUsed: booking.credits_used,
         gymId: booking.courses?.gym_id,
         reason: 'Rimosso dallo staff dal calendario'
@@ -527,7 +527,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       const refundResult = await processRefund(
         booking,
         booking.user_id,
-        userRole,
+        staffRole,
         'Rimosso dallo staff dal calendario'
       );
 
