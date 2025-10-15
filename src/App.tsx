@@ -26,7 +26,7 @@ import AdminCourseDetail from "./pages/admin/AdminCourseDetail";
 import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
 import AdminCourseSchedules from "./pages/admin/AdminCourseSchedules";
 import AdminCourseSessions from "./pages/admin/AdminCourseSessions";
-import AdminCourseExceptions from "./pages/admin/AdminCourseExceptions";
+
 
 import AdminRooms from "./pages/admin/AdminRooms";
 import AdminSchedule from "./pages/admin/AdminSchedule";
@@ -58,7 +58,7 @@ import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
 import OwnerCourseDetail from "./pages/owner/OwnerCourseDetail";
 import OwnerCourseSchedules from "./pages/owner/OwnerCourseSchedules";
 import OwnerCourseSessions from "./pages/owner/OwnerCourseSessions";
-import OwnerCourseExceptions from "./pages/owner/OwnerCourseExceptions";
+
 import OwnerStripeSetup from "./pages/owner/OwnerStripeSetup";
 import OwnerProfile from "./pages/owner/OwnerProfile";
 import OwnerDocuments from "./pages/owner/OwnerDocuments";
@@ -115,7 +115,7 @@ const App = () => (
                   <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
                   <Route path="courses/:id/schedules" element={<AdminCourseSchedules />} />
                   <Route path="courses/:id/sessions" element={<AdminCourseSessions />} />
-                  <Route path="courses/:id/exceptions" element={<AdminCourseExceptions />} />
+                  
                   
                   {/* User Management */}
                   <Route path="users" element={<AdminUsers />} />
@@ -149,7 +149,7 @@ const App = () => (
                   <Route path="courses/:id/edit" element={<OwnerCourseEdit />} />
                   <Route path="courses/:id/schedules" element={<OwnerCourseSchedules />} />
                   <Route path="courses/:id/sessions" element={<OwnerCourseSessions />} />
-                  <Route path="courses/:id/exceptions" element={<OwnerCourseExceptions />} />
+                  
                   <Route path="schedule" element={<OwnerSchedule />} />
                   <Route path="bookings" element={<OwnerBookings />} />
                   <Route path="bookings-analytics" element={<OwnerBookingsAnalytics />} />

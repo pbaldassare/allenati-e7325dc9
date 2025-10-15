@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Info, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Info, Calendar, Check, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { OwnerCourseForm } from '@/components/owner/OwnerCourseForm';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
-import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
 import { supabase } from '@/integrations/supabase/client';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import type { ScheduleItem, GymRoom, CourseSession } from '@/types/schedule';
+import { cn } from '@/lib/utils';
+import type { GymRoom } from '@/types/schedule';
 import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 
 interface CourseBasicData {
-  id?: string;
+  id: string;
   name: string;
   description: string;
   category_id: string;
@@ -35,56 +35,43 @@ interface CourseBasicData {
   end_date: Date;
 }
 
-
-interface ScheduleException {
-  start_date: Date;
-  end_date: Date;
-  reason?: string;
-}
-
 const OwnerCourseNew: React.FC = () => {
   const navigate = useNavigate();
   const { selectedGym } = useOwnerGym();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'schedule-sessions'>('basic');
   const [courseData, setCourseData] = useState<CourseBasicData | null>(null);
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [sessions, setSessions] = useState<CourseSession[]>([]);
-  const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [gymRooms, setGymRooms] = useState<GymRoom[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomsError, setRoomsError] = useState<string | null>(null);
   
   useEffect(() => {
-    document.title = "Nuovo Corso | Area Proprietario";
     loadGymRooms();
   }, [selectedGym?.id]);
 
   const loadGymRooms = async () => {
     if (!selectedGym?.id) {
-      setRoomsLoading(false);
+      setLoadingRooms(false);
       setRoomsError('Nessuna palestra selezionata');
       return;
     }
     
-    setRoomsLoading(true);
+    setLoadingRooms(true);
     setRoomsError(null);
     
     try {
-      console.log('Loading rooms for gym:', selectedGym.id, selectedGym.name);
-      
       const { data, error } = await supabase
         .from('gym_rooms')
-        .select('id, name')
+        .select('id, name, description, color')
         .eq('gym_id', selectedGym.id)
         .eq('is_active', true)
         .order('name');
       
       if (error) throw error;
       
-      console.log('Loaded rooms:', data);
       setGymRooms(data || []);
       
       if (!data || data.length === 0) {
@@ -99,342 +86,259 @@ const OwnerCourseNew: React.FC = () => {
         variant: 'destructive',
       });
     } finally {
-      setRoomsLoading(false);
+      setLoadingRooms(false);
     }
   };
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/owner/courses');
-    }
+  const handleCourseCreated = (data: CourseBasicData) => {
+    console.log('Course created with data:', data);
+    setCourseData(data);
+    setActiveTab('schedule-sessions');
   };
 
-  const handleCourseCreated = (newCourseData: CourseBasicData) => {
-    setCourseData(newCourseData);
-    setActiveTab('schedules');
-    toast({
-      title: 'Corso creato',
-      description: 'Ora configura gli orari settimanali del corso',
-    });
-  };
-
-  const handleSchedulesChange = (newSchedules: ScheduleItem[]) => {
+  const handleSchedulesChange = (newSchedules: any[]) => {
+    console.log('Schedules updated:', newSchedules);
     setSchedules(newSchedules);
   };
 
-  const handleSessionsChange = (newSessions: CourseSession[]) => {
+  const handleSessionsChange = (newSessions: any[]) => {
+    console.log('Sessions updated:', newSessions);
     setSessions(newSessions);
   };
 
-  const handleExceptionsChange = (newExceptions: ScheduleException[]) => {
-    setExceptions(newExceptions);
-  };
-
   const handleFinalizeCourse = async () => {
-    if (!courseData?.id) return;
-
-    setLoading(true);
-    try {
-      // Save schedules
-      if (schedules.length > 0) {
-        const scheduleData = schedules.map(schedule => ({
-          course_id: courseData.id,
-          day_of_week: schedule.dayOfWeek,
-          start_time: schedule.time,
-          end_time: schedule.end_time,
-          room_id: schedule.roomId || null,
-          room_name: gymRooms.find(r => r.id === schedule.roomId)?.name || null,
-        }));
-
-        const { error: scheduleError } = await supabase
-          .from('course_schedules')
-          .insert(scheduleData);
-
-        if (scheduleError) throw scheduleError;
-      }
-
-      // Save sessions if any
-      if (sessions.length > 0) {
-        const sessionData = sessions.map(session => ({
-          course_id: courseData.id,
-          ...session,
-        }));
-
-        const { error: sessionError } = await supabase
-          .from('course_sessions')
-          .insert(sessionData);
-
-        if (sessionError) throw sessionError;
-      }
-
-      // Save exceptions if any
-      if (exceptions.length > 0) {
-        const exceptionData = exceptions.map(exception => ({
-          course_id: courseData.id,
-          start_date: exception.start_date instanceof Date ? 
-            format(exception.start_date, 'yyyy-MM-dd') : exception.start_date,
-          end_date: exception.end_date instanceof Date ? 
-            format(exception.end_date, 'yyyy-MM-dd') : exception.end_date,
-          reason: exception.reason,
-        }));
-
-        const { error: exceptionError } = await supabase
-          .from('course_schedule_exceptions')
-          .insert(exceptionData);
-
-        if (exceptionError) throw exceptionError;
-      }
-
-      // Genera automaticamente le sessioni se necessario
-      await autoGenerateSessionsIfNeeded(courseData.id);
-
+    if (!courseData?.id) {
       toast({
-        title: 'Successo',
-        description: 'Corso configurato completamente',
+        title: 'Errore',
+        description: 'Corso non creato correttamente',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    if (schedules.length === 0) {
+      toast({
+        title: 'Errore',
+        description: 'Aggiungi almeno un orario settimanale',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      console.log('Saving schedules for course:', courseData.id);
+      
+      // Step 1: Save schedules
+      const schedulesWithCourseId = schedules.map(schedule => ({
+        course_id: courseData.id,
+        day_of_week: schedule.dayOfWeek,
+        start_time: schedule.time,
+        end_time: schedule.end_time,
+        room_id: schedule.roomId,
+        room_name: gymRooms.find(r => r.id === schedule.roomId)?.name || null,
+        is_active: true
+      }));
+
+      const { error: schedulesError } = await supabase
+        .from('course_schedules')
+        .insert(schedulesWithCourseId);
+
+      if (schedulesError) {
+        console.error('Error saving schedules:', schedulesError);
+        throw new Error('Errore nel salvataggio degli orari');
+      }
+
+      // Step 2: Save sessions if manually added
+      if (sessions.length > 0) {
+        console.log('Saving manual sessions:', sessions);
+        
+        const sessionsWithCourseId = sessions.map(session => ({
+          course_id: courseData.id,
+          session_date: session.session_date,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          room_id: session.room_id,
+          room_name: session.room_name,
+          max_participants: courseData.max_participants,
+          available_spots: courseData.max_participants,
+          status: 'scheduled'
+        }));
+
+        const { error: sessionsError } = await supabase
+          .from('course_sessions')
+          .insert(sessionsWithCourseId);
+
+        if (sessionsError) {
+          console.error('Error saving sessions:', sessionsError);
+          throw new Error('Errore nel salvataggio delle sessioni');
+        }
+      }
+
+      // Step 3: Trigger automatic session generation
+      console.log('Triggering automatic session generation');
+      const generated = await autoGenerateSessionsIfNeeded(courseData.id);
+      
+      if (generated) {
+        toast({
+          title: 'Successo',
+          description: 'Corso creato e sessioni generate automaticamente',
+        });
+      } else {
+        toast({
+          title: 'Successo',
+          description: 'Corso creato correttamente',
+        });
+      }
 
       navigate('/owner/courses');
     } catch (error) {
       console.error('Error finalizing course:', error);
       toast({
         title: 'Errore',
-        description: 'Errore nel completare la configurazione del corso',
+        description: error instanceof Error ? error.message : 'Errore nel completare la configurazione del corso',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const getTabStatus = (tab: string) => {
-    switch (tab) {
-      case 'basic':
-        return courseData ? 'completed' : 'current';
-      case 'schedules':
-        return !courseData ? 'disabled' : schedules.length > 0 ? 'completed' : 'current';
-      case 'sessions':
-        return !courseData || schedules.length === 0 ? 'disabled' : sessions.length > 0 ? 'completed' : 'current';
-      case 'exceptions':
-        return !courseData ? 'disabled' : 'available';
-      default:
-        return 'disabled';
-    }
+  const getTabStatus = (tab: 'basic' | 'schedule-sessions') => {
+    if (tab === 'basic') return 'current';
+    if (!courseData) return 'disabled';
+    if (tab === 'schedule-sessions') return activeTab === 'schedule-sessions' ? 'current' : 'completed';
+    return 'disabled';
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Indietro
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Nuovo Corso
-          </h1>
-          <p className="text-muted-foreground">
-            Configura completamente il tuo nuovo corso in pochi passi
-          </p>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          Nuovo Corso
+        </h1>
+        <p className="text-muted-foreground">
+          Crea un nuovo corso in 2 semplici passaggi
+        </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic" className="flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Informazioni Base
-            {getTabStatus('basic') === 'completed' && <span className="text-xs">✓</span>}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="schedules" 
-            disabled={getTabStatus('schedules') === 'disabled'}
-            className="flex items-center gap-2"
-          >
-            <Calendar className="h-4 w-4" />
-            Orari
-            {getTabStatus('schedules') === 'completed' && <span className="text-xs">✓</span>}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="sessions" 
-            disabled={getTabStatus('sessions') === 'disabled'}
-            className="flex items-center gap-2"
-          >
-            <Clock className="h-4 w-4" />
-            Sessioni
-            {getTabStatus('sessions') === 'completed' && <span className="text-xs">✓</span>}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="exceptions" 
-            disabled={getTabStatus('exceptions') === 'disabled'}
-            className="flex items-center gap-2"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            Eccezioni
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardContent className="pt-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger 
+                value="basic" 
+                disabled={getTabStatus('basic') === 'disabled'}
+                className={cn(
+                  getTabStatus('basic') === 'completed' && 'bg-primary/10'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {getTabStatus('basic') === 'completed' && <Check className="h-4 w-4 text-primary" />}
+                  <Info className="h-4 w-4" />
+                  <span>Informazioni Base</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="schedule-sessions" 
+                disabled={getTabStatus('schedule-sessions') === 'disabled'}
+                className={cn(
+                  getTabStatus('schedule-sessions') === 'completed' && 'bg-primary/10'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {getTabStatus('schedule-sessions') === 'completed' && <Check className="h-4 w-4 text-primary" />}
+                  <Calendar className="h-4 w-4" />
+                  <span>Orari e Sessioni</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="basic" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informazioni Base del Corso</CardTitle>
-              <CardDescription>
-                Inserisci tutti i dettagli principali del corso
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <TabsContent value="basic" className="space-y-6 mt-6">
               <OwnerCourseForm 
                 mode="create" 
                 onCourseCreated={handleCourseCreated}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="schedules" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Orari Settimanali</CardTitle>
-              <CardDescription>
-                Configura quando si svolge il corso durante la settimana
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {roomsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center space-y-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-sm text-muted-foreground">Caricamento sale...</p>
-                  </div>
-                </div>
-              ) : roomsError ? (
-                <div className="text-center py-8 space-y-4">
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
-                    <p className="text-destructive font-medium">{roomsError}</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={loadGymRooms}
-                    className="mx-auto"
-                  >
-                    Ricarica Sale
-                  </Button>
-                </div>
-              ) : gymRooms.length === 0 ? (
-                <div className="text-center py-8 space-y-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                    <p className="text-amber-800 font-medium">
-                      Nessuna sala disponibile per questa palestra
-                    </p>
-                    <p className="text-amber-700 text-sm mt-1">
-                      Aggiungi delle sale dalla sezione "Sale" prima di creare un corso
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate('/owner/rooms')}
-                  >
-                    Gestisci Sale
-                  </Button>
-                </div>
-              ) : (
-                <CourseScheduleManager
-                  schedule={schedules}
-                  onChange={handleSchedulesChange}
-                  gymRooms={gymRooms}
-                />
+            <TabsContent value="schedule-sessions" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Orari Settimanali</CardTitle>
+                  <CardDescription>
+                    Configura gli orari ricorrenti per questo corso
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingRooms ? (
+                    <div className="text-center py-8">Caricamento sale...</div>
+                  ) : roomsError ? (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Errore</AlertTitle>
+                      <AlertDescription>{roomsError}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <CourseScheduleManager
+                      schedule={schedules}
+                      onChange={handleSchedulesChange}
+                      gymRooms={gymRooms}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
+              {schedules.length > 0 && courseData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Anteprima Sessioni</CardTitle>
+                    <CardDescription>
+                      Sessioni che verranno generate in base agli orari configurati
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <CourseSessionManager
+                      courseId={courseData.id}
+                      schedules={schedules.map(s => ({
+                        day_of_week: s.dayOfWeek,
+                        start_time: s.time,
+                        end_time: s.end_time,
+                        room_id: s.roomId,
+                        room_name: gymRooms.find(r => r.id === s.roomId)?.name
+                      }))}
+                      maxParticipants={courseData.max_participants}
+                      onSessionsChange={handleSessionsChange}
+                      startDate={new Date(courseData.start_date)}
+                      endDate={new Date(courseData.end_date)}
+                    />
+                  </CardContent>
+                </Card>
               )}
-              <div className="mt-6 flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab('basic')}
-                >
-                  Indietro
-                </Button>
-                <Button 
-                  onClick={() => setActiveTab('sessions')}
-                  disabled={schedules.length === 0}
-                >
-                  Avanti: Genera Sessioni
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="sessions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestione Sessioni</CardTitle>
-              <CardDescription>
-                Genera automaticamente le sessioni o aggiungile manualmente
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CourseSessionManager
-                courseId={courseData?.id}
-                startDate={courseData?.start_date}
-                endDate={courseData?.end_date}
-                schedules={schedules.map(s => ({
-                  day_of_week: s.dayOfWeek,
-                  start_time: s.time,
-                  end_time: s.end_time,
-                  room_id: s.roomId,
-                  room_name: gymRooms.find(r => r.id === s.roomId)?.name
-                }))}
-                maxParticipants={courseData?.max_participants || 10}
-                onSessionsChange={handleSessionsChange}
-              />
-              <div className="mt-6 flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab('schedules')}
-                >
-                  Indietro
-                </Button>
-                <Button 
-                  onClick={() => setActiveTab('exceptions')}
-                >
-                  Avanti: Eccezioni (Opzionale)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveTab('basic')}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Indietro
+                    </Button>
 
-        <TabsContent value="exceptions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Eccezioni agli Orari</CardTitle>
-              <CardDescription>
-                Configura giorni di chiusura o modifiche agli orari (opzionale)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CourseScheduleExceptions
-                exceptions={exceptions}
-                onChange={handleExceptionsChange}
-              />
-              <div className="mt-6 flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab('sessions')}
-                >
-                  Indietro
-                </Button>
-                <Button 
-                  onClick={handleFinalizeCourse}
-                  disabled={loading}
-                  className="bg-gradient-primary text-white"
-                >
-                  {loading ? 'Salvando...' : 'Completa Corso'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    <Button
+                      onClick={handleFinalizeCourse}
+                      disabled={!courseData || schedules.length === 0}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      Completa Corso
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

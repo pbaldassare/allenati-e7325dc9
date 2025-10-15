@@ -9,7 +9,7 @@ import { ArrowLeft, Settings, Calendar, Clock, Ban } from 'lucide-react';
 import { SupabaseCourse } from '@/types/course';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
-import { CourseScheduleExceptions } from '@/components/owner/CourseScheduleExceptions';
+
 import { useToast } from '@/hooks/use-toast';
 import { WeeksSelector } from '@/components/ui/weeks-selector';
 
@@ -22,7 +22,7 @@ const OwnerCourseEdit = () => {
   const [error, setError] = useState<string | null>(null);
   const [gymRooms, setGymRooms] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
-  const [exceptions, setExceptions] = useState<any[]>([]);
+  
   const [durationWeeks, setDurationWeeks] = useState(12);
 
   const handleBack = () => {
@@ -68,7 +68,7 @@ const OwnerCourseEdit = () => {
         if (courseResult.error) throw courseResult.error;
         
         // Then load related data using the course's gym_id
-        const [roomsResult, sessionsResult, exceptionsResult] = await Promise.all([
+        const [roomsResult, sessionsResult] = await Promise.all([
           // Gym rooms
           supabase
             .from('gym_rooms')
@@ -81,14 +81,7 @@ const OwnerCourseEdit = () => {
             .from('course_sessions')
             .select('*')
             .eq('course_id', id)
-            .order('session_date', { ascending: true }),
-          
-          // Course exceptions
-          supabase
-            .from('course_schedule_exceptions')
-            .select('*')
-            .eq('course_id', id)
-            .order('start_date', { ascending: true })
+            .order('session_date', { ascending: true })
         ]);
 
         const courseData = courseResult.data;
@@ -120,11 +113,6 @@ const OwnerCourseEdit = () => {
         setCourse(mappedCourse);
         setGymRooms(roomsResult.data || []);
         setSessions(sessionsResult.data || []);
-        setExceptions((exceptionsResult.data || []).map(exc => ({
-          ...exc,
-          start_date: new Date(exc.start_date),
-          end_date: new Date(exc.end_date)
-        })));
         setDurationWeeks(mappedCourse.duration_weeks || 12);
         
       } catch (err) {
@@ -276,45 +264,6 @@ const OwnerCourseEdit = () => {
     }
   };
 
-  // Handle exceptions changes
-  const handleExceptionsChange = async (newExceptions: any[]) => {
-    if (!id) return;
-    
-    try {
-      // Delete existing exceptions
-      await supabase
-        .from('course_schedule_exceptions')
-        .delete()
-        .eq('course_id', id);
-      
-      // Insert new exceptions
-      if (newExceptions.length > 0) {
-        const exceptionsToInsert = newExceptions.map(exception => ({
-          course_id: id,
-          start_date: exception.start_date.toISOString().split('T')[0],
-          end_date: exception.end_date.toISOString().split('T')[0],
-          reason: exception.reason
-        }));
-        
-        await supabase
-          .from('course_schedule_exceptions')
-          .insert(exceptionsToInsert);
-      }
-      
-      setExceptions(newExceptions);
-      toast({
-        title: "Successo",
-        description: "Eccezioni aggiornate con successo",
-      });
-    } catch (error) {
-      console.error('Error updating exceptions:', error);
-      toast({
-        title: "Errore",
-        description: "Errore nell'aggiornamento delle eccezioni",
-        variant: "destructive",
-      });
-    }
-  };
 
 
   // Helper function to add hours to time
@@ -356,10 +305,6 @@ const OwnerCourseEdit = () => {
           <TabsTrigger value="sessions" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Sessioni
-          </TabsTrigger>
-          <TabsTrigger value="exceptions" className="flex items-center gap-2">
-            <Ban className="h-4 w-4" />
-            Eccezioni
           </TabsTrigger>
         </TabsList>
 
@@ -434,22 +379,6 @@ const OwnerCourseEdit = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="exceptions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Periodi di Esclusione</CardTitle>
-              <CardDescription>
-                Configura i periodi in cui il corso non si tiene (vacanze, chiusure, ecc.)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CourseScheduleExceptions
-                exceptions={exceptions}
-                onChange={handleExceptionsChange}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
