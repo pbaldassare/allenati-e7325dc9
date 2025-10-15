@@ -10,6 +10,7 @@ import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
+import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
@@ -49,6 +50,7 @@ const OwnerCoursesList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -241,27 +243,51 @@ const OwnerCoursesList: React.FC = () => {
     load();
   }, [selectedGym?.id, toast]);
 
-  // TEMPORARILY DISABLED - Duplicate functionality
-  /*
   const duplicateCourse = async (courseId: string) => {
     try {
-      if (!selectedGym?.id) return;
+      setDuplicating(courseId);
+      
+      if (!selectedGym?.id) {
+        throw new Error('Nessuna palestra selezionata');
+      }
 
-      // Get original course data
-      const { data: originalCourse } = await supabase
+      console.log('Duplicating course:', courseId);
+
+      // Step 1: Get original course data
+      const { data: originalCourse, error: courseError } = await supabase
         .from('courses')
         .select('*')
         .eq('id', courseId)
         .single();
 
-      if (!originalCourse) return;
+      if (courseError) throw courseError;
+      if (!originalCourse) throw new Error('Corso non trovato');
 
-      // Create duplicate
-      const { name, description, category_id, instructor_id, max_participants, 
-             duration_minutes, difficulty_level, price_per_session, 
-             credits_required, requirements, benefits, equipment_needed } = originalCourse;
+      // Step 2: Get original schedules
+      const { data: originalSchedules, error: schedulesError } = await supabase
+        .from('course_schedules')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('is_active', true);
 
-      const { error } = await supabase
+      if (schedulesError) throw schedulesError;
+
+      console.log('Original schedules:', originalSchedules);
+
+      // Step 3: Calculate new dates (today + 12 weeks)
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + (12 * 7)); // 12 weeks
+
+      // Step 4: Create duplicate course
+      const { 
+        name, description, category_id, instructor_id, max_participants,
+        duration_minutes, difficulty_level, price_per_session,
+        credits_required, requirements, benefits, equipment_needed,
+        image_url, deadline_hours, reserved_spots
+      } = originalCourse;
+
+      const { data: newCourse, error: insertError } = await supabase
         .from('courses')
         .insert({
           name: `${name} (Copia)`,
@@ -276,29 +302,67 @@ const OwnerCoursesList: React.FC = () => {
           requirements,
           benefits,
           equipment_needed,
+          image_url,
+          deadline_hours,
+          reserved_spots,
           gym_id: selectedGym.id,
-          is_active: false // Start as inactive
-        });
+          is_active: false, // Start as inactive
+          start_date: today.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          duration_weeks: 12
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+      if (!newCourse) throw new Error('Errore nella creazione del corso');
+
+      console.log('New course created:', newCourse.id);
+
+      // Step 5: Duplicate schedules
+      if (originalSchedules && originalSchedules.length > 0) {
+        const newSchedules = originalSchedules.map(schedule => ({
+          course_id: newCourse.id,
+          day_of_week: schedule.day_of_week,
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+          room_id: schedule.room_id,
+          room_name: schedule.room_name,
+          is_active: true
+        }));
+
+        const { error: scheduleInsertError } = await supabase
+          .from('course_schedules')
+          .insert(newSchedules);
+
+        if (scheduleInsertError) throw scheduleInsertError;
+        
+        console.log('Schedules duplicated successfully');
+      }
+
+      // Step 6: Generate sessions automatically
+      console.log('Triggering automatic session generation');
+      await autoGenerateSessionsIfNeeded(newCourse.id);
 
       toast({
         title: 'Successo',
-        description: 'Corso duplicato con successo',
+        description: 'Corso duplicato con successo. Modifica le date e gli orari prima di attivarlo.',
       });
 
-      // Reload courses
-      window.location.reload();
+      // Redirect to edit page
+      navigate(`/owner/courses/${newCourse.id}/edit`);
+
     } catch (error) {
       console.error('Error duplicating course:', error);
       toast({
         title: 'Errore',
-        description: 'Impossibile duplicare il corso',
+        description: error instanceof Error ? error.message : 'Impossibile duplicare il corso',
         variant: 'destructive',
       });
+    } finally {
+      setDuplicating(null);
     }
   };
-  */
 
   const toggleCourseStatus = async (course: CourseItem) => {
     try {
@@ -530,6 +594,14 @@ const OwnerCoursesList: React.FC = () => {
                       </Button>
                       <Button 
                         size="sm" 
+                        variant="outline"
+                        onClick={() => duplicateCourse(course.id)}
+                        disabled={duplicating === course.id}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
                         variant={course.is_active ? "destructive" : "default"}
                         onClick={() => toggleCourseStatus(course)}
                         disabled={togglingStatus === course.id}
@@ -628,6 +700,13 @@ const OwnerCoursesList: React.FC = () => {
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Modifica
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => duplicateCourse(course.id)}
+                              disabled={duplicating === course.id}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              {duplicating === course.id ? 'Duplicando...' : 'Duplica'}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => toggleCourseStatus(course)}
