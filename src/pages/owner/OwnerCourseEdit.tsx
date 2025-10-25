@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Calendar, Clock, Ban } from 'lucide-react';
+import { ArrowLeft, Settings, Calendar, Clock, Ban, Plus } from 'lucide-react';
 import { SupabaseCourse } from '@/types/course';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { CourseSessionManager } from '@/components/admin/CourseSessionManager';
 
 import { useToast } from '@/hooks/use-toast';
 import { WeeksSelector } from '@/components/ui/weeks-selector';
+import { AddPeriodDialog } from '@/components/owner/AddPeriodDialog';
 
 const OwnerCourseEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ const OwnerCourseEdit = () => {
   const [error, setError] = useState<string | null>(null);
   const [gymRooms, setGymRooms] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [showAddPeriodDialog, setShowAddPeriodDialog] = useState(false);
   
   const [durationWeeks, setDurationWeeks] = useState(12);
 
@@ -355,10 +357,23 @@ const OwnerCourseEdit = () => {
         <TabsContent value="sessions">
           <Card>
             <CardHeader>
-              <CardTitle>Gestione Sessioni</CardTitle>
-              <CardDescription>
-                Genera e gestisci le sessioni individuali del corso
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Gestione Sessioni</CardTitle>
+                  <CardDescription>
+                    Genera e gestisci le sessioni individuali del corso
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => setShowAddPeriodDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Aggiungi Periodo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <CourseSessionManager
@@ -380,6 +395,24 @@ const OwnerCourseEdit = () => {
         </TabsContent>
 
       </Tabs>
+
+      <AddPeriodDialog
+        open={showAddPeriodDialog}
+        onOpenChange={setShowAddPeriodDialog}
+        courseId={id || ''}
+        schedules={course?.schedules?.map(s => ({
+          day_of_week: s.day_of_week,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          room_id: s.room_id,
+          room_name: s.room_name
+        })) || []}
+        maxParticipants={course?.max_participants || 20}
+        currentEndDate={course?.end_date ? new Date(course.end_date) : undefined}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };
