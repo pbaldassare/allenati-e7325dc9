@@ -368,33 +368,84 @@ const OwnerCoursesList: React.FC = () => {
     try {
       setTogglingStatus(course.id);
       
+      console.log('Toggling course status:', {
+        courseId: course.id,
+        courseName: course.name,
+        currentStatus: course.is_active,
+        newStatus: !course.is_active
+      });
+
       const newStatus = !course.is_active;
       
       // Update course status in database
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('courses')
-        .update({ is_active: newStatus })
-        .eq('id', course.id);
+        .update({ 
+          is_active: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', course.id)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Update local state
-      setCourses(prevCourses => 
-        prevCourses.map(c => 
-          c.id === course.id ? { ...c, is_active: newStatus } : c
-        )
-      );
+      console.log('Course status updated successfully:', data);
+
+      // If deactivating, hide all future sessions
+      if (!newStatus) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { error: sessionsError } = await supabase
+          .from('course_sessions')
+          .update({ 
+            status: 'hidden',
+            updated_at: new Date().toISOString()
+          })
+          .eq('course_id', course.id)
+          .eq('status', 'scheduled')
+          .gte('session_date', today);
+
+        if (sessionsError) {
+          console.error('Error hiding sessions:', sessionsError);
+        } else {
+          console.log('Future sessions hidden successfully');
+        }
+      } else {
+        // If reactivating, restore hidden sessions
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { error: sessionsError } = await supabase
+          .from('course_sessions')
+          .update({ 
+            status: 'scheduled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('course_id', course.id)
+          .eq('status', 'hidden')
+          .gte('session_date', today);
+
+        if (sessionsError) {
+          console.error('Error restoring sessions:', sessionsError);
+        } else {
+          console.log('Future sessions restored successfully');
+        }
+      }
 
       toast({
         title: 'Successo',
         description: `Corso "${course.name}" ${newStatus ? 'attivato' : 'disattivato'} con successo`,
       });
 
+      // Force reload to ensure fresh data
+      console.log('Reloading courses list...');
+      window.location.reload();
+
     } catch (error) {
       console.error('Error toggling course status:', error);
       toast({
         title: 'Errore',
-        description: 'Impossibile modificare lo stato del corso',
+        description: error instanceof Error ? error.message : 'Impossibile modificare lo stato del corso',
         variant: 'destructive',
       });
     } finally {
