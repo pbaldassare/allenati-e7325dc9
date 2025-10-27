@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff } from "lucide-react";
+import { Search, MoreHorizontal, Edit, Copy, Eye, Users, EyeOff, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CourseParticipantOverview } from "@/components/CourseParticipantOverview";
 import { useToast } from "@/hooks/use-toast";
 import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
+import { CourseDeleteConfirmDialog } from "@/components/dialogs/CourseDeleteConfirmDialog";
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
@@ -51,6 +52,8 @@ const OwnerCoursesList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [deletingCourse, setDeletingCourse] = useState<CourseItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -364,6 +367,93 @@ const OwnerCoursesList: React.FC = () => {
     }
   };
 
+  const deleteCourse = async () => {
+    if (!deletingCourse) return;
+
+    try {
+      setIsDeleting(true);
+      console.log('Deleting course:', deletingCourse.id);
+
+      // Step 1: Cancel all active bookings for this course
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'Corso eliminato',
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('course_id', deletingCourse.id)
+        .eq('status', 'confirmed');
+
+      if (bookingsError) {
+        console.error('Error cancelling bookings:', bookingsError);
+        throw new Error('Errore durante la cancellazione delle prenotazioni');
+      }
+
+      // Step 2: Delete all sessions (this will cascade to bookings via foreign keys)
+      const { error: sessionsError } = await supabase
+        .from('course_sessions')
+        .delete()
+        .eq('course_id', deletingCourse.id);
+
+      if (sessionsError) {
+        console.error('Error deleting sessions:', sessionsError);
+        throw new Error('Errore durante l\'eliminazione delle sessioni');
+      }
+
+      // Step 3: Delete all schedules
+      const { error: schedulesError } = await supabase
+        .from('course_schedules')
+        .delete()
+        .eq('course_id', deletingCourse.id);
+
+      if (schedulesError) {
+        console.error('Error deleting schedules:', schedulesError);
+        throw new Error('Errore durante l\'eliminazione degli orari');
+      }
+
+      // Step 4: Delete schedule exceptions
+      const { error: exceptionsError } = await supabase
+        .from('course_schedule_exceptions')
+        .delete()
+        .eq('course_id', deletingCourse.id);
+
+      if (exceptionsError) {
+        console.error('Error deleting exceptions:', exceptionsError);
+      }
+
+      // Step 5: Delete the course itself
+      const { error: courseError } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', deletingCourse.id);
+
+      if (courseError) {
+        console.error('Error deleting course:', courseError);
+        throw new Error('Errore durante l\'eliminazione del corso');
+      }
+
+      toast({
+        title: 'Successo',
+        description: `Corso "${deletingCourse.name}" eliminato con successo`,
+      });
+
+      // Reload the page
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      toast({
+        title: 'Errore',
+        description: error instanceof Error ? error.message : 'Impossibile eliminare il corso',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeletingCourse(null);
+    }
+  };
+
   const toggleCourseStatus = async (course: CourseItem) => {
     try {
       setTogglingStatus(course.id);
@@ -663,6 +753,13 @@ const OwnerCoursesList: React.FC = () => {
                           <Eye className="h-4 w-4" />
                         )}
                       </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => setDeletingCourse(course)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -779,6 +876,13 @@ const OwnerCoursesList: React.FC = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeletingCourse(course)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Elimina
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -791,6 +895,13 @@ const OwnerCoursesList: React.FC = () => {
         </CardContent>
       </Card>
 
+      <CourseDeleteConfirmDialog
+        open={!!deletingCourse}
+        onOpenChange={(open) => !open && setDeletingCourse(null)}
+        onConfirm={deleteCourse}
+        courseNames={deletingCourse ? [deletingCourse.name] : []}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
