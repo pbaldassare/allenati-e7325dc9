@@ -8,9 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, RotateCcw, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Calendar, Clock, Plus, Download, Play, Pause, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ExtendSubscriptionDialog from '@/components/dialogs/ExtendSubscriptionDialog';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
@@ -448,16 +449,9 @@ const OwnerSubscriptions: React.FC = () => {
     
     if (subscription.status === 'expired') {
       return (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'active', 'riattivato')}
-          disabled={isUpdating}
-          className="flex items-center space-x-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>{isUpdating ? 'Riattivando...' : 'Riattiva'}</span>
-        </Button>
+        <div className="text-sm text-muted-foreground">
+          Scaduto il {format(new Date(subscription.expires_at), 'dd/MM/yyyy')}
+        </div>
       );
     }
     

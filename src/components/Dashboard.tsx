@@ -80,6 +80,36 @@ export const Dashboard = () => {
 
       setUserCredits(creditsData?.credits || 0);
       setUserSubscription(subscriptionData);
+
+      // Check for expired subscriptions and show warning
+      const { data: expiredSubscription } = await supabase
+        .from('user_subscriptions')
+        .select('expires_at, subscription_plans(name)')
+        .eq('user_id', user.id)
+        .eq('gym_id', gymId)
+        .eq('status', 'expired')
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (expiredSubscription && !subscriptionData) {
+        toast({
+          title: "Abbonamento Scaduto",
+          description: "Il tuo abbonamento è scaduto. Acquista un nuovo piano per continuare a prenotare.",
+          variant: "destructive",
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/subscriptions')}
+              className="border-white text-white hover:bg-white hover:text-destructive"
+            >
+              Vai agli Abbonamenti
+            </Button>
+          ),
+          duration: 10000,
+        });
+      }
     } catch (error) {
       console.error('Errore nel caricamento dati crediti/abbonamento:', error);
     } finally {

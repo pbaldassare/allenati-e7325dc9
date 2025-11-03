@@ -87,21 +87,39 @@ export const checkBookingEligibility = async (
     const availableCredits = gymCredits?.credits || 0;
     console.log('Available credits:', availableCredits);
 
-    if (availableCredits >= creditsRequired) {
-      console.log('Sufficient credits available, booking allowed');
+    // Check if user has any active subscriptions
+    const activeSubscriptions = await getUserActiveSubscriptions(userId, gymId);
+    const hasActiveSubscription = activeSubscriptions.length > 0;
+
+    // If no active subscription and no credits
+    if (!hasActiveSubscription && availableCredits === 0) {
+      console.log('No active subscription and no credits');
       return {
-        canBook: true,
+        canBook: false,
         hasUnlimitedAccess: false,
-        gymCredits: availableCredits
+        gymCredits: 0,
+        reason: 'Nessun abbonamento attivo. Acquista un abbonamento per prenotare.'
       };
     }
 
-    console.log('Insufficient credits, booking denied');
+    // If has subscription but insufficient credits
+    if (availableCredits < creditsRequired) {
+      console.log('Insufficient credits, booking denied');
+      return {
+        canBook: false,
+        hasUnlimitedAccess: false,
+        gymCredits: availableCredits,
+        reason: hasActiveSubscription
+          ? `Crediti insufficienti (disponibili: ${availableCredits}, necessari: ${creditsRequired}). Acquista un nuovo pacchetto crediti.`
+          : `Crediti esauriti. Acquista un abbonamento o un pacchetto crediti.`
+      };
+    }
+
+    console.log('Sufficient credits available, booking allowed');
     return {
-      canBook: false,
+      canBook: true,
       hasUnlimitedAccess: false,
-      gymCredits: availableCredits,
-      reason: `Crediti insufficienti. Necessari: ${creditsRequired}, disponibili: ${availableCredits}`
+      gymCredits: availableCredits
     };
   } catch (error) {
     console.error('Error checking booking eligibility:', error);

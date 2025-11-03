@@ -56,7 +56,7 @@ export type Database = {
           admin_id: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_data: Json | null
           old_data: Json | null
           target_id: string | null
@@ -68,7 +68,7 @@ export type Database = {
           admin_id: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           target_id?: string | null
@@ -80,7 +80,7 @@ export type Database = {
           admin_id?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           target_id?: string | null
@@ -2177,6 +2177,7 @@ export type Database = {
         Args: { _gym_id: string }
         Returns: undefined
       }
+      auto_expire_subscriptions: { Args: never; Returns: undefined }
       can_book_within_deadline: {
         Args: { _course_id: string; _scheduled_datetime: string }
         Returns: boolean
@@ -2185,10 +2186,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
-      cleanup_expired_reset_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       create_course_chat: {
         Args: { _course_id: string; _course_name: string; _created_by: string }
         Returns: string
@@ -2197,20 +2195,14 @@ export type Database = {
         Args: { _created_by: string; _gym_id: string }
         Returns: string
       }
-      debug_user_permissions: {
-        Args: { _user_id: string }
-        Returns: Json
-      }
+      debug_user_permissions: { Args: { _user_id: string }; Returns: Json }
       demote_instructor_to_user: {
         Args: { target_user_id: string }
         Returns: boolean
       }
-      demote_super_instructor: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      demote_super_instructor: { Args: { _user_id: string }; Returns: boolean }
       fix_instructor_privilege_inconsistencies: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_taken: string
           fixed_user_id: string
@@ -2219,7 +2211,7 @@ export type Database = {
         }[]
       }
       fix_missing_owner_instructors: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_taken: string
           fixed_gym_id: string
@@ -2240,14 +2232,8 @@ export type Database = {
         Args: { _course_id: string; _end_date: string; _start_date: string }
         Returns: number
       }
-      get_gym_owner_instructor: {
-        Args: { _gym_id: string }
-        Returns: string
-      }
-      get_instructor_gyms: {
-        Args: { _user_id: string }
-        Returns: string[]
-      }
+      get_gym_owner_instructor: { Args: { _gym_id: string }; Returns: string }
+      get_instructor_gyms: { Args: { _user_id: string }; Returns: string[] }
       get_instructor_id_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: string
@@ -2274,22 +2260,10 @@ export type Database = {
         Args: { _gym_id: string; _user_id: string }
         Returns: number
       }
-      get_user_gym_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
-      get_user_gyms: {
-        Args: { _user_id: string }
-        Returns: string[]
-      }
-      get_user_owned_gyms: {
-        Args: { _user_id: string }
-        Returns: string[]
-      }
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      get_user_gym_id: { Args: { _user_id: string }; Returns: string }
+      get_user_gyms: { Args: { _user_id: string }; Returns: string[] }
+      get_user_owned_gyms: { Args: { _user_id: string }; Returns: string[] }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
       get_user_subscription_for_gym: {
         Args: { _gym_id: string; _user_id: string }
         Returns: string
@@ -2309,10 +2283,7 @@ export type Database = {
         Args: { _gym_id: string; _user_id: string }
         Returns: boolean
       }
-      is_backoffice_user: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_backoffice_user: { Args: { _user_id: string }; Returns: boolean }
       manual_enroll_user: {
         Args: { _enrolled_by: string; _session_id: string; _user_id: string }
         Returns: string
@@ -2325,14 +2296,8 @@ export type Database = {
         Args: { bio?: string; target_user_id: string }
         Returns: string
       }
-      recalculate_all_gym_credits: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      recalculate_all_gym_credits_fixed: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      recalculate_all_gym_credits: { Args: never; Returns: undefined }
+      recalculate_all_gym_credits_fixed: { Args: never; Returns: undefined }
       smart_generate_sessions_with_dates: {
         Args: {
           _course_id: string
@@ -2381,7 +2346,7 @@ export type Database = {
         Returns: boolean
       }
       validate_instructor_consistency: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           assignment_privileges: boolean
           gym_name: string
