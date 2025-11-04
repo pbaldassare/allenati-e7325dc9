@@ -93,10 +93,37 @@ export const AddPeriodDialog: React.FC<AddPeriodDialogProps> = ({
 
     setLoading(true);
     try {
-      // Insert new sessions
+      // Fetch existing sessions to avoid duplicates
+      const { data: existingSessions, error: fetchError } = await supabase
+        .from('course_sessions')
+        .select('session_date, start_time, end_time')
+        .eq('course_id', courseId);
+
+      if (fetchError) throw fetchError;
+
+      // Filter out sessions that already exist
+      const newSessions = previewSessions.filter(session => {
+        return !existingSessions?.some(existing => 
+          existing.session_date === session.session_date &&
+          existing.start_time === session.start_time &&
+          existing.end_time === session.end_time
+        );
+      });
+
+      if (newSessions.length === 0) {
+        toast({
+          title: "Nessuna sessione da creare",
+          description: "Tutte le sessioni nel periodo selezionato esistono già",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Insert only new sessions
       const { error: insertError } = await supabase
         .from('course_sessions')
-        .insert(previewSessions.map(session => ({
+        .insert(newSessions.map(session => ({
           course_id: courseId,
           session_date: session.session_date,
           start_time: session.start_time,
@@ -110,6 +137,8 @@ export const AddPeriodDialog: React.FC<AddPeriodDialogProps> = ({
 
       if (insertError) throw insertError;
 
+      const skippedCount = previewSessions.length - newSessions.length;
+
       // Update course end_date if new period extends beyond current end
       if (!currentEndDate || newEndDate > currentEndDate) {
         const { error: updateError } = await supabase
@@ -122,7 +151,7 @@ export const AddPeriodDialog: React.FC<AddPeriodDialogProps> = ({
 
       toast({
         title: "Periodo aggiunto con successo",
-        description: `${previewSessions.length} nuove sessioni create dal ${format(newStartDate, 'dd/MM/yyyy')} al ${format(newEndDate, 'dd/MM/yyyy')}`
+        description: `${newSessions.length} nuove sessioni create${skippedCount > 0 ? ` (${skippedCount} già esistenti saltate)` : ''} dal ${format(newStartDate, 'dd/MM/yyyy')} al ${format(newEndDate, 'dd/MM/yyyy')}`
       });
 
       onSuccess();
