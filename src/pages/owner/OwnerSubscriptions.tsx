@@ -647,11 +647,11 @@ const OwnerSubscriptions: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="expiring" className="w-full">
         <TabsList>
-          <TabsTrigger value="all">Tutti ({searchQuery ? filteredStats.total : stats.total})</TabsTrigger>
-          <TabsTrigger value="active">Attivi ({searchQuery ? filteredStats.active : stats.active})</TabsTrigger>
           <TabsTrigger value="expiring">In Scadenza ({searchQuery ? filteredStats.expiring_soon : stats.expiring_soon})</TabsTrigger>
+          <TabsTrigger value="active">Attivi ({searchQuery ? filteredStats.active : stats.active})</TabsTrigger>
+          <TabsTrigger value="all">Tutti ({searchQuery ? filteredStats.total : stats.total})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
