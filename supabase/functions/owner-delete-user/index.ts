@@ -101,26 +101,31 @@ serve(async (req) => {
     }
 
     // Cancel all future bookings for this user in this gym
-    const { error: bookingsError } = await supabase
-      .from('bookings')
-      .update({ 
-        status: 'cancelled',
-        cancellation_reason: 'Utente rimosso dalla palestra',
-        cancelled_at: new Date().toISOString()
-      })
-      .eq('user_id', user_id)
-      .eq('status', 'confirmed')
-      .in('course_id', 
-        supabase
-          .from('courses')
-          .select('id')
-          .eq('gym_id', gym_id)
-      )
-      .gte('scheduled_date', new Date().toISOString().split('T')[0]);
+    // First, get all course IDs for this gym
+    const { data: gymCourses } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('gym_id', gym_id);
 
-    if (bookingsError) {
-      console.error('Error cancelling bookings:', bookingsError);
-      // Don't throw, this is not critical
+    const courseIds = gymCourses?.map(c => c.id) || [];
+
+    if (courseIds.length > 0) {
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'Utente rimosso dalla palestra',
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('user_id', user_id)
+        .eq('status', 'confirmed')
+        .in('course_id', courseIds)
+        .gte('scheduled_date', new Date().toISOString().split('T')[0]);
+
+      if (bookingsError) {
+        console.error('Error cancelling bookings:', bookingsError);
+        // Don't throw, this is not critical
+      }
     }
 
     console.log('User removed from gym successfully');
