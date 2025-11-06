@@ -5,10 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Crown } from "lucide-react";
+import { Crown, UserPlus, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOwnerGym } from "@/contexts/OwnerGymContext";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AddInstructorDialog } from "@/components/owner/AddInstructorDialog";
+import { Button } from "@/components/ui/button";
 
 interface Instructor {
   id: string;
@@ -34,6 +37,8 @@ const OwnerInstructors: React.FC = () => {
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggleLoading, setToggleLoading] = useState<string | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [removingInstructor, setRemovingInstructor] = useState<string | null>(null);
 
   const loadInstructors = async () => {
     if (gymLoading || !selectedGym?.id) {
@@ -274,6 +279,30 @@ const OwnerInstructors: React.FC = () => {
     }
   };
 
+  const handleRemoveInstructor = async (userId: string) => {
+    if (!selectedGym) return;
+    
+    setRemovingInstructor(userId);
+    try {
+      const { error } = await supabase.functions.invoke('remove-instructor-from-gym', {
+        body: {
+          instructor_user_id: userId,
+          gym_id: selectedGym.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success("Istruttore rimosso dalla palestra");
+      loadInstructors();
+    } catch (error: any) {
+      console.error('Error removing instructor:', error);
+      toast.error(error.message || "Errore durante la rimozione dell'istruttore");
+    } finally {
+      setRemovingInstructor(null);
+    }
+  };
+
   useEffect(() => {
     document.title = "Istruttori | Area Proprietario";
   }, []);
@@ -304,7 +333,15 @@ const OwnerInstructors: React.FC = () => {
       <h1 className="sr-only">Istruttori palestra</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Istruttori</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Istruttori della Palestra</CardTitle>
+            {selectedGym && (
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Aggiungi Istruttore
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -330,6 +367,7 @@ const OwnerInstructors: React.FC = () => {
                   <TableHead>Privilegi</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead>Dal</TableHead>
+                  <TableHead>Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -419,6 +457,40 @@ const OwnerInstructors: React.FC = () => {
                     <TableCell>
                       {new Date(instructor.created_at).toLocaleDateString()}
                     </TableCell>
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            disabled={removingInstructor === instructor.user_id}
+                          >
+                            {removingInstructor === instructor.user_id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 mr-1" />
+                            )}
+                            Rimuovi
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Conferma Rimozione</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Vuoi rimuovere <strong>{instructor.profile.first_name} {instructor.profile.last_name}</strong> da questa palestra?
+                              <br />
+                              L'istruttore non verrà eliminato dal sistema e potrà essere aggiunto nuovamente in futuro.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleRemoveInstructor(instructor.user_id)}>
+                              Rimuovi
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -426,6 +498,15 @@ const OwnerInstructors: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {selectedGym && (
+        <AddInstructorDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          gymId={selectedGym.id}
+          onSuccess={loadInstructors}
+        />
+      )}
     </section>
   );
 };

@@ -38,3 +38,9 @@ verify_jwt = true
 
 [functions.join-gym]
 verify_jwt = true
+
+[functions.assign-instructor-to-gym]
+verify_jwt = true
+
+[functions.remove-instructor-from-gym]
+verify_jwt = true
