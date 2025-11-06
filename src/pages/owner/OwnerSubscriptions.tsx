@@ -46,6 +46,16 @@ interface UserSubscription {
   };
 }
 
+// Helper function to check if a subscription is truly active
+const isSubscriptionActive = (subscription: UserSubscription): boolean => {
+  if (subscription.status !== 'active') return false;
+  
+  const expiresDate = new Date(subscription.expires_at);
+  const now = new Date();
+  
+  return expiresDate > now;
+};
+
 const OwnerSubscriptions: React.FC = () => {
   const { selectedGym } = useOwnerGym();
   const isMobile = useIsMobile();
@@ -168,15 +178,15 @@ const OwnerSubscriptions: React.FC = () => {
       const soon = new Date();
       soon.setDate(soon.getDate() + 7); // 7 days from now
 
-      const active = subs.filter(s => s.status === 'active').length;
-      const expiring_soon = subs.filter(s => 
-        s.status === 'active' && 
-        new Date(s.expires_at) <= soon
-      ).length;
+      const active = subs.filter(s => isSubscriptionActive(s)).length;
+      const expiring_soon = subs.filter(s => {
+        if (!isSubscriptionActive(s)) return false;
+        return new Date(s.expires_at) <= soon && new Date(s.expires_at) > now;
+      }).length;
 
       const by_plan: { [key: string]: number } = {};
       subs.forEach(s => {
-        if (s.status === 'active' && s.plan) {
+        if (isSubscriptionActive(s) && s.plan) {
           by_plan[s.plan.name] = (by_plan[s.plan.name] || 0) + 1;
         }
       });
@@ -524,12 +534,13 @@ const OwnerSubscriptions: React.FC = () => {
   // Calculate filtered stats
   const filteredStats = {
     total: filteredAndSortedSubscriptions.length,
-    active: filteredAndSortedSubscriptions.filter(s => s.status === 'active').length,
+    active: filteredAndSortedSubscriptions.filter(s => isSubscriptionActive(s)).length,
     expiring_soon: filteredAndSortedSubscriptions.filter(s => {
+      if (!isSubscriptionActive(s)) return false;
       const now = new Date();
       const soon = new Date();
       soon.setDate(soon.getDate() + 7);
-      return s.status === 'active' && new Date(s.expires_at) <= soon;
+      return new Date(s.expires_at) <= soon && new Date(s.expires_at) > now;
     }).length
   };
 
@@ -818,7 +829,7 @@ const OwnerSubscriptions: React.FC = () => {
                 </TableHeader>
                  <TableBody>
                    {filteredAndSortedSubscriptions
-                     .filter(sub => sub.status === 'active')
+                     .filter(sub => isSubscriptionActive(sub))
                      .map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>
@@ -877,11 +888,11 @@ const OwnerSubscriptions: React.FC = () => {
                  <TableBody>
                    {filteredAndSortedSubscriptions
                      .filter(sub => {
-                       if (sub.status !== 'active') return false;
+                       if (!isSubscriptionActive(sub)) return false;
                        const expiresDate = new Date(sub.expires_at);
                        const now = new Date();
                        const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                       return daysUntilExpiry <= 7;
+                       return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
                      })
                      .map((sub) => {
                       const expiresDate = new Date(sub.expires_at);
