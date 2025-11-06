@@ -912,18 +912,18 @@ const OwnerUsers = () => {
             ) : (
               // Desktop Table Layout
               <div className="overflow-x-auto">
-                <Table className="min-w-max">
+                <Table className="min-w-max w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>Codice Fiscale</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Cintura</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Certificato</TableHead>
-                    <TableHead>Azione</TableHead>
+                    <TableHead className="whitespace-nowrap">Nome</TableHead>
+                    <TableHead className="whitespace-nowrap">Email</TableHead>
+                    <TableHead className="whitespace-nowrap">Telefono</TableHead>
+                    <TableHead className="whitespace-nowrap">Codice Fiscale</TableHead>
+                    <TableHead className="whitespace-nowrap">Ruolo</TableHead>
+                    <TableHead className="whitespace-nowrap">Cintura</TableHead>
+                    <TableHead className="whitespace-nowrap">Stato</TableHead>
+                    <TableHead className="whitespace-nowrap">Certificato</TableHead>
+                    <TableHead className="whitespace-nowrap min-w-[280px]">Azione</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -951,9 +951,9 @@ const OwnerUsers = () => {
                       
                       return (
                         <TableRow key={m.user_id}>
-                          <TableCell className="font-medium">{m.first_name} {m.last_name}</TableCell>
-                          <TableCell className="text-muted-foreground">{m.email || 'N/D'}</TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="font-medium whitespace-nowrap">{m.first_name} {m.last_name}</TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">{m.email || 'N/D'}</TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
                             {m.phone ? (
                               <div className="flex items-center gap-2">
                                 <Phone className="h-4 w-4" />
@@ -961,7 +961,7 @@ const OwnerUsers = () => {
                               </div>
                             ) : 'N/D'}
                           </TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
+                          <TableCell className="text-muted-foreground font-mono text-sm whitespace-nowrap">
                             {m.fiscal_code ? (
                               <div className="flex items-center gap-2">
                                 <CreditCard className="h-4 w-4" />
@@ -989,8 +989,8 @@ const OwnerUsers = () => {
                               {m.membership_status}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 flex-wrap">
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-2">
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <FileText className="h-3 w-3" />
                                 Scadenza: {expiryLabel}
@@ -1032,8 +1032,8 @@ const OwnerUsers = () => {
                               </Tooltip>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-1 flex-nowrap">
                               <Button
                                 variant="outline"
                                 size="sm"
