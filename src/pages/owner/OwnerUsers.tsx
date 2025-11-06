@@ -912,7 +912,7 @@ const OwnerUsers = () => {
             ) : (
               // Desktop Table Layout
               <div className="overflow-x-auto">
-                <Table className="min-w-max w-full">
+                <Table className="min-w-max">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="whitespace-nowrap">Nome</TableHead>
@@ -923,7 +923,7 @@ const OwnerUsers = () => {
                     <TableHead className="whitespace-nowrap">Cintura</TableHead>
                     <TableHead className="whitespace-nowrap">Stato</TableHead>
                     <TableHead className="whitespace-nowrap">Certificato</TableHead>
-                    <TableHead className="whitespace-nowrap min-w-[280px]">Azione</TableHead>
+                    <TableHead className="whitespace-nowrap min-w-[420px]">Azione</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1032,7 +1032,7 @@ const OwnerUsers = () => {
                               </Tooltip>
                             </div>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap min-w-[420px]">
                             <div className="flex items-center gap-1 flex-nowrap">
                               <Button
                                 variant="outline"
