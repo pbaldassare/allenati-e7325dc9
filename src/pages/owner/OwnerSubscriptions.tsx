@@ -18,14 +18,14 @@ import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubsc
 import { RenewSubscriptionDialog } from '@/components/dialogs/RenewSubscriptionDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-
 interface SubscriptionStats {
   total: number;
   active: number;
   expiring_soon: number;
-  by_plan: { [key: string]: number };
+  by_plan: {
+    [key: string]: number;
+  };
 }
-
 interface UserSubscription {
   id: string;
   user_id: string;
@@ -49,15 +49,14 @@ interface UserSubscription {
 // Helper function to check if a subscription is truly active
 const isSubscriptionActive = (subscription: UserSubscription): boolean => {
   if (subscription.status !== 'active') return false;
-  
   const expiresDate = new Date(subscription.expires_at);
   const now = new Date();
-  
   return expiresDate > now;
 };
-
 const OwnerSubscriptions: React.FC = () => {
-  const { selectedGym } = useOwnerGym();
+  const {
+    selectedGym
+  } = useOwnerGym();
   const isMobile = useIsMobile();
   const [stats, setStats] = useState<SubscriptionStats>({
     total: 0,
@@ -80,8 +79,9 @@ const OwnerSubscriptions: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [userCredits, setUserCredits] = useState<Map<string, number>>(new Map());
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     document.title = 'Abbonamenti | Area Proprietario';
     if (selectedGym?.id) {
@@ -91,68 +91,43 @@ const OwnerSubscriptions: React.FC = () => {
       setLoading(false);
     }
   }, [selectedGym?.id]);
-
   const loadSubscriptionData = async () => {
     if (!selectedGym?.id) return;
-
     try {
       console.log('Loading subscriptions for gym:', selectedGym.id);
 
       // First get gym member user IDs
-      const { data: memberIds } = await supabase
-        .from('user_gym_memberships')
-        .select('user_id')
-        .eq('gym_id', selectedGym.id)
-        .eq('status', 'active');
-
+      const {
+        data: memberIds
+      } = await supabase.from('user_gym_memberships').select('user_id').eq('gym_id', selectedGym.id).eq('status', 'active');
       if (!memberIds || memberIds.length === 0) {
         setSubscriptions([]);
         setLoading(false);
         return;
       }
-
       console.log('Loading subscriptions for gym members:', memberIds.map(m => m.user_id));
-      
-      // Load subscriptions for gym members in the current gym only
-      const { data: subscriptionsData, error } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .in('user_id', memberIds.map(m => m.user_id))
-        .eq('gym_id', selectedGym.id)
-        .order('created_at', { ascending: false });
 
+      // Load subscriptions for gym members in the current gym only
+      const {
+        data: subscriptionsData,
+        error
+      } = await supabase.from('user_subscriptions').select('*').in('user_id', memberIds.map(m => m.user_id)).eq('gym_id', selectedGym.id).order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
-      
+
       // Load related data separately
       const subscriptionIds = subscriptionsData?.map(s => s.plan_id) || [];
       const userIds = subscriptionsData?.map(s => s.user_id) || [];
-      
-      const [plansData, profilesData, creditsData] = await Promise.all([
-        supabase
-          .from('subscription_plans')
-          .select('id, name, credits_included, unlimited_access, duration_days')
-          .in('id', subscriptionIds),
-        supabase
-          .from('profiles')
-          .select('user_id, first_name, last_name, email, profile_picture_url')
-          .in('user_id', userIds),
-        supabase
-          .from('gym_credits')
-          .select('user_id, credits')
-          .in('user_id', userIds)
-          .eq('gym_id', selectedGym.id)
-      ]);
-
+      const [plansData, profilesData, creditsData] = await Promise.all([supabase.from('subscription_plans').select('id, name, credits_included, unlimited_access, duration_days').in('id', subscriptionIds), supabase.from('profiles').select('user_id, first_name, last_name, email, profile_picture_url').in('user_id', userIds), supabase.from('gym_credits').select('user_id, credits').in('user_id', userIds).eq('gym_id', selectedGym.id)]);
       const plansMap = new Map(plansData.data?.map(p => [p.id, p]) || []);
       const profilesMap = new Map(profilesData.data?.map(p => [p.user_id, p]) || []);
       const creditsMap = new Map(creditsData.data?.map(c => [c.user_id, c.credits]) || []);
-      
       setUserCredits(creditsMap);
-      
+
       // Function to get complete user data with fallbacks
       const getUserData = (userId: string) => {
         const profile = profilesMap.get(userId);
-        
         return {
           first_name: profile?.first_name || 'Nome',
           last_name: profile?.last_name || 'Cognome',
@@ -160,25 +135,22 @@ const OwnerSubscriptions: React.FC = () => {
           profile_picture_url: profile?.profile_picture_url || null
         };
       };
-      
       const subs = (subscriptionsData || []).map((sub: any) => {
         const plan = plansMap.get(sub.plan_id);
         const user = getUserData(sub.user_id);
-        
         console.log(`Processing subscription ${sub.id}:`, {
           plan_id: sub.plan_id,
           user_id: sub.user_id,
           plan,
           user
         });
-        
         return {
           ...sub,
           plan: plan || null,
           user: user // Always return user data, even if incomplete
         };
       }); // Rimosso filtro - mostriamo tutte le subscription anche se incomplete
-      
+
       console.log('Processed subscriptions:', subs);
       setSubscriptions(subs);
 
@@ -192,37 +164,33 @@ const OwnerSubscriptions: React.FC = () => {
         if (!isSubscriptionActive(s)) return false;
         return new Date(s.expires_at) <= soon && new Date(s.expires_at) > now;
       }).length;
-
-      const by_plan: { [key: string]: number } = {};
+      const by_plan: {
+        [key: string]: number;
+      } = {};
       subs.forEach(s => {
         if (isSubscriptionActive(s) && s.plan) {
           by_plan[s.plan.name] = (by_plan[s.plan.name] || 0) + 1;
         }
       });
-
       setStats({
         total: subs.length,
         active,
         expiring_soon,
         by_plan
       });
-
     } catch (error) {
       console.error('Error loading subscription data:', error);
     } finally {
       setLoading(false);
     }
   };
-
   const getStatusBadge = (status: string, expires_at: string) => {
     if (status !== 'active') {
       return <Badge variant="secondary">{status}</Badge>;
     }
-
     const expiresDate = new Date(expires_at);
     const now = new Date();
     const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
     if (daysUntilExpiry <= 0) {
       return <Badge variant="destructive">Scaduto</Badge>;
     } else if (daysUntilExpiry <= 7) {
@@ -231,78 +199,66 @@ const OwnerSubscriptions: React.FC = () => {
       return <Badge variant="default">Attivo</Badge>;
     }
   };
-
   const canExtendSubscription = (subscription: UserSubscription) => {
-    return (
-      subscription.status === 'active' &&
-      subscription.plan?.unlimited_access &&
-      subscription.plan?.duration_days === 365
-    );
+    return subscription.status === 'active' && subscription.plan?.unlimited_access && subscription.plan?.duration_days === 365;
   };
-
   const handleExtendClick = (subscription: UserSubscription) => {
     setSelectedSubscription(subscription);
     setExtendDialogOpen(true);
   };
-
   const handleRenewClick = (subscription: UserSubscription) => {
     setSelectedSubscriptionToRenew(subscription);
     setRenewDialogOpen(true);
   };
-
   const handleExtensionCompleted = async (subscriptionId: string, newExpiryDate: string) => {
     console.log('Extension completed, updating optimistically...', subscriptionId, newExpiryDate);
-    
+
     // Optimistic update: immediately update the subscription in the state
-    setSubscriptions(prevSubscriptions => 
-      prevSubscriptions.map(sub => 
-        sub.id === subscriptionId 
-          ? { ...sub, expires_at: newExpiryDate }
-          : sub
-      )
-    );
-    
+    setSubscriptions(prevSubscriptions => prevSubscriptions.map(sub => sub.id === subscriptionId ? {
+      ...sub,
+      expires_at: newExpiryDate
+    } : sub));
+
     // Update stats optimistically as well
-    setStats(prevStats => ({ ...prevStats })); // Force re-calculation
-    
+    setStats(prevStats => ({
+      ...prevStats
+    })); // Force re-calculation
+
     setSelectedSubscription(null);
-    
+
     // Backup reload with longer delay for database sync
     setTimeout(() => {
       console.log('Backup reload after optimistic update...');
       loadSubscriptionData();
     }, 1000);
   };
-
   const handleManualActivationCompleted = async () => {
     setManualActivationDialogOpen(false);
-    
     toast({
       title: "Abbonamento attivato",
-      description: "L'abbonamento è stato attivato con successo.",
+      description: "L'abbonamento è stato attivato con successo."
     });
-    
+
     // Reload data to reflect changes
     await loadSubscriptionData();
   };
-
   const handleDownloadReceipt = async (subscription: UserSubscription, retryCount = 0) => {
     try {
       setGeneratingReceipt(subscription.id);
-      
       console.log(`[RECEIPT-DOWNLOAD] Starting receipt generation for subscription: ${subscription.id}, attempt: ${retryCount + 1}`);
-      
-      const { data, error } = await supabase.functions.invoke('generate-subscription-receipt', {
-        body: { subscriptionId: subscription.id }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-subscription-receipt', {
+        body: {
+          subscriptionId: subscription.id
+        }
       });
-
       if (error) {
         console.error('[RECEIPT-DOWNLOAD] Edge function error:', error);
         throw error;
       }
-
       console.log('[RECEIPT-DOWNLOAD] Edge function response received:', typeof data, data ? 'has data' : 'no data');
-
       if (!data || !data.pdf) {
         throw new Error('Invalid response format - missing PDF data');
       }
@@ -310,42 +266,32 @@ const OwnerSubscriptions: React.FC = () => {
       // Convert base64 to blob using fetch approach for better compatibility
       const base64Response = await fetch(`data:application/pdf;base64,${data.pdf}`);
       const blob = await base64Response.blob();
-      
       console.log('[RECEIPT-DOWNLOAD] PDF blob created, size:', blob.size, 'bytes');
-
       if (blob.size === 0) {
         throw new Error('Generated PDF is empty');
       }
-
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `ricevuta-abbonamento-${subscription.user?.first_name || 'utente'}-${subscription.user?.last_name || 'sconosciuto'}.pdf`;
-      
+
       // Ensure link is temporarily added to DOM for compatibility
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up object URL
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-
       console.log('[RECEIPT-DOWNLOAD] Download completed successfully');
-      
       toast({
         title: "Ricevuta scaricata",
-        description: "La ricevuta è stata generata e scaricata con successo.",
+        description: "La ricevuta è stata generata e scaricata con successo."
       });
-
     } catch (error) {
       console.error('[RECEIPT-DOWNLOAD] Error generating receipt:', error);
-      
+
       // Retry logic for transient failures
-      if (retryCount < 2 && (
-        error.message?.includes('network') || 
-        error.message?.includes('timeout') ||
-        error.message?.includes('fetch')
-      )) {
+      if (retryCount < 2 && (error.message?.includes('network') || error.message?.includes('timeout') || error.message?.includes('fetch'))) {
         console.log(`[RECEIPT-DOWNLOAD] Retrying download, attempt ${retryCount + 2}/3...`);
         setTimeout(() => {
           handleDownloadReceipt(subscription, retryCount + 1);
@@ -354,77 +300,57 @@ const OwnerSubscriptions: React.FC = () => {
       }
 
       // Show user-friendly error message
-      const errorMessage = error.message?.includes('PDF') 
-        ? 'Errore nella generazione del PDF. Riprova più tardi.'
-        : error.message?.includes('network') || error.message?.includes('fetch')
-        ? 'Errore di connessione. Verifica la tua connessione e riprova.'
-        : 'Errore nella generazione della ricevuta. Riprova più tardi.';
-
+      const errorMessage = error.message?.includes('PDF') ? 'Errore nella generazione del PDF. Riprova più tardi.' : error.message?.includes('network') || error.message?.includes('fetch') ? 'Errore di connessione. Verifica la tua connessione e riprova.' : 'Errore nella generazione della ricevuta. Riprova più tardi.';
       toast({
         title: "Errore download ricevuta",
         description: errorMessage,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setGeneratingReceipt(null);
     }
   };
-
   const handleUpdateSubscriptionStatus = async (subscriptionId: string, newStatus: 'active' | 'cancelled' | 'expired' | 'trial', actionLabel: string) => {
     try {
       setUpdatingStatus(subscriptionId);
-
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .update({ status: newStatus })
-        .eq('id', subscriptionId);
-
+      const {
+        error
+      } = await supabase.from('user_subscriptions').update({
+        status: newStatus
+      }).eq('id', subscriptionId);
       if (error) throw error;
 
       // Aggiornamento ottimistico
-      setSubscriptions(prevSubscriptions => 
-        prevSubscriptions.map(sub => 
-          sub.id === subscriptionId 
-            ? { ...sub, status: newStatus }
-            : sub
-        )
-      );
+      setSubscriptions(prevSubscriptions => prevSubscriptions.map(sub => sub.id === subscriptionId ? {
+        ...sub,
+        status: newStatus
+      } : sub));
 
       // Ricalcola statistiche
       setTimeout(() => {
         loadSubscriptionData();
       }, 500);
-
       toast({
         title: "Abbonamento aggiornato",
-        description: `L'abbonamento è stato ${actionLabel} con successo.`,
+        description: `L'abbonamento è stato ${actionLabel} con successo.`
       });
-
     } catch (error) {
       console.error('Error updating subscription status:', error);
       toast({
         title: "Errore",
         description: "Errore nell'aggiornamento dell'abbonamento. Riprova più tardi.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setUpdatingStatus(null);
     }
   };
-
   const getStatusActionButton = (subscription: UserSubscription) => {
     const isUpdating = updatingStatus === subscription.id;
-    
     if (subscription.status === 'active') {
-      return (
-        <AlertDialog>
+      return <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isUpdating}
-              className="flex items-center space-x-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
+            <Button variant="outline" size="sm" disabled={isUpdating} className="flex items-center space-x-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
               <Pause className="w-3 h-3" />
               <span>{isUpdating ? 'Disattivando...' : 'Disattiva'}</span>
             </Button>
@@ -439,41 +365,24 @@ const OwnerSubscriptions: React.FC = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annulla</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'cancelled', 'disattivato')}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
+              <AlertDialogAction onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'cancelled', 'disattivato')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Disattiva
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
-      );
+        </AlertDialog>;
     }
-    
     if (subscription.status === 'cancelled') {
-      return (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'active', 'riattivato')}
-          disabled={isUpdating}
-          className="flex items-center space-x-1 border-success text-success hover:bg-success hover:text-success-foreground"
-        >
+      return <Button variant="outline" size="sm" onClick={() => handleUpdateSubscriptionStatus(subscription.id, 'active', 'riattivato')} disabled={isUpdating} className="flex items-center space-x-1 border-success text-success hover:bg-success hover:text-success-foreground">
           <Play className="w-3 h-3" />
           <span>{isUpdating ? 'Attivando...' : 'Attiva'}</span>
-        </Button>
-      );
+        </Button>;
     }
-    
     if (subscription.status === 'expired') {
-      return (
-        <div className="text-sm text-muted-foreground">
+      return <div className="text-sm text-muted-foreground">
           Scaduto il {format(new Date(subscription.expires_at), 'dd/MM/yyyy')}
-        </div>
-      );
+        </div>;
     }
-    
     return null;
   };
 
@@ -497,21 +406,18 @@ const OwnerSubscriptions: React.FC = () => {
           'expired': 2,
           'cancelled': 3
         };
-        
         const aPriority = statusPriority[a.status] || 4;
         const bPriority = statusPriority[b.status] || 4;
-        
         if (aPriority !== bPriority) {
           return sortOrder === 'asc' ? aPriority - bPriority : bPriority - aPriority;
         }
-        
+
         // If same status, sort by expiration date for active subscriptions
         if (a.status === 'active' && b.status === 'active') {
           const aExpires = new Date(a.expires_at).getTime();
           const bExpires = new Date(b.expires_at).getTime();
           return aExpires - bExpires; // Sooner expiring first
         }
-        
         return 0;
       } else if (sortBy === 'expires_at') {
         const aDate = new Date(a.expires_at).getTime();
@@ -524,16 +430,12 @@ const OwnerSubscriptions: React.FC = () => {
       }
       return 0;
     });
-
     return filtered;
   }, [subscriptions, searchQuery, sortBy, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedSubscriptions.length / itemsPerPage);
-  const paginatedSubscriptions = filteredAndSortedSubscriptions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedSubscriptions = filteredAndSortedSubscriptions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Reset page when filters change
   React.useEffect(() => {
@@ -552,13 +454,10 @@ const OwnerSubscriptions: React.FC = () => {
       return new Date(s.expires_at) <= soon && new Date(s.expires_at) > now;
     }).length
   };
-
   if (loading) {
     return <div className="text-center py-8">Caricamento abbonamenti...</div>;
   }
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className={`${isMobile ? 'space-y-4' : 'flex justify-between items-start'}`}>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -568,10 +467,7 @@ const OwnerSubscriptions: React.FC = () => {
             Monitora e gestisci gli abbonamenti dei membri della palestra
           </p>
         </div>
-        <Button 
-          onClick={() => setManualActivationDialogOpen(true)}
-          className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}
-        >
+        <Button onClick={() => setManualActivationDialogOpen(true)} className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
           <Plus className="w-4 h-4" />
           {isMobile ? 'Attiva Abbonamento' : 'Attiva Abbonamento Manuale'}
         </Button>
@@ -626,12 +522,7 @@ const OwnerSubscriptions: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Cerca utente per nome o email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+              <Input placeholder="Cerca utente per nome o email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
             </div>
             <div className="flex gap-2">
               <Select value={sortBy} onValueChange={(value: 'status' | 'expires_at' | 'created_at') => setSortBy(value)}>
@@ -644,11 +535,7 @@ const OwnerSubscriptions: React.FC = () => {
                   <SelectItem value="created_at">Data inizio</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
+              <Button variant="outline" size="icon" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
                 <ArrowUpDown className="h-4 w-4" />
               </Button>
             </div>
@@ -684,24 +571,19 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                  <TableBody>
-                   {paginatedSubscriptions.map((sub) => (
-                    <TableRow key={sub.id}>
+                   {paginatedSubscriptions.map(sub => <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
                              <AvatarImage src={sub.user?.profile_picture_url || undefined} />
                               <AvatarFallback>
-                                {`${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` || 
-                                 sub.user.email?.[0]?.toUpperCase() || 'U'}
+                                {`${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` || sub.user.email?.[0]?.toUpperCase() || 'U'}
                               </AvatarFallback>
                            </Avatar>
                             <div>
                               <div className="font-medium">
                                 {sub.user.first_name} {sub.user.last_name}
-                                {(!sub.user.first_name || sub.user.first_name === 'Nome') && 
-                                 (!sub.user.last_name || sub.user.last_name === 'Cognome') && (
-                                  <span className="text-muted-foreground text-xs ml-2">(ID: {sub.user_id.slice(0, 8)})</span>
-                                )}
+                                {(!sub.user.first_name || sub.user.first_name === 'Nome') && (!sub.user.last_name || sub.user.last_name === 'Cognome') && <span className="text-muted-foreground text-xs ml-2">(ID: {sub.user_id.slice(0, 8)})</span>}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {sub.user.email}
@@ -713,10 +595,7 @@ const OwnerSubscriptions: React.FC = () => {
                         <div>
                            <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
                            <div className="text-sm text-muted-foreground">
-                             {sub.plan?.unlimited_access ? 
-                               sub.plan?.name : 
-                               `${sub.plan?.credits_included || 0} crediti`
-                             }
+                             {sub.plan?.unlimited_access ? sub.plan?.name : `${sub.plan?.credits_included || 0} crediti`}
                           </div>
                         </div>
                       </TableCell>
@@ -732,90 +611,54 @@ const OwnerSubscriptions: React.FC = () => {
                        <TableCell>
                          <div className="flex items-center space-x-2">
                            {getStatusActionButton(sub)}
-                           {canExtendSubscription(sub) && (
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => handleExtendClick(sub)}
-                               className="flex items-center space-x-1"
-                             >
+                           {canExtendSubscription(sub) && <Button variant="outline" size="sm" onClick={() => handleExtendClick(sub)} className="flex items-center space-x-1">
                                <Clock className="w-3 h-3" />
                                <span>Estendi</span>
-                             </Button>
-                           )}
-                           <Button
-                             variant="default"
-                             size="sm"
-                             onClick={() => handleRenewClick(sub)}
-                             className="flex items-center space-x-1"
-                           >
+                             </Button>}
+                           <Button variant="default" size="sm" onClick={() => handleRenewClick(sub)} className="flex items-center space-x-1">
                              <RefreshCw className="w-3 h-3" />
                              <span>Rinnova</span>
                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadReceipt(sub)}
-                              disabled={generatingReceipt === sub.id}
-                              className="flex items-center space-x-1"
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadReceipt(sub)} disabled={generatingReceipt === sub.id} className="flex items-center space-x-1">
                               <Download className="w-3 h-3" />
                               <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
                             </Button>
                          </div>
                        </TableCell>
-                    </TableRow>
-                  ))}
+                    </TableRow>)}
                 </TableBody>
                </Table>
                
                {/* Pagination */}
-               {totalPages > 1 && (
-                 <div className="mt-6 flex items-center justify-between">
-                   <div className="text-sm text-muted-foreground">
-                     Mostrando {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedSubscriptions.length)} di {filteredAndSortedSubscriptions.length} abbonamenti
+               {totalPages > 1 && <div className="mt-6 flex items-center justify-between">
+                   <div className="text-sm text-muted-foreground">Stai mostrando 341 - 346 di 346 abbonamenti{(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedSubscriptions.length)} di {filteredAndSortedSubscriptions.length} abbonamenti
                    </div>
                    <Pagination>
                      <PaginationContent>
                        <PaginationItem>
-                         <PaginationPrevious 
-                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                           className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                         />
+                         <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                        </PaginationItem>
                        
                        {[...Array(totalPages)].map((_, index) => {
-                         const page = index + 1;
-                         if (totalPages > 7 && (page > 3 && page < totalPages - 2 && Math.abs(page - currentPage) > 1)) {
-                           return page === 4 || page === totalPages - 3 ? (
-                             <PaginationItem key={page}>
+                    const page = index + 1;
+                    if (totalPages > 7 && page > 3 && page < totalPages - 2 && Math.abs(page - currentPage) > 1) {
+                      return page === 4 || page === totalPages - 3 ? <PaginationItem key={page}>
                                <span className="px-3 py-2">...</span>
-                             </PaginationItem>
-                           ) : null;
-                         }
-                         return (
-                           <PaginationItem key={page}>
-                             <PaginationLink
-                               onClick={() => setCurrentPage(page)}
-                               isActive={currentPage === page}
-                               className="cursor-pointer"
-                             >
+                             </PaginationItem> : null;
+                    }
+                    return <PaginationItem key={page}>
+                             <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
                                {page}
                              </PaginationLink>
-                           </PaginationItem>
-                         );
-                       })}
+                           </PaginationItem>;
+                  })}
                        
                        <PaginationItem>
-                         <PaginationNext
-                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                           className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                         />
+                         <PaginationNext onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                        </PaginationItem>
                      </PaginationContent>
                    </Pagination>
-                 </div>
-               )}
+                 </div>}
              </CardContent>
            </Card>
          </TabsContent>
@@ -836,31 +679,20 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                  <TableBody>
-                   {filteredAndSortedSubscriptions
-                     .filter(sub => isSubscriptionActive(sub))
-                     .map((sub) => {
-                       const userCreditsBalance = userCredits.get(sub.user_id) || 0;
-                       return (
-                    <TableRow key={sub.id}>
+                   {filteredAndSortedSubscriptions.filter(sub => isSubscriptionActive(sub)).map(sub => {
+                  const userCreditsBalance = userCredits.get(sub.user_id) || 0;
+                  return <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={sub.user.profile_picture_url} />
                              <AvatarFallback>
-                               {sub.user ? 
-                                 `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
-                                 sub.user.email?.[0]?.toUpperCase() || 'U'
-                                 : 'U'
-                               }
+                               {sub.user ? `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` || sub.user.email?.[0]?.toUpperCase() || 'U' : 'U'}
                              </AvatarFallback>
                           </Avatar>
                            <div>
                              <div className="font-medium">
-                               {sub.user ? 
-                                 `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || 
-                                 sub.user.email || 'Utente senza nome'
-                                 : 'Utente non trovato'
-                               }
+                               {sub.user ? `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || sub.user.email || 'Utente senza nome' : 'Utente non trovato'}
                              </div>
                            </div>
                         </div>
@@ -868,11 +700,9 @@ const OwnerSubscriptions: React.FC = () => {
                       <TableCell>
                         <div>
                           <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
-                          {sub.plan && !sub.plan.unlimited_access && (
-                            <div className="text-sm text-muted-foreground">
+                          {sub.plan && !sub.plan.unlimited_access && <div className="text-sm text-muted-foreground">
                               {userCreditsBalance} crediti residui
-                            </div>
-                          )}
+                            </div>}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -881,9 +711,8 @@ const OwnerSubscriptions: React.FC = () => {
                       <TableCell>
                         {new Date(sub.expires_at).toLocaleDateString()}
                       </TableCell>
-                    </TableRow>
-                       );
-                     })}
+                    </TableRow>;
+                })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -910,41 +739,29 @@ const OwnerSubscriptions: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                  <TableBody>
-                   {filteredAndSortedSubscriptions
-                     .filter(sub => {
-                       if (!isSubscriptionActive(sub)) return false;
-                       const expiresDate = new Date(sub.expires_at);
-                       const now = new Date();
-                       const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                       return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
-                     })
-                     .map((sub) => {
-                      const expiresDate = new Date(sub.expires_at);
-                      const now = new Date();
-                      const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                      const userCreditsBalance = userCredits.get(sub.user_id) || 0;
-                      
-                      return (
-                        <TableRow key={sub.id}>
+                   {filteredAndSortedSubscriptions.filter(sub => {
+                  if (!isSubscriptionActive(sub)) return false;
+                  const expiresDate = new Date(sub.expires_at);
+                  const now = new Date();
+                  const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
+                }).map(sub => {
+                  const expiresDate = new Date(sub.expires_at);
+                  const now = new Date();
+                  const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const userCreditsBalance = userCredits.get(sub.user_id) || 0;
+                  return <TableRow key={sub.id}>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={sub.user.profile_picture_url} />
                                  <AvatarFallback>
-                                   {sub.user ? 
-                                     `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` ||
-                                     sub.user.email?.[0]?.toUpperCase() || 'U'
-                                     : 'U'
-                                   }
+                                   {sub.user ? `${sub.user.first_name?.[0] || ''}${sub.user.last_name?.[0] || ''}` || sub.user.email?.[0]?.toUpperCase() || 'U' : 'U'}
                                  </AvatarFallback>
                               </Avatar>
                                <div>
                                  <div className="font-medium">
-                                   {sub.user ? 
-                                     `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || 
-                                     sub.user.email || 'Utente senza nome'
-                                     : 'Utente non trovato'
-                                   }
+                                   {sub.user ? `${sub.user.first_name || ''} ${sub.user.last_name || ''}`.trim() || sub.user.email || 'Utente senza nome' : 'Utente non trovato'}
                                  </div>
                                </div>
                             </div>
@@ -952,11 +769,9 @@ const OwnerSubscriptions: React.FC = () => {
                           <TableCell>
                             <div>
                               <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
-                              {sub.plan && !sub.plan.unlimited_access && (
-                                <div className="text-sm text-muted-foreground">
+                              {sub.plan && !sub.plan.unlimited_access && <div className="text-sm text-muted-foreground">
                                   {userCreditsBalance} crediti residui
-                                </div>
-                              )}
+                                </div>}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -970,9 +785,8 @@ const OwnerSubscriptions: React.FC = () => {
                               {daysUntilExpiry <= 0 ? 'Scaduto' : `${daysUntilExpiry} giorni`}
                             </Badge>
                           </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        </TableRow>;
+                })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -990,51 +804,29 @@ const OwnerSubscriptions: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(stats.by_plan).map(([planName, count]) => (
-              <div key={planName} className="flex items-center justify-between p-3 border rounded-lg">
+            {Object.entries(stats.by_plan).map(([planName, count]) => <div key={planName} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="font-medium">{planName}</div>
                 <Badge variant="secondary">{count} utenti</Badge>
-              </div>
-            ))}
+              </div>)}
           </div>
         </CardContent>
       </Card>
 
       {/* Extend Subscription Dialog */}
-      {selectedSubscription && (
-        <ExtendSubscriptionDialog
-          isOpen={extendDialogOpen}
-          onClose={() => setExtendDialogOpen(false)}
-          subscription={selectedSubscription}
-          onExtended={handleExtensionCompleted}
-        />
-      )}
+      {selectedSubscription && <ExtendSubscriptionDialog isOpen={extendDialogOpen} onClose={() => setExtendDialogOpen(false)} subscription={selectedSubscription} onExtended={handleExtensionCompleted} />}
 
       {/* Renew Subscription Dialog */}
-      {selectedSubscriptionToRenew && (
-        <RenewSubscriptionDialog
-          isOpen={renewDialogOpen}
-          onClose={() => {
-            setRenewDialogOpen(false);
-            setSelectedSubscriptionToRenew(null);
-          }}
-          subscription={selectedSubscriptionToRenew}
-          onRenewed={() => {
-            loadSubscriptionData();
-            setRenewDialogOpen(false);
-            setSelectedSubscriptionToRenew(null);
-          }}
-        />
-      )}
+      {selectedSubscriptionToRenew && <RenewSubscriptionDialog isOpen={renewDialogOpen} onClose={() => {
+      setRenewDialogOpen(false);
+      setSelectedSubscriptionToRenew(null);
+    }} subscription={selectedSubscriptionToRenew} onRenewed={() => {
+      loadSubscriptionData();
+      setRenewDialogOpen(false);
+      setSelectedSubscriptionToRenew(null);
+    }} />}
 
       {/* Manual Activation Dialog */}
-      <ManualSubscriptionActivationDialog
-        isOpen={manualActivationDialogOpen}
-        onClose={() => setManualActivationDialogOpen(false)}
-        onActivated={handleManualActivationCompleted}
-      />
-    </div>
-  );
+      <ManualSubscriptionActivationDialog isOpen={manualActivationDialogOpen} onClose={() => setManualActivationDialogOpen(false)} onActivated={handleManualActivationCompleted} />
+    </div>;
 };
-
 export default OwnerSubscriptions;
