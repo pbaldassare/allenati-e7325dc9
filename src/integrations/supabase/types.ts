@@ -2275,6 +2275,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      instructor_can_manage_gym: {
+        Args: { _gym_id: string; _user_id: string }
+        Returns: boolean
+      }
       instructor_has_owner_privileges: {
         Args: { _user_id: string }
         Returns: boolean
