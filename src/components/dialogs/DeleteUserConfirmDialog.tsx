@@ -19,6 +19,7 @@ interface DeleteUserConfirmDialogProps {
   userEmail: string;
   userName: string;
   userId?: string;
+  gymId?: string;
   onUserDeleted: () => void;
 }
 
@@ -26,6 +27,7 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
   userEmail,
   userName,
   userId,
+  gymId,
   onUserDeleted,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,41 +38,69 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
     try {
       setIsDeleting(true);
 
-      // Build flexible search parameters - prefer user_id, fallback to email and name
-      const [firstName, lastName] = userName.split(' ');
-      const searchParams: any = {};
-      
-      if (userId) {
-        searchParams.user_id = userId;
-      }
-      if (userEmail) {
-        searchParams.email = userEmail;
-      }
-      if (firstName && lastName) {
-        searchParams.firstName = firstName;
-        searchParams.lastName = lastName;
-      }
+      // If gymId is provided, use owner-delete-user (soft delete from gym)
+      // Otherwise use admin-delete-user (full system delete)
+      if (gymId && userId) {
+        console.log('Removing user from gym:', { userId, gymId });
 
-      console.log('Deleting user with params:', searchParams);
-
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: searchParams
-      });
-
-      if (error) {
-        console.error('Error deleting user:', error);
-        toast({
-          title: "Errore",
-          description: error.message || "Impossibile eliminare l'utente",
-          variant: "destructive",
+        const { error } = await supabase.functions.invoke('owner-delete-user', {
+          body: { 
+            user_id: userId,
+            gym_id: gymId
+          }
         });
-        return;
-      }
 
-      toast({
-        title: "Utente eliminato",
-        description: `L'utente ${userName} (${userEmail}) è stato eliminato con successo`,
-      });
+        if (error) {
+          console.error('Error removing user from gym:', error);
+          toast({
+            title: "Errore",
+            description: error.message || "Impossibile rimuovere l'utente dalla palestra",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Utente rimosso",
+          description: `L'utente ${userName} è stato rimosso dalla palestra`,
+        });
+      } else {
+        // Admin full delete
+        const [firstName, lastName] = userName.split(' ');
+        const searchParams: any = {};
+        
+        if (userId) {
+          searchParams.user_id = userId;
+        }
+        if (userEmail) {
+          searchParams.email = userEmail;
+        }
+        if (firstName && lastName) {
+          searchParams.firstName = firstName;
+          searchParams.lastName = lastName;
+        }
+
+        console.log('Deleting user with params:', searchParams);
+
+        const { error } = await supabase.functions.invoke('admin-delete-user', {
+          body: searchParams
+        });
+
+        if (error) {
+          console.error('Error deleting user:', error);
+          toast({
+            title: "Errore",
+            description: error.message || "Impossibile eliminare l'utente",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Utente eliminato",
+          description: `L'utente ${userName} (${userEmail}) è stato eliminato con successo`,
+        });
+      }
 
       setOpen(false);
       onUserDeleted();
@@ -78,7 +108,7 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
       console.error('Error deleting user:', error);
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'eliminazione dell'utente",
+        description: error.message || "Errore durante l'operazione",
         variant: "destructive",
       });
     } finally {
@@ -101,15 +131,31 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
         <AlertDialogHeader>
           <AlertDialogTitle>Conferma eliminazione utente</AlertDialogTitle>
           <AlertDialogDescription>
-            Sei sicuro di voler eliminare definitivamente l'utente <strong>{userName}</strong> ({userEmail})?
-            <br /><br />
-            <strong>Questa azione:</strong>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li>Eliminerà completamente l'account utente</li>
-              <li>Anonimizzerà i messaggi chat e le prenotazioni</li>
-              <li>Rimuoverà tutti i dati personali</li>
-              <li>Non potrà essere annullata</li>
-            </ul>
+            {gymId ? (
+              <>
+                Sei sicuro di voler rimuovere l'utente <strong>{userName}</strong> da questa palestra?
+                <br /><br />
+                <strong>Questa azione:</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                  <li>Disattiverà la membership dell'utente per questa palestra</li>
+                  <li>Cancellerà le sue prenotazioni future</li>
+                  <li>L'utente non potrà più accedere ai corsi della palestra</li>
+                  <li>L'account utente rimarrà attivo nel sistema</li>
+                </ul>
+              </>
+            ) : (
+              <>
+                Sei sicuro di voler eliminare definitivamente l'utente <strong>{userName}</strong> ({userEmail})?
+                <br /><br />
+                <strong>Questa azione:</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                  <li>Eliminerà completamente l'account utente</li>
+                  <li>Anonimizzerà i messaggi chat e le prenotazioni</li>
+                  <li>Rimuoverà tutti i dati personali</li>
+                  <li>Non potrà essere annullata</li>
+                </ul>
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -121,7 +167,10 @@ export const DeleteUserConfirmDialog: React.FC<DeleteUserConfirmDialogProps> = (
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'Eliminazione...' : 'Elimina Utente'}
+            {isDeleting 
+              ? (gymId ? 'Rimozione...' : 'Eliminazione...') 
+              : (gymId ? 'Rimuovi dalla Palestra' : 'Elimina Utente')
+            }
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

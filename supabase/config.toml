@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.remove-instructor-from-gym]
 verify_jwt = true
+
+[functions.owner-delete-user]
+verify_jwt = true

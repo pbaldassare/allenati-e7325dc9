@@ -850,6 +850,7 @@ const OwnerUsers = () => {
                                 userEmail={m.email || ''}
                                 userName={`${m.first_name} ${m.last_name}`}
                                 userId={m.user_id}
+                                gymId={selectedGym?.id}
                                 onUserDeleted={() => reloadMembers()}
                               />
                             )}
@@ -1069,6 +1070,7 @@ const OwnerUsers = () => {
                                     userEmail={m.email || ''}
                                     userName={`${m.first_name} ${m.last_name}`}
                                     userId={m.user_id}
+                                    gymId={selectedGym?.id}
                                     onUserDeleted={() => reloadMembers()}
                                   />
                                )}
