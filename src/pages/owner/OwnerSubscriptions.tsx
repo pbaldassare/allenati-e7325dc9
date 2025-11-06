@@ -752,18 +752,16 @@ const OwnerSubscriptions: React.FC = () => {
                              <RefreshCw className="w-3 h-3" />
                              <span>Rinnova</span>
                            </Button>
-                           {(sub.status === 'active' || sub.status === 'expired') && (
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => handleDownloadReceipt(sub)}
-                               disabled={generatingReceipt === sub.id}
-                               className="flex items-center space-x-1"
-                             >
-                               <Download className="w-3 h-3" />
-                               <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
-                             </Button>
-                           )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadReceipt(sub)}
+                              disabled={generatingReceipt === sub.id}
+                              className="flex items-center space-x-1"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>{generatingReceipt === sub.id ? 'Generando...' : 'Ricevuta'}</span>
+                            </Button>
                          </div>
                        </TableCell>
                     </TableRow>
