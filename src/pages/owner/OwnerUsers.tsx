@@ -475,23 +475,71 @@ const OwnerUsers = () => {
   };
 
   const promoteToInstructor = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId || !selectedGym?.id) return;
     
     try {
       setPromoting(selectedUserId);
-      const { error } = await (supabase as any).rpc('promote_user_to_instructor', {
-        target_user_id: selectedUserId,
-        bio: instructorBio.trim() || null,
+      
+      // Step 1: Check if user already has instructor role
+      const { data: existingRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', selectedUserId)
+        .eq('role', 'instructor')
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (rolesError) throw rolesError;
+      
+      const hasInstructorRole = !!existingRoles;
+      
+      // Step 2: If user doesn't have instructor role, promote first
+      if (!hasInstructorRole) {
+        const { error: promoteError } = await (supabase as any).rpc('promote_user_to_instructor', {
+          target_user_id: selectedUserId,
+          bio: instructorBio.trim() || null,
+        });
+        if (promoteError) throw promoteError;
+      }
+      
+      // Step 3: Check if instructor record exists
+      const { data: instructorRecord, error: instructorError } = await supabase
+        .from('instructors')
+        .select('id')
+        .eq('user_id', selectedUserId)
+        .maybeSingle();
+      
+      if (instructorError) throw instructorError;
+      
+      // Step 4: Assign instructor to current gym using edge function
+      const { data, error: assignError } = await supabase.functions.invoke('assign-instructor-to-gym', {
+        body: {
+          instructor_user_id: selectedUserId,
+          gym_id: selectedGym.id
+        }
       });
-      if (error) throw error;
+      
+      if (assignError) throw assignError;
+      if (!data.success) throw new Error(data.error || 'Failed to assign instructor to gym');
 
-      toast({ title: 'Utente promosso', description: 'Ora è un istruttore della tua palestra.' });
+      toast({ 
+        title: hasInstructorRole ? 'Istruttore assegnato' : 'Utente promosso', 
+        description: hasInstructorRole 
+          ? `L'istruttore è stato assegnato a ${selectedGym.name}.`
+          : `Ora è un istruttore di ${selectedGym.name}.`
+      });
+      
       setPromoteDialogOpen(false);
       setInstructorBio('');
       setSelectedUserId(null);
       await reloadMembers();
     } catch (e: any) {
-      toast({ title: 'Errore', description: e.message || 'Impossibile promuovere utente', variant: 'destructive' });
+      console.error('Error promoting/assigning instructor:', e);
+      toast({ 
+        title: 'Errore', 
+        description: e.message || 'Impossibile promuovere/assegnare istruttore', 
+        variant: 'destructive' 
+      });
     } finally {
       setPromoting(null);
     }
@@ -864,7 +912,7 @@ const OwnerUsers = () => {
             ) : (
               // Desktop Table Layout
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-max">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
