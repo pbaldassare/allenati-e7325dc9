@@ -79,6 +79,7 @@ const OwnerSubscriptions: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
+  const [userCredits, setUserCredits] = useState<Map<string, number>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -126,7 +127,7 @@ const OwnerSubscriptions: React.FC = () => {
       const subscriptionIds = subscriptionsData?.map(s => s.plan_id) || [];
       const userIds = subscriptionsData?.map(s => s.user_id) || [];
       
-      const [plansData, profilesData] = await Promise.all([
+      const [plansData, profilesData, creditsData] = await Promise.all([
         supabase
           .from('subscription_plans')
           .select('id, name, credits_included, unlimited_access, duration_days')
@@ -134,11 +135,19 @@ const OwnerSubscriptions: React.FC = () => {
         supabase
           .from('profiles')
           .select('user_id, first_name, last_name, email, profile_picture_url')
+          .in('user_id', userIds),
+        supabase
+          .from('gym_credits')
+          .select('user_id, credits')
           .in('user_id', userIds)
+          .eq('gym_id', selectedGym.id)
       ]);
 
       const plansMap = new Map(plansData.data?.map(p => [p.id, p]) || []);
       const profilesMap = new Map(profilesData.data?.map(p => [p.user_id, p]) || []);
+      const creditsMap = new Map(creditsData.data?.map(c => [c.user_id, c.credits]) || []);
+      
+      setUserCredits(creditsMap);
       
       // Function to get complete user data with fallbacks
       const getUserData = (userId: string) => {
@@ -824,13 +833,16 @@ const OwnerSubscriptions: React.FC = () => {
                   <TableRow>
                     <TableHead>Utente</TableHead>
                     <TableHead>Piano</TableHead>
+                    <TableHead>Inizio</TableHead>
                     <TableHead>Scadenza</TableHead>
                   </TableRow>
                 </TableHeader>
                  <TableBody>
                    {filteredAndSortedSubscriptions
                      .filter(sub => isSubscriptionActive(sub))
-                     .map((sub) => (
+                     .map((sub) => {
+                       const userCreditsBalance = userCredits.get(sub.user_id) || 0;
+                       return (
                     <TableRow key={sub.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -855,12 +867,25 @@ const OwnerSubscriptions: React.FC = () => {
                            </div>
                         </div>
                       </TableCell>
-                      <TableCell>{sub.plan?.name || 'Piano non disponibile'}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
+                          {sub.plan && !sub.plan.unlimited_access && (
+                            <div className="text-sm text-muted-foreground">
+                              {userCreditsBalance} crediti residui
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(sub.starts_at).toLocaleDateString()}
+                      </TableCell>
                       <TableCell>
                         {new Date(sub.expires_at).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
-                  ))}
+                       );
+                     })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -881,6 +906,7 @@ const OwnerSubscriptions: React.FC = () => {
                   <TableRow>
                     <TableHead>Utente</TableHead>
                     <TableHead>Piano</TableHead>
+                    <TableHead>Inizio</TableHead>
                     <TableHead>Scadenza</TableHead>
                     <TableHead>Giorni Rimanenti</TableHead>
                   </TableRow>
@@ -898,6 +924,7 @@ const OwnerSubscriptions: React.FC = () => {
                       const expiresDate = new Date(sub.expires_at);
                       const now = new Date();
                       const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                      const userCreditsBalance = userCredits.get(sub.user_id) || 0;
                       
                       return (
                         <TableRow key={sub.id}>
@@ -924,7 +951,19 @@ const OwnerSubscriptions: React.FC = () => {
                                </div>
                             </div>
                           </TableCell>
-                          <TableCell>{sub.plan?.name || 'Piano non disponibile'}</TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{sub.plan?.name || 'Piano non disponibile'}</div>
+                              {sub.plan && !sub.plan.unlimited_access && (
+                                <div className="text-sm text-muted-foreground">
+                                  {userCreditsBalance} crediti residui
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(sub.starts_at).toLocaleDateString()}
+                          </TableCell>
                           <TableCell>
                             {expiresDate.toLocaleDateString()}
                           </TableCell>
