@@ -56,14 +56,31 @@ export function AddInstructorDialog({ open, onOpenChange, gymId, onSuccess }: Ad
         return;
       }
 
-      // Search profiles for these users
+      // Get all profiles for instructors
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, first_name, last_name, email, profile_picture_url')
-        .in('user_id', instructorUserIds)
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        .in('user_id', instructorUserIds);
 
       if (profilesError) throw profilesError;
+
+      // Client-side filtering with multi-word support
+      const searchWords = searchTerm.trim().toLowerCase().split(/\s+/);
+      
+      const filteredProfiles = profiles?.filter(profile => {
+        const firstName = (profile.first_name || '').toLowerCase();
+        const lastName = (profile.last_name || '').toLowerCase();
+        const email = (profile.email || '').toLowerCase();
+        const fullName = `${firstName} ${lastName}`;
+
+        // Check if all search words match somewhere in the profile
+        return searchWords.every(word => 
+          firstName.includes(word) || 
+          lastName.includes(word) || 
+          email.includes(word) ||
+          fullName.includes(word)
+        );
+      }) || [];
 
       // Get current gym instructors
       const { data: currentInstructors, error: currentError } = await supabase
@@ -76,14 +93,14 @@ export function AddInstructorDialog({ open, onOpenChange, gymId, onSuccess }: Ad
 
       const assignedUserIds = new Set(currentInstructors?.map(i => i.instructors.user_id) || []);
 
-      const formattedResults: InstructorSearchResult[] = profiles?.map(profile => ({
+      const formattedResults: InstructorSearchResult[] = filteredProfiles.map(profile => ({
         user_id: profile.user_id,
         first_name: profile.first_name || 'Nome',
         last_name: profile.last_name || 'Cognome',
         email: profile.email || '',
         avatar_url: profile.profile_picture_url || null,
         is_assigned: assignedUserIds.has(profile.user_id)
-      })) || [];
+      }));
 
       setResults(formattedResults);
     } catch (error) {
