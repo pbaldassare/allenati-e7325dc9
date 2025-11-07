@@ -347,7 +347,7 @@ const OwnerSubscriptions: React.FC = () => {
   };
   const getStatusActionButton = (subscription: UserSubscription) => {
     const isUpdating = updatingStatus === subscription.id;
-    if (subscription.status === 'active') {
+    if (isSubscriptionActive(subscription)) {
       return <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm" disabled={isUpdating} className="flex items-center space-x-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
