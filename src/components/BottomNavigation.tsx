@@ -45,8 +45,8 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
   return (
     <nav 
       className={cn(
-        "fixed bottom-4 left-4 right-4 mx-auto max-w-md glass rounded-3xl shadow-glow transition-all duration-300 z-50 md:hidden",
-        scrollDirection === "down" && !keyboardVisible ? "translate-y-[120%]" : "translate-y-0",
+        "fixed bottom-0 left-0 right-0 bg-card border-t-2 border-border shadow-lg transition-all duration-200 z-50 md:hidden",
+        scrollDirection === "down" && !keyboardVisible ? "translate-y-full" : "translate-y-0",
         keyboardVisible && "hidden"
       )}
     >
@@ -62,19 +62,19 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
               size="sm"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 h-14 px-3 rounded-2xl transition-all duration-300",
+                "flex flex-col items-center justify-center gap-1 h-14 px-3 rounded-none transition-all duration-200",
                 isActive 
-                  ? "glass-strong text-primary-foreground shadow-primary scale-105" 
-                  : "text-muted-foreground hover:text-foreground hover:glass-card"
+                  ? "text-primary border-t-2 border-primary" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className={cn(
-                "transition-all duration-300",
+                "transition-all duration-200",
                 isActive ? "w-6 h-6" : "w-5 h-5"
               )} />
               <span className={cn(
-                "text-xs font-medium transition-all duration-300",
-                isActive ? "opacity-100 font-semibold" : "opacity-70"
+                "text-2xs font-bold uppercase tracking-wide transition-all duration-200",
+                isActive ? "opacity-100" : "opacity-70"
               )}>
                 {tab.label}
               </span>
