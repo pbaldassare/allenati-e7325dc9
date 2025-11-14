@@ -96,13 +96,17 @@ const Index = () => {
   // Show auth landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50 dark:from-background dark:via-background dark:to-primary/10 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Soft gradient orbs */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-violet-300/20 dark:bg-violet-500/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-300/20 dark:bg-pink-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in glass-strong rounded-3xl p-8 shadow-glow relative z-10">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold gradient-text font-space">
               Benvenuto
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-lg font-medium">
               Accedi al tuo account o registrati per iniziare
             </p>
           </div>
@@ -137,8 +141,15 @@ const Index = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        {renderActiveTab()}
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50 dark:from-background dark:via-background dark:to-primary/10 pb-24 md:pb-4 relative overflow-hidden">
+        {/* Soft gradient background orbs */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-violet-300/10 dark:bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-pink-300/10 dark:bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-300/10 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10">
+          {renderActiveTab()}
+        </div>
         <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
         
         <WelcomeModal 

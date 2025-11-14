@@ -43,12 +43,14 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
       ];
 
   return (
-    <div className={cn(
-      "fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-primary/10 shadow-card transition-transform duration-300 safe-area-bottom",
-      scrollDirection === 'down' && !keyboardVisible && "translate-y-full",
-      keyboardVisible && "translate-y-full"
-    )}>
-      <div className="flex items-center justify-around px-6 py-3 max-w-md mx-auto">
+    <nav 
+      className={cn(
+        "fixed bottom-4 left-4 right-4 mx-auto max-w-md glass rounded-3xl shadow-glow transition-all duration-300 z-50 md:hidden",
+        scrollDirection === "down" && !keyboardVisible ? "translate-y-[120%]" : "translate-y-0",
+        keyboardVisible && "hidden"
+      )}
+    >
+      <div className="flex justify-around items-center h-16 px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -60,29 +62,26 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
               size="sm"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center gap-1 h-auto p-3 transition-all duration-300 rounded-2xl min-h-[60px] relative",
-                isActive
-                  ? "text-white bg-gradient-primary shadow-primary border-none transform scale-105"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/10 hover:scale-105"
+                "flex flex-col items-center justify-center gap-1 h-14 px-3 rounded-2xl transition-all duration-300",
+                isActive 
+                  ? "glass-strong text-primary-foreground shadow-primary scale-105" 
+                  : "text-muted-foreground hover:text-foreground hover:glass-card"
               )}
             >
-              <Icon 
-                className={cn(
-                  "h-5 w-5 transition-all duration-200",
-                  isActive && "text-white scale-110"
-                )} 
-              />
+              <Icon className={cn(
+                "transition-all duration-300",
+                isActive ? "w-6 h-6" : "w-5 h-5"
+              )} />
               <span className={cn(
-                "text-xs font-medium transition-colors",
-                isActive ? "text-white" : "text-muted-foreground"
-              )}>{tab.label}</span>
-              {isActive && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse" />
-              )}
+                "text-xs font-medium transition-all duration-300",
+                isActive ? "opacity-100 font-semibold" : "opacity-70"
+              )}>
+                {tab.label}
+              </span>
             </Button>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };
