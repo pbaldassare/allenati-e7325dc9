@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInstructorGym } from "@/contexts/InstructorGymContext";
 import { InstructorGymSelector } from "./InstructorGymSelector";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import {
   Sidebar,
@@ -48,6 +49,7 @@ export function InstructorSidebar() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { selectedGymId, hasOwnerPrivilegesForGym } = useInstructorGym();
+  const isMobile = useIsMobile();
   const currentPath = location.pathname;
   const hasOwnerPrivileges = selectedGymId ? hasOwnerPrivilegesForGym(selectedGymId) : false;
   const items = getItems(hasOwnerPrivileges);
@@ -74,7 +76,7 @@ export function InstructorSidebar() {
       <SidebarTrigger className="m-2 self-end" />
       
       <SidebarHeader className="p-4">
-        {!collapsed && <InstructorGymSelector />}
+        {!collapsed && !isMobile && <InstructorGymSelector />}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
