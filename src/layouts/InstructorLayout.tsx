@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
-
+import { InstructorGymSelector } from '@/components/instructor/InstructorGymSelector';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Home } from 'lucide-react';
+import { LogOut, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const isMobile = useIsMobile();
-  const { hasOwnerPrivileges } = useAuth();
+  const { hasOwnerPrivileges, logout } = useAuth();
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const title = hasOwnerPrivileges ? 'Area Super Istruttore' : 'Area Istruttore';
   const mobileTitle = hasOwnerPrivileges ? 'Super Istruttore' : 'Istruttore';
@@ -21,6 +22,19 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
   useEffect(() => {
     document.title = `${title} | Gym Manager`;
   }, [title]);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
+    try {
+      setIsLoggingOut(true);
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <ProtectedRoute requiredRoles={['instructor', 'admin']}>
@@ -33,11 +47,16 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
               <div className="flex h-14 items-center justify-between px-4 gap-2">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger />
-                  <h1 className="text-lg font-semibold">
+                  <h1 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
                     {isMobile ? mobileTitle : title}
                   </h1>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isMobile && (
+                    <div className="flex items-center gap-2">
+                      <InstructorGymSelector />
+                    </div>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -47,14 +66,16 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
                     <Home className="w-4 h-4" />
                     {!isMobile && "Vista Utente"}
                   </Button>
-                  {!isMobile && (
+                  {isMobile && (
                     <Button 
                       variant="ghost" 
                       size="sm"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
                       className="flex items-center gap-2"
                     >
-                      <HelpCircle className="w-4 h-4" />
-                      Guida
+                      <LogOut className="w-4 h-4" />
+                      {isLoggingOut ? 'Uscendo...' : 'Esci'}
                     </Button>
                   )}
                 </div>
