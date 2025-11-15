@@ -96,50 +96,38 @@ const Index = () => {
   // Show auth landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-8 animate-fade-in bg-card border-2 border-foreground rounded-md p-8 shadow-primary">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
           <div className="space-y-4">
-            <h1 className="text-5xl font-extrabold uppercase tracking-tight">
-              BENVENUTO
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Benvenuto
             </h1>
-            <p className="text-xl text-muted-foreground font-bold uppercase tracking-wide">
-              Supera i tuoi limiti
+            <p className="text-muted-foreground text-lg">
+              Accedi al tuo account o registrati per iniziare
             </p>
           </div>
-
+          
           <div className="space-y-4">
-            <Button 
-              onClick={openRegister}
-              size="lg"
-              className="w-full text-base shadow-primary hover:shadow-glow"
-            >
-              INIZIA ORA
-            </Button>
-            <Button 
-              onClick={openLogin}
+            <Button
+              onClick={() => setShowHowItWorksModal(true)}
               variant="outline"
-              size="lg"
-              className="w-full text-base"
+              className="w-full text-primary border-primary/20 hover:bg-primary/5"
             >
-              ACCEDI
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Come funziona l'app Allenati
             </Button>
+            
+            <AuthButtons onLogin={openLogin} onRegister={openRegister} />
           </div>
-
-          <button
-            onClick={() => setShowHowItWorksModal(true)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors font-bold uppercase tracking-wide flex items-center justify-center gap-2 mx-auto"
-          >
-            <HelpCircle className="w-4 h-4" />
-            Come Funziona
-          </button>
         </div>
-
+        
         <AuthModal 
-          isOpen={isOpen} 
+          isOpen={isOpen}
           onClose={close}
           defaultMode={defaultMode}
         />
-        <HowItWorksModal 
+        
+        <HowItWorksModal
           isOpen={showHowItWorksModal}
           onClose={() => setShowHowItWorksModal(false)}
         />
@@ -149,7 +137,7 @@ const Index = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background pb-24 md:pb-4">
+      <div className="min-h-screen bg-background">
         {renderActiveTab()}
         <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
         
