@@ -650,11 +650,11 @@ export const CourseCalendar = () => {
                     <Card 
                       key={course.sessionKey}
                       className={cn(
-                        "p-4 hover:shadow-md transition-all duration-200 border-l-4",
+                        "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
                         getOccupancyColor(participants, maxParticipants)
                       )}
                     >
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center justify-between">
                         {/* Colonna sinistra - Info corso */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -681,7 +681,7 @@ export const CourseCalendar = () => {
                         </div>
                         
                         {/* Colonna destra - Occupancy e azioni */}
-                        <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+                        <div className="flex flex-col items-end gap-2 ml-4">
                           <Badge 
                             variant={
                               participants >= maxParticipants 
@@ -695,7 +695,7 @@ export const CourseCalendar = () => {
                             {participants}/{maxParticipants}
                           </Badge>
                           
-                          <div className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                          <div className="text-xs text-muted-foreground text-right">
                             {course.credits_required} {course.credits_required === 1 ? 'credito' : 'crediti'}
                           </div>
                           
