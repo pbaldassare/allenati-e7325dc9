@@ -130,10 +130,10 @@ export const Dashboard = () => {
       
       try {
         // Load all future sessions from selected gym with instructor names via foreign key
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('course_sessions')
-          .select(`
-            *,
+    const { data: sessionsData, error: sessionsError } = await supabase
+      .from('course_sessions')
+      .select(`
+        *,
         courses!inner(
           id,
           name,
@@ -142,20 +142,32 @@ export const Dashboard = () => {
           difficulty_level,
           instructor_id,
           gym_id,
+          instructors(
+            first_name,
+            last_name
+          ),
           course_categories(name, color_hex, icon_name),
-          instructors(first_name, last_name),
           gyms(name)
         ),
         rooms(name)
-          `)
-          .eq('courses.gym_id', selectedGym.id)
-          .eq('courses.is_active', true)
-          .eq('status', 'scheduled')
-          .gte('session_date', today)
-          .order('session_date', { ascending: true })
-          .order('start_time', { ascending: true });
+      `)
+      .eq('courses.gym_id', selectedGym.id)
+      .eq('courses.is_active', true)
+      .eq('status', 'scheduled')
+      .gte('session_date', today)
+      .order('session_date', { ascending: true })
+      .order('start_time', { ascending: true });
 
         if (sessionsError) throw sessionsError;
+
+        // Debug: verifica dati istruttore
+        if (sessionsData && sessionsData.length > 0) {
+          console.log('📊 First session instructor data:', {
+            course_name: sessionsData[0].courses?.name,
+            instructor: sessionsData[0].courses?.instructors,
+            full_data: sessionsData[0]
+          });
+        }
 
         setAvailableSessions(sessionsData || []);
         
