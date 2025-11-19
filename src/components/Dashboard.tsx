@@ -583,13 +583,6 @@ export const Dashboard = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         {/* Header section with avatar and main info */}
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Avatar className="w-12 h-12 sm:w-10 sm:h-10 border-2 border-primary/30 flex-shrink-0">
-                             <AvatarImage src={instructorAvatar} alt="Istruttore" />
-                             <AvatarFallback className="bg-primary/20 text-primary font-bold text-sm sm:text-xs">
-                               I
-                             </AvatarFallback>
-                          </Avatar>
-                           
                            <div className="flex-1 min-w-0">
                              <h3 className="font-semibold text-base sm:text-sm text-foreground">{session.courses?.name}</h3>
                              <p className="text-sm sm:text-xs text-muted-foreground">{instructorName}</p>
