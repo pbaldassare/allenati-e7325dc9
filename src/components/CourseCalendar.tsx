@@ -503,17 +503,12 @@ export const CourseCalendar = () => {
   };
 
   const getOccupancyColor = (participants: number, maxParticipants: number) => {
-    const occupancyRate = participants / maxParticipants;
+    const occupancyRate = maxParticipants > 0 ? participants / maxParticipants : 0;
     
-    if (occupancyRate >= 0.9) {
-      return "border-red-500 bg-red-50 dark:bg-red-950/20";
-    } else if (occupancyRate >= 0.7) {
-      return "border-orange-500 bg-orange-50 dark:bg-orange-950/20";
-    } else if (occupancyRate >= 0.5) {
-      return "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
-    } else {
-      return "border-green-500 bg-green-50 dark:bg-green-950/20";
-    }
+    if (occupancyRate >= 0.9) return 'bg-destructive/20 border-destructive/30';
+    if (occupancyRate >= 0.7) return 'bg-warning/20 border-warning/30';
+    if (occupancyRate >= 0.4) return 'bg-primary/20 border-primary/30';
+    return 'bg-success/20 border-success/30';
   };
 
   const clearFilters = () => {
@@ -647,9 +642,12 @@ export const CourseCalendar = () => {
                   return (
                     <Card 
                       key={course.sessionKey}
-                      className={`p-4 hover:shadow-md transition-all duration-200 border-l-4 ${getOccupancyColor(participants, maxParticipants)}`}
+                      className={cn(
+                        "p-4 hover:shadow-md transition-all duration-200 !border-l-4 !border-r-0 !border-t-0 !border-b-0",
+                        getOccupancyColor(participants, maxParticipants)
+                      )}
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center justify-between gap-4">
                         {/* Colonna sinistra - Info corso */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -676,7 +674,7 @@ export const CourseCalendar = () => {
                         </div>
                         
                         {/* Colonna destra - Occupancy e azioni */}
-                        <div className="flex flex-col items-end gap-2 shrink-0">
+                        <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
                           <Badge 
                             variant={
                               participants >= maxParticipants 
@@ -685,7 +683,7 @@ export const CourseCalendar = () => {
                                   ? "secondary" 
                                   : "default"
                             }
-                            className="text-xs whitespace-nowrap"
+                            className="text-xs"
                           >
                             {participants}/{maxParticipants}
                           </Badge>
@@ -701,7 +699,7 @@ export const CourseCalendar = () => {
                                 participants >= maxParticipants * 0.9 
                                   ? "bg-destructive" 
                                   : participants >= maxParticipants * 0.7 
-                                    ? "bg-orange-500" 
+                                    ? "bg-warning" 
                                     : "bg-primary"
                               }`}
                               style={{ 
