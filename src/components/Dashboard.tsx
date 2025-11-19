@@ -16,7 +16,7 @@ import WeeklyCalendarCompact from './WeeklyCalendarCompact';
 import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { CourseParticipantCount } from './CourseParticipantCount';
+
 import { useSessionBookings } from '@/hooks/useSessionBookings';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { GymSelectorWithLogo } from '@/components/GymSelectorWithLogo';
@@ -145,7 +145,8 @@ export const Dashboard = () => {
           course_categories(name, color_hex, icon_name),
           instructors(first_name, last_name),
           gyms(name)
-        )
+        ),
+        rooms(name)
           `)
           .eq('courses.gym_id', selectedGym.id)
           .eq('courses.is_active', true)
@@ -573,90 +574,124 @@ export const Dashboard = () => {
               const isFull = spotsLeft <= 0;
               const isAlreadyBooked = isSessionBookedByUser(session.id);
               
+              const participants = session.max_participants - session.available_spots;
+              const getOccupancyColor = (participants: number, maxParticipants: number) => {
+                const occupancyRate = participants / maxParticipants;
+                if (occupancyRate >= 1) {
+                  return "border-destructive/30 bg-destructive/20";
+                } else if (occupancyRate >= 0.8) {
+                  return "border-warning/30 bg-warning/20";
+                } else {
+                  return "border-success/30 bg-success/20";
+                }
+              };
+
               return (
-                 <Card key={session.id} className={cn(
-                    "group hover:shadow-md transition-all duration-200 border-primary/20 hover:border-primary/40",
-                    isAlreadyBooked && "bg-primary/5 border-primary/40"
-                  )}>
-                    <CardContent className="p-4 sm:p-3">
-                      {/* Mobile: Vertical Layout, Desktop: Horizontal Layout */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        {/* Header section with avatar and main info */}
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                           <div className="flex-1 min-w-0">
-                             <h3 className="font-semibold text-base sm:text-sm text-foreground">{session.courses?.name}</h3>
-                             <p className="text-sm sm:text-xs text-muted-foreground">{instructorName}</p>
-                           </div>
-                        </div>
-                        
-                         {/* Details section - Mobile: Below header, Desktop: Same row */}
-                         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 text-sm sm:text-xs text-muted-foreground">
-                           <div className="flex items-center gap-1">
-                             <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
-                             <span>{session.start_time}</span>
-                           </div>
-                           <CourseParticipantCount
-                             sessionId={session.id}
-                             maxParticipants={session.max_participants}
-                             className="text-sm sm:text-xs"
-                           />
-                         </div>
-                        
-                          {/* Action button - Mobile: Full width, Desktop: Compact */}
-                          <div className="flex flex-col sm:flex-row justify-center sm:justify-end gap-2 mt-2 sm:mt-0">
-                             {isAlreadyBooked ? (
-                               <div className="flex items-center gap-2 w-full sm:w-auto">
-                                 <Badge className="text-sm sm:text-xs px-4 sm:px-2 py-2 sm:py-1 bg-gradient-success text-white border-none flex-shrink-0">
-                                   ✓ Prenotato
-                                 </Badge>
-                                 <Button
-                                   onClick={() => {
-                                     const booking = getSessionBooking(session.id, session.courses?.id, session.session_date, session.start_time);
-                                     if (booking) {
-                                       openCancellationDialog(booking.course, booking);
-                                     }
-                                   }}
-                                   variant="outline"
-                                   size="sm"
-                                   className="text-sm sm:text-xs h-9 sm:h-7 px-4 sm:px-2 flex-1 sm:flex-initial"
-                                 >
-                                   <X className="w-4 h-4 sm:w-3 sm:h-3 mr-1" />
-                                   Cancella
-                                 </Button>
-                               </div>
-                             ) : (
-                               <Button
-                                 onClick={() => openBookingDialog(session)}
-                                 disabled={isLoading || isFull}
-                                 size="sm"
-                                 className={cn(
-                                   "w-full sm:w-auto text-sm sm:text-xs h-9 sm:h-7 px-6 sm:px-2 flex-shrink-0 font-medium transition-all duration-200",
-                                   isFull 
-                                     ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                     : isAlmostFull
-                                       ? "bg-gradient-warm text-white hover:opacity-90 border-none"
-                                       : "bg-gradient-primary text-white hover:opacity-90 border-none"
-                                 )}
-                               >
-                                 {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
-                               </Button>
-                             )}
-                            
-                            {/* Subscription/Credits Link */}
-                            <Button
-                              onClick={() => navigate('/subscriptions')}
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                            >
-                              <Coins className="h-3 w-3 mr-1" />
-                              Crediti
-                            </Button>
-                         </div>
+                <Card 
+                  key={session.id}
+                  className={cn(
+                    "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
+                    getOccupancyColor(participants, session.max_participants),
+                    isAlreadyBooked && "ring-2 ring-primary"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    {/* Colonna sinistra - Info corso */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-base truncate">
+                          {session.courses?.name}
+                        </h3>
+                        {isAlreadyBooked && (
+                          <Badge className="text-xs bg-gradient-success text-white border-none">
+                            ✓ Prenotato
+                          </Badge>
+                        )}
                       </div>
-                    </CardContent>
-                   </Card>
-               );
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          🕐 {session.start_time} - {session.end_time}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          📍 {session.rooms?.name || 'Sala non specificata'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          👤 {instructorName}
+                        </p>
+                        {session.courses?.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                            {session.courses.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Colonna destra - Occupancy e azioni */}
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <Badge 
+                        variant={
+                          session.available_spots <= 0
+                            ? "destructive" 
+                            : session.available_spots <= session.max_participants * 0.2
+                              ? "secondary" 
+                              : "default"
+                        }
+                        className="text-xs"
+                      >
+                        {participants}/{session.max_participants}
+                      </Badge>
+                      
+                      <div className="text-xs text-muted-foreground text-right">
+                        {session.courses?.credits_required} {session.courses?.credits_required === 1 ? 'credito' : 'crediti'}
+                      </div>
+                      
+                      {/* Progress bar occupancy */}
+                      <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full transition-all duration-300",
+                            session.available_spots <= session.max_participants * 0.1 
+                              ? "bg-destructive" 
+                              : session.available_spots <= session.max_participants * 0.3 
+                                ? "bg-warning" 
+                                : "bg-primary"
+                          )}
+                          style={{ 
+                            width: `${Math.min((participants / session.max_participants) * 100, 100)}%` 
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Bottoni azione */}
+                      <div className="flex gap-2 mt-2">
+                        {isAlreadyBooked ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const booking = getSessionBooking(session.id, session.courses?.id, session.session_date, session.start_time);
+                              if (booking) {
+                                openCancellationDialog(booking.course, booking);
+                              }
+                            }}
+                            disabled={isLoading}
+                          >
+                            Disdici
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => openBookingDialog(session)}
+                            disabled={isLoading || isFull}
+                          >
+                            {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
              })
             ) : (
               <div className="text-center py-12">
