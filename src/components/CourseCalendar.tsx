@@ -643,7 +643,7 @@ export const CourseCalendar = () => {
                     <Card 
                       key={course.sessionKey}
                       className={cn(
-                        "p-4 hover:shadow-md transition-all duration-200 !border-l-4 !border-r-0 !border-t-0 !border-b-0",
+                        "p-4 hover:shadow-md transition-all duration-200 border-l-4",
                         getOccupancyColor(participants, maxParticipants)
                       )}
                     >
