@@ -148,8 +148,7 @@ export const Dashboard = () => {
           ),
           course_categories(name, color_hex, icon_name),
           gyms(name)
-        ),
-        rooms(name)
+        )
       `)
       .eq('courses.gym_id', selectedGym.id)
       .eq('courses.is_active', true)
@@ -625,7 +624,7 @@ export const Dashboard = () => {
                           🕐 {session.start_time} - {session.end_time}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          📍 {session.rooms?.name || 'Sala non specificata'}
+                          📍 {session.room_name || 'Sala non specificata'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           👤 {instructorName}
