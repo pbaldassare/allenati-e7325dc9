@@ -14,6 +14,7 @@ import { CancellationConfirmDialog } from "@/components/dialogs/CancellationConf
 import { ReservedSpotsDialog } from "@/components/dialogs/ReservedSpotsDialog";
 import { processBooking, checkBookingEligibility, BookingData, getUserGymCredits } from '@/lib/bookingHelpers';
 import { hasActiveUnlimitedSubscription } from '@/lib/subscriptionHelpers';
+import { cn } from "@/lib/utils";
 
 // Icon mapping
 const courseIcons = {
@@ -501,6 +502,20 @@ export const CourseCalendar = () => {
     );
   };
 
+  const getOccupancyColor = (participants: number, maxParticipants: number) => {
+    const occupancyRate = participants / maxParticipants;
+    
+    if (occupancyRate >= 0.9) {
+      return "border-red-500 bg-red-50 dark:bg-red-950/20";
+    } else if (occupancyRate >= 0.7) {
+      return "border-orange-500 bg-orange-50 dark:bg-orange-950/20";
+    } else if (occupancyRate >= 0.5) {
+      return "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
+    } else {
+      return "border-green-500 bg-green-50 dark:bg-green-950/20";
+    }
+  };
+
   const clearFilters = () => {
     setSelectedCategory('Tutti');
     setSelectedLevel('Tutti');
@@ -622,123 +637,85 @@ export const CourseCalendar = () => {
             {coursesByDay[day] && coursesByDay[day].length > 0 ? (
               <div className="space-y-3">
                 {coursesByDay[day].map((course) => {
-                  const IconComponent = courseIcons[course.course_categories?.name as keyof typeof courseIcons] || Users;
                   const instructorName = course.instructors?.profiles ? 
                     `${course.instructors.profiles.first_name || ''} ${course.instructors.profiles.last_name || ''}`.trim() || course.instructors.profiles.email?.split('@')[0] : 
                     'Istruttore';
                   
-                  const categoryColors = {
-                    'Functional Training': 'bg-gradient-to-br from-blue-500 to-purple-600',
-                    'Cardio': 'bg-gradient-to-br from-red-500 to-orange-600',
-                    'Strength Training': 'bg-gradient-to-br from-green-500 to-teal-600',
-                    'Pilates': 'bg-gradient-to-br from-purple-500 to-pink-600',
-                    'Yoga': 'bg-gradient-to-br from-green-400 to-blue-500',
-                    'CrossFit': 'bg-gradient-to-br from-orange-500 to-red-600',
-                    'BJJ': 'bg-gradient-to-br from-gray-600 to-blue-800',
-                    'MMA': 'bg-gradient-to-br from-red-600 to-black',
-                    'Boxing': 'bg-gradient-to-br from-yellow-500 to-red-600',
-                    'Wrestling': 'bg-gradient-to-br from-blue-600 to-purple-700',
-                    'Muay Thai': 'bg-gradient-to-br from-orange-600 to-red-700'
-                  };
-                  
-                  const categoryColor = categoryColors[course.course_categories?.name as keyof typeof categoryColors] || 'bg-gradient-primary';
-                  const availableRatio = (course.session_available_spots || 0) / (course.session_max_participants || course.max_participants || 1);
-                  const capacityColor = availableRatio > 0.5 ? 'text-green-500' : availableRatio > 0.2 ? 'text-yellow-500' : 'text-red-500';
+                  const participants = (course.session_max_participants || course.max_participants) - (course.session_available_spots || 0);
+                  const maxParticipants = course.session_max_participants || course.max_participants;
                   
                   return (
-                    <Card key={course.sessionKey} className="shadow-glow hover:shadow-primary hover:scale-[1.02] transition-all duration-300 border-primary/20 overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-5 transition-opacity" />
-                      <CardContent className="p-4 relative z-10">
-                        <div className="flex items-center gap-4">
-                          {/* Icon */}
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${categoryColor} shadow-glow relative`}>
-                            <IconComponent className="h-6 w-6 text-white" />
-                            <div className="absolute -top-1 -right-1">
-                              <Sparkles className="w-3 h-3 text-white animate-pulse" />
-                            </div>
+                    <Card 
+                      key={course.sessionKey}
+                      className={`p-4 hover:shadow-md transition-all duration-200 border-l-4 ${getOccupancyColor(participants, maxParticipants)}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Colonna sinistra - Info corso */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-base truncate">
+                              {course.name}
+                            </h3>
                           </div>
-                          
-                          {/* Course Info */}
-                          <div className="flex-1">
-                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                               <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{course.name}</h4>
-                               <Badge className="text-xs font-mono bg-gradient-primary text-white shadow-sm">
-                                 <Clock className="w-3 h-3 mr-1" />
-                                 {course.session_start_time?.slice(0, 5)} - {course.session_end_time?.slice(0, 5)}
-                               </Badge>
-                               {course.difficulty_level && (
-                                 <Badge 
-                                   className={`text-xs font-medium ${
-                                     course.difficulty_level === 'Principiante' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                                     course.difficulty_level === 'Intermedio' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                                     'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                   }`}
-                                 >
-                                   {course.difficulty_level === 'Principiante' && <Sparkles className="w-3 h-3 mr-1" />}
-                                   {course.difficulty_level === 'Intermedio' && <Star className="w-3 h-3 mr-1" />}
-                                   {course.difficulty_level === 'Avanzato' && <Trophy className="w-3 h-3 mr-1" />}
-                                   {course.difficulty_level}
-                                 </Badge>
-                               )}
-                               {course.course_categories?.name && (
-                                 <Badge variant="outline" className="text-xs border-primary/30 text-primary font-medium">
-                                   <Activity className="w-3 h-3 mr-1" />
-                                   {course.course_categories.name}
-                                 </Badge>
-                               )}
-                             </div>
-                             
-                             <div className="flex items-center gap-4 text-sm">
-                               <div className="flex items-center gap-1 text-primary">
-                                 <Clock className="h-4 w-4" />
-                                 <span className="font-medium">{course.duration_minutes} min</span>
-                               </div>
-                               <div className={`flex items-center gap-1 ${capacityColor} font-medium`}>
-                                 <Users className="h-4 w-4" />
-                                 <span>{course.session_available_spots || 0}/{course.session_max_participants || course.max_participants}</span>
-                                 {availableRatio > 0.8 && <Sparkles className="w-3 h-3 animate-pulse" />}
-                                 {availableRatio <= 0.2 && <Zap className="w-3 h-3 animate-pulse" />}
-                               </div>
-                               {course.session_room_name && (
-                                 <div className="flex items-center gap-1 text-accent">
-                                   <MapPin className="h-4 w-4" />
-                                   <span className="font-medium">{course.session_room_name}</span>
-                                 </div>
-                               )}
-                             </div>
-                            
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Istruttore: {instructorName}
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">
+                              🕐 {course.session_start_time?.slice(0, 5)} - {course.session_end_time?.slice(0, 5)}
                             </p>
+                            <p className="text-sm text-muted-foreground">
+                              📍 {course.session_room_name || 'Sala non specificata'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              👤 {instructorName}
+                            </p>
+                            {course.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                                {course.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Colonna destra - Occupancy e azioni */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge 
+                            variant={
+                              participants >= maxParticipants 
+                                ? "destructive" 
+                                : participants >= maxParticipants * 0.8 
+                                  ? "secondary" 
+                                  : "default"
+                            }
+                            className="text-xs whitespace-nowrap"
+                          >
+                            {participants}/{maxParticipants}
+                          </Badge>
+                          
+                          <div className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                            {course.credits_required} {course.credits_required === 1 ? 'credito' : 'crediti'}
                           </div>
                           
-                             {/* Status and Action */}
-                             <div className="flex flex-col items-end gap-2">
-                               {isSessionBooked(course.session_id, course.id, course.session_date, course.session_start_time) ? (
-                                 <Badge className="bg-gradient-accent text-white animate-pulse shadow-glow">
-                                   <Star className="w-3 h-3 mr-1" />
-                                   Prenotato
-                                 </Badge>
-                               ) : (
-                                 <Badge className="bg-gradient-secondary text-white">
-                                   <Sparkles className="w-3 h-3 mr-1" />
-                                   Disponibile
-                                 </Badge>
-                               )}
-                               <div className="flex gap-2 items-center">
-                                 {getActionButton(course)}
-                                 <Button
-                                   onClick={() => navigate('/subscriptions')}
-                                   variant="ghost"
-                                   size="sm"
-                                   className="text-xs text-muted-foreground hover:text-primary transition-colors p-1"
-                                 >
-                                   <Coins className="h-3 w-3" />
-                                 </Button>
-                               </div>
-                             </div>
+                          {/* Progress bar occupancy */}
+                          <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-300 ${
+                                participants >= maxParticipants * 0.9 
+                                  ? "bg-destructive" 
+                                  : participants >= maxParticipants * 0.7 
+                                    ? "bg-orange-500" 
+                                    : "bg-primary"
+                              }`}
+                              style={{ 
+                                width: `${Math.min((participants / maxParticipants) * 100, 100)}%` 
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Bottoni azione */}
+                          <div className="flex gap-2 mt-2">
+                            {getActionButton(course)}
+                          </div>
                         </div>
-                      </CardContent>
+                      </div>
                     </Card>
                   );
                 })}
