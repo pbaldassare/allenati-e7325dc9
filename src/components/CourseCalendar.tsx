@@ -107,9 +107,16 @@ export const CourseCalendar = () => {
           .select(`
             *,
             courses!inner(
-              *,
+              id,
+              name,
+              description,
+              gym_id,
+              instructor_id,
+              credits_required,
+              max_participants,
+              is_active,
               course_categories(name, color_hex, icon_name),
-              instructors!courses_instructor_id_fkey(*, profiles(*))
+              instructors!courses_instructor_id_fkey(id, first_name, last_name, profiles(first_name, last_name, email))
             )
           `)
           .eq('courses.gym_id', userGym)
