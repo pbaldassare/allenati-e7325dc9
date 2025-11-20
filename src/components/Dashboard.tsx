@@ -21,6 +21,7 @@ import { useSessionBookings } from '@/hooks/useSessionBookings';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { GymSelectorWithLogo } from '@/components/GymSelectorWithLogo';
 import { processBooking, checkBookingEligibility, BookingData } from '@/lib/bookingHelpers';
+import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -43,6 +44,7 @@ export const Dashboard = () => {
   const [userCredits, setUserCredits] = useState<number>(0);
   const [userSubscription, setUserSubscription] = useState<any>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
+  const [selectedSessionForParticipants, setSelectedSessionForParticipants] = useState<string | null>(null);
 
   const loadUserCreditsAndSubscription = async () => {
     if (!user || !selectedGym) return;
@@ -647,7 +649,12 @@ export const Dashboard = () => {
                               ? "secondary" 
                               : "default"
                         }
-                        className="text-xs"
+                        className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSessionForParticipants(session.id);
+                        }}
+                        title="Clicca per vedere i partecipanti"
                       >
                         {participants}/{session.max_participants}
                       </Badge>
@@ -753,6 +760,12 @@ export const Dashboard = () => {
       <HowItWorksModal
         isOpen={showHowItWorksModal}
         onClose={() => setShowHowItWorksModal(false)}
+      />
+
+      <CourseParticipantsViewModal
+        sessionId={selectedSessionForParticipants || ''}
+        isOpen={selectedSessionForParticipants !== null}
+        onClose={() => setSelectedSessionForParticipants(null)}
       />
     </div>
   );
