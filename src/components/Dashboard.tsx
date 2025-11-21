@@ -623,7 +623,7 @@ export const Dashboard = () => {
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">
-                          🕐 {session.start_time} - {session.end_time}
+                          🕐 {session.start_time?.slice(0, 5)} - {session.end_time?.slice(0, 5)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           📍 {session.room_name || 'Sala non specificata'}
