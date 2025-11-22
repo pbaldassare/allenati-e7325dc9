@@ -142,7 +142,6 @@ export const Dashboard = () => {
           description,
           credits_required,
           difficulty_level,
-          instructor_id,
           gym_id,
           instructors(
             first_name,
