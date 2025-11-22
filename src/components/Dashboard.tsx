@@ -332,7 +332,13 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    const instructor = session.courses?.instructors;
+    let instructor = session.courses?.instructors;
+    
+    // Se instructors è un array, prendi il primo elemento
+    if (Array.isArray(instructor)) {
+      instructor = instructor[0];
+    }
+    
     if (!instructor) return 'Istruttore non assegnato';
     
     const firstName = instructor.first_name || '';
