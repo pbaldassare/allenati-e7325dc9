@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { CourseScheduleManager } from '@/components/admin/CourseScheduleManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { regenerateCourseSessions } from '@/lib/sessionRegenerator';
 
 interface GymRoom {
   id: string;
@@ -29,7 +30,7 @@ const AdminCourseSchedules = () => {
         // Fetch course details
         const { data: courseData, error: courseError } = await supabase
           .from('courses')
-          .select('id, name')
+          .select('id, name, duration_weeks')
           .eq('id', id)
           .single();
 
@@ -96,22 +97,13 @@ const AdminCourseSchedules = () => {
         if (error) throw error;
       }
 
-      // Rigenera automaticamente le sessioni future
-      const { regenerateCourseSessions } = await import('@/lib/sessionRegenerator');
-      const result = await regenerateCourseSessions(id);
+      // Usa la funzione smart che preserva le prenotazioni
+      const result = await regenerateCourseSessions(id, course?.duration_weeks || 12);
 
       setSchedules(newSchedules);
       
       if (result.success) {
         let description = result.message;
-        
-        // Aggiungi informazioni aggiuntive
-        if (result.deletedOrphanSessions > 0) {
-          description += ` (${result.deletedOrphanSessions} sessioni orfane eliminate)`;
-        }
-        if (result.affectedBookings > 0) {
-          description += ` - ${result.affectedBookings} prenotazioni riassegnate`;
-        }
         
         // Aggiungi avvisi se presenti
         if (result.warnings && result.warnings.length > 0) {
@@ -183,7 +175,8 @@ const AdminCourseSchedules = () => {
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground">
-                ⚠️ <strong>Nota importante:</strong> Modificando gli orari, TUTTE le sessioni future dalla data odierna verranno eliminate e rigenerate con i nuovi orari. Le prenotazioni esistenti saranno automaticamente riassegnate alle nuove sessioni compatibili quando possibile.
+                ℹ️ <strong>Nota:</strong> Modificando gli orari, le sessioni future senza prenotazioni verranno eliminate. 
+                Le sessioni con prenotazioni esistenti verranno invece <strong>annullate</strong> (non eliminate) per preservare lo storico.
               </p>
             </div>
             <CourseScheduleManager

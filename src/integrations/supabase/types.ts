@@ -2311,6 +2311,14 @@ export type Database = {
       }
       recalculate_all_gym_credits: { Args: never; Returns: undefined }
       recalculate_all_gym_credits_fixed: { Args: never; Returns: undefined }
+      repair_orphan_bookings: {
+        Args: { _course_id?: string }
+        Returns: {
+          repaired_count: number
+          sessions_created: number
+          sessions_relinked: number
+        }[]
+      }
       smart_generate_sessions_with_dates: {
         Args: {
           _course_id: string
@@ -2328,24 +2336,35 @@ export type Database = {
           success: boolean
         }[]
       }
-      smart_generate_sessions_with_weeks: {
-        Args: {
-          _course_id: string
-          _duration_weeks?: number
-          _new_schedules?: Json
-          _start_date?: string
-        }
-        Returns: {
-          affected_bookings: number
-          duration_weeks: number
-          end_date: string
-          message: string
-          sessions_created: number
-          sessions_deleted: number
-          start_date: string
-          success: boolean
-        }[]
-      }
+      smart_generate_sessions_with_weeks:
+        | {
+            Args: {
+              _course_id: string
+              _duration_weeks?: number
+              _new_schedules?: Json
+              _start_date?: string
+            }
+            Returns: {
+              affected_bookings: number
+              duration_weeks: number
+              end_date: string
+              message: string
+              sessions_created: number
+              sessions_deleted: number
+              start_date: string
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_course_id: string
+              p_duration_weeks?: number
+              p_max_participants?: number
+              p_schedules: Json
+              p_start_date?: string
+            }
+            Returns: Json
+          }
       toggle_session_visibility: {
         Args: { _new_status: string; _session_id: string }
         Returns: boolean
