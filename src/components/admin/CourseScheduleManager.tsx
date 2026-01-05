@@ -27,7 +27,7 @@ const daysOfWeek = [
 ];
 
 const difficultyOptions = [
-  { value: '', label: 'Come corso' },
+  { value: 'default', label: 'Come corso' },
   { value: '1', label: '1 - Principiante' },
   { value: '2', label: '2 - Intermedio' },
   { value: '3', label: '3 - Avanzato' },
@@ -223,7 +223,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {gymRooms.length === 0 ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="none" disabled>
                           Nessuna sala configurata
                         </SelectItem>
                       ) : (
@@ -268,9 +268,9 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                     Difficoltà
                   </label>
                   <Select
-                    value={item.difficultyLevelOverride?.toString() ?? ''}
+                    value={item.difficultyLevelOverride?.toString() ?? 'default'}
                     onValueChange={(value) => {
-                      const val = value === '' ? null : parseInt(value);
+                      const val = value === 'default' ? null : parseInt(value);
                       updateScheduleItem(index, 'difficultyLevelOverride', val);
                     }}
                   >
