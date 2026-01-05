@@ -72,7 +72,9 @@ export async function smartUpdateCourseSchedules(
       start_time: schedule.time,
       end_time: schedule.end_time,
       room_id: schedule.roomId,
-      room_name: schedule.room_name
+      room_name: schedule.room_name,
+      max_participants_override: schedule.maxParticipantsOverride || null,
+      difficulty_level_override: schedule.difficultyLevelOverride || null
     }));
 
     console.log('📋 Schedules prepared for RPC:', schedulesForRpc);

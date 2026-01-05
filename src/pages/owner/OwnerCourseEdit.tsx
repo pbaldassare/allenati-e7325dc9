@@ -54,7 +54,9 @@ const OwnerCourseEdit = () => {
               start_time,
               end_time,
               room_id,
-              room_name
+              room_name,
+              max_participants_override,
+              difficulty_level_override
             ),
             course_categories (
               name
@@ -169,9 +171,11 @@ const OwnerCourseEdit = () => {
       const formattedNewSchedules = newSchedules.map(schedule => ({
         dayOfWeek: schedule.dayOfWeek,
         time: schedule.time,
-        end_time: addHoursToTime(schedule.time, course?.duration_minutes || 60),
+        end_time: schedule.end_time || addHoursToTime(schedule.time, course?.duration_minutes || 60),
         roomId: schedule.roomId,
-        room_name: gymRooms.find(r => r.id === schedule.roomId)?.name
+        room_name: gymRooms.find(r => r.id === schedule.roomId)?.name,
+        maxParticipantsOverride: schedule.maxParticipantsOverride,
+        difficultyLevelOverride: schedule.difficultyLevelOverride
       }));
 
       const comparison = await smartUpdateCourseSchedules(id, formattedNewSchedules, currentSchedules || [], durationWeeks);
@@ -344,11 +348,16 @@ const OwnerCourseEdit = () => {
                 schedule={course?.schedules?.map(s => ({
                   dayOfWeek: s.day_of_week,
                   time: s.start_time,
+                  end_time: s.end_time,
                   roomId: s.room_id || '',
-                  day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week]
+                  day: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'][s.day_of_week],
+                  maxParticipantsOverride: s.max_participants_override,
+                  difficultyLevelOverride: s.difficulty_level_override
                 })) || []}
                 onChange={handleScheduleChange}
                 gymRooms={gymRooms}
+                courseMaxParticipants={course?.max_participants}
+                courseDifficultyLevel={course?.difficulty_level}
               />
             </CardContent>
           </Card>
