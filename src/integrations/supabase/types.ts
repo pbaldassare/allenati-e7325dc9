@@ -2346,12 +2346,10 @@ export type Database = {
             }
             Returns: {
               affected_bookings: number
-              duration_weeks: number
-              end_date: string
               message: string
+              sessions_cancelled: number
               sessions_created: number
               sessions_deleted: number
-              start_date: string
               success: boolean
             }[]
           }
@@ -2360,10 +2358,17 @@ export type Database = {
               p_course_id: string
               p_duration_weeks?: number
               p_max_participants?: number
-              p_schedules: Json
+              p_schedules?: Json
               p_start_date?: string
             }
-            Returns: Json
+            Returns: {
+              affected_bookings: number
+              message: string
+              sessions_cancelled: number
+              sessions_created: number
+              sessions_deleted: number
+              success: boolean
+            }[]
           }
       toggle_session_visibility: {
         Args: { _new_status: string; _session_id: string }
