@@ -370,23 +370,55 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
   const searchUsers = async () => {
     try {
-      // First get profiles, then get gym-specific credits
-      const { data, error } = await supabase
+      // First get the gym_id from the session's course
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('gym_id')
+        .eq('id', session.course_id)
+        .single();
+
+      if (courseError || !courseData?.gym_id) {
+        console.error('Error fetching gym_id:', courseError);
+        toast.error('Errore nel recupero della palestra');
+        return;
+      }
+
+      const gymId = courseData.gym_id;
+
+      // Get active memberships for this gym
+      const { data: memberships, error: membershipError } = await supabase
+        .from('user_gym_memberships')
+        .select('user_id')
+        .eq('gym_id', gymId)
+        .eq('status', 'active');
+
+      if (membershipError) throw membershipError;
+
+      if (!memberships || memberships.length === 0) {
+        setSearchResults([]);
+        return;
+      }
+
+      const memberUserIds = memberships.map(m => m.user_id);
+
+      // Search profiles only for gym members
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, first_name, last_name, email, profile_picture_url')
+        .in('user_id', memberUserIds)
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
         .limit(8);
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      // Get gym-specific credits for each user
+      // Get gym-specific credits for filtered users
       const users = await Promise.all(
-        (data || []).map(async (profile) => {
-          // Get gym-specific credits - we'd need gym context here
+        (profiles || []).map(async (profile) => {
           const { data: gymCredits } = await supabase
             .from('gym_credits')
             .select('credits')
             .eq('user_id', profile.user_id)
+            .eq('gym_id', gymId)
             .maybeSingle();
           
           return {
