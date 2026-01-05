@@ -12,6 +12,7 @@ import { useOwnerGym } from "@/contexts/OwnerGymContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AddInstructorDialog } from "@/components/owner/AddInstructorDialog";
 import { Button } from "@/components/ui/button";
+import { InstructorHoursDashboard } from "@/components/owner/InstructorHoursDashboard";
 
 interface Instructor {
   id: string;
@@ -329,8 +330,12 @@ const OwnerInstructors: React.FC = () => {
   }, [selectedGym?.id]);
 
   return (
-    <section>
+    <section className="space-y-6">
       <h1 className="sr-only">Istruttori palestra</h1>
+      
+      {/* Dashboard Ore Lavorate */}
+      <InstructorHoursDashboard gymId={selectedGym?.id} />
+      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
