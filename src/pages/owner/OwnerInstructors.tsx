@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Crown, UserPlus, Trash2, Loader2 } from "lucide-react";
+import { Crown, UserPlus, Trash2, Loader2, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOwnerGym } from "@/contexts/OwnerGymContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AddInstructorDialog } from "@/components/owner/AddInstructorDialog";
 import { Button } from "@/components/ui/button";
-import { InstructorHoursDashboard } from "@/components/owner/InstructorHoursDashboard";
+import { useInstructorHoursWorked } from "@/hooks/useInstructorHoursWorked";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
+import { it } from "date-fns/locale";
 
 interface Instructor {
   id: string;
@@ -40,6 +44,51 @@ const OwnerInstructors: React.FC = () => {
   const [toggleLoading, setToggleLoading] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removingInstructor, setRemovingInstructor] = useState<string | null>(null);
+  
+  // Date filters for hours
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  
+  const { data: hoursData } = useInstructorHoursWorked(
+    selectedGym?.id,
+    startDate,
+    endDate
+  );
+  
+  // Create a map of instructor hours by user_id
+  const hoursByUserId = new Map(
+    hoursData?.map(h => [h.instructorUserId, h]) || []
+  );
+  
+  const setPreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
+    const now = new Date();
+    switch (preset) {
+      case 'thisMonth':
+        setStartDate(startOfMonth(now));
+        setEndDate(now);
+        break;
+      case 'lastMonth':
+        const lastMonth = subMonths(now, 1);
+        setStartDate(startOfMonth(lastMonth));
+        setEndDate(endOfMonth(lastMonth));
+        break;
+      case 'thisYear':
+        setStartDate(startOfYear(now));
+        setEndDate(now);
+        break;
+    }
+  };
+  
+  const formatHours = (totalHours: number) => {
+    const hours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours - hours) * 60);
+    if (hours === 0 && minutes === 0) return "-";
+    if (hours === 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  };
+  
+  const totalHours = hoursData?.reduce((sum, h) => sum + h.totalHours, 0) || 0;
 
   const loadInstructors = async () => {
     if (gymLoading || !selectedGym?.id) {
@@ -333,19 +382,63 @@ const OwnerInstructors: React.FC = () => {
     <section className="space-y-6">
       <h1 className="sr-only">Istruttori palestra</h1>
       
-      {/* Dashboard Ore Lavorate */}
-      <InstructorHoursDashboard gymId={selectedGym?.id} />
-      
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Istruttori della Palestra</CardTitle>
-            {selectedGym && (
-              <Button onClick={() => setAddDialogOpen(true)}>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Aggiungi Istruttore
-              </Button>
-            )}
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              Istruttori della Palestra
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Date filters */}
+              <div className="flex items-center gap-1 text-xs">
+                <Clock className="w-3 h-3 text-muted-foreground" />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                      {format(startDate, "dd/MM", { locale: it })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => date && setStartDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-muted-foreground">-</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                      {format(endDate, "dd/MM", { locale: it })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => date && setEndDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {/* Presets */}
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setPreset('thisMonth')}>Mese</Button>
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setPreset('lastMonth')}>Scorso</Button>
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setPreset('thisYear')}>Anno</Button>
+              </div>
+              
+              {selectedGym && (
+                <Button onClick={() => setAddDialogOpen(true)} size="sm">
+                  <UserPlus className="w-4 h-4 mr-1" />
+                  Aggiungi
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -366,17 +459,17 @@ const OwnerInstructors: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Istruttore</TableHead>
+                  <TableHead className="text-right">Ore</TableHead>
                   <TableHead>Telefono</TableHead>
-                  <TableHead>Esperienza</TableHead>
-                  <TableHead>Specializzazioni</TableHead>
                   <TableHead>Privilegi</TableHead>
                   <TableHead>Stato</TableHead>
-                  <TableHead>Dal</TableHead>
                   <TableHead>Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {instructors.map((instructor) => (
+                {instructors.map((instructor) => {
+                  const instructorHours = hoursByUserId.get(instructor.user_id);
+                  return (
                   <TableRow key={instructor.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -393,42 +486,15 @@ const OwnerInstructors: React.FC = () => {
                           <p className="font-medium">
                             {instructor.profile?.first_name} {instructor.profile?.last_name}
                           </p>
-                          {instructor.bio && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {instructor.bio}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {instructorHours ? formatHours(instructorHours.totalHours) : "-"}
+                    </TableCell>
                     <TableCell>
                       {instructor.profile?.phone || (
-                        <span className="text-muted-foreground">Non fornito</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {instructor.experience_years ? (
-                        <span>{instructor.experience_years} anni</span>
-                      ) : (
-                        <span className="text-muted-foreground">Non specificato</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {instructor.specializations && instructor.specializations.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {instructor.specializations.slice(0, 2).map((spec, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {spec}
-                            </Badge>
-                          ))}
-                          {instructor.specializations.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{instructor.specializations.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Nessuna</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -458,9 +524,6 @@ const OwnerInstructors: React.FC = () => {
                       <Badge variant={instructor.is_active ? "default" : "secondary"}>
                         {instructor.is_active ? "Attivo" : "Inattivo"}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(instructor.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       <AlertDialog>
@@ -497,8 +560,16 @@ const OwnerInstructors: React.FC = () => {
                       </AlertDialog>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell className="font-medium">Totale</TableCell>
+                  <TableCell className="text-right font-bold">{formatHours(totalHours)}</TableCell>
+                  <TableCell colSpan={4}></TableCell>
+                </TableRow>
+              </TableFooter>
             </Table>
           )}
         </CardContent>
