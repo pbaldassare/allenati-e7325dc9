@@ -1,17 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
-import { BookOpen, Users, Calendar, TrendingUp } from 'lucide-react';
+import { useInstructorHoursWorked } from '@/hooks/useInstructorHoursWorked';
+import { BookOpen, Users, Calendar, TrendingUp, Clock, CalendarIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstructorGym } from '@/contexts/InstructorGymContext';
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 const InstructorDashboard = () => {
   const { selectedGymId } = useInstructorGym();
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
-  const { hasOwnerPrivileges } = useAuth();
+  const { hasOwnerPrivileges, user } = useAuth();
+
+  // Date filters for hours worked
+  const today = new Date();
+  const [hoursStartDate, setHoursStartDate] = useState<Date>(startOfMonth(today));
+  const [hoursEndDate, setHoursEndDate] = useState<Date>(today);
+
+  const { data: hoursData, loading: hoursLoading } = useInstructorHoursWorked(
+    selectedGymId,
+    hoursStartDate,
+    hoursEndDate,
+    user?.id
+  );
+
+  const myHoursData = hoursData[0];
+
+  const setHoursPreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
+    const now = new Date();
+    switch (preset) {
+      case 'thisMonth':
+        setHoursStartDate(startOfMonth(now));
+        setHoursEndDate(now);
+        break;
+      case 'lastMonth':
+        const lastMonth = subMonths(now, 1);
+        setHoursStartDate(startOfMonth(lastMonth));
+        setHoursEndDate(endOfMonth(lastMonth));
+        break;
+      case 'thisYear':
+        setHoursStartDate(startOfYear(now));
+        setHoursEndDate(now);
+        break;
+    }
+  };
+
+  const formatHours = (hours: number) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  };
 
   const stats = {
     totalCourses: courses.length,
@@ -124,6 +170,111 @@ const InstructorDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Le Mie Ore Lavorate */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Le Mie Ore Lavorate
+            </CardTitle>
+            
+            {/* Date filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <CalendarIcon className="mr-2 h-3 w-3" />
+                    {format(hoursStartDate, 'dd/MM/yy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={hoursStartDate}
+                    onSelect={(d) => d && setHoursStartDate(d)}
+                    disabled={(date) => date > hoursEndDate || date > today}
+                    locale={it}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground text-sm">-</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <CalendarIcon className="mr-2 h-3 w-3" />
+                    {format(hoursEndDate, 'dd/MM/yy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={hoursEndDate}
+                    onSelect={(d) => d && setHoursEndDate(d)}
+                    disabled={(date) => date < hoursStartDate || date > today}
+                    locale={it}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <div className="flex gap-1 ml-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs px-2"
+                  onClick={() => setHoursPreset('thisMonth')}
+                >
+                  Mese
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs px-2"
+                  onClick={() => setHoursPreset('lastMonth')}
+                >
+                  Scorso
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs px-2"
+                  onClick={() => setHoursPreset('thisYear')}
+                >
+                  Anno
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {hoursLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-muted/30 rounded-lg p-4 text-center">
+                <p className="text-3xl font-bold text-primary">
+                  {myHoursData ? formatHours(myHoursData.totalHours) : '0h'}
+                </p>
+                <p className="text-sm text-muted-foreground">Ore Lavorate</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-4 text-center">
+                <p className="text-3xl font-bold">
+                  {myHoursData?.sessionCount || 0}
+                </p>
+                <p className="text-sm text-muted-foreground">Sessioni Tenute</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Courses Overview */}
       <Card>
