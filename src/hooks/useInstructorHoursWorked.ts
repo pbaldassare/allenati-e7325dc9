@@ -44,10 +44,27 @@ export const useInstructorHoursWorked = (
         const startDateStr = startDate.toISOString().split('T')[0];
         const endDateStr = endDate.toISOString().split('T')[0];
 
-        // Get all instructors for this gym
+        // First, get instructor IDs assigned to this specific gym
+        const { data: gymAssignments, error: assignmentsError } = await supabase
+          .from('instructor_gym_assignments')
+          .select('instructor_id')
+          .eq('gym_id', gymId)
+          .eq('is_active', true);
+
+        if (assignmentsError) throw assignmentsError;
+        if (!gymAssignments || gymAssignments.length === 0) {
+          setData([]);
+          setLoading(false);
+          return;
+        }
+
+        const instructorIdsForGym = gymAssignments.map(a => a.instructor_id);
+
+        // Get only instructors assigned to this gym
         let instructorQuery = supabase
           .from('instructors')
           .select('id, user_id, first_name, last_name')
+          .in('id', instructorIdsForGym)
           .eq('is_active', true);
 
         // If filtering by specific instructor
