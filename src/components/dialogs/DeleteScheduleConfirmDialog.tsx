@@ -37,8 +37,25 @@ export function DeleteScheduleConfirmDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Elimina Orario</AlertDialogTitle>
-          <AlertDialogDescription>
-            Sei sicuro di voler eliminare questo orario? Questa azione eliminerà anche tutte le sessioni future associate a questo orario e cancellerà le prenotazioni esistenti.
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>Sei sicuro di voler eliminare questo orario?</p>
+              <div className="text-sm space-y-1">
+                <p className="text-destructive font-medium">Cosa verrà eliminato:</p>
+                <ul className="list-disc list-inside ml-2 text-muted-foreground">
+                  <li>Sessioni future associate a questo orario</li>
+                  <li>Prenotazioni future per queste sessioni</li>
+                </ul>
+              </div>
+              <div className="text-sm space-y-1">
+                <p className="text-green-600 dark:text-green-500 font-medium">Cosa rimane intatto:</p>
+                <ul className="list-disc list-inside ml-2 text-muted-foreground">
+                  <li>Tutte le sessioni passate</li>
+                  <li>Tutte le prenotazioni storiche</li>
+                  <li>I dati per report e statistiche</li>
+                </ul>
+              </div>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
