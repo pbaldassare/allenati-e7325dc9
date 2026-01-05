@@ -28,6 +28,7 @@ interface SessionData {
   status: 'scheduled' | 'cancelled' | 'completed' | 'hidden';
   credits: number;
   difficulty_level?: number | null;
+  instructor_id_override?: string | null;
 }
 
 const SessionCalendarMobile: React.FC = () => {
@@ -169,7 +170,8 @@ const SessionCalendarMobile: React.FC = () => {
           maxParticipants: session.max_participants ?? session.courses.max_participants,
           status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
           credits: session.courses.credits_required,
-          difficulty_level: session.difficulty_level ?? session.courses.difficulty_level
+          difficulty_level: session.difficulty_level ?? session.courses.difficulty_level,
+          instructor_id_override: session.instructor_id_override
         };
       });
 
@@ -299,7 +301,8 @@ const SessionCalendarMobile: React.FC = () => {
                 available_spots: session.maxParticipants - session.participants,
                 participant_count: session.participants,
                 status: session.status,
-                difficulty_level: session.difficulty_level
+                difficulty_level: session.difficulty_level,
+                instructor_id_override: session.instructor_id_override
               }}
               onSessionUpdate={fetchSessions}
             >
