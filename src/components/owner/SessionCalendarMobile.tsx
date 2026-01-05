@@ -25,6 +25,7 @@ interface SessionData {
   maxParticipants: number;
   status: 'scheduled' | 'cancelled' | 'completed' | 'hidden';
   credits: number;
+  difficulty_level?: number | null;
 }
 
 const SessionCalendarMobile: React.FC = () => {
@@ -103,6 +104,8 @@ const SessionCalendarMobile: React.FC = () => {
             gym_id,
             instructor_id,
             credits_required,
+            difficulty_level,
+            max_participants,
             instructors (
               first_name,
               last_name
@@ -155,9 +158,10 @@ const SessionCalendarMobile: React.FC = () => {
           room: session.room_name || 'Non specificata',
           instructor: instructorName,
           participants: bookingCountMap[session.id] || 0,
-          maxParticipants: session.max_participants,
+          maxParticipants: session.max_participants ?? session.courses.max_participants,
           status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
-          credits: session.courses.credits_required
+          credits: session.courses.credits_required,
+          difficulty_level: session.difficulty_level ?? session.courses.difficulty_level
         };
       });
 

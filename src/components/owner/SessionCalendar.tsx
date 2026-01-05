@@ -28,6 +28,7 @@ interface SessionData {
   maxParticipants: number;
   status: 'scheduled' | 'cancelled' | 'completed' | 'hidden';
   credits: number;
+  difficulty_level?: number | null;
 }
 
 type ViewMode = 'week' | 'month';
@@ -128,7 +129,9 @@ const SessionCalendar: React.FC = () => {
             description,
             gym_id,
             instructor_id,
-            credits_required
+            credits_required,
+            difficulty_level,
+            max_participants
           )
         `)
         .eq('courses.gym_id', selectedGym.id)
@@ -173,9 +176,10 @@ const SessionCalendar: React.FC = () => {
         room: session.room_name || 'Non specificata',
         instructor: 'Non assegnato',
         participants: bookingCountMap[session.id] || 0,
-        maxParticipants: session.max_participants,
+        maxParticipants: session.max_participants ?? session.courses.max_participants,
         status: session.status as 'scheduled' | 'cancelled' | 'completed' | 'hidden',
-        credits: session.courses.credits_required
+        credits: session.courses.credits_required,
+        difficulty_level: session.difficulty_level ?? session.courses.difficulty_level
       }));
 
       const loadTime = Date.now() - startTime;

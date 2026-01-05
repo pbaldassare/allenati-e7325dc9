@@ -114,6 +114,19 @@ export const CancelSessionDialog: React.FC<CancelSessionDialogProps> = ({
                 </div>
               )}
 
+              {/* Reassurance about what remains intact */}
+              <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                <p className="text-sm text-green-800 dark:text-green-200 font-medium">
+                  ✓ Cosa rimane intatto:
+                </p>
+                <ul className="text-sm text-green-700 dark:text-green-300 list-disc list-inside mt-1 space-y-0.5">
+                  <li>Tutte le altre sessioni del corso (passate e future)</li>
+                  <li>Lo storico delle prenotazioni precedenti</li>
+                  <li>Gli altri orari del corso</li>
+                  <li>I dati per report e statistiche</li>
+                </ul>
+              </div>
+
               {/* Optional reason */}
               <div className="space-y-2">
                 <Label htmlFor="cancellation-reason">Motivo cancellazione (opzionale)</Label>
