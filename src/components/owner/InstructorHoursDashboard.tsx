@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Clock, Users, Loader2 } from 'lucide-react';
+import { CalendarIcon, Clock, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { useInstructorHoursWorked } from '@/hooks/useInstructorHoursWorked';
 
 interface InstructorHoursDashboardProps {
@@ -57,22 +56,20 @@ export const InstructorHoursDashboard: React.FC<InstructorHoursDashboardProps> =
   if (!gymId) return null;
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Ore Lavorate Istruttori
+    <Card className="mb-4">
+      <CardHeader className="pb-2 pt-3 px-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+            <Clock className="h-4 w-4" />
+            Ore Lavorate
           </CardTitle>
           
-          {/* Date filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Start Date */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <CalendarIcon className="mr-2 h-3 w-3" />
-                  {format(startDate, 'dd/MM/yy')}
+                <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {format(startDate, 'dd/MM')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -87,14 +84,13 @@ export const InstructorHoursDashboard: React.FC<InstructorHoursDashboardProps> =
               </PopoverContent>
             </Popover>
 
-            <span className="text-muted-foreground text-sm">-</span>
+            <span className="text-muted-foreground text-xs">-</span>
 
-            {/* End Date */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <CalendarIcon className="mr-2 h-3 w-3" />
-                  {format(endDate, 'dd/MM/yy')}
+                <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {format(endDate, 'dd/MM')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -109,28 +105,27 @@ export const InstructorHoursDashboard: React.FC<InstructorHoursDashboardProps> =
               </PopoverContent>
             </Popover>
 
-            {/* Presets */}
-            <div className="flex gap-1 ml-2">
+            <div className="flex gap-0.5">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 text-xs px-2"
+                className="h-6 text-[10px] px-1.5"
                 onClick={() => setPreset('thisMonth')}
               >
-                Questo mese
+                Mese
               </Button>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 text-xs px-2"
+                className="h-6 text-[10px] px-1.5"
                 onClick={() => setPreset('lastMonth')}
               >
-                Mese scorso
+                Scorso
               </Button>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 text-xs px-2 hidden sm:inline-flex"
+                className="h-6 text-[10px] px-1.5 hidden sm:inline-flex"
                 onClick={() => setPreset('thisYear')}
               >
                 Anno
@@ -140,66 +135,59 @@ export const InstructorHoursDashboard: React.FC<InstructorHoursDashboardProps> =
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="pt-0 pb-3 px-4">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <p className="text-destructive text-center py-4">{error}</p>
+          <p className="text-destructive text-center py-2 text-sm">{error}</p>
         ) : data.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">
-            Nessun dato disponibile per il periodo selezionato
+          <p className="text-muted-foreground text-center py-2 text-sm">
+            Nessun dato per il periodo selezionato
           </p>
         ) : (
-          <>
-            {/* Summary */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-muted/30 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-primary">{formatHours(totalHours)}</p>
-                <p className="text-xs text-muted-foreground">Ore Totali</p>
-              </div>
-              <div className="bg-muted/30 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold">{totalSessions}</p>
-                <p className="text-xs text-muted-foreground">Sessioni</p>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Istruttore</TableHead>
-                    <TableHead className="text-right">Ore</TableHead>
-                    <TableHead className="text-right">Sessioni</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">Media</TableHead>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="py-2 text-xs">Istruttore</TableHead>
+                  <TableHead className="py-2 text-xs text-right">Ore</TableHead>
+                  <TableHead className="py-2 text-xs text-right">Sess.</TableHead>
+                  <TableHead className="py-2 text-xs text-right hidden sm:table-cell">Media</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((instructor) => (
+                  <TableRow key={instructor.instructorId}>
+                    <TableCell className="py-2 text-sm font-medium">
+                      {instructor.firstName} {instructor.lastName}
+                    </TableCell>
+                    <TableCell className="py-2 text-sm text-right">
+                      {formatHours(instructor.totalHours)}
+                    </TableCell>
+                    <TableCell className="py-2 text-sm text-right">
+                      {instructor.sessionCount}
+                    </TableCell>
+                    <TableCell className="py-2 text-sm text-right hidden sm:table-cell text-muted-foreground">
+                      {instructor.sessionCount > 0 
+                        ? formatHours(instructor.totalHours / instructor.sessionCount)
+                        : '-'
+                      }
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.map((instructor) => (
-                    <TableRow key={instructor.instructorId}>
-                      <TableCell className="font-medium">
-                        {instructor.firstName} {instructor.lastName}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatHours(instructor.totalHours)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {instructor.sessionCount}
-                      </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell text-muted-foreground">
-                        {instructor.sessionCount > 0 
-                          ? formatHours(instructor.totalHours / instructor.sessionCount)
-                          : '-'
-                        }
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-muted/50">
+                  <TableCell className="py-2 text-xs font-bold">Totale</TableCell>
+                  <TableCell className="py-2 text-xs font-bold text-right">{formatHours(totalHours)}</TableCell>
+                  <TableCell className="py-2 text-xs font-bold text-right">{totalSessions}</TableCell>
+                  <TableCell className="py-2 hidden sm:table-cell" />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

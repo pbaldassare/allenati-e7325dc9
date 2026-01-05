@@ -44,27 +44,36 @@ export const useInstructorHoursWorked = (
         const startDateStr = startDate.toISOString().split('T')[0];
         const endDateStr = endDate.toISOString().split('T')[0];
 
-        // First, get instructor IDs assigned to this specific gym
-        const { data: gymAssignments, error: assignmentsError } = await supabase
+        // Method 1: Get instructor IDs from instructor_gym_assignments
+        const { data: gymAssignments } = await supabase
           .from('instructor_gym_assignments')
           .select('instructor_id')
           .eq('gym_id', gymId)
           .eq('is_active', true);
 
-        if (assignmentsError) throw assignmentsError;
-        if (!gymAssignments || gymAssignments.length === 0) {
+        // Method 2: Get instructor IDs from legacy instructors.gym_id
+        const { data: directInstructors } = await supabase
+          .from('instructors')
+          .select('id')
+          .eq('gym_id', gymId)
+          .eq('is_active', true);
+
+        // Combine both sources (deduplicate)
+        const assignmentIds = gymAssignments?.map(a => a.instructor_id) || [];
+        const directIds = directInstructors?.map(i => i.id) || [];
+        const allInstructorIds = [...new Set([...assignmentIds, ...directIds])];
+
+        if (allInstructorIds.length === 0) {
           setData([]);
           setLoading(false);
           return;
         }
 
-        const instructorIdsForGym = gymAssignments.map(a => a.instructor_id);
-
-        // Get only instructors assigned to this gym
+        // Get instructors from combined IDs
         let instructorQuery = supabase
           .from('instructors')
           .select('id, user_id, first_name, last_name')
-          .in('id', instructorIdsForGym)
+          .in('id', allInstructorIds)
           .eq('is_active', true);
 
         // If filtering by specific instructor
