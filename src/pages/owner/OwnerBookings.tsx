@@ -138,6 +138,12 @@ const OwnerBookings: React.FC = () => {
     cancelled: filteredBookings.filter(b => b.status === 'cancelled').length,
   };
 
+  // Calculate if there are hidden bookings due to filters
+  const totalBookingsWithOtherStatus = useMemo(() => {
+    if (statusFilter === 'all') return 0;
+    return bookings.filter(b => b.status !== statusFilter).length;
+  }, [bookings, statusFilter]);
+
   // Mobile-specific data calculations
   const pieData = [
     { name: 'Confermate', value: stats.confirmed, color: 'hsl(var(--primary))' },
@@ -409,9 +415,22 @@ const OwnerBookings: React.FC = () => {
           </CardHeader>
           <CardContent>
             {filteredBookings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
-              </p>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-2">
+                  {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
+                </p>
+                {filteredBookings.length === 0 && totalBookingsWithOtherStatus > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    💡 Ci sono {totalBookingsWithOtherStatus} prenotazioni con altri stati.{' '}
+                    <button 
+                      onClick={() => setStatusFilter('all')} 
+                      className="text-primary underline hover:no-underline"
+                    >
+                      Mostra tutte
+                    </button>
+                  </p>
+                )}
+              </div>
             ) : (
               <Table>
                 <TableHeader>

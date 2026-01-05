@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
 import { it } from "date-fns/locale/it";
@@ -41,6 +43,7 @@ const SessionCalendar: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [showCancelled, setShowCancelled] = useState(false);
 
   useEffect(() => {
     if (!isMobile) {
@@ -84,7 +87,7 @@ const SessionCalendar: React.FC = () => {
         supabase.removeChannel(sessionChannel);
       };
     }
-  }, [currentWeek, currentMonth, viewMode, isMobile, selectedGym]);
+  }, [currentWeek, currentMonth, viewMode, isMobile, selectedGym, showCancelled]);
 
   // Return mobile version if on mobile
   if (isMobile) {
@@ -120,6 +123,11 @@ const SessionCalendar: React.FC = () => {
         endDate = endOfMonth(currentMonth);
       }
 
+      // Determine which statuses to include
+      const statusFilter = showCancelled 
+        ? ['scheduled', 'hidden', 'cancelled'] 
+        : ['scheduled', 'hidden'];
+
       const { data: sessionsData, error } = await supabase
         .from('course_sessions')
         .select(`
@@ -137,7 +145,7 @@ const SessionCalendar: React.FC = () => {
         .eq('courses.gym_id', selectedGym.id)
         .gte('session_date', format(startDate, 'yyyy-MM-dd'))
         .lte('session_date', format(endDate, 'yyyy-MM-dd'))
-        .in('status', ['scheduled', 'hidden'])
+        .in('status', statusFilter)
         .order('session_date')
         .order('start_time');
 
@@ -325,13 +333,16 @@ const SessionCalendar: React.FC = () => {
                         <Card 
                           className={cn(
                             `p-1 md:p-2 cursor-pointer hover:shadow-md transition-shadow min-h-[32px] md:min-h-[70px] flex flex-col justify-between`,
-                            getOccupancyColor(session.participants, session.maxParticipants),
+                            session.status === 'cancelled' 
+                              ? "bg-destructive/10 border-destructive/30 opacity-70"
+                              : getOccupancyColor(session.participants, session.maxParticipants),
                             session.status === 'hidden' && "opacity-60 bg-muted/50"
                           )}
                         >
                           <div className="space-y-0.5">
                             <div className="text-xs font-medium line-clamp-2 leading-tight flex items-center gap-1">
                               {session.status === 'hidden' && <EyeOff className="h-3 w-3 shrink-0 text-orange-600" />}
+                              {session.status === 'cancelled' && <XCircle className="h-3 w-3 shrink-0 text-destructive" />}
                               {session.courseName}
                             </div>
                             <div className="text-xs text-muted-foreground leading-tight">{session.time}</div>
@@ -340,6 +351,9 @@ const SessionCalendar: React.FC = () => {
                             <div className="text-xs text-muted-foreground">
                               {session.participants}/{session.maxParticipants}
                             </div>
+                            {session.status === 'cancelled' && (
+                              <Badge variant="destructive" className="text-[10px] h-4 px-1 mt-0.5">Annullata</Badge>
+                            )}
                           </div>
                         </Card>
                       </SessionManagementDrawer>
@@ -430,9 +444,11 @@ const SessionCalendar: React.FC = () => {
                           >
                             <div className={cn(
                               "text-xs truncate cursor-pointer hover:text-foreground transition-colors flex items-center gap-1",
-                              session.status === 'hidden' ? "text-orange-600" : "text-muted-foreground"
+                              session.status === 'hidden' ? "text-orange-600" : 
+                              session.status === 'cancelled' ? "text-destructive line-through" : "text-muted-foreground"
                             )}>
                               {session.status === 'hidden' && <EyeOff className="h-3 w-3 shrink-0" />}
+                              {session.status === 'cancelled' && <XCircle className="h-3 w-3 shrink-0" />}
                               {session.courseName}
                             </div>
                           </SessionManagementDrawer>
@@ -477,23 +493,35 @@ const SessionCalendar: React.FC = () => {
           </Button>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('week')}
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            Settimana
-          </Button>
-          <Button
-            variant={viewMode === 'month' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('month')}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Mese
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch 
+              id="show-cancelled" 
+              checked={showCancelled} 
+              onCheckedChange={setShowCancelled}
+            />
+            <Label htmlFor="show-cancelled" className="text-sm cursor-pointer">
+              Mostra annullate
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('week')}
+            >
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Settimana
+            </Button>
+            <Button
+              variant={viewMode === 'month' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('month')}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Mese
+            </Button>
+          </div>
         </div>
       </div>
 
