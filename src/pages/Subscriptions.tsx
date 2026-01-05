@@ -328,10 +328,10 @@ export default function Subscriptions() {
 
                       <Button
                         onClick={() => selectPlan(plan)}
-                        disabled={isActive || changing === plan.id}
+                        disabled={changing === plan.id}
                         className="w-full mt-auto"
                         size="sm"
-                        variant={isActive ? "secondary" : "default"}
+                        variant={isActive ? "outline" : "default"}
                       >
                         {changing === plan.id ? (
                           <>
@@ -339,7 +339,7 @@ export default function Subscriptions() {
                             <span className="text-xs sm:text-sm">Attivazione...</span>
                           </>
                         ) : isActive ? (
-                          <span className="text-xs sm:text-sm">Piano Attivo</span>
+                          <span className="text-xs sm:text-sm">Riacquista</span>
                         ) : (
                           <span className="text-xs sm:text-sm">Seleziona Piano</span>
                         )}
@@ -469,8 +469,16 @@ export default function Subscriptions() {
                   <>
                     <p className="font-medium">Acquistando "{pendingPlan.name}":</p>
                     <ul className="list-disc list-inside space-y-1 text-sm">
-                      <li>Avrai <strong>{activeSubscriptions.length + 1}</strong> abbonamenti attivi contemporaneamente</li>
-                      <li>Le date di validità si sovrapporranno</li>
+                      {pendingPlan.credits_included > 0 && !pendingPlan.unlimited_access && (
+                        <li className="text-primary font-medium">
+                          I {pendingPlan.credits_included} crediti si cumuleranno ai tuoi crediti attuali
+                        </li>
+                      )}
+                      {(pendingPlan.duration_days >= 30 || pendingPlan.unlimited_access) && (
+                        <li>
+                          Il nuovo periodo di {pendingPlan.duration_days} giorni partirà da oggi
+                        </li>
+                      )}
                       {activeSubscriptions.some(s => s.plan.unlimited_access) && (
                         <li>L'accesso illimitato rimarrà attivo</li>
                       )}
