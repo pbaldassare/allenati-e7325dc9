@@ -92,7 +92,61 @@ serve(async (req) => {
       );
     }
 
-    // Payment was successful, process the subscription/credits
+    // Payment was successful - CHECK FOR IDEMPOTENCY first
+    // Prevent duplicate processing (e.g., Klarna multiple redirects)
+    
+    // Check if this session was already processed in admin_action_logs
+    const { data: existingLog } = await supabaseClient
+      .from("admin_action_logs")
+      .select("new_data")
+      .eq("action", "payment_completed")
+      .filter("new_data->>session_id", "eq", sessionId)
+      .maybeSingle();
+
+    if (existingLog) {
+      console.log("Payment already processed for session:", sessionId);
+      return new Response(
+        JSON.stringify({ 
+          paid: true, 
+          processed: true,
+          already_processed: true,
+          type: existingLog.new_data?.subscription_id ? "subscription" : "credits"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    // Also check if payment_intent already exists in payments table
+    const paymentIntent = session.payment_intent as string;
+    if (paymentIntent) {
+      const { data: existingPayment } = await supabaseClient
+        .from("payments")
+        .select("id")
+        .eq("transaction_id", paymentIntent)
+        .eq("status", "completed")
+        .maybeSingle();
+
+      if (existingPayment) {
+        console.log("Payment already recorded with transaction_id:", paymentIntent);
+        return new Response(
+          JSON.stringify({ 
+            paid: true, 
+            processed: true,
+            already_processed: true,
+            type: "unknown"
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+    }
+
+    // Process the subscription/credits
     const { user_id, plan_id, gym_id, credits_amount } = session.metadata || {};
 
     if (user_id !== user.id) {
