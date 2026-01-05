@@ -132,7 +132,7 @@ export const useInstructorHoursWorked = (
         const courseIds = courses.map(c => c.id);
         const { data: sessions, error: sessionsError } = await supabase
           .from('course_sessions')
-          .select('id, course_id, start_time, end_time, session_date')
+          .select('id, course_id, start_time, end_time, session_date, instructor_id_override')
           .in('course_id', courseIds)
           .gte('session_date', startDateStr)
           .lte('session_date', endDateStr)
@@ -178,7 +178,8 @@ export const useInstructorHoursWorked = (
         sessions.forEach(session => {
           if (!sessionsWithParticipants.has(session.id)) return;
 
-          const instructorId = courseToInstructor.get(session.course_id);
+          // Use instructor_id_override if present, otherwise fall back to course instructor
+          const instructorId = session.instructor_id_override || courseToInstructor.get(session.course_id);
           if (!instructorId) return;
 
           // Calculate session duration in hours

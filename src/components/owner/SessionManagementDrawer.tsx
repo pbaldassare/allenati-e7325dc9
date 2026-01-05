@@ -49,6 +49,8 @@ interface SessionData {
   participant_count: number;
   status?: string;
   difficulty_level?: number | null;
+  instructor_id_override?: string | null;
+  instructor_name?: string;
 }
 
 const difficultyLabels: Record<number, string> = {
@@ -126,23 +128,111 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [editMaxParticipants, setEditMaxParticipants] = useState<number>(session.max_participants);
   const [editDifficultyLevel, setEditDifficultyLevel] = useState<number | null>(session.difficulty_level ?? null);
+  const [editInstructorIdOverride, setEditInstructorIdOverride] = useState<string | null>(session.instructor_id_override ?? null);
   const [savingSession, setSavingSession] = useState(false);
+  
+  // Instructor data
+  const [courseInstructorId, setCourseInstructorId] = useState<string | null>(null);
+  const [availableInstructors, setAvailableInstructors] = useState<Array<{
+    id: string;
+    user_id: string;
+    firstName: string;
+    lastName: string;
+  }>>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadParticipants();
+      loadCourseInstructorAndAvailableInstructors();
       // Reset edit state when opening
       setEditMaxParticipants(session.max_participants);
       setEditDifficultyLevel(session.difficulty_level ?? null);
+      setEditInstructorIdOverride(session.instructor_id_override ?? null);
       setIsEditingSession(false);
     }
   }, [open, session.id]);
+  
+  const loadCourseInstructorAndAvailableInstructors = async () => {
+    setLoadingInstructors(true);
+    try {
+      // Get course instructor_id and gym_id
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('instructor_id, gym_id')
+        .eq('id', session.course_id)
+        .single();
+
+      if (courseError) throw courseError;
+      
+      setCourseInstructorId(courseData?.instructor_id || null);
+      
+      if (!courseData?.gym_id) return;
+
+      // Get instructors from gym_assignments
+      const { data: gymAssignments } = await supabase
+        .from('instructor_gym_assignments')
+        .select('instructor_id')
+        .eq('gym_id', courseData.gym_id)
+        .eq('is_active', true);
+
+      // Get instructors from legacy instructors.gym_id
+      const { data: directInstructors } = await supabase
+        .from('instructors')
+        .select('id')
+        .eq('gym_id', courseData.gym_id)
+        .eq('is_active', true);
+
+      // Combine both sources
+      const assignmentIds = gymAssignments?.map(a => a.instructor_id) || [];
+      const directIds = directInstructors?.map(i => i.id) || [];
+      const allInstructorIds = [...new Set([...assignmentIds, ...directIds])];
+
+      if (allInstructorIds.length === 0) {
+        setAvailableInstructors([]);
+        return;
+      }
+
+      // Get instructor details
+      const { data: instructorsData } = await supabase
+        .from('instructors')
+        .select('id, user_id, first_name, last_name')
+        .in('id', allInstructorIds)
+        .eq('is_active', true);
+
+      // Get profiles for better names
+      const userIds = instructorsData?.map(i => i.user_id) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      const instructors = (instructorsData || []).map(instructor => {
+        const profile = profileMap.get(instructor.user_id);
+        return {
+          id: instructor.id,
+          user_id: instructor.user_id,
+          firstName: profile?.first_name || instructor.first_name || 'N/D',
+          lastName: profile?.last_name || instructor.last_name || '',
+        };
+      });
+
+      setAvailableInstructors(instructors);
+    } catch (error) {
+      console.error('Error loading instructors:', error);
+    } finally {
+      setLoadingInstructors(false);
+    }
+  };
 
   // Update local state when session prop changes
   useEffect(() => {
     setEditMaxParticipants(session.max_participants);
     setEditDifficultyLevel(session.difficulty_level ?? null);
-  }, [session.max_participants, session.difficulty_level]);
+    setEditInstructorIdOverride(session.instructor_id_override ?? null);
+  }, [session.max_participants, session.difficulty_level, session.instructor_id_override]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -822,7 +912,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .update({
           max_participants: editMaxParticipants,
           available_spots: newAvailableSpots,
-          difficulty_level: editDifficultyLevel
+          difficulty_level: editDifficultyLevel,
+          instructor_id_override: editInstructorIdOverride
         })
         .eq('id', session.id);
 
@@ -961,6 +1052,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                       setIsEditingSession(false);
                       setEditMaxParticipants(session.max_participants);
                       setEditDifficultyLevel(session.difficulty_level ?? null);
+                      setEditInstructorIdOverride(session.instructor_id_override ?? null);
                     }}
                   >
                     Annulla
@@ -982,7 +1074,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Max Partecipanti</label>
                 {isEditingSession ? (
@@ -1020,6 +1112,45 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                       {session.difficulty_level 
                         ? difficultyLabels[session.difficulty_level] || `Livello ${session.difficulty_level}`
                         : 'Non specificata'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Istruttore</label>
+                {isEditingSession ? (
+                  <select
+                    value={editInstructorIdOverride || courseInstructorId || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Se seleziona l'istruttore del corso, rimuove l'override
+                      setEditInstructorIdOverride(value === courseInstructorId ? null : value || null);
+                    }}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={loadingInstructors}
+                  >
+                    {loadingInstructors ? (
+                      <option>Caricamento...</option>
+                    ) : (
+                      availableInstructors.map(instructor => (
+                        <option key={instructor.id} value={instructor.id}>
+                          {instructor.firstName} {instructor.lastName}
+                          {instructor.id === courseInstructorId ? ' (default)' : ''}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">
+                      {(() => {
+                        const effectiveId = session.instructor_id_override || courseInstructorId;
+                        const instructor = availableInstructors.find(i => i.id === effectiveId);
+                        return instructor 
+                          ? `${instructor.firstName} ${instructor.lastName}`
+                          : session.instructor_name || 'N/D';
+                      })()}
                     </span>
                   </div>
                 )}
