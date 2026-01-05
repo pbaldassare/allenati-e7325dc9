@@ -576,6 +576,7 @@ export type Database = {
           difficulty_level: number | null
           end_time: string
           id: string
+          instructor_id_override: string | null
           max_participants: number
           notes: string | null
           room_id: string | null
@@ -592,6 +593,7 @@ export type Database = {
           difficulty_level?: number | null
           end_time: string
           id?: string
+          instructor_id_override?: string | null
           max_participants?: number
           notes?: string | null
           room_id?: string | null
@@ -608,6 +610,7 @@ export type Database = {
           difficulty_level?: number | null
           end_time?: string
           id?: string
+          instructor_id_override?: string | null
           max_participants?: number
           notes?: string | null
           room_id?: string | null
@@ -623,6 +626,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_sessions_instructor_id_override_fkey"
+            columns: ["instructor_id_override"]
+            isOneToOne: false
+            referencedRelation: "instructors"
             referencedColumns: ["id"]
           },
           {
