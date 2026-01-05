@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, Calendar, EyeOff, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay } from "date-fns";
 import { it } from "date-fns/locale/it";
@@ -33,6 +35,7 @@ const SessionCalendarMobile: React.FC = () => {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showCancelled, setShowCancelled] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -74,7 +77,7 @@ const SessionCalendarMobile: React.FC = () => {
       supabase.removeChannel(bookingChannel);
       supabase.removeChannel(sessionChannel);
     };
-  }, [currentDate, selectedGym]);
+  }, [currentDate, selectedGym, showCancelled]);
 
   const fetchSessions = async () => {
     setLoading(true);
@@ -93,6 +96,11 @@ const SessionCalendarMobile: React.FC = () => {
       const dayStart = startOfDay(currentDate);
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
+
+      // Determine which statuses to include
+      const statusFilter = showCancelled 
+        ? ['scheduled', 'hidden', 'cancelled'] 
+        : ['scheduled', 'hidden'];
 
       const { data: sessionsData, error } = await supabase
         .from('course_sessions')
@@ -114,7 +122,7 @@ const SessionCalendarMobile: React.FC = () => {
         `)
         .eq('courses.gym_id', selectedGym.id)
         .eq('session_date', format(dayStart, 'yyyy-MM-dd'))
-        .in('status', ['scheduled', 'hidden'])
+        .in('status', statusFilter)
         .order('start_time');
 
       if (error) {
@@ -240,18 +248,30 @@ const SessionCalendarMobile: React.FC = () => {
             {getCurrentDateText()}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {sessions.length} {sessions.length === 1 ? 'sessione' : 'sessioni'} programmate
+            {sessions.length} {sessions.length === 1 ? 'sessione' : 'sessioni'} {showCancelled ? '' : 'programmate'}
           </p>
         </div>
         
         <Button 
-          variant="outline" 
+          variant="outline"
           size="sm" 
           onClick={() => navigateDay('next')}
           className="h-10 w-10 p-0"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
+      </div>
+
+      {/* Toggle Cancelled Sessions */}
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <Switch 
+          id="show-cancelled-mobile" 
+          checked={showCancelled} 
+          onCheckedChange={setShowCancelled}
+        />
+        <Label htmlFor="show-cancelled-mobile" className="text-sm cursor-pointer">
+          Mostra annullate
+        </Label>
       </div>
 
       {/* Sessions List */}
@@ -286,16 +306,27 @@ const SessionCalendarMobile: React.FC = () => {
               <Card 
                 className={cn(
                   "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
-                  getOccupancyColor(session.participants, session.maxParticipants),
+                  session.status === 'cancelled' 
+                    ? "bg-destructive/10 border-destructive/50 opacity-70"
+                    : getOccupancyColor(session.participants, session.maxParticipants),
                   session.status === 'hidden' && "opacity-60 bg-muted/50"
                 )}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-base truncate">
+                      <h3 className={cn(
+                        "font-semibold text-base truncate",
+                        session.status === 'cancelled' && "line-through text-destructive"
+                      )}>
                         {session.courseName}
                       </h3>
+                      {session.status === 'cancelled' && (
+                        <Badge variant="destructive" className="text-xs">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Annullata
+                        </Badge>
+                      )}
                       {session.status === 'hidden' && (
                         <div className="flex items-center gap-1">
                           <EyeOff className="h-4 w-4 text-orange-600" />

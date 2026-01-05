@@ -4,9 +4,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Plus, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DateRangeSelector } from '@/components/ui/date-range-selector';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CourseSession {
   id?: string;
@@ -56,8 +57,54 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
   const [generatedSessions, setGeneratedSessions] = useState<CourseSession[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingFromDb, setLoadingFromDb] = useState(false);
   const [currentStartDate, setCurrentStartDate] = useState(startDate);
   const [currentEndDate, setCurrentEndDate] = useState(endDate);
+
+  // Fetch existing sessions from DB when courseId is provided
+  useEffect(() => {
+    if (courseId) {
+      fetchSessionsFromDb();
+    }
+  }, [courseId]);
+
+  const fetchSessionsFromDb = async () => {
+    if (!courseId) return;
+    
+    setLoadingFromDb(true);
+    try {
+      const { data, error } = await supabase
+        .from('course_sessions')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('session_date')
+        .order('start_time');
+
+      if (error) {
+        console.error('Error fetching sessions:', error);
+        return;
+      }
+
+      const transformedSessions: CourseSession[] = (data || []).map(s => ({
+        id: s.id,
+        session_date: s.session_date,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        room_id: s.room_id || undefined,
+        room_name: s.room_name || undefined,
+        max_participants: s.max_participants,
+        available_spots: s.available_spots,
+        status: s.status as 'scheduled' | 'cancelled' | 'completed'
+      }));
+
+      setSessions(transformedSessions);
+      console.log(`📊 Loaded ${transformedSessions.length} sessions from DB for course ${courseId}`);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setLoadingFromDb(false);
+    }
+  };
 
   const generateSessions = () => {
     if (!currentStartDate || !currentEndDate || schedules.length === 0) return [];
@@ -279,7 +326,12 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          {sessions.length === 0 ? (
+          {loadingFromDb ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground">Caricamento sessioni dal database...</p>
+            </div>
+          ) : sessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nessuna sessione programmata</p>
@@ -288,20 +340,25 @@ export const CourseSessionManager: React.FC<CourseSessionManagerProps> = ({
           ) : (
             <div className="max-h-96 overflow-y-auto space-y-2">
               {sessions.map((session, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={session.id || index} className={`flex items-center justify-between p-3 border rounded-lg ${
+                  session.status === 'cancelled' ? 'bg-destructive/10 border-destructive/30' : ''
+                }`}>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">
                       {format(new Date(session.session_date), 'dd/MM/yyyy')}
                     </Badge>
-                    <span className="text-sm font-medium">
+                    <span className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-muted-foreground' : ''}`}>
                       {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
                     </span>
                     {session.room_name && (
                       <Badge variant="secondary">{session.room_name}</Badge>
                     )}
-                    <Badge variant={session.status === 'scheduled' ? 'default' : 'secondary'}>
+                    <Badge variant={
+                      session.status === 'scheduled' ? 'default' : 
+                      session.status === 'cancelled' ? 'destructive' : 'secondary'
+                    }>
                       {session.status === 'scheduled' ? 'Programmata' : 
-                       session.status === 'cancelled' ? 'Cancellata' : 'Completata'}
+                       session.status === 'cancelled' ? 'Annullata' : 'Completata'}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2">
