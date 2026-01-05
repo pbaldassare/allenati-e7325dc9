@@ -238,6 +238,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
           user_id: string
+          waitlist_position: number | null
         }
         Insert: {
           cancellation_reason?: string | null
@@ -259,6 +260,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
           user_id: string
+          waitlist_position?: number | null
         }
         Update: {
           cancellation_reason?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
           user_id?: string
+          waitlist_position?: number | null
         }
         Relationships: [
           {
@@ -2261,6 +2264,10 @@ export type Database = {
         Args: { _gym_id: string; _year?: number }
         Returns: string
       }
+      get_next_waitlist_position: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
       get_user_active_subscriptions: {
         Args: { _gym_id: string; _user_id: string }
         Returns: {
@@ -2321,6 +2328,14 @@ export type Database = {
       }
       recalculate_all_gym_credits: { Args: never; Returns: undefined }
       recalculate_all_gym_credits_fixed: { Args: never; Returns: undefined }
+      refund_expired_waitlist: {
+        Args: never
+        Returns: {
+          credits_refunded: number
+          refunded_booking_id: string
+          refunded_user_id: string
+        }[]
+      }
       repair_orphan_bookings: {
         Args: { _course_id?: string }
         Returns: {

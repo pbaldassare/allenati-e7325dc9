@@ -20,7 +20,9 @@ import {
   Eye,
   EyeOff,
   Signal,
-  Save
+  Save,
+  ArrowUp,
+  ListOrdered
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -31,6 +33,7 @@ import { useVirtualKeyboard } from '@/hooks/useVirtualKeyboard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
+import { promoteFromWaitlist, cancelWaitlistBooking } from '@/lib/waitlistHelpers';
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
 import { MedicalCertificateStatusBadge } from './MedicalCertificateStatusBadge';
 import ManualSubscriptionActivationDialog from '@/components/dialogs/ManualSubscriptionActivationDialog';
@@ -113,11 +116,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [open, setOpen] = useState(false);
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [waitlistParticipants, setWaitlistParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [promoting, setPromoting] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [toggleVisibilityLoading, setToggleVisibilityLoading] = useState(false);
   const [cancellingSession, setCancellingSession] = useState(false);
@@ -144,6 +149,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   useEffect(() => {
     if (open) {
       loadParticipants();
+      loadWaitlistParticipants();
       loadCourseInstructorAndAvailableInstructors();
       // Reset edit state when opening
       setEditMaxParticipants(session.max_participants);
@@ -480,6 +486,54 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWaitlistParticipants = async () => {
+    try {
+      const { data: waitlistData, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          user_id,
+          status,
+          credits_used,
+          waitlist_position,
+          created_at,
+          profiles!inner (
+            user_id,
+            first_name,
+            last_name,
+            email,
+            profile_picture_url,
+            current_credits
+          )
+        `)
+        .eq('status', 'waitlist')
+        .eq('session_id', session.id)
+        .order('waitlist_position', { ascending: true });
+
+      if (error) throw error;
+
+      const waitlist: Participant[] = (waitlistData || []).map((booking: any) => ({
+        id: booking.id,
+        user_id: booking.user_id,
+        status: booking.status,
+        credits_used: booking.credits_used,
+        user: {
+          first_name: booking.profiles?.first_name || 'Utente',
+          last_name: booking.profiles?.last_name || 'Sconosciuto',
+          email: booking.profiles?.email || 'N/A',
+          profile_picture_url: booking.profiles?.profile_picture_url,
+          current_credits: booking.profiles?.current_credits || 0
+        },
+        subscription: null,
+        medical_certificate: null
+      }));
+
+      setWaitlistParticipants(waitlist);
+    } catch (error) {
+      console.error('Error loading waitlist:', error);
     }
   };
 
@@ -898,6 +952,46 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const handleSubscriptionActivated = () => {
     loadParticipants(); // Reload participants to see updated subscription status
     setSelectedUserForSubscription(null);
+  };
+
+  const handlePromoteFromWaitlist = async (bookingId: string) => {
+    setPromoting(bookingId);
+    try {
+      const result = await promoteFromWaitlist(bookingId);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      toast.success(result.message);
+      loadParticipants();
+      loadWaitlistParticipants();
+      onSessionUpdate?.();
+    } catch (error: any) {
+      console.error('Error promoting from waitlist:', error);
+      toast.error(error.message || 'Errore durante la promozione');
+    } finally {
+      setPromoting(null);
+    }
+  };
+
+  const handleRemoveFromWaitlist = async (bookingId: string, userId: string) => {
+    setRemoving(bookingId);
+    try {
+      const result = await cancelWaitlistBooking(bookingId, userId);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      toast.success(result.message);
+      loadWaitlistParticipants();
+    } catch (error: any) {
+      console.error('Error removing from waitlist:', error);
+      toast.error(error.message || 'Errore durante la rimozione');
+    } finally {
+      setRemoving(null);
+    }
   };
 
   const saveSessionChanges = async () => {
@@ -1430,6 +1524,99 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {/* Waitlist Section */}
+            {waitlistParticipants.length > 0 && (
+              <div className="mt-6 pt-4 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <ListOrdered className="h-4 w-4 text-warning" />
+                    Lista d'Attesa ({waitlistParticipants.length})
+                  </h4>
+                </div>
+
+                <div className={cn("space-y-3", isMobile && "space-y-4")}>
+                  {waitlistParticipants.map((participant, index) => (
+                    <Card key={participant.id} className="border-l-4 border-l-warning/50">
+                      <CardContent className={cn("p-3", isMobile && "p-4")}>
+                        <div className={cn(
+                          "flex items-center justify-between",
+                          isMobile && "flex-col space-y-3"
+                        )}>
+                          <div className={cn(
+                            "flex items-center gap-3",
+                            isMobile && "w-full"
+                          )}>
+                            <Badge variant="secondary" className="font-bold text-sm">
+                              #{index + 1}
+                            </Badge>
+                            <Avatar className={cn("h-10 w-10", isMobile && "h-12 w-12")}>
+                              <AvatarImage src={participant.user.profile_picture_url} />
+                              <AvatarFallback className="font-semibold">
+                                {participant.user.first_name[0]}{participant.user.last_name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn("font-medium text-sm truncate", isMobile && "text-base")}>
+                                {participant.user.first_name} {participant.user.last_name}
+                              </p>
+                              <p className={cn("text-xs text-muted-foreground truncate", isMobile && "text-sm")}>
+                                {participant.user.email}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {participant.credits_used} crediti trattenuti
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className={cn(
+                            "flex gap-2",
+                            isMobile && "w-full"
+                          )}>
+                            <Button
+                              variant="outline"
+                              size={isMobile ? "default" : "sm"}
+                              onClick={() => handlePromoteFromWaitlist(participant.id)}
+                              disabled={promoting === participant.id || isFull}
+                              className={cn(
+                                "gap-1",
+                                isMobile && "flex-1 h-10"
+                              )}
+                              title={isFull ? "Non ci sono posti disponibili" : "Promuovi a confermato"}
+                            >
+                              {promoting === participant.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : (
+                                <ArrowUp className="h-4 w-4" />
+                              )}
+                              {isMobile && "Promuovi"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size={isMobile ? "default" : "sm"}
+                              onClick={() => handleRemoveFromWaitlist(participant.id, participant.user_id)}
+                              disabled={removing === participant.id}
+                              className={cn(
+                                "text-destructive hover:text-destructive",
+                                isMobile && "flex-1 h-10"
+                              )}
+                            >
+                              {removing === participant.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : (
+                                <UserMinus className="h-4 w-4" />
+                              )}
+                              {isMobile && "Rimuovi"}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
           </ScrollArea>
