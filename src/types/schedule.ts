@@ -5,6 +5,8 @@ export interface ScheduleItem {
   roomId: string;
   day?: string;
   date?: string;
+  maxParticipantsOverride?: number | null;
+  difficultyLevelOverride?: number | null;
 }
 
 export interface GymRoom {
@@ -20,6 +22,8 @@ export interface CourseSchedule {
   end_time: string;
   room_id?: string;
   room_name?: string;
+  max_participants_override?: number | null;
+  difficulty_level_override?: number | null;
 }
 
 export interface CourseSession {
@@ -31,5 +35,6 @@ export interface CourseSession {
   room_name?: string;
   max_participants: number;
   available_spots: number;
+  difficulty_level?: number | null;
   status: 'scheduled' | 'cancelled' | 'completed';
 }

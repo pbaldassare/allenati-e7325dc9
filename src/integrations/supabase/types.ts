@@ -523,9 +523,11 @@ export type Database = {
           course_id: string
           created_at: string
           day_of_week: number
+          difficulty_level_override: number | null
           end_time: string
           id: string
           is_active: boolean
+          max_participants_override: number | null
           room_id: string | null
           room_name: string | null
           start_time: string
@@ -534,9 +536,11 @@ export type Database = {
           course_id: string
           created_at?: string
           day_of_week: number
+          difficulty_level_override?: number | null
           end_time: string
           id?: string
           is_active?: boolean
+          max_participants_override?: number | null
           room_id?: string | null
           room_name?: string | null
           start_time: string
@@ -545,9 +549,11 @@ export type Database = {
           course_id?: string
           created_at?: string
           day_of_week?: number
+          difficulty_level_override?: number | null
           end_time?: string
           id?: string
           is_active?: boolean
+          max_participants_override?: number | null
           room_id?: string | null
           room_name?: string | null
           start_time?: string
@@ -567,6 +573,7 @@ export type Database = {
           available_spots: number
           course_id: string
           created_at: string
+          difficulty_level: number | null
           end_time: string
           id: string
           max_participants: number
@@ -582,6 +589,7 @@ export type Database = {
           available_spots?: number
           course_id: string
           created_at?: string
+          difficulty_level?: number | null
           end_time: string
           id?: string
           max_participants?: number
@@ -597,6 +605,7 @@ export type Database = {
           available_spots?: number
           course_id?: string
           created_at?: string
+          difficulty_level?: number | null
           end_time?: string
           id?: string
           max_participants?: number

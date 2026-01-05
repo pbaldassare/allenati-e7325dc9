@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Clock, MapPin } from 'lucide-react';
+import { Plus, Trash2, Clock, MapPin, Users, Signal } from 'lucide-react';
 import type { ScheduleItem, GymRoom } from '@/types/schedule';
 import { DeleteScheduleConfirmDialog } from '@/components/dialogs/DeleteScheduleConfirmDialog';
 
@@ -12,6 +12,8 @@ interface CourseScheduleManagerProps {
   schedule: ScheduleItem[];
   onChange: (schedule: ScheduleItem[]) => void;
   gymRooms: GymRoom[];
+  courseMaxParticipants?: number;
+  courseDifficultyLevel?: number;
 }
 
 const daysOfWeek = [
@@ -24,13 +26,30 @@ const daysOfWeek = [
   { value: 0, label: 'Domenica' },
 ];
 
+const difficultyOptions = [
+  { value: '', label: 'Come corso' },
+  { value: '1', label: '1 - Principiante' },
+  { value: '2', label: '2 - Intermedio' },
+  { value: '3', label: '3 - Avanzato' },
+];
+
 export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   schedule,
   onChange,
   gymRooms,
+  courseMaxParticipants,
+  courseDifficultyLevel,
 }) => {
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(
-    schedule.length > 0 ? schedule : [{ dayOfWeek: 1, time: '09:00', end_time: '10:00', roomId: '', day: 'Lunedì' }]
+    schedule.length > 0 ? schedule : [{ 
+      dayOfWeek: 1, 
+      time: '09:00', 
+      end_time: '10:00', 
+      roomId: '', 
+      day: 'Lunedì',
+      maxParticipantsOverride: null,
+      difficultyLevelOverride: null
+    }]
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<{
@@ -47,7 +66,9 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       time: '09:00',
       end_time: '10:00',
       roomId: '',
-      day: 'Lunedì'
+      day: 'Lunedì',
+      maxParticipantsOverride: null,
+      difficultyLevelOverride: null
     };
     const newSchedule = [newItem, ...scheduleItems];
     setScheduleItems(newSchedule);
@@ -133,7 +154,7 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
         {scheduleItems.map((item, index) => (
           <Card key={index}>
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
                 <div>
                   <label className="text-sm font-medium">Giorno</label>
                   <Select
@@ -225,6 +246,48 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
                 </div>
 
                 <div>
+                  <label className="text-sm font-medium flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Max Part.
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder={courseMaxParticipants ? courseMaxParticipants.toString() : 'Corso'}
+                    value={item.maxParticipantsOverride ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? null : parseInt(e.target.value);
+                      updateScheduleItem(index, 'maxParticipantsOverride', val);
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium flex items-center gap-1">
+                    <Signal className="h-3 w-3" />
+                    Difficoltà
+                  </label>
+                  <Select
+                    value={item.difficultyLevelOverride?.toString() ?? ''}
+                    onValueChange={(value) => {
+                      const val = value === '' ? null : parseInt(value);
+                      updateScheduleItem(index, 'difficultyLevelOverride', val);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Come corso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {difficultyOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Button
                     type="button"
                     variant="outline"
@@ -250,12 +313,25 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
           <div className="flex flex-wrap gap-2">
             {scheduleItems.map((item, index) => {
               const roomName = getRoomName(item.roomId);
+              const hasOverride = item.maxParticipantsOverride || item.difficultyLevelOverride;
               return (
                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {item.day} {item.time}-{item.end_time}
                   <MapPin className="h-3 w-3" />
                   {roomName}
+                  {item.maxParticipantsOverride && (
+                    <>
+                      <Users className="h-3 w-3 ml-1" />
+                      {item.maxParticipantsOverride}
+                    </>
+                  )}
+                  {item.difficultyLevelOverride && (
+                    <>
+                      <Signal className="h-3 w-3 ml-1" />
+                      Lv.{item.difficultyLevelOverride}
+                    </>
+                  )}
                 </Badge>
               );
             })}

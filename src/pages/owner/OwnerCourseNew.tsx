@@ -128,7 +128,7 @@ const OwnerCourseNew: React.FC = () => {
     try {
       console.log('Saving schedules for course:', courseData.id);
       
-      // Step 1: Save schedules
+      // Step 1: Save schedules with new override fields
       const schedulesWithCourseId = schedules.map(schedule => ({
         course_id: courseData.id,
         day_of_week: schedule.dayOfWeek,
@@ -136,6 +136,8 @@ const OwnerCourseNew: React.FC = () => {
         end_time: schedule.end_time,
         room_id: schedule.roomId,
         room_name: gymRooms.find(r => r.id === schedule.roomId)?.name || null,
+        max_participants_override: schedule.maxParticipantsOverride || null,
+        difficulty_level_override: schedule.difficultyLevelOverride || null,
         is_active: true
       }));
 
@@ -280,6 +282,8 @@ const OwnerCourseNew: React.FC = () => {
                       schedule={schedules}
                       onChange={handleSchedulesChange}
                       gymRooms={gymRooms}
+                      courseMaxParticipants={courseData?.max_participants}
+                      courseDifficultyLevel={courseData?.difficulty_level}
                     />
                   )}
                 </CardContent>

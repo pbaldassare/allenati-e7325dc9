@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Signal,
+  Save
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,7 +48,14 @@ interface SessionData {
   available_spots: number;
   participant_count: number;
   status?: string;
+  difficulty_level?: number | null;
 }
+
+const difficultyLabels: Record<number, string> = {
+  1: 'Principiante',
+  2: 'Intermedio',
+  3: 'Avanzato'
+};
 
 interface Participant {
   id: string;
@@ -112,12 +121,28 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [cancellingSession, setCancellingSession] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [selectedUserForSubscription, setSelectedUserForSubscription] = useState<{ id: string; name: string; email: string } | null>(null);
+  
+  // Session edit state
+  const [isEditingSession, setIsEditingSession] = useState(false);
+  const [editMaxParticipants, setEditMaxParticipants] = useState<number>(session.max_participants);
+  const [editDifficultyLevel, setEditDifficultyLevel] = useState<number | null>(session.difficulty_level ?? null);
+  const [savingSession, setSavingSession] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadParticipants();
+      // Reset edit state when opening
+      setEditMaxParticipants(session.max_participants);
+      setEditDifficultyLevel(session.difficulty_level ?? null);
+      setIsEditingSession(false);
     }
   }, [open, session.id]);
+
+  // Update local state when session prop changes
+  useEffect(() => {
+    setEditMaxParticipants(session.max_participants);
+    setEditDifficultyLevel(session.difficulty_level ?? null);
+  }, [session.max_participants, session.difficulty_level]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -785,6 +810,35 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     setSelectedUserForSubscription(null);
   };
 
+  const saveSessionChanges = async () => {
+    setSavingSession(true);
+    try {
+      // Calculate new available spots based on current bookings
+      const currentBookedCount = session.max_participants - session.available_spots;
+      const newAvailableSpots = Math.max(0, editMaxParticipants - currentBookedCount);
+
+      const { error } = await supabase
+        .from('course_sessions')
+        .update({
+          max_participants: editMaxParticipants,
+          available_spots: newAvailableSpots,
+          difficulty_level: editDifficultyLevel
+        })
+        .eq('id', session.id);
+
+      if (error) throw error;
+
+      toast.success('Sessione aggiornata con successo');
+      setIsEditingSession(false);
+      onSessionUpdate?.();
+    } catch (error) {
+      console.error('Error updating session:', error);
+      toast.error('Errore durante l\'aggiornamento della sessione');
+    } finally {
+      setSavingSession(false);
+    }
+  };
+
   const occupancyRate = ((session.max_participants - session.available_spots) / session.max_participants) * 100;
   const isAlmostFull = session.available_spots <= 3 && session.available_spots > 0;
   const isFull = session.available_spots <= 0;
@@ -883,6 +937,96 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         </DrawerHeader>
 
         <div className="flex flex-col h-full overflow-hidden">
+          {/* Session Settings Section */}
+          <div className="p-4 border-b bg-muted/10">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Signal className="h-4 w-4" />
+                Impostazioni Sessione
+              </h4>
+              {!isEditingSession ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingSession(true)}
+                >
+                  Modifica
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingSession(false);
+                      setEditMaxParticipants(session.max_participants);
+                      setEditDifficultyLevel(session.difficulty_level ?? null);
+                    }}
+                  >
+                    Annulla
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveSessionChanges}
+                    disabled={savingSession}
+                    className="gap-1"
+                  >
+                    {savingSession ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Max Partecipanti</label>
+                {isEditingSession ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editMaxParticipants}
+                    onChange={(e) => setEditMaxParticipants(parseInt(e.target.value) || 1)}
+                    className="h-9"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{session.max_participants}</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Difficoltà</label>
+                {isEditingSession ? (
+                  <select
+                    value={editDifficultyLevel ?? ''}
+                    onChange={(e) => setEditDifficultyLevel(e.target.value ? parseInt(e.target.value) : null)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">Non specificata</option>
+                    <option value="1">1 - Principiante</option>
+                    <option value="2">2 - Intermedio</option>
+                    <option value="3">3 - Avanzato</option>
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Signal className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {session.difficulty_level 
+                        ? difficultyLabels[session.difficulty_level] || `Livello ${session.difficulty_level}`
+                        : 'Non specificata'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Search Section */}
           <div className="p-4 border-b bg-muted/30">
             <div className="flex items-center gap-2">
