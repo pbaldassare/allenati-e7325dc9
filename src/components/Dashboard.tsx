@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BookingConfirmDialog } from '@/components/dialogs/BookingConfirmDialog';
 import { CancellationConfirmDialog } from '@/components/dialogs/CancellationConfirmDialog';
+import { WaitlistConfirmDialog } from '@/components/dialogs/WaitlistConfirmDialog';
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 import WeeklyCalendarCompact from './WeeklyCalendarCompact';
@@ -18,9 +19,11 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 import { useSessionBookings } from '@/hooks/useSessionBookings';
+import { useUserWaitlistStatus } from '@/hooks/useWaitlist';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { GymSelectorWithLogo } from '@/components/GymSelectorWithLogo';
 import { processBooking, checkBookingEligibility, BookingData } from '@/lib/bookingHelpers';
+import { processWaitlistBooking, cancelWaitlistBooking, getNextWaitlistPosition, WaitlistBookingData } from '@/lib/waitlistHelpers';
 import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
 export const Dashboard = () => {
@@ -29,14 +32,17 @@ export const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { bookings, isSessionBooked, getSessionBooking, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
+  const { isInWaitlistForSession, getWaitlistPosition, getWaitlistBookingId, fetchUserWaitlistBookings } = useUserWaitlistStatus();
   const [availableSessions, setAvailableSessions] = useState([]);
   const [instructorProfiles, setInstructorProfiles] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [loadingBooking, setLoadingBooking] = useState<string | null>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [estimatedWaitlistPosition, setEstimatedWaitlistPosition] = useState(1);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -216,6 +222,14 @@ export const Dashboard = () => {
     setCancellationDialogOpen(true);
   };
 
+  const openWaitlistDialog = async (session: any) => {
+    setSelectedSession(session);
+    // Get estimated position
+    const position = await getNextWaitlistPosition(session.id);
+    setEstimatedWaitlistPosition(position);
+    setWaitlistDialogOpen(true);
+  };
+
   const handleBookingConfirm = async () => {
     if (!user || !selectedSession || !selectedGym) return;
     
@@ -324,6 +338,76 @@ export const Dashboard = () => {
     } finally {
       setLoadingBooking(null);
       setSelectedBooking(null);
+    }
+  };
+
+  const handleWaitlistConfirm = async () => {
+    if (!user || !selectedSession || !selectedGym) return;
+
+    setLoadingBooking(selectedSession.id);
+    try {
+      const waitlistData: WaitlistBookingData = {
+        sessionId: selectedSession.id,
+        courseId: selectedSession.course_id,
+        gymId: selectedGym.id,
+        scheduledDate: selectedSession.session_date,
+        scheduledTime: selectedSession.start_time,
+        creditsRequired: selectedSession.courses?.credits_required || 1
+      };
+
+      const result = await processWaitlistBooking(user.id, waitlistData);
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      toast({
+        title: "Iscritto alla lista d'attesa",
+        description: result.message,
+      });
+      setWaitlistDialogOpen(false);
+      fetchUserWaitlistBookings();
+      loadUserCreditsAndSubscription();
+    } catch (error: any) {
+      console.error('Waitlist error:', error);
+      toast({
+        title: "Errore",
+        description: error.message || "Si è verificato un errore",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
+      setSelectedSession(null);
+    }
+  };
+
+  const handleCancelWaitlist = async (sessionId: string) => {
+    const bookingId = getWaitlistBookingId(sessionId);
+    if (!bookingId || !user) return;
+
+    setLoadingBooking(sessionId);
+    try {
+      const result = await cancelWaitlistBooking(bookingId, user.id);
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      toast({
+        title: "Rimosso dalla lista d'attesa",
+        description: result.message,
+      });
+      fetchUserWaitlistBookings();
+      loadUserCreditsAndSubscription();
+    } catch (error: any) {
+      console.error('Cancel waitlist error:', error);
+      toast({
+        title: "Errore",
+        description: error.message || "Si è verificato un errore",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBooking(null);
     }
   };
 
@@ -702,13 +786,35 @@ export const Dashboard = () => {
                           >
                             Disdici
                           </Button>
+                        ) : isInWaitlistForSession(session.id) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancelWaitlist(session.id)}
+                            disabled={isLoading}
+                            className="gap-1"
+                          >
+                            <Clock className="h-3 w-3" />
+                            #{getWaitlistPosition(session.id)} - Esci
+                          </Button>
+                        ) : isFull ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => openWaitlistDialog(session)}
+                            disabled={isLoading}
+                            className="gap-1"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Lista d'Attesa
+                          </Button>
                         ) : (
                           <Button
                             size="sm"
                             onClick={() => openBookingDialog(session)}
-                            disabled={isLoading || isFull}
+                            disabled={isLoading}
                           >
-                            {isLoading ? "..." : isFull ? "Pieno" : "Prenota"}
+                            {isLoading ? "..." : "Prenota"}
                           </Button>
                         )}
                       </div>
@@ -772,6 +878,18 @@ export const Dashboard = () => {
         sessionId={selectedSessionForParticipants || ''}
         isOpen={selectedSessionForParticipants !== null}
         onClose={() => setSelectedSessionForParticipants(null)}
+      />
+
+      <WaitlistConfirmDialog
+        open={waitlistDialogOpen}
+        onOpenChange={setWaitlistDialogOpen}
+        courseName={selectedSession?.courses?.name || ''}
+        scheduledDate={selectedSession?.session_date || ''}
+        scheduledTime={selectedSession?.start_time || ''}
+        creditsRequired={selectedSession?.courses?.credits_required || 1}
+        estimatedPosition={estimatedWaitlistPosition}
+        onConfirm={handleWaitlistConfirm}
+        isLoading={loadingBooking === selectedSession?.id}
       />
     </div>
   );
