@@ -79,13 +79,15 @@ export async function smartUpdateCourseSchedules(
 
     console.log('📋 Schedules prepared for RPC:', schedulesForRpc);
 
-    // Call the RPC function with new schedules - this handles everything internally
+    // Call the RPC function with SAFE parameters (p_* prefix) - this preserves existing sessions
+    // The p_* version only cancels/deletes sessions for REMOVED schedules, not everything
     const { data: rpcResult, error: rpcError } = await supabase
       .rpc('smart_generate_sessions_with_weeks', {
-        _course_id: courseId,
-        _duration_weeks: durationWeeks,
-        _start_date: null,
-        _new_schedules: schedulesForRpc
+        p_course_id: courseId,
+        p_schedules: schedulesForRpc,
+        p_duration_weeks: durationWeeks,
+        p_start_date: null,
+        p_max_participants: null
       });
 
     if (rpcError) {
