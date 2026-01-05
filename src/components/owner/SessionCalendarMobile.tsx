@@ -278,7 +278,8 @@ const SessionCalendarMobile: React.FC = () => {
                 max_participants: session.maxParticipants,
                 available_spots: session.maxParticipants - session.participants,
                 participant_count: session.participants,
-                status: session.status
+                status: session.status,
+                difficulty_level: session.difficulty_level
               }}
               onSessionUpdate={fetchSessions}
             >
