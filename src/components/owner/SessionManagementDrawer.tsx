@@ -636,6 +636,30 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     }
   };
 
+  const enrollToWaitlist = async (userId: string) => {
+    setEnrolling(userId);
+    try {
+      const { data: bookingId, error } = await supabase.rpc('manual_enroll_to_waitlist', {
+        _user_id: userId,
+        _session_id: session.id,
+        _enrolled_by: user?.id
+      });
+
+      if (error) throw error;
+
+      toast.success('Utente aggiunto alla lista d\'attesa!');
+      await loadWaitlistParticipants();
+      setSearchTerm('');
+      setSearchResults([]);
+      onSessionUpdate?.();
+    } catch (error: any) {
+      console.error('Error enrolling to waitlist:', error);
+      toast.error(error.message || 'Errore nell\'iscrizione alla waitlist');
+    } finally {
+      setEnrolling(null);
+    }
+  };
+
   const removeParticipant = async (bookingId: string) => {
     setRemoving(bookingId);
     try {
@@ -1322,24 +1346,31 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                       <Badge variant="outline" className="text-xs">
                         {user.current_credits} crediti
                       </Badge>
-                      <Button
-                        size={isMobile ? "default" : "sm"}
-                        onClick={() => enrollUser(user.id)}
-                        disabled={enrolling === user.id || isFull}
-                        className={cn(
-                          isMobile && [
-                            "h-10 min-w-[44px]",
-                            "touch-manipulation",
-                            "active:scale-95 transition-transform"
-                          ]
-                        )}
-                      >
-                        {enrolling === user.id ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : (
-                          <UserPlus className="h-4 w-4" />
-                        )}
-                      </Button>
+                    <Button
+                      size={isMobile ? "default" : "sm"}
+                      onClick={() => isFull ? enrollToWaitlist(user.id) : enrollUser(user.id)}
+                      disabled={enrolling === user.id}
+                      variant={isFull ? "outline" : "default"}
+                      className={cn(
+                        isMobile && [
+                          "h-10 min-w-[44px]",
+                          "touch-manipulation",
+                          "active:scale-95 transition-transform"
+                        ],
+                        isFull && "border-warning text-warning hover:bg-warning/10"
+                      )}
+                    >
+                      {enrolling === user.id ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : isFull ? (
+                        <>
+                          <ListOrdered className="h-4 w-4 mr-1" />
+                          <span className="text-xs">Waitlist</span>
+                        </>
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                    </Button>
                     </div>
                   </div>
                 ))}
@@ -1580,12 +1611,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                               variant="outline"
                               size={isMobile ? "default" : "sm"}
                               onClick={() => handlePromoteFromWaitlist(participant.id)}
-                              disabled={promoting === participant.id || isFull}
+                              disabled={promoting === participant.id}
                               className={cn(
                                 "gap-1",
-                                isMobile && "flex-1 h-10"
+                                isMobile && "flex-1 h-10",
+                                isFull && "border-warning text-warning hover:bg-warning/10"
                               )}
-                              title={isFull ? "Non ci sono posti disponibili" : "Promuovi a confermato"}
+                              title={isFull ? "Promuovi (sovraprenotazione)" : "Promuovi a confermato"}
                             >
                               {promoting === participant.id ? (
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
