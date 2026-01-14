@@ -2314,10 +2314,15 @@ export type Database = {
         Returns: boolean
       }
       is_backoffice_user: { Args: { _user_id: string }; Returns: boolean }
+      manual_enroll_to_waitlist: {
+        Args: { _enrolled_by: string; _session_id: string; _user_id: string }
+        Returns: string
+      }
       manual_enroll_user: {
         Args: { _enrolled_by: string; _session_id: string; _user_id: string }
         Returns: string
       }
+      promote_from_waitlist: { Args: { _booking_id: string }; Returns: boolean }
       promote_instructor_to_super: {
         Args: { _user_id: string }
         Returns: boolean

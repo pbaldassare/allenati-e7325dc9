@@ -259,6 +259,7 @@ export const cancelWaitlistBooking = async (
 
 /**
  * Manually promote a user from waitlist (for owner/instructor)
+ * Uses RPC function that also decrements available_spots
  */
 export const promoteFromWaitlist = async (
   bookingId: string
@@ -266,53 +267,28 @@ export const promoteFromWaitlist = async (
   try {
     console.log('Manually promoting from waitlist:', bookingId);
 
-    const { error } = await supabase
-      .from('bookings')
-      .update({
-        status: 'confirmed',
-        waitlist_position: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', bookingId)
-      .eq('status', 'waitlist');
+    // Use RPC function that handles status update, available_spots, and waitlist reordering
+    const { data, error } = await supabase.rpc('promote_from_waitlist', {
+      _booking_id: bookingId
+    });
 
-    if (error) throw error;
-
-    // Recalculate positions for remaining waitlist
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('session_id')
-      .eq('id', bookingId)
-      .single();
-
-    if (booking?.session_id) {
-      const { data: remainingWaitlist } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('session_id', booking.session_id)
-        .eq('status', 'waitlist')
-        .order('waitlist_position', { ascending: true });
-
-      if (remainingWaitlist) {
-        for (let i = 0; i < remainingWaitlist.length; i++) {
-          await supabase
-            .from('bookings')
-            .update({ waitlist_position: i + 1 })
-            .eq('id', remainingWaitlist[i].id);
-        }
-      }
+    if (error) {
+      console.error('RPC promote_from_waitlist error:', error);
+      throw error;
     }
+
+    console.log('Promotion successful via RPC:', data);
 
     return {
       success: true,
       message: 'Utente promosso dalla lista d\'attesa'
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error promoting from waitlist:', error);
     return {
       success: false,
-      message: 'Errore durante la promozione dalla lista d\'attesa'
+      message: error.message || 'Errore durante la promozione dalla lista d\'attesa'
     };
   }
 };
