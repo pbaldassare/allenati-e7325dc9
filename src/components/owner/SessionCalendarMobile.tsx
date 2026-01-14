@@ -38,6 +38,9 @@ const SessionCalendarMobile: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCancelled, setShowCancelled] = useState(false);
 
+  // Track last known update timestamp for cross-page sync
+  const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
+
   useEffect(() => {
     fetchSessions();
 
@@ -79,6 +82,21 @@ const SessionCalendarMobile: React.FC = () => {
       supabase.removeChannel(sessionChannel);
     };
   }, [currentDate, selectedGym, showCancelled]);
+
+  // Window focus listener for cross-page synchronization
+  useEffect(() => {
+    const handleFocus = () => {
+      const lastUpdate = localStorage.getItem('sessions_updated_at');
+      if (lastUpdate && parseInt(lastUpdate) > lastUpdateCheck) {
+        console.log('📱 Window focus - detected schedule changes, refreshing sessions');
+        fetchSessions();
+        setLastUpdateCheck(Date.now());
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [lastUpdateCheck, selectedGym, currentDate, showCancelled]);
 
   const fetchSessions = async () => {
     setLoading(true);

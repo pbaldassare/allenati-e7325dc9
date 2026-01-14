@@ -182,6 +182,9 @@ const OwnerCourseEdit = () => {
       
       const summary = getScheduleChangeSummary(comparison);
       
+      // Signal to other components that sessions have been updated
+      localStorage.setItem('sessions_updated_at', Date.now().toString());
+      
       toast({
         title: "Orari aggiornati con successo",
         description: summary || "Nessuna modifica rilevata",
