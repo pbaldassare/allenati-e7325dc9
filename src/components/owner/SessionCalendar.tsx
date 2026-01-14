@@ -46,6 +46,9 @@ const SessionCalendar: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [showCancelled, setShowCancelled] = useState(false);
 
+  // Track last known update timestamp for cross-page sync
+  const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
+
   useEffect(() => {
     if (!isMobile) {
       fetchSessions();
@@ -89,6 +92,23 @@ const SessionCalendar: React.FC = () => {
       };
     }
   }, [currentWeek, currentMonth, viewMode, isMobile, selectedGym, showCancelled]);
+
+  // Window focus listener for cross-page synchronization
+  useEffect(() => {
+    if (isMobile) return;
+
+    const handleFocus = () => {
+      const lastUpdate = localStorage.getItem('sessions_updated_at');
+      if (lastUpdate && parseInt(lastUpdate) > lastUpdateCheck) {
+        console.log('🖥️ Window focus - detected schedule changes, refreshing sessions');
+        fetchSessions();
+        setLastUpdateCheck(Date.now());
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [lastUpdateCheck, isMobile, selectedGym, currentWeek, currentMonth, viewMode, showCancelled]);
 
   // Return mobile version if on mobile
   if (isMobile) {
