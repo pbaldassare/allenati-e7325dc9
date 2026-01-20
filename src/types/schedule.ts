@@ -1,4 +1,7 @@
 export interface ScheduleItem {
+  id?: string; // ID interno per tracciare modifiche (non database ID)
+  originalDayOfWeek?: number; // Valore originale per rilevare modifiche
+  originalTime?: string; // Valore originale per rilevare modifiche
   dayOfWeek: number;
   time: string;
   end_time: string;
