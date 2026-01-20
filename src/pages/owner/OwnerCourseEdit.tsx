@@ -349,6 +349,7 @@ const OwnerCourseEdit = () => {
             <CardContent>
               <CourseScheduleManager
                 schedule={course?.schedules?.map(s => ({
+                  id: s.id,
                   dayOfWeek: s.day_of_week,
                   time: s.start_time,
                   end_time: s.end_time,
@@ -357,7 +358,7 @@ const OwnerCourseEdit = () => {
                   maxParticipantsOverride: s.max_participants_override,
                   difficultyLevelOverride: s.difficulty_level_override
                 })) || []}
-                onChange={handleScheduleChange}
+                onSave={handleScheduleChange}
                 gymRooms={gymRooms}
                 courseMaxParticipants={course?.max_participants}
                 courseDifficultyLevel={course?.difficulty_level}

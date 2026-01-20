@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Clock, MapPin, Users, Signal } from 'lucide-react';
+import { Plus, Trash2, Clock, MapPin, Users, Signal, Save, RotateCcw } from 'lucide-react';
 import type { ScheduleItem, GymRoom } from '@/types/schedule';
 import { DeleteScheduleConfirmDialog } from '@/components/dialogs/DeleteScheduleConfirmDialog';
+import { SaveScheduleConfirmDialog } from '@/components/dialogs/SaveScheduleConfirmDialog';
 
 interface CourseScheduleManagerProps {
   schedule: ScheduleItem[];
-  onChange: (schedule: ScheduleItem[]) => void;
+  /** For manual save mode - shows save/cancel buttons with confirmation */
+  onSave?: (schedule: ScheduleItem[]) => Promise<void>;
+  /** For inline/form mode - called on every change (no confirmation dialog) */
+  onChange?: (schedule: ScheduleItem[]) => void;
   gymRooms: GymRoom[];
   courseMaxParticipants?: number;
   courseDifficultyLevel?: number;
@@ -33,25 +37,31 @@ const difficultyOptions = [
   { value: '3', label: '3 - Avanzato' },
 ];
 
+const generateScheduleId = () => `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   schedule,
+  onSave,
   onChange,
   gymRooms,
   courseMaxParticipants,
   courseDifficultyLevel,
 }) => {
-  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(() => {
-    if (schedule.length > 0) {
-      // Add tracking fields to existing schedules
-      return schedule.map(item => ({
+  // Determine mode: manual save (with confirmation) or inline (immediate updates)
+  const isManualSaveMode = Boolean(onSave);
+  
+  // Initialize schedules from prop with tracking fields
+  const initializeSchedules = useCallback((schedules: ScheduleItem[]): ScheduleItem[] => {
+    if (schedules.length > 0) {
+      return schedules.map(item => ({
         ...item,
-        id: item.id || `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: item.id || generateScheduleId(),
         originalDayOfWeek: item.dayOfWeek,
         originalTime: item.time
       }));
     }
     return [{ 
-      id: `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateScheduleId(),
       dayOfWeek: 1, 
       time: '09:00', 
       end_time: '10:00', 
@@ -62,7 +72,14 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       originalDayOfWeek: undefined,
       originalTime: undefined
     }];
-  });
+  }, []);
+
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(() => initializeSchedules(schedule));
+  const [originalSchedules, setOriginalSchedules] = useState<ScheduleItem[]>(() => initializeSchedules(schedule));
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<{
     index: number;
@@ -72,9 +89,64 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
     roomName?: string;
   } | null>(null);
 
+  // Sync with external schedule changes (e.g., after page reload)
+  useEffect(() => {
+    const initialized = initializeSchedules(schedule);
+    setScheduleItems(initialized);
+    setOriginalSchedules(initialized);
+    setHasUnsavedChanges(false);
+  }, [schedule, initializeSchedules]);
+
+  // Detect changes
+  const detectChanges = useCallback(() => {
+    const changes: { type: 'added' | 'removed' | 'modified'; schedule: ScheduleItem; oldSchedule?: ScheduleItem }[] = [];
+    
+    // Find added and modified schedules
+    scheduleItems.forEach(item => {
+      const original = originalSchedules.find(o => o.id === item.id);
+      if (!original) {
+        // New schedule (no matching ID in original)
+        changes.push({ type: 'added', schedule: item });
+      } else if (
+        original.dayOfWeek !== item.dayOfWeek ||
+        original.time !== item.time ||
+        original.end_time !== item.end_time ||
+        original.roomId !== item.roomId ||
+        original.maxParticipantsOverride !== item.maxParticipantsOverride ||
+        original.difficultyLevelOverride !== item.difficultyLevelOverride
+      ) {
+        // Modified schedule
+        changes.push({ type: 'modified', schedule: item, oldSchedule: original });
+      }
+    });
+    
+    // Find removed schedules
+    originalSchedules.forEach(original => {
+      const exists = scheduleItems.find(item => item.id === original.id);
+      if (!exists) {
+        changes.push({ type: 'removed', schedule: original });
+      }
+    });
+    
+    return changes;
+  }, [scheduleItems, originalSchedules]);
+
+  const notifyChange = useCallback((newSchedules: ScheduleItem[]) => {
+    if (!isManualSaveMode && onChange) {
+      // In inline mode, call onChange immediately
+      const hasIncomplete = newSchedules.some(item => !item.roomId);
+      if (!hasIncomplete) {
+        onChange(newSchedules);
+      }
+    } else {
+      // In manual save mode, just mark as having unsaved changes
+      setHasUnsavedChanges(true);
+    }
+  }, [isManualSaveMode, onChange]);
+
   const addScheduleItem = () => {
     const newItem: ScheduleItem = {
-      id: `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateScheduleId(),
       dayOfWeek: 1,
       time: '09:00',
       end_time: '10:00',
@@ -82,12 +154,12 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       day: 'Lunedì',
       maxParticipantsOverride: null,
       difficultyLevelOverride: null,
-      originalDayOfWeek: undefined, // New schedule, no original values
+      originalDayOfWeek: undefined,
       originalTime: undefined
     };
-    const newSchedule = [newItem, ...scheduleItems];
-    setScheduleItems(newSchedule);
-    onChange(newSchedule);
+    const newSchedules = [newItem, ...scheduleItems];
+    setScheduleItems(newSchedules);
+    notifyChange(newSchedules);
   };
 
   const confirmRemoveScheduleItem = (index: number) => {
@@ -107,16 +179,16 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
 
   const removeScheduleItem = () => {
     if (scheduleToDelete && scheduleItems.length > 1) {
-      const newSchedule = scheduleItems.filter((_, i) => i !== scheduleToDelete.index);
-      setScheduleItems(newSchedule);
-      onChange(newSchedule);
+      const newSchedules = scheduleItems.filter((_, i) => i !== scheduleToDelete.index);
+      setScheduleItems(newSchedules);
+      notifyChange(newSchedules);
       setDeleteDialogOpen(false);
       setScheduleToDelete(null);
     }
   };
 
   const updateScheduleItem = (index: number, field: keyof ScheduleItem, value: any) => {
-    const newSchedule = scheduleItems.map((item, i) => {
+    const newSchedules = scheduleItems.map((item, i) => {
       if (i === index) {
         const updatedItem = { ...item, [field]: value };
         if (field === 'dayOfWeek') {
@@ -127,19 +199,42 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
       }
       return item;
     });
-    setScheduleItems(newSchedule);
-    
-    // Verifica che tutti gli orari abbiano una sala prima di chiamare onChange
-    const hasIncompleteSchedules = newSchedule.some(item => 
-      item.dayOfWeek && item.time && item.end_time && !item.roomId
-    );
-    
-    if (!hasIncompleteSchedules) {
-      onChange(newSchedule);
+    setScheduleItems(newSchedules);
+    notifyChange(newSchedules);
+  };
+
+  const handleReset = () => {
+    setScheduleItems([...originalSchedules]);
+    setHasUnsavedChanges(false);
+  };
+
+  const handleSaveClick = () => {
+    // Check for invalid schedules before saving
+    const hasIncomplete = scheduleItems.some(item => !item.roomId);
+    if (hasIncomplete) {
+      return; // Don't open dialog if there are invalid schedules
+    }
+    setShowSaveConfirm(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!onSave) return;
+    setIsSaving(true);
+    try {
+      await onSave(scheduleItems);
+      // Update original schedules to current after successful save
+      setOriginalSchedules([...scheduleItems]);
+      setHasUnsavedChanges(false);
+      setShowSaveConfirm(false);
+    } catch (error) {
+      console.error('Error saving schedules:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const hasInvalidSchedules = scheduleItems.some(item => !item.roomId || item.roomId === '');
+  const changes = detectChanges();
 
   const getRoomName = (roomId: string) => {
     return gymRooms.find(room => room.id === roomId)?.name || 'Sala non selezionata';
@@ -154,20 +249,27 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
             Configura gli orari ricorrenti del corso e assegna le sale
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addScheduleItem}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Aggiungi Orario
-        </Button>
+        <div className="flex items-center gap-2">
+          {isManualSaveMode && hasUnsavedChanges && (
+            <Badge variant="secondary" className="bg-warning/20 text-warning-foreground border-warning/30">
+              Modifiche non salvate
+            </Badge>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addScheduleItem}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Aggiungi Orario
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
         {scheduleItems.map((item, index) => (
-          <Card key={index}>
+          <Card key={item.id || index}>
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
                 <div>
@@ -328,9 +430,8 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
           <div className="flex flex-wrap gap-2">
             {scheduleItems.map((item, index) => {
               const roomName = getRoomName(item.roomId);
-              const hasOverride = item.maxParticipantsOverride || item.difficultyLevelOverride;
               return (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                <Badge key={item.id || index} variant="secondary" className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {item.day} {item.time}-{item.end_time}
                   <MapPin className="h-3 w-3" />
@@ -361,12 +462,45 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
         </CardContent>
       </Card>
 
+      {/* Save Actions - Only in manual save mode */}
+      {isManualSaveMode && (
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReset}
+            disabled={!hasUnsavedChanges || isSaving}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Annulla Modifiche
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSaveClick}
+            disabled={!hasUnsavedChanges || hasInvalidSchedules || isSaving}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Salva Orari
+          </Button>
+        </div>
+      )}
+
       <DeleteScheduleConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={removeScheduleItem}
         scheduleToDelete={scheduleToDelete}
       />
+
+      {isManualSaveMode && (
+        <SaveScheduleConfirmDialog
+          open={showSaveConfirm}
+          onOpenChange={setShowSaveConfirm}
+          onConfirm={handleConfirmSave}
+          changes={changes}
+          isLoading={isSaving}
+        />
+      )}
     </div>
   );
 };
