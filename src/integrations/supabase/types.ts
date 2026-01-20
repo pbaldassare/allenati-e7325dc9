@@ -2404,6 +2404,26 @@ export type Database = {
         Args: { _new_status: string; _session_id: string }
         Returns: boolean
       }
+      update_schedule_sessions: {
+        Args: {
+          p_course_id: string
+          p_from_date?: string
+          p_new_day_of_week: number
+          p_new_difficulty_level?: number
+          p_new_end_time: string
+          p_new_max_participants?: number
+          p_new_room_id?: string
+          p_new_room_name?: string
+          p_new_start_time: string
+          p_old_day_of_week: number
+          p_old_start_time: string
+        }
+        Returns: {
+          message: string
+          preserved_count: number
+          updated_count: number
+        }[]
+      }
       user_has_permission: {
         Args: { _permission_name: string; _user_id: string }
         Returns: boolean

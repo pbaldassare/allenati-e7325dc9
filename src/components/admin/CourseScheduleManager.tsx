@@ -40,17 +40,29 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
   courseMaxParticipants,
   courseDifficultyLevel,
 }) => {
-  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(
-    schedule.length > 0 ? schedule : [{ 
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(() => {
+    if (schedule.length > 0) {
+      // Add tracking fields to existing schedules
+      return schedule.map(item => ({
+        ...item,
+        id: item.id || `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        originalDayOfWeek: item.dayOfWeek,
+        originalTime: item.time
+      }));
+    }
+    return [{ 
+      id: `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       dayOfWeek: 1, 
       time: '09:00', 
       end_time: '10:00', 
       roomId: '', 
       day: 'Lunedì',
       maxParticipantsOverride: null,
-      difficultyLevelOverride: null
-    }]
-  );
+      difficultyLevelOverride: null,
+      originalDayOfWeek: undefined,
+      originalTime: undefined
+    }];
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<{
     index: number;
@@ -62,13 +74,16 @@ export const CourseScheduleManager: React.FC<CourseScheduleManagerProps> = ({
 
   const addScheduleItem = () => {
     const newItem: ScheduleItem = {
+      id: `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       dayOfWeek: 1,
       time: '09:00',
       end_time: '10:00',
       roomId: '',
       day: 'Lunedì',
       maxParticipantsOverride: null,
-      difficultyLevelOverride: null
+      difficultyLevelOverride: null,
+      originalDayOfWeek: undefined, // New schedule, no original values
+      originalTime: undefined
     };
     const newSchedule = [newItem, ...scheduleItems];
     setScheduleItems(newSchedule);
