@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getUserActiveSubscription, hasActiveUnlimitedSubscription, getUserActiveSubscriptions, type ActiveSubscription } from './subscriptionHelpers';
 import { deductCredits } from './creditRefundHelpers';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 /**
  * Determine which subscription to use for booking with priority logic
@@ -47,29 +49,70 @@ export interface BookingEligibility {
   hasUnlimitedAccess: boolean;
   gymCredits: number;
   reason?: string;
+  subscriptionExpiresAt?: string;
 }
 
 /**
  * Check if user can book a session (unified logic)
+ * @param sessionDate - Optional: the date of the session being booked (YYYY-MM-DD)
+ *                      Used to block unlimited subscription users from booking beyond expiry
  */
 export const checkBookingEligibility = async (
   userId: string, 
   gymId: string, 
-  creditsRequired: number
+  creditsRequired: number,
+  sessionDate?: string
 ): Promise<BookingEligibility> => {
   try {
-    console.log('Checking booking eligibility for user:', userId, 'gym:', gymId, 'credits needed:', creditsRequired);
+    console.log('Checking booking eligibility for user:', userId, 'gym:', gymId, 'credits needed:', creditsRequired, 'sessionDate:', sessionDate);
     
-    // First check for unlimited subscription
-    const hasUnlimited = await hasActiveUnlimitedSubscription(userId, gymId);
-    console.log('Has unlimited subscription:', hasUnlimited);
+    // Get all active subscriptions for the user at this gym
+    const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+    const unlimitedSub = subscriptions.find(sub => sub.subscription_plans.unlimited_access);
     
-    if (hasUnlimited) {
+    // Check for unlimited subscription
+    if (unlimitedSub) {
+      console.log('Found unlimited subscription:', unlimitedSub.id, 'expires:', unlimitedSub.expires_at);
+      
+      // NEW: Check if session date is beyond subscription expiry
+      if (sessionDate) {
+        const sessionDateObj = new Date(sessionDate);
+        const expiryDateObj = new Date(unlimitedSub.expires_at);
+        
+        // Set both dates to start of day for comparison
+        sessionDateObj.setHours(0, 0, 0, 0);
+        expiryDateObj.setHours(0, 0, 0, 0);
+        
+        if (sessionDateObj > expiryDateObj) {
+          console.log('Session date beyond subscription expiry - blocking booking');
+          
+          // Get gym credits to return in response
+          const { data: gymCreditsData } = await supabase
+            .from('gym_credits')
+            .select('credits')
+            .eq('user_id', userId)
+            .eq('gym_id', gymId)
+            .maybeSingle();
+          
+          const availableCredits = gymCreditsData?.credits || 0;
+          const formattedDate = format(expiryDateObj, 'dd/MM/yyyy', { locale: it });
+          
+          return {
+            canBook: false,
+            hasUnlimitedAccess: false,
+            gymCredits: availableCredits,
+            reason: `La sessione è oltre la scadenza del tuo abbonamento (${formattedDate}). Rinnova l'abbonamento per prenotare.`,
+            subscriptionExpiresAt: unlimitedSub.expires_at
+          };
+        }
+      }
+      
       console.log('User has unlimited access, booking allowed');
       return {
         canBook: true,
         hasUnlimitedAccess: true,
-        gymCredits: 0
+        gymCredits: 0,
+        subscriptionExpiresAt: unlimitedSub.expires_at
       };
     }
 
@@ -142,11 +185,12 @@ export const processBooking = async (
   try {
     console.log('Processing booking for user:', userId, 'data:', bookingData);
     
-    // Check eligibility first
+    // Check eligibility first (pass session date for expiry check on unlimited subscriptions)
     const eligibility = await checkBookingEligibility(
       userId, 
       bookingData.gymId, 
-      bookingData.creditsRequired
+      bookingData.creditsRequired,
+      bookingData.scheduledDate // Pass session date to check subscription coverage
     );
 
     console.log('Booking eligibility result:', eligibility);
