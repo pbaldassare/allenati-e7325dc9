@@ -109,3 +109,41 @@ export const getTotalAvailableCredits = async (userId: string, gymId: string): P
     return 0;
   }
 };
+
+/**
+ * Check if a session date is covered by an unlimited subscription
+ * Credit-based plans are always considered "covered" (no date restriction)
+ */
+export const isSessionCoveredBySubscription = async (
+  userId: string,
+  gymId: string,
+  sessionDate: string
+): Promise<{ covered: boolean; expiresAt?: string; reason?: string }> => {
+  try {
+    const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+    
+    // Check unlimited subscriptions first
+    const unlimitedSub = subscriptions.find(s => s.subscription_plans.unlimited_access);
+    if (unlimitedSub) {
+      const sessionDateObj = new Date(sessionDate);
+      const expiryDateObj = new Date(unlimitedSub.expires_at);
+      
+      // Compare dates (session should be on or before expiry)
+      if (sessionDateObj <= expiryDateObj) {
+        return { covered: true, expiresAt: unlimitedSub.expires_at };
+      }
+      return { 
+        covered: false, 
+        expiresAt: unlimitedSub.expires_at,
+        reason: 'La sessione è oltre la scadenza dell\'abbonamento'
+      };
+    }
+    
+    // Credit-based plans: always "covered" if user has any active subscription
+    // (the actual credit check happens elsewhere)
+    return { covered: true };
+  } catch (error) {
+    console.error('Error checking session coverage:', error);
+    return { covered: true }; // Default to covered to avoid blocking legitimate users
+  }
+};

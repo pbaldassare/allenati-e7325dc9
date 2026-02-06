@@ -196,11 +196,12 @@ export const CourseCalendar = () => {
     
     if (!user || !selectedGym) return;
     
-    // Check user eligibility using unified logic
+    // Check user eligibility using unified logic (pass session date for expiry check)
     const eligibility = await checkBookingEligibility(
       user.id, 
       selectedGym.id, 
-      session.credits_required || 1
+      session.credits_required || 1,
+      session.session_date // Pass session date to check against subscription expiry
     );
 
     const hasCreditsOrUnlimitedAccess = eligibility.canBook;
