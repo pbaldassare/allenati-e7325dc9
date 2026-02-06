@@ -134,6 +134,41 @@ export const checkBookingEligibility = async (
     const activeSubscriptions = await getUserActiveSubscriptions(userId, gymId);
     const hasActiveSubscription = activeSubscriptions.length > 0;
 
+    // For credit-based plans: limit booking to 2 weeks after expiry
+    if (sessionDate && hasActiveSubscription) {
+      const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
+      
+      if (creditSubs.length > 0) {
+        // Find the latest expiry date among credit subscriptions
+        const latestExpiry = creditSubs.reduce((latest, sub) => {
+          const expiry = new Date(sub.expires_at);
+          return expiry > latest ? expiry : latest;
+        }, new Date(0));
+        
+        const sessionDateObj = new Date(sessionDate);
+        const maxBookingDate = new Date(latestExpiry);
+        maxBookingDate.setDate(maxBookingDate.getDate() + 14); // +2 weeks
+        
+        // Set both dates to start of day for comparison
+        sessionDateObj.setHours(0, 0, 0, 0);
+        maxBookingDate.setHours(0, 0, 0, 0);
+        
+        if (sessionDateObj > maxBookingDate) {
+          console.log('Session date beyond 2-week limit for credit plans - blocking booking');
+          const formattedMaxDate = format(maxBookingDate, 'dd/MM/yyyy', { locale: it });
+          const formattedExpiry = format(latestExpiry, 'dd/MM/yyyy', { locale: it });
+          
+          return {
+            canBook: false,
+            hasUnlimitedAccess: false,
+            gymCredits: availableCredits,
+            reason: `La sessione è oltre il limite di prenotazione (${formattedMaxDate}). I crediti possono essere usati fino a 2 settimane dopo la scadenza del piano (${formattedExpiry}).`,
+            subscriptionExpiresAt: latestExpiry.toISOString()
+          };
+        }
+      }
+    }
+
     // If no active subscription and no credits
     if (!hasActiveSubscription && availableCredits === 0) {
       console.log('No active subscription and no credits');
