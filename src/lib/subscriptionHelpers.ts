@@ -111,14 +111,15 @@ export const getTotalAvailableCredits = async (userId: string, gymId: string): P
 };
 
 /**
- * Check if a session date is covered by an unlimited subscription
- * Credit-based plans are always considered "covered" (no date restriction)
+ * Check if a session date is covered by a subscription
+ * - Unlimited plans: session must be <= expires_at
+ * - Credit-based plans: session must be <= expires_at + 14 days
  */
 export const isSessionCoveredBySubscription = async (
   userId: string,
   gymId: string,
   sessionDate: string
-): Promise<{ covered: boolean; expiresAt?: string; reason?: string }> => {
+): Promise<{ covered: boolean; expiresAt?: string; maxBookingDate?: string; reason?: string }> => {
   try {
     const subscriptions = await getUserActiveSubscriptions(userId, gymId);
     
@@ -127,6 +128,10 @@ export const isSessionCoveredBySubscription = async (
     if (unlimitedSub) {
       const sessionDateObj = new Date(sessionDate);
       const expiryDateObj = new Date(unlimitedSub.expires_at);
+      
+      // Set both dates to start of day for comparison
+      sessionDateObj.setHours(0, 0, 0, 0);
+      expiryDateObj.setHours(0, 0, 0, 0);
       
       // Compare dates (session should be on or before expiry)
       if (sessionDateObj <= expiryDateObj) {
@@ -139,8 +144,41 @@ export const isSessionCoveredBySubscription = async (
       };
     }
     
-    // Credit-based plans: always "covered" if user has any active subscription
-    // (the actual credit check happens elsewhere)
+    // Credit-based plans: limit to 2 weeks after expiry
+    const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
+    if (creditSubs.length > 0) {
+      // Find the latest expiry date among credit subscriptions
+      const latestExpiry = creditSubs.reduce((latest, sub) => {
+        const expiry = new Date(sub.expires_at);
+        return expiry > latest ? expiry : latest;
+      }, new Date(0));
+      
+      const maxBookingDate = new Date(latestExpiry);
+      maxBookingDate.setDate(maxBookingDate.getDate() + 14); // +2 weeks
+      
+      const sessionDateObj = new Date(sessionDate);
+      
+      // Set both dates to start of day for comparison
+      sessionDateObj.setHours(0, 0, 0, 0);
+      maxBookingDate.setHours(0, 0, 0, 0);
+      
+      if (sessionDateObj > maxBookingDate) {
+        return { 
+          covered: false, 
+          expiresAt: latestExpiry.toISOString(),
+          maxBookingDate: maxBookingDate.toISOString(),
+          reason: 'La sessione è oltre il limite di 2 settimane dalla scadenza del piano'
+        };
+      }
+      
+      return { 
+        covered: true, 
+        expiresAt: latestExpiry.toISOString(), 
+        maxBookingDate: maxBookingDate.toISOString() 
+      };
+    }
+    
+    // No subscriptions - covered by default (credits check happens elsewhere)
     return { covered: true };
   } catch (error) {
     console.error('Error checking session coverage:', error);
