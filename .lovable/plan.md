@@ -1,159 +1,128 @@
 
-## Piano: Bloccare Prenotazioni Oltre Scadenza per Abbonamenti Illimitati
 
-### Problema
-Attualmente un utente con abbonamento illimitato mensile (es. "Mensile singola disciplina") può prenotare lezioni anche oltre la data di scadenza del suo abbonamento. Questo non è corretto perché l'accesso illimitato vale solo fino a `expires_at`.
+## Piano: Limite Prenotazione 2 Settimane per Piani a Crediti
 
-I piani a crediti invece non devono avere questa restrizione perché i crediti sono già stati pagati e possono essere usati in qualsiasi momento.
+### Regola di Business Aggiornata
 
-### Regola di Business
+| Tipo Piano | Limite Data Sessione |
+|------------|---------------------|
+| **Illimitato** | Sessione deve essere ≤ `expires_at` |
+| **A crediti** | Sessione deve essere ≤ `expires_at + 14 giorni` |
 
-| Tipo Piano | Controllo Data Sessione |
-|------------|------------------------|
-| **Illimitato** | Sessione deve essere ≤ `expires_at` dell'abbonamento |
-| **A crediti** | Nessun controllo sulla data (crediti già pagati) |
+### Esempio Pratico
+
+Utente con piano a crediti che scade il **15/02/2026**:
+- Sessione 20/02/2026 → ✅ Può prenotare (entro 2 settimane)
+- Sessione 01/03/2026 → ✅ Può prenotare (entro 2 settimane, scade 01/03)
+- Sessione 05/03/2026 → ❌ Non può prenotare (oltre 2 settimane dalla scadenza)
 
 ### Modifiche Necessarie
 
 #### 1. `src/lib/bookingHelpers.ts`
 
-Modificare `checkBookingEligibility` per accettare un nuovo parametro `sessionDate` e verificare che la data della sessione sia entro la scadenza dell'abbonamento illimitato.
+Aggiungere controllo date per piani a crediti nella funzione `checkBookingEligibility`:
 
 ```typescript
-export interface BookingEligibilityParams {
-  userId: string;
-  gymId: string;
-  creditsRequired: number;
-  sessionDate?: string;  // NUOVO: data della sessione (YYYY-MM-DD)
-}
+// Dopo il controllo abbonamento illimitato...
 
-export const checkBookingEligibility = async (
-  userId: string, 
-  gymId: string, 
-  creditsRequired: number,
-  sessionDate?: string  // NUOVO parametro opzionale
-): Promise<BookingEligibility> => {
-  // ...
+// Per piani a crediti: limite di 2 settimane dopo scadenza
+if (sessionDate && subscriptions.length > 0) {
+  // Trova la sottoscrizione a crediti con scadenza più lontana
+  const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
   
-  // Check for unlimited subscription
-  const subscriptions = await getUserActiveSubscriptions(userId, gymId);
-  const unlimitedSub = subscriptions.find(sub => sub.subscription_plans.unlimited_access);
-  
-  if (unlimitedSub) {
-    // NUOVO: Se la sessione è oltre la scadenza, non può prenotare con illimitato
-    if (sessionDate && new Date(sessionDate) > new Date(unlimitedSub.expires_at)) {
-      console.log('Session date beyond subscription expiry');
+  if (creditSubs.length > 0) {
+    // Trova la data limite massima (scadenza più lontana + 14 giorni)
+    const latestExpiry = creditSubs.reduce((latest, sub) => {
+      const expiry = new Date(sub.expires_at);
+      return expiry > latest ? expiry : latest;
+    }, new Date(0));
+    
+    const sessionDateObj = new Date(sessionDate);
+    const maxBookingDate = new Date(latestExpiry);
+    maxBookingDate.setDate(maxBookingDate.getDate() + 14); // +2 settimane
+    
+    if (sessionDateObj > maxBookingDate) {
       return {
         canBook: false,
         hasUnlimitedAccess: false,
         gymCredits: availableCredits,
-        reason: `La sessione è oltre la scadenza del tuo abbonamento (${format(new Date(unlimitedSub.expires_at), 'dd/MM/yyyy')}). Rinnova l'abbonamento per prenotare.`
+        reason: `La sessione è oltre il limite di prenotazione (${format(maxBookingDate, 'dd/MM/yyyy')}). I crediti possono essere usati fino a 2 settimane dopo la scadenza del piano.`,
+        subscriptionExpiresAt: latestExpiry.toISOString()
       };
     }
-    // OK: sessione entro la scadenza
-    return {
-      canBook: true,
-      hasUnlimitedAccess: true,
-      gymCredits: 0,
-      subscriptionExpiresAt: unlimitedSub.expires_at  // NUOVO: per mostrare nella UI
-    };
   }
-  
-  // Per piani a crediti: nessun controllo sulla data
-  // ... logica esistente per crediti
-};
+}
 ```
 
 #### 2. `src/lib/subscriptionHelpers.ts`
 
-Aggiungere una nuova funzione per verificare la copertura temporale:
+Aggiornare `isSessionCoveredBySubscription` per includere la logica delle 2 settimane:
 
 ```typescript
 export const isSessionCoveredBySubscription = async (
   userId: string,
   gymId: string,
   sessionDate: string
-): Promise<{ covered: boolean; expiresAt?: string; reason?: string }> => {
-  const subscriptions = await getUserActiveSubscriptions(userId, gymId);
+): Promise<{ covered: boolean; expiresAt?: string; maxBookingDate?: string; reason?: string }> => {
+  // ... controllo unlimited esistente ...
   
-  // Check unlimited subscriptions
-  const unlimitedSub = subscriptions.find(s => s.subscription_plans.unlimited_access);
-  if (unlimitedSub) {
-    const sessionDateObj = new Date(sessionDate);
-    const expiryDateObj = new Date(unlimitedSub.expires_at);
+  // Credit-based plans: limite di 2 settimane dopo scadenza
+  const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
+  if (creditSubs.length > 0) {
+    const latestExpiry = creditSubs.reduce((latest, sub) => {
+      const expiry = new Date(sub.expires_at);
+      return expiry > latest ? expiry : latest;
+    }, new Date(0));
     
-    if (sessionDateObj <= expiryDateObj) {
-      return { covered: true, expiresAt: unlimitedSub.expires_at };
+    const maxBookingDate = new Date(latestExpiry);
+    maxBookingDate.setDate(maxBookingDate.getDate() + 14);
+    
+    const sessionDateObj = new Date(sessionDate);
+    
+    if (sessionDateObj > maxBookingDate) {
+      return { 
+        covered: false, 
+        expiresAt: latestExpiry.toISOString(),
+        maxBookingDate: maxBookingDate.toISOString(),
+        reason: 'La sessione è oltre il limite di 2 settimane dalla scadenza del piano'
+      };
     }
-    return { 
-      covered: false, 
-      expiresAt: unlimitedSub.expires_at,
-      reason: 'La sessione è oltre la scadenza dell\'abbonamento'
-    };
+    
+    return { covered: true, expiresAt: latestExpiry.toISOString(), maxBookingDate: maxBookingDate.toISOString() };
   }
   
-  // Credit-based plans: always "covered" if credits available
   return { covered: true };
 };
 ```
 
-#### 3. `src/components/CourseCalendar.tsx`
-
-Passare `sessionDate` a `checkBookingEligibility`:
-
-```typescript
-const eligibility = await checkBookingEligibility(
-  user.id, 
-  selectedGym.id, 
-  session.credits_required || 1,
-  session.session_date  // NUOVO: passa la data sessione
-);
-```
-
-#### 4. `src/components/Dashboard.tsx`
-
-Stesso aggiornamento per passare `sessionDate` quando si verifica l'eleggibilità.
-
-#### 5. UI Miglioramento (opzionale)
-
-Nella card della sessione, mostrare un indicatore visivo quando una sessione è oltre la scadenza dell'abbonamento:
-- Badge "Oltre scadenza" per sessioni non prenotabili
-- Tooltip con "Il tuo abbonamento scade il DD/MM/YYYY"
-
 ### Flusso Dopo le Modifiche
 
 ```text
-Utente con "Mensile Singola Disciplina" (scade 15/02/2026)
+Utente con "Piano 10 Crediti" (scade 15/02/2026)
          ↓
-Prova a prenotare sessione del 20/02/2026
+Prova a prenotare sessione del 05/03/2026
          ↓
 checkBookingEligibility verifica:
-  - Ha abbonamento illimitato attivo? SI
-  - Data sessione (20/02) <= scadenza (15/02)? NO
+  - Ha abbonamento illimitato? NO
+  - Ha piano a crediti? SI (scade 15/02)
+  - Data limite: 15/02 + 14 giorni = 01/03/2026
+  - Data sessione (05/03) <= limite (01/03)? NO
          ↓
 Ritorna canBook: false + messaggio esplicativo
          ↓
-UI mostra: "La sessione è oltre la scadenza del tuo abbonamento"
+UI mostra: "La sessione è oltre il limite di prenotazione (01/03/2026)"
 ```
 
 ### File da Modificare
 
 | File | Modifica |
 |------|----------|
-| `src/lib/subscriptionHelpers.ts` | Nuova funzione `isSessionCoveredBySubscription` |
-| `src/lib/bookingHelpers.ts` | Aggiungere parametro `sessionDate` e controllo scadenza |
-| `src/components/CourseCalendar.tsx` | Passare `session_date` a `checkBookingEligibility` |
-| `src/components/Dashboard.tsx` | Passare `session_date` a `checkBookingEligibility` |
-
-### Impatto sui Piani a Crediti
-
-I piani a crediti **non sono influenzati** da questa modifica:
-- Non hanno `unlimited_access = true`
-- La logica di controllo scade solo se trova un abbonamento illimitato
-- I crediti possono essere usati per prenotare sessioni future senza limite di data
+| `src/lib/bookingHelpers.ts` | Aggiungere controllo 2 settimane per piani a crediti |
+| `src/lib/subscriptionHelpers.ts` | Aggiornare `isSessionCoveredBySubscription` |
 
 ### Risultato Atteso
 
-- Utenti con abbonamento illimitato: possono prenotare solo sessioni entro la scadenza
-- Utenti con piano a crediti: nessuna restrizione sulla data delle sessioni
-- Messaggio chiaro quando la prenotazione viene bloccata per scadenza
+- **Piani illimitati**: prenotazione fino a scadenza esatta ✅
+- **Piani a crediti**: prenotazione fino a 2 settimane dopo scadenza ✅
+- Messaggio chiaro che spiega il limite e la data massima
+
