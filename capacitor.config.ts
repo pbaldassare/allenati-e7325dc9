@@ -1,13 +1,9 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.a7f666a5460d4202a57e353031cc30fd',
-  appName: 'allenati',
+  appId: 'it.legconsulenze.allenati',
+  appName: 'Allenati',
   webDir: 'dist',
-  server: {
-    url: 'https://a7f666a5-460d-4202-a57e-353031cc30fd.lovableproject.com?forceHideBadge=true',
-    cleartext: true
-  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
@@ -24,6 +20,14 @@ const config: CapacitorConfig = {
       layoutName: "launch_screen",
       useDialog: true,
     },
+    "SystemBars": {
+      "insetsHandling": "disable"
+    },
+    StatusBar: {
+      overlaysWebView: false,
+      backgroundColor: "#ffffff",
+      style: "LIGHT"
+    }
   },
 };
 
