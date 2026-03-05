@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { sendPushNotification } from '@/lib/pushNotifications';
 
 export type BookingWithCourse = any;
 
@@ -128,6 +129,15 @@ export const useBookings = (gymId?: string) => {
       // Process refund using new helper
       const { processRefund } = await import('@/lib/creditRefundHelpers');
       const refundResult = await processRefund(booking, user.id, 'user', 'Cancellato dall\'utente');
+
+      // Fire-and-forget push notification for cancellation
+      sendPushNotification({
+        userId: user.id,
+        title: 'Prenotazione Cancellata ❌',
+        message: `La prenotazione del ${booking.scheduled_date} alle ${booking.scheduled_time} è stata cancellata${refundResult.success && refundResult.message.includes('credits refunded') ? '. Crediti rimborsati.' : '.'}`,
+        type: 'booking',
+        data: { bookingId: booking.id, courseId: booking.course_id },
+      });
 
       toast({
         title: "Prenotazione cancellata",
