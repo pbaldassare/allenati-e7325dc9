@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getUserActiveSubscription, hasActiveUnlimitedSubscription, getUserActiveSubscriptions, type ActiveSubscription } from './subscriptionHelpers';
 import { deductCredits } from './creditRefundHelpers';
+import { sendPushNotification } from './pushNotifications';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -316,6 +317,18 @@ export const processBooking = async (
     }
 
     console.log('Booking process completed successfully');
+
+    // Fire-and-forget push notification
+    sendPushNotification({
+      userId,
+      title: 'Prenotazione Confermata ✅',
+      message: eligibility.hasUnlimitedAccess 
+        ? `Prenotazione confermata per il ${format(new Date(bookingData.scheduledDate), 'dd/MM/yyyy', { locale: it })} alle ${bookingData.scheduledTime}`
+        : `Prenotazione confermata. Utilizzati ${bookingData.creditsRequired} crediti. ${format(new Date(bookingData.scheduledDate), 'dd/MM/yyyy', { locale: it })} alle ${bookingData.scheduledTime}`,
+      type: 'booking',
+      data: { bookingId: booking.id, courseId: bookingData.courseId },
+    });
+
     return {
       success: true,
       message: eligibility.hasUnlimitedAccess 
