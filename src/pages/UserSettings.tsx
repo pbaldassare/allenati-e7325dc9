@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Camera, User, AlertTriangle, Download, Calendar, FileText, Clock } from 'lucide-react';
 import DeleteAccountDialog from '@/components/dialogs/DeleteAccountDialog';
 import { Badge } from '@/components/ui/badge';
+import NotificationSettings from '@/components/NotificationSettings';
 
 const profileSchema = z.object({
   first_name: z.string().min(1, 'Nome è obbligatorio').max(50, 'Nome troppo lungo'),
@@ -806,6 +807,9 @@ export default function UserSettings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Notification Settings */}
+        <NotificationSettings />
 
         {/* Danger Zone */}
         <Card className="border-destructive/20">
