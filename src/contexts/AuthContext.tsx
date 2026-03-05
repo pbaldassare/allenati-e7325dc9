@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import { setExternalUserId, removeExternalUserId } from '@/lib/onesignal';
 
 interface User {
   id: string;
@@ -186,6 +187,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setUser(userData);
               setLoading(false);
               setInitialized(true);
+
+              // Link user to OneSignal
+              setExternalUserId(session.user.id);
               
               // Check if it's a new user and show welcome modal  
               if (event === 'SIGNED_UP' as AuthChangeEvent) {
@@ -297,6 +301,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Clear local state first
       setUser(null);
       setSession(null);
+
+      // Unlink from OneSignal
+      removeExternalUserId();
       
       // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
