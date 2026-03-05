@@ -1,128 +1,71 @@
 
 
-## Piano: Limite Prenotazione 2 Settimane per Piani a Crediti
+## Piano: Integrazione OneSignal Push Notifications
 
-### Regola di Business Aggiornata
+### Situazione Attuale
+Il database ha già le tabelle necessarie:
+- **`user_preferences`**: con campi `notifications_enabled`, `push_bookings`, `push_promotions`
+- **`mobile_notifications`**: per lo storico notifiche con tipi `booking`, `payment`, `course_update`, `achievement`, `system`
 
-| Tipo Piano | Limite Data Sessione |
-|------------|---------------------|
-| **Illimitato** | Sessione deve essere ≤ `expires_at` |
-| **A crediti** | Sessione deve essere ≤ `expires_at + 14 giorni` |
+Non esiste ancora nessuna integrazione OneSignal nel codice.
 
-### Esempio Pratico
+### Dati Forniti
+- **App ID**: `2936021b-a20f-44bb-81dd-0cba1d64c481`
+- **Safari Web ID**: `web.onesignal.auto.2900aeea-27da-4bc5-9f95-2e3d9a76781c`
+- **Service Worker**: `OneSignalSDKWorker.js`
 
-Utente con piano a crediti che scade il **15/02/2026**:
-- Sessione 20/02/2026 → ✅ Può prenotare (entro 2 settimane)
-- Sessione 01/03/2026 → ✅ Può prenotare (entro 2 settimane, scade 01/03)
-- Sessione 05/03/2026 → ❌ Non può prenotare (oltre 2 settimane dalla scadenza)
+### Modifiche da Implementare
 
-### Modifiche Necessarie
+#### 1. Service Worker → `public/OneSignalSDKWorker.js`
+Copiare il file uploadato nella cartella public.
 
-#### 1. `src/lib/bookingHelpers.ts`
+#### 2. SDK Initialization → `index.html`
+Aggiungere lo script OneSignal SDK nel `<head>`.
 
-Aggiungere controllo date per piani a crediti nella funzione `checkBookingEligibility`:
+#### 3. Provider OneSignal → `src/lib/onesignal.ts`
+Creare un modulo di inizializzazione e utility:
+- `initOneSignal()` - inizializza l'SDK con l'appId
+- `setExternalUserId(userId)` - collega l'utente Supabase a OneSignal
+- `removeExternalUserId()` - al logout
+- `setNotificationPreferences(prefs)` - sincronizza tag/preferenze con OneSignal
 
-```typescript
-// Dopo il controllo abbonamento illimitato...
+#### 4. Hook → `src/hooks/useNotificationPreferences.ts`
+Hook per gestire le preferenze notifiche dell'utente:
+- Carica preferenze da `user_preferences`
+- Salva modifiche su Supabase + sincronizza tag OneSignal
+- Gestisce opt-in/opt-out per categoria (prenotazioni, promozioni, ecc.)
 
-// Per piani a crediti: limite di 2 settimane dopo scadenza
-if (sessionDate && subscriptions.length > 0) {
-  // Trova la sottoscrizione a crediti con scadenza più lontana
-  const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
-  
-  if (creditSubs.length > 0) {
-    // Trova la data limite massima (scadenza più lontana + 14 giorni)
-    const latestExpiry = creditSubs.reduce((latest, sub) => {
-      const expiry = new Date(sub.expires_at);
-      return expiry > latest ? expiry : latest;
-    }, new Date(0));
-    
-    const sessionDateObj = new Date(sessionDate);
-    const maxBookingDate = new Date(latestExpiry);
-    maxBookingDate.setDate(maxBookingDate.getDate() + 14); // +2 settimane
-    
-    if (sessionDateObj > maxBookingDate) {
-      return {
-        canBook: false,
-        hasUnlimitedAccess: false,
-        gymCredits: availableCredits,
-        reason: `La sessione è oltre il limite di prenotazione (${format(maxBookingDate, 'dd/MM/yyyy')}). I crediti possono essere usati fino a 2 settimane dopo la scadenza del piano.`,
-        subscriptionExpiresAt: latestExpiry.toISOString()
-      };
-    }
-  }
-}
-```
+#### 5. Componente Preferenze → `src/components/NotificationSettings.tsx`
+Card con toggle per:
+- Notifiche push (on/off globale)
+- Prenotazioni confermate/cancellate
+- Promozioni e novità
+- Aggiornamenti corsi
 
-#### 2. `src/lib/subscriptionHelpers.ts`
+#### 6. Integrazione in `src/pages/UserSettings.tsx`
+Aggiungere la card `NotificationSettings` nella pagina impostazioni utente.
 
-Aggiornare `isSessionCoveredBySubscription` per includere la logica delle 2 settimane:
+#### 7. Integrazione Auth → `src/contexts/AuthContext.tsx`
+- Al login: chiamare `setExternalUserId(userId)` per associare l'utente
+- Al logout: chiamare `removeExternalUserId()`
 
-```typescript
-export const isSessionCoveredBySubscription = async (
-  userId: string,
-  gymId: string,
-  sessionDate: string
-): Promise<{ covered: boolean; expiresAt?: string; maxBookingDate?: string; reason?: string }> => {
-  // ... controllo unlimited esistente ...
-  
-  // Credit-based plans: limite di 2 settimane dopo scadenza
-  const creditSubs = subscriptions.filter(s => !s.subscription_plans.unlimited_access);
-  if (creditSubs.length > 0) {
-    const latestExpiry = creditSubs.reduce((latest, sub) => {
-      const expiry = new Date(sub.expires_at);
-      return expiry > latest ? expiry : latest;
-    }, new Date(0));
-    
-    const maxBookingDate = new Date(latestExpiry);
-    maxBookingDate.setDate(maxBookingDate.getDate() + 14);
-    
-    const sessionDateObj = new Date(sessionDate);
-    
-    if (sessionDateObj > maxBookingDate) {
-      return { 
-        covered: false, 
-        expiresAt: latestExpiry.toISOString(),
-        maxBookingDate: maxBookingDate.toISOString(),
-        reason: 'La sessione è oltre il limite di 2 settimane dalla scadenza del piano'
-      };
-    }
-    
-    return { covered: true, expiresAt: latestExpiry.toISOString(), maxBookingDate: maxBookingDate.toISOString() };
-  }
-  
-  return { covered: true };
-};
-```
+#### 8. Inizializzazione App → `src/App.tsx`
+Chiamare `initOneSignal()` all'avvio dell'app.
 
-### Flusso Dopo le Modifiche
+### File da Creare/Modificare
 
-```text
-Utente con "Piano 10 Crediti" (scade 15/02/2026)
-         ↓
-Prova a prenotare sessione del 05/03/2026
-         ↓
-checkBookingEligibility verifica:
-  - Ha abbonamento illimitato? NO
-  - Ha piano a crediti? SI (scade 15/02)
-  - Data limite: 15/02 + 14 giorni = 01/03/2026
-  - Data sessione (05/03) <= limite (01/03)? NO
-         ↓
-Ritorna canBook: false + messaggio esplicativo
-         ↓
-UI mostra: "La sessione è oltre il limite di prenotazione (01/03/2026)"
-```
+| File | Azione |
+|------|--------|
+| `public/OneSignalSDKWorker.js` | Copiare da upload |
+| `index.html` | Aggiungere script SDK |
+| `src/lib/onesignal.ts` | Creare modulo inizializzazione |
+| `src/hooks/useNotificationPreferences.ts` | Creare hook preferenze |
+| `src/components/NotificationSettings.tsx` | Creare UI preferenze |
+| `src/pages/UserSettings.tsx` | Aggiungere card notifiche |
+| `src/contexts/AuthContext.tsx` | Collegare utente a OneSignal |
+| `src/App.tsx` | Inizializzare OneSignal |
 
-### File da Modificare
-
-| File | Modifica |
-|------|----------|
-| `src/lib/bookingHelpers.ts` | Aggiungere controllo 2 settimane per piani a crediti |
-| `src/lib/subscriptionHelpers.ts` | Aggiornare `isSessionCoveredBySubscription` |
-
-### Risultato Atteso
-
-- **Piani illimitati**: prenotazione fino a scadenza esatta ✅
-- **Piani a crediti**: prenotazione fino a 2 settimane dopo scadenza ✅
-- Messaggio chiaro che spiega il limite e la data massima
+### Note
+- L'App ID OneSignal (`2936021b-a20f-44bb-81dd-0cba1d64c481`) è una chiave pubblica, sicuro metterla nel codice frontend.
+- Le preferenze utente vengono salvate sia su Supabase (persistenza) che come tag OneSignal (per segmentazione lato server).
 
