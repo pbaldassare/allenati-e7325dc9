@@ -38,7 +38,6 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
         { id: "chat", icon: MessageSquare, label: "Chat" },
         { id: "i-miei-corsi", icon: Calendar, label: "I Miei Corsi" },
         { id: "gyms", icon: Plus, label: "Palestre" },
-        { id: "ai-assistant", icon: Brain, label: "IA" },
         { id: "profile", icon: User, label: "Profilo" }
       ];
 
