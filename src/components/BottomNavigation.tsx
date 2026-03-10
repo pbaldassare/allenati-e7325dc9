@@ -22,7 +22,6 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
         { id: "home", icon: Home, label: "Home" },
         { id: "chat", icon: MessageSquare, label: "Chat" },
         { id: "gyms", icon: Plus, label: "Palestre" },
-        { id: "ai-assistant", icon: Brain, label: "IA" },
         { id: "owner", icon: Settings, label: "Owner" }
       ]
     : isInstructor
@@ -30,7 +29,6 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
         { id: "home", icon: Home, label: "Home" },
         { id: "chat", icon: MessageSquare, label: "Chat" },
         { id: "gyms", icon: Plus, label: "Palestre" },
-        { id: "ai-assistant", icon: Brain, label: "IA" },
         { id: "instructor", icon: Settings, label: "Istruttore" }
       ]
     : [
