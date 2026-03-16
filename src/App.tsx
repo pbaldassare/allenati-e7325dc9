@@ -194,9 +194,9 @@ const App = () => {
                 <Route path="/landing" element={<GymLanding />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </TourProvider>
             </BrowserRouter>
           </TooltipProvider>
-              </TourProvider>
             </MobileOptimizations>
           </AppDataProvider>
           </InstructorGymProvider>
