@@ -524,7 +524,7 @@ export const Dashboard = () => {
 
       {/* Summary Stats - Moved to top */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-primary border-none shadow-primary cursor-pointer text-white hover:shadow-glow transition-all duration-300" onClick={() => navigate('/i-miei-corsi')}>
+        <Card data-tour="user-stats-sessions" className="bg-gradient-primary border-none shadow-primary cursor-pointer text-white hover:shadow-glow transition-all duration-300" onClick={() => navigate('/i-miei-corsi')}>
           <CardContent className="p-4 text-center">
             <Calendar className="h-5 w-5 mx-auto mb-1 text-white/80" />
             <div className="text-2xl font-bold text-white">
