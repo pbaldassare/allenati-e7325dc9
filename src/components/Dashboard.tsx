@@ -516,7 +516,7 @@ export const Dashboard = () => {
           </div>
           
           {/* Gym Selector with Logo */}
-          <div className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
+          <div data-tour="user-gym-selector" className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
             <GymSelectorWithLogo />
           </div>
         </div>
