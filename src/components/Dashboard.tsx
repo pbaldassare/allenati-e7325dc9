@@ -515,6 +515,15 @@ export const Dashboard = () => {
               <HelpCircle className="w-4 h-4 mr-2" />
               Come funziona l'app
             </Button>
+            <Button
+              onClick={() => startTour('user')}
+              variant="outline"
+              size="sm"
+              className="mt-2 text-primary border-primary/20 hover:bg-primary/5"
+            >
+              <Navigation className="w-4 h-4 mr-2" />
+              Tour guidato
+            </Button>
           </div>
           
           {/* Gym Selector with Logo */}
