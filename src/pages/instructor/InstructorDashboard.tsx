@@ -19,6 +19,7 @@ const InstructorDashboard = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
   const { hasOwnerPrivileges, user } = useAuth();
+  const { startTour } = useTour();
 
   // Date filters for hours worked
   const today = new Date();
