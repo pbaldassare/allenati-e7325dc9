@@ -622,7 +622,7 @@ export const Dashboard = () => {
 
 
       {/* Sessioni Disponibili - Session-based Booking */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+      <Card data-tour="user-session-list" className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-3 text-xl font-bold">
