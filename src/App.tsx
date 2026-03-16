@@ -103,13 +103,12 @@ const App = () => {
           <InstructorGymProvider>
             <AppDataProvider>
             <MobileOptimizations>
-              <TourProvider>
               <TooltipProvider>
-              <AppTour />
               <Toaster />
               <Sonner />
-              <Sonner />
               <BrowserRouter>
+              <TourProvider>
+              <AppTour />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -195,9 +194,9 @@ const App = () => {
                 <Route path="/landing" element={<GymLanding />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </TourProvider>
             </BrowserRouter>
           </TooltipProvider>
-              </TourProvider>
             </MobileOptimizations>
           </AppDataProvider>
           </InstructorGymProvider>
