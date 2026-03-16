@@ -7,7 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { useInstructorHoursWorked } from '@/hooks/useInstructorHoursWorked';
-import { BookOpen, Users, Calendar, TrendingUp, Clock, CalendarIcon, Loader2 } from 'lucide-react';
+import { BookOpen, Users, Calendar, TrendingUp, Clock, CalendarIcon, Loader2, Navigation } from 'lucide-react';
+import { useTour } from '@/components/AppTourContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstructorGym } from '@/contexts/InstructorGymContext';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
