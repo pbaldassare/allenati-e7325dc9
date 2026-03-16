@@ -8,6 +8,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppDataProvider } from "@/contexts/AppDataContext";
+import { TourProvider } from "@/components/AppTourContext";
+import AppTour from "@/components/AppTour";
 import { GymProvider } from "@/contexts/GymContext";
 import { InstructorGymProvider } from "@/contexts/InstructorGymContext";
 import { OwnerGymProvider } from "@/contexts/OwnerGymContext";
