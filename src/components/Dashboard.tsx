@@ -504,6 +504,7 @@ export const Dashboard = () => {
             </p>
             
             <Button
+              data-tour="user-how-it-works"
               onClick={() => setShowHowItWorksModal(true)}
               variant="outline"
               size="sm"
