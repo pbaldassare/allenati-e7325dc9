@@ -93,16 +93,23 @@ export function InstructorSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {items.map((item) => {
+                const tourId = item.url === "/instructor" ? "instructor-dashboard-title" :
+                  item.url === "/instructor/courses" ? "instructor-nav-courses" :
+                  item.url === "/instructor/participants" ? "instructor-nav-participants" :
+                  item.url === "/instructor/schedule" ? "instructor-nav-schedule" :
+                  undefined;
+                return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild data-tour={tourId}>
                     <NavLink to={item.url} end className={getNavCls}>
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

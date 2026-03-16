@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter, Infinity, Coins, ShoppingCart, X } from 'lucide-react';
+import { Calendar, Clock, User, Users, Trophy, Star, HelpCircle, Building2, ArrowRight, MapPin, Zap, Activity, Filter, Infinity, Coins, ShoppingCart, X, Navigation } from 'lucide-react';
+import { useTour } from '@/components/AppTourContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +32,7 @@ export const Dashboard = () => {
   const { userGyms, selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const { bookings, isSessionBooked, getSessionBooking, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
   const { isInWaitlistForSession, getWaitlistPosition, getWaitlistBookingId, fetchUserWaitlistBookings } = useUserWaitlistStatus();
   const [availableSessions, setAvailableSessions] = useState([]);
@@ -496,7 +498,7 @@ export const Dashboard = () => {
       <div className="pt-6 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+            <h1 data-tour="user-greeting" className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
               Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋
             </h1>
             <p className="text-muted-foreground text-base md:text-lg font-medium">
@@ -504,6 +506,7 @@ export const Dashboard = () => {
             </p>
             
             <Button
+              data-tour="user-how-it-works"
               onClick={() => setShowHowItWorksModal(true)}
               variant="outline"
               size="sm"
@@ -512,10 +515,19 @@ export const Dashboard = () => {
               <HelpCircle className="w-4 h-4 mr-2" />
               Come funziona l'app
             </Button>
+            <Button
+              onClick={() => startTour('user')}
+              variant="outline"
+              size="sm"
+              className="mt-2 text-primary border-primary/20 hover:bg-primary/5"
+            >
+              <Navigation className="w-4 h-4 mr-2" />
+              Tour guidato
+            </Button>
           </div>
           
           {/* Gym Selector with Logo */}
-          <div className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
+          <div data-tour="user-gym-selector" className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
             <GymSelectorWithLogo />
           </div>
         </div>
@@ -523,7 +535,7 @@ export const Dashboard = () => {
 
       {/* Summary Stats - Moved to top */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-primary border-none shadow-primary cursor-pointer text-white hover:shadow-glow transition-all duration-300" onClick={() => navigate('/i-miei-corsi')}>
+        <Card data-tour="user-stats-sessions" className="bg-gradient-primary border-none shadow-primary cursor-pointer text-white hover:shadow-glow transition-all duration-300" onClick={() => navigate('/i-miei-corsi')}>
           <CardContent className="p-4 text-center">
             <Calendar className="h-5 w-5 mx-auto mb-1 text-white/80" />
             <div className="text-2xl font-bold text-white">
@@ -550,6 +562,7 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
         <Card 
+          data-tour="user-stats-credits"
           className={`cursor-pointer transition-all duration-300 border-none shadow-card hover:shadow-glow ${
             creditsLoading 
               ? 'bg-gradient-to-br from-muted/10 to-muted/5' 
@@ -591,7 +604,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Calendar Section with Toggle */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+      <Card data-tour="user-calendar" className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg">Calendario</h3>
@@ -620,7 +633,7 @@ export const Dashboard = () => {
 
 
       {/* Sessioni Disponibili - Session-based Booking */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+      <Card data-tour="user-session-list" className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-3 text-xl font-bold">

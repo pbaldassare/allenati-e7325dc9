@@ -53,6 +53,7 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
           return (
             <Button
               key={tab.id}
+              data-tour={`nav-${tab.id === 'profile' ? 'profilo' : tab.id === 'gyms' ? 'palestre' : tab.id}`}
               variant="ghost"
               size="sm"
               onClick={() => onTabChange(tab.id)}

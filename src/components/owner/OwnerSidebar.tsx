@@ -93,16 +93,30 @@ export const OwnerSidebar: React.FC = () => {
           <SidebarGroupLabel>Area Proprietario</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {items.map((item) => {
+                const tourId = item.url === "/owner" ? "owner-dashboard-title" :
+                  item.url === "/owner/users" ? "owner-nav-users" :
+                  item.url === "/owner/instructors" ? "owner-nav-instructors" :
+                  item.url === "/owner/courses" ? "owner-nav-courses" :
+                  item.url === "/owner/rooms" ? "owner-nav-rooms" :
+                  item.url === "/owner/schedule" ? "owner-nav-schedule" :
+                  item.url === "/owner/bookings" ? "owner-nav-bookings" :
+                  item.url === "/owner/subscriptions" ? "owner-nav-subscriptions" :
+                  item.url === "/owner/chat" ? "owner-nav-chat" :
+                  item.url === "/owner/reports" ? "owner-nav-reports" :
+                  item.url === "/owner/documents" ? "owner-nav-documents" :
+                  undefined;
+                return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} data-tour={tourId}>
                     <NavLink to={item.url} end>
                       <item.icon className="h-4 w-4" />
                       {(isMobile || !collapsed) && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

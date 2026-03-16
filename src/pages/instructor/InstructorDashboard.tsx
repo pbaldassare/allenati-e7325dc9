@@ -7,7 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useInstructorCourses } from '@/hooks/useInstructorCourses';
 import { useInstructorBookings } from '@/hooks/useInstructorBookings';
 import { useInstructorHoursWorked } from '@/hooks/useInstructorHoursWorked';
-import { BookOpen, Users, Calendar, TrendingUp, Clock, CalendarIcon, Loader2 } from 'lucide-react';
+import { BookOpen, Users, Calendar, TrendingUp, Clock, CalendarIcon, Loader2, Navigation } from 'lucide-react';
+import { useTour } from '@/components/AppTourContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstructorGym } from '@/contexts/InstructorGymContext';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
@@ -18,6 +19,7 @@ const InstructorDashboard = () => {
   const { courses, loading: coursesLoading } = useInstructorCourses();
   const { bookings, loading: bookingsLoading } = useInstructorBookings();
   const { hasOwnerPrivileges, user } = useAuth();
+  const { startTour } = useTour();
 
   // Date filters for hours worked
   const today = new Date();
@@ -103,15 +105,26 @@ const InstructorDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <h1 data-tour="instructor-dashboard-title" className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           {hasOwnerPrivileges ? 'Dashboard Super Istruttore' : 'Dashboard Istruttore'}
         </h1>
-        <p className="text-muted-foreground">
-          {hasOwnerPrivileges 
-            ? 'Panoramica completa della palestra'
-            : 'Panoramica delle tue attività e corsi'
-          }
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-muted-foreground">
+            {hasOwnerPrivileges 
+              ? 'Panoramica completa della palestra'
+              : 'Panoramica delle tue attività e corsi'
+            }
+          </p>
+          <Button
+            onClick={() => startTour('instructor')}
+            variant="outline"
+            size="sm"
+            className="text-primary border-primary/20 hover:bg-primary/5"
+          >
+            <Navigation className="w-4 h-4 mr-1" />
+            Tour
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

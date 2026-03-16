@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CreditCard, ExternalLink, TrendingUp, TrendingDown, Coins, Activity, Users, Target, PieChart, DollarSign, RefreshCw, Navigation } from 'lucide-react';
+import { useTour } from '@/components/AppTourContext';
 import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +22,7 @@ const OwnerDashboard = () => {
   const { user } = useAuth();
   const { selectedGym } = useOwnerGym();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const isMobile = useIsMobile();
   const [membersCount, setMembersCount] = useState<number | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
@@ -119,11 +121,20 @@ const OwnerDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <h1 data-tour="owner-dashboard-title" className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Dashboard Proprietario
         </h1>
         <div className="flex items-center gap-2 mt-2">
           <p className="text-muted-foreground">Riepilogo rapido della tua palestra</p>
+          <Button
+            onClick={() => startTour('gym_owner')}
+            variant="outline"
+            size="sm"
+            className="text-primary border-primary/20 hover:bg-primary/5"
+          >
+            <Navigation className="w-4 h-4 mr-1" />
+            Tour
+          </Button>
           {selectedGym && (
             <div className="flex items-center gap-2 ml-2">
               <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
