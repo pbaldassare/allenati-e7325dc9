@@ -197,6 +197,7 @@ const App = () => {
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+              </TourProvider>
             </MobileOptimizations>
           </AppDataProvider>
           </InstructorGymProvider>
