@@ -551,6 +551,7 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
         <Card 
+          data-tour="user-stats-credits"
           className={`cursor-pointer transition-all duration-300 border-none shadow-card hover:shadow-glow ${
             creditsLoading 
               ? 'bg-gradient-to-br from-muted/10 to-muted/5' 
