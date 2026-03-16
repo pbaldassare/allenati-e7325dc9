@@ -496,7 +496,7 @@ export const Dashboard = () => {
       <div className="pt-6 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+            <h1 data-tour="user-greeting" className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
               Ciao{user?.first_name ? `, ${user.first_name}` : ''}! 👋
             </h1>
             <p className="text-muted-foreground text-base md:text-lg font-medium">
