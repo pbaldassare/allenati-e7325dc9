@@ -105,15 +105,26 @@ const InstructorDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        <h1 data-tour="instructor-dashboard-title" className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           {hasOwnerPrivileges ? 'Dashboard Super Istruttore' : 'Dashboard Istruttore'}
         </h1>
-        <p className="text-muted-foreground">
-          {hasOwnerPrivileges 
-            ? 'Panoramica completa della palestra'
-            : 'Panoramica delle tue attività e corsi'
-          }
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-muted-foreground">
+            {hasOwnerPrivileges 
+              ? 'Panoramica completa della palestra'
+              : 'Panoramica delle tue attività e corsi'
+            }
+          </p>
+          <Button
+            onClick={() => startTour('instructor')}
+            variant="outline"
+            size="sm"
+            className="text-primary border-primary/20 hover:bg-primary/5"
+          >
+            <Navigation className="w-4 h-4 mr-1" />
+            Tour
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
