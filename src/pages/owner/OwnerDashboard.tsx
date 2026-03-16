@@ -22,6 +22,7 @@ const OwnerDashboard = () => {
   const { user } = useAuth();
   const { selectedGym } = useOwnerGym();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const isMobile = useIsMobile();
   const [membersCount, setMembersCount] = useState<number | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<number | null>(null);
