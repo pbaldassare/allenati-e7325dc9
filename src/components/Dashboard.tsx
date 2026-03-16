@@ -32,6 +32,7 @@ export const Dashboard = () => {
   const { userGyms, selectedGym } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const { bookings, isSessionBooked, getSessionBooking, cancelSessionBooking, loading: bookingsLoading } = useSessionBookings();
   const { isInWaitlistForSession, getWaitlistPosition, getWaitlistBookingId, fetchUserWaitlistBookings } = useUserWaitlistStatus();
   const [availableSessions, setAvailableSessions] = useState([]);
