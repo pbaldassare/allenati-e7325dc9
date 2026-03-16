@@ -593,7 +593,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Calendar Section with Toggle */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
+      <Card data-tour="user-calendar" className="shadow-lg border-0 bg-gradient-to-br from-card to-card/50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg">Calendario</h3>
