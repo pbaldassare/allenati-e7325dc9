@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'it.legconsulenze.allenati',
-  appName: 'Allenati',
+  appName: 'Allenati.me',
   webDir: 'dist',
   plugins: {
     SplashScreen: {
