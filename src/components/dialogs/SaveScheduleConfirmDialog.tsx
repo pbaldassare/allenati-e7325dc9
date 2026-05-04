@@ -114,9 +114,9 @@ export const SaveScheduleConfirmDialog: React.FC<SaveScheduleConfirmDialogProps>
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
                   <div>
-                    <p className="font-medium">Le sessioni future verranno aggiornate automaticamente.</p>
+                    <p className="font-medium">Le sessioni future senza prenotazioni verranno aggiornate.</p>
                     <p className="text-muted-foreground mt-1">
-                      Le sessioni con prenotazioni esistenti non verranno modificate.
+                      Le sessioni con utenti già prenotati restano <strong>al vecchio orario/sala</strong> e i partecipanti restano confermati. Per spostarli, cancella manualmente la sessione dal calendario.
                     </p>
                   </div>
                 </div>
