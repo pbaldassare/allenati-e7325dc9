@@ -315,10 +315,11 @@ const OwnerBookings: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
+              <SelectItem value="not_cancelled">Non cancellate</SelectItem>
               <SelectItem value="confirmed">Confermate</SelectItem>
+              <SelectItem value="waitlist">Lista d'attesa</SelectItem>
               <SelectItem value="completed">Completate</SelectItem>
               <SelectItem value="cancelled">Cancellate</SelectItem>
-              <SelectItem value="waitlist">Lista d'attesa</SelectItem>
             </SelectContent>
           </Select>
         </div>
