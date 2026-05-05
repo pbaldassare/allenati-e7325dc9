@@ -76,7 +76,9 @@ const OwnerBookings: React.FC = () => {
       );
     }
 
-    if (statusFilter !== 'all') {
+    if (statusFilter === 'not_cancelled') {
+      filtered = filtered.filter(booking => booking.status !== 'cancelled');
+    } else if (statusFilter !== 'all') {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
