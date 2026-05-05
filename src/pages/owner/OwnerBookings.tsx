@@ -442,6 +442,7 @@ const OwnerBookings: React.FC = () => {
                     <TableHead>Crediti</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Prenotato</TableHead>
+                    <TableHead>Cancellata il</TableHead>
                     <TableHead>Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
