@@ -136,6 +136,7 @@ const OwnerBookings: React.FC = () => {
     confirmed: filteredBookings.filter(b => b.status === 'confirmed').length,
     completed: filteredBookings.filter(b => b.status === 'completed').length,
     cancelled: filteredBookings.filter(b => b.status === 'cancelled').length,
+    waitlist: filteredBookings.filter(b => b.status === 'waitlist').length,
   };
 
   // Calculate if there are hidden bookings due to filters
