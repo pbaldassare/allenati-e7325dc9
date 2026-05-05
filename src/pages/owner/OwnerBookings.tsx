@@ -442,6 +442,7 @@ const OwnerBookings: React.FC = () => {
                     <TableHead>Crediti</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Prenotato</TableHead>
+                    <TableHead>Cancellata il</TableHead>
                     <TableHead>Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -484,6 +485,23 @@ const OwnerBookings: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(booking.created_at).toLocaleDateString('it-IT')}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {booking.status === 'cancelled' && booking.cancelled_at ? (
+                          <div>
+                            <div>{new Date(booking.cancelled_at).toLocaleDateString('it-IT')}</div>
+                            <div className="text-xs">
+                              {new Date(booking.cancelled_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            {booking.cancellation_reason && (
+                              <div className="text-xs italic mt-1 max-w-[200px] truncate" title={booking.cancellation_reason}>
+                                {booking.cancellation_reason}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
                       </TableCell>
                       <TableCell>
                         {(booking.status === 'confirmed' || booking.status === 'waitlist') && (
