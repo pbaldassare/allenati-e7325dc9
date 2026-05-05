@@ -76,7 +76,9 @@ const OwnerBookings: React.FC = () => {
       );
     }
 
-    if (statusFilter !== 'all') {
+    if (statusFilter === 'not_cancelled') {
+      filtered = filtered.filter(booking => booking.status !== 'cancelled');
+    } else if (statusFilter !== 'all') {
       filtered = filtered.filter(booking => booking.status === statusFilter);
     }
 
@@ -136,6 +138,7 @@ const OwnerBookings: React.FC = () => {
     confirmed: filteredBookings.filter(b => b.status === 'confirmed').length,
     completed: filteredBookings.filter(b => b.status === 'completed').length,
     cancelled: filteredBookings.filter(b => b.status === 'cancelled').length,
+    waitlist: filteredBookings.filter(b => b.status === 'waitlist').length,
   };
 
   // Calculate if there are hidden bookings due to filters
@@ -228,7 +231,9 @@ const OwnerBookings: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="not_cancelled">Non cancellate</SelectItem>
                 <SelectItem value="confirmed">Confermate</SelectItem>
+                <SelectItem value="waitlist">Lista d'attesa</SelectItem>
                 <SelectItem value="completed">Completate</SelectItem>
                 <SelectItem value="cancelled">Cancellate</SelectItem>
               </SelectContent>
@@ -237,7 +242,7 @@ const OwnerBookings: React.FC = () => {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Totale</CardTitle>
@@ -252,6 +257,14 @@ const OwnerBookings: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.confirmed}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">In attesa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">{stats.waitlist}</div>
           </CardContent>
         </Card>
         <Card>
@@ -302,10 +315,11 @@ const OwnerBookings: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
+              <SelectItem value="not_cancelled">Non cancellate</SelectItem>
               <SelectItem value="confirmed">Confermate</SelectItem>
+              <SelectItem value="waitlist">Lista d'attesa</SelectItem>
               <SelectItem value="completed">Completate</SelectItem>
               <SelectItem value="cancelled">Cancellate</SelectItem>
-              <SelectItem value="waitlist">Lista d'attesa</SelectItem>
             </SelectContent>
           </Select>
         </div>
