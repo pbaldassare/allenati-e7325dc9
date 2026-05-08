@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { useOwnerRevenue } from '@/hooks/useOwnerRevenue';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
-import { DebugDataComponent } from '@/components/owner/DebugDataComponent';
+
 
 interface GymStripeData {
   id: string;
@@ -175,9 +175,6 @@ const OwnerDashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Debug Component */}
-      <DebugDataComponent />
 
       {/* Stripe Configuration Alert */}
       {gymStripeData && !gymStripeData.stripe_credentials_configured && (
