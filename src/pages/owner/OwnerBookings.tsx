@@ -20,6 +20,8 @@ const OwnerBookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('confirmed');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
