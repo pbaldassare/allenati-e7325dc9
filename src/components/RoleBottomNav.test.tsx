@@ -30,10 +30,7 @@ vi.mock("@/components/ui/sidebar", async () => {
   };
 });
 
-import { useVirtualKeyboard } from "@/hooks/useVirtualKeyboard";
 import { RoleBottomNav, RoleBottomNavTab } from "@/components/RoleBottomNav";
-
-const mockedKeyboard = vi.mocked(useVirtualKeyboard);
 
 const tabs: RoleBottomNavTab[] = [
   { id: "home", icon: Home, label: "Home", path: "/owner", exact: true },
@@ -49,7 +46,6 @@ const renderNav = (path = "/owner") =>
 
 describe("RoleBottomNav", () => {
   beforeEach(() => {
-    mockedKeyboard.mockReturnValue({ isVisible: false, viewportHeight: 844 });
     setMobileViewport(390, 844);
   });
 
