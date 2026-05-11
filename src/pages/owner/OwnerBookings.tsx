@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, CheckCircle, XCircle, Clock, Trash2, Calendar, Users, TrendingUp, Eye } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, Trash2, Calendar, Users, TrendingUp, Eye, X } from "lucide-react";
 import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
@@ -20,6 +20,8 @@ const OwnerBookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('confirmed');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
@@ -105,8 +107,20 @@ const OwnerBookings: React.FC = () => {
       });
     }
 
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(b => new Date(b.scheduled_date) >= from);
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(b => new Date(b.scheduled_date) <= to);
+    }
+
     return filtered;
-  }, [bookings, searchTerm, statusFilter, dateFilter]);
+  }, [bookings, searchTerm, statusFilter, dateFilter, dateFrom, dateTo]);
 
   const handleCancelBooking = async (bookingId: string) => {
     await cancelOwnerBooking(bookingId, cancellationReason || undefined);
@@ -239,6 +253,22 @@ const OwnerBookings: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground">Dal</label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground">Al</label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="icon" className="mt-4" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -322,6 +352,17 @@ const OwnerBookings: React.FC = () => {
               <SelectItem value="cancelled">Cancellate</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">Dal</span>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+            <span className="text-sm text-muted-foreground">Al</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="icon" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -431,7 +472,7 @@ const OwnerBookings: React.FC = () => {
             {filteredBookings.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-2">
-                  {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
+                  {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' || dateFrom || dateTo ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
                 </p>
                 {filteredBookings.length === 0 && totalBookingsWithOtherStatus > 0 && (
                   <p className="text-sm text-muted-foreground">
