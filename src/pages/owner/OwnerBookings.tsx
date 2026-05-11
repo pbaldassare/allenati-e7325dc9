@@ -107,8 +107,20 @@ const OwnerBookings: React.FC = () => {
       });
     }
 
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(b => new Date(b.scheduled_date) >= from);
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(b => new Date(b.scheduled_date) <= to);
+    }
+
     return filtered;
-  }, [bookings, searchTerm, statusFilter, dateFilter]);
+  }, [bookings, searchTerm, statusFilter, dateFilter, dateFrom, dateTo]);
 
   const handleCancelBooking = async (bookingId: string) => {
     await cancelOwnerBooking(bookingId, cancellationReason || undefined);
