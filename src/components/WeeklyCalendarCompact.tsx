@@ -181,7 +181,8 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           variant="ghost"
           size="sm"
           onClick={() => navigateWeek('prev')}
-          className="p-2"
+          disabled={!canGoPrev}
+          className="p-2 disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -196,7 +197,8 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           variant="ghost"
           size="sm"
           onClick={() => navigateWeek('next')}
-          className="p-2"
+          disabled={!canGoNext}
+          className="p-2 disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
