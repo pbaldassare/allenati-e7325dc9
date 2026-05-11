@@ -352,6 +352,17 @@ const OwnerBookings: React.FC = () => {
               <SelectItem value="cancelled">Cancellate</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">Dal</span>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+            <span className="text-sm text-muted-foreground">Al</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="icon" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
