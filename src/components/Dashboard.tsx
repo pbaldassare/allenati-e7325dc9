@@ -15,7 +15,7 @@ import { WaitlistConfirmDialog } from '@/components/dialogs/WaitlistConfirmDialo
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 import WeeklyCalendarCompact from './WeeklyCalendarCompact';
-import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
+
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
