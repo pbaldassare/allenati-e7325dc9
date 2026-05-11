@@ -118,7 +118,25 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
     return 'Non assegnato';
   };
 
+  const getMondayOf = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const currentMonday = getMondayOf(new Date());
+  const nextMonday = new Date(currentMonday);
+  nextMonday.setDate(nextMonday.getDate() + 7);
+  const viewMonday = getMondayOf(currentWeek);
+  const canGoPrev = viewMonday > currentMonday;
+  const canGoNext = viewMonday < nextMonday;
+
   const navigateWeek = (direction: 'prev' | 'next') => {
+    if (direction === 'next' && !canGoNext) return;
+    if (direction === 'prev' && !canGoPrev) return;
     const newWeek = new Date(currentWeek);
     newWeek.setDate(newWeek.getDate() + (direction === 'next' ? 7 : -7));
     setCurrentWeek(newWeek);
@@ -163,7 +181,8 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           variant="ghost"
           size="sm"
           onClick={() => navigateWeek('prev')}
-          className="p-2"
+          disabled={!canGoPrev}
+          className="p-2 disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -178,7 +197,8 @@ const WeeklyCalendarCompact = ({ onDayClick, selectedDate }: WeeklyCalendarCompa
           variant="ghost"
           size="sm"
           onClick={() => navigateWeek('next')}
-          className="p-2"
+          disabled={!canGoNext}
+          className="p-2 disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

@@ -15,7 +15,7 @@ import { WaitlistConfirmDialog } from '@/components/dialogs/WaitlistConfirmDialo
 import { useGym } from '@/contexts/GymContext';
 import { HowItWorksModal } from './modals/HowItWorksModal';
 import WeeklyCalendarCompact from './WeeklyCalendarCompact';
-import { MonthlyCalendarCompact } from './MonthlyCalendarCompact';
+
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,7 @@ export const Dashboard = () => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  
   const [userCredits, setUserCredits] = useState<number>(0);
   const [userSubscription, setUserSubscription] = useState<any>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
@@ -608,26 +608,9 @@ export const Dashboard = () => {
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg">Calendario</h3>
-            <ToggleGroup
-              type="single"
-              value={viewMode}
-              onValueChange={(value: 'weekly' | 'monthly') => value && setViewMode(value)}
-              className="bg-muted/50 p-1 rounded-lg"
-            >
-              <ToggleGroupItem value="weekly" className="text-xs">
-                Settimana
-              </ToggleGroupItem>
-              <ToggleGroupItem value="monthly" className="text-xs">
-                Mese
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
-          
-          {viewMode === 'weekly' ? (
-            <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
-          ) : (
-            <MonthlyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
-          )}
+
+          <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
         </CardContent>
       </Card>
 
