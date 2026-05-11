@@ -1061,19 +1061,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent 
+      <DrawerContent
         className={cn(
-          "flex flex-col transition-all duration-300",
-          isMobile ? [
-            keyboardVisible 
-              ? "max-h-[70vh] min-h-[50vh]" 
-              : "max-h-[90vh] min-h-[60vh]",
-            "safe-area-inset-bottom"
-          ] : "max-h-[85vh]"
+          "flex flex-col p-0 transition-all duration-300",
+          isMobile
+            ? "h-[100dvh] max-h-[100dvh] rounded-t-none"
+            : "max-h-[90vh]"
         )}
-        style={isMobile ? { 
-          height: keyboardVisible ? `${viewportHeight * 0.7}px` : `${viewportHeight * 0.9}px` 
-        } : undefined}
       >
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1149,7 +1143,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Session Settings Section */}
           <div className="p-4 border-b bg-muted/10">
             <div className="flex items-center justify-between mb-3">
