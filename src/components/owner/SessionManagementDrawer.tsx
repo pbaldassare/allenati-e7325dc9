@@ -1400,36 +1400,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="font-medium">Nessun partecipante iscritto</p>
-                {isMobile && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="mt-3 text-xs"
-                    onClick={() => {
-                      // Add mock data for testing
-                      const mockParticipant: Participant = {
-                        id: 'test-booking-' + Date.now(),
-                        user_id: 'test-user-' + Date.now(),
-                        status: 'confirmed',
-                        credits_used: 1,
-                        user: {
-                          first_name: 'Test',
-                          last_name: 'User',
-                          email: 'test@test.com',
-                          profile_picture_url: null,
-                          current_credits: 10
-                        },
-                        subscription: null,
-                        medical_certificate: null
-                      };
-                      setParticipants([mockParticipant]);
-                      console.log('🧪 [MOBILE DEBUG] Added mock participant for testing');
-                    }}
-                  >
-                    🧪 Test con dati mock
-                  </Button>
-                )}
               </div>
+
             ) : (
               <div className={cn(
                 "space-y-3",
