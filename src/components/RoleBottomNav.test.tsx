@@ -9,7 +9,7 @@ vi.mock("@/hooks/useScrollDirection", () => ({
   useScrollDirection: () => "up",
 }));
 
-const keyboardState = { isVisible: false };
+const { keyboardState } = vi.hoisted(() => ({ keyboardState: { isVisible: false } }));
 vi.mock("@/hooks/useVirtualKeyboard", () => ({
   useVirtualKeyboard: () => keyboardState,
 }));
