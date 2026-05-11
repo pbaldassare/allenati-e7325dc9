@@ -250,33 +250,35 @@ const SessionCalendarMobile: React.FC = () => {
   }
 
   return (
-    <Card className="p-4">
+    <Card className="p-3 sm:p-4 overflow-hidden">
       {/* Navigation Header */}
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="outline" 
-          size="sm" 
+      <div className="flex items-center justify-between gap-2 mb-6">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => navigateDay('prev')}
-          className="h-10 w-10 p-0"
+          className="h-10 w-10 p-0 shrink-0"
+          aria-label="Giorno precedente"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        
-        <div className="text-center">
-          <h2 className="text-lg font-semibold flex items-center gap-2 justify-center">
-            <Calendar className="h-5 w-5" />
-            {getCurrentDateText()}
+
+        <div className="text-center min-w-0 flex-1">
+          <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2 justify-center truncate">
+            <Calendar className="h-5 w-5 shrink-0" />
+            <span className="truncate">{getCurrentDateText()}</span>
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
             {sessions.length} {sessions.length === 1 ? 'sessione' : 'sessioni'} {showCancelled ? '' : 'programmate'}
           </p>
         </div>
         
-        <Button 
+        <Button
           variant="outline"
-          size="sm" 
+          size="sm"
           onClick={() => navigateDay('next')}
-          className="h-10 w-10 p-0"
+          className="h-10 w-10 p-0 shrink-0"
+          aria-label="Giorno successivo"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>

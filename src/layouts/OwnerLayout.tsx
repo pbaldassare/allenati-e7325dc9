@@ -50,7 +50,7 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
           <div className="min-h-screen flex w-full">
             <OwnerSidebar />
 
-            <SidebarInset className="w-full">
+            <SidebarInset className="w-full min-w-0 overflow-x-hidden">
               <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex h-14 items-center justify-between px-4 gap-2">
                   <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                 </div>
               </header>
 
-              <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-28' : 'p-6'}`}>
+              <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-bottom-nav' : 'p-6'}`}>
                 {children || <Outlet />}
               </main>
             </SidebarInset>
