@@ -608,26 +608,9 @@ export const Dashboard = () => {
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg">Calendario</h3>
-            <ToggleGroup
-              type="single"
-              value={viewMode}
-              onValueChange={(value: 'weekly' | 'monthly') => value && setViewMode(value)}
-              className="bg-muted/50 p-1 rounded-lg"
-            >
-              <ToggleGroupItem value="weekly" className="text-xs">
-                Settimana
-              </ToggleGroupItem>
-              <ToggleGroupItem value="monthly" className="text-xs">
-                Mese
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
-          
-          {viewMode === 'weekly' ? (
-            <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
-          ) : (
-            <MonthlyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
-          )}
+
+          <WeeklyCalendarCompact onDayClick={handleDayClick} selectedDate={selectedDate} />
         </CardContent>
       </Card>
 
