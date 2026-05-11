@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
 import { InstructorGymSelector } from '@/components/instructor/InstructorGymSelector';
+import { InstructorBottomNav } from '@/components/instructor/InstructorBottomNav';
 import { Button } from '@/components/ui/button';
 import { LogOut, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -82,10 +83,11 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
               </div>
             </header>
 
-            <main className={`flex-1 ${isMobile ? 'p-4' : 'p-6'}`}>
+            <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-28' : 'p-6'}`}>
               {children || <Outlet />}
             </main>
           </SidebarInset>
+          <InstructorBottomNav />
         </div>
       </SidebarProvider>
     </ProtectedRoute>
