@@ -472,7 +472,7 @@ const OwnerBookings: React.FC = () => {
             {filteredBookings.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-2">
-                  {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
+                  {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' || dateFrom || dateTo ? 'Nessuna prenotazione trovata' : 'Nessuna prenotazione presente'}
                 </p>
                 {filteredBookings.length === 0 && totalBookingsWithOtherStatus > 0 && (
                   <p className="text-sm text-muted-foreground">
