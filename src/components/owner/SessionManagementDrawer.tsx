@@ -1076,7 +1076,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         } : undefined}
       >
         <DrawerHeader className="border-b">
-          <DrawerTitle className="flex items-center justify-between">
+          <DrawerTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">{session.course_name}</h3>
               {session.course_description && (
@@ -1097,7 +1097,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <div className="text-right">
                 <div className="flex items-center gap-2">
                   <Badge variant={isFull ? "destructive" : isAlmostFull ? "secondary" : "default"}>
@@ -1109,7 +1109,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                   {occupancyRate.toFixed(0)}% occupato
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
