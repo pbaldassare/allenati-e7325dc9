@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { useVirtualKeyboard } from "@/hooks/useVirtualKeyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBottomNavCollisionDetector } from "@/hooks/useBottomNavCollisionDetector";
@@ -33,7 +32,6 @@ export const RoleBottomNav = ({ tabs }: RoleBottomNavProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { toggleSidebar } = useSidebar();
-  const scrollDirection = useScrollDirection();
   const { isVisible: keyboardVisible } = useVirtualKeyboard();
   const isMobile = useIsMobile();
   const navRef = useRef<HTMLElement>(null);
@@ -49,10 +47,10 @@ export const RoleBottomNav = ({ tabs }: RoleBottomNavProps) => {
     <nav
       ref={navRef}
       data-testid="role-bottom-nav"
+      data-bottom-nav-height="64"
       aria-label="Navigazione principale mobile"
       className={cn(
         "fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-primary/10 shadow-card transition-transform duration-300 safe-area-bottom",
-        scrollDirection === "down" && !keyboardVisible && "translate-y-full",
         keyboardVisible && "translate-y-full"
       )}
     >
