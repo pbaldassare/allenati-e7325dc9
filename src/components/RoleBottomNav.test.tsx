@@ -4,10 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import { Home, Calendar } from "lucide-react";
 import { setMobileViewport, setDesktopViewport } from "@/test/mobile-utils";
 
-vi.mock("@/hooks/useScrollDirection", () => ({
-  useScrollDirection: () => "up",
-}));
-
 vi.mock("@/hooks/useVirtualKeyboard", () => ({
   useVirtualKeyboard: vi.fn(() => ({ isVisible: false, viewportHeight: 844 })),
 }));
