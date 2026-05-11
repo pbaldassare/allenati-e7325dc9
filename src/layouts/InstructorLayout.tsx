@@ -83,7 +83,7 @@ export const InstructorLayout: React.FC<{ children?: React.ReactNode }> = ({ chi
               </div>
             </header>
 
-            <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-28' : 'p-6'}`}>
+            <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-bottom-nav' : 'p-6'}`}>
               {children || <Outlet />}
             </main>
           </SidebarInset>
