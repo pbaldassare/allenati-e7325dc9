@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, CheckCircle, XCircle, Clock, Trash2, Calendar, Users, TrendingUp, Eye } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, Trash2, Calendar, Users, TrendingUp, Eye, X } from "lucide-react";
 import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
