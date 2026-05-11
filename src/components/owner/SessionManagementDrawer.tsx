@@ -1390,36 +1390,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 <Users className="h-4 w-4" />
                 Partecipanti Iscritti ({participants.length})
               </h4>
-              {isMobile && (
-                <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                  📱 Mobile ({window.innerWidth}x{window.innerHeight})
-                </div>
-              )}
             </div>
-
-            {/* Mobile Debug Info */}
-            {isMobile && (
-              <div className="mb-4 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                Debug: Session {session.id.slice(0, 8)}... | 
-                Loading: {loading ? 'YES' : 'NO'} | 
-                Count: {participants.length} |
-                Viewport: {window.innerHeight}px
-              </div>
-            )}
 
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 <div className="animate-pulse">Caricamento partecipanti...</div>
-                <div className="text-xs mt-2">📱 {isMobile ? 'Mobile' : 'Desktop'}</div>
-                <div className="text-xs mt-1">Session: {session.id.slice(0, 8)}...</div>
               </div>
             ) : participants.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="font-medium">Nessun partecipante iscritto</p>
-                <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'}</p>
-                <p className="text-xs">Session: {session.id}</p>
-                <p className="text-xs">Course: {session.course_name}</p>
                 {isMobile && (
                   <Button 
                     size="sm" 
