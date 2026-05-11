@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { OwnerGymSelector } from '@/components/owner/OwnerGymSelector';
+import { OwnerBottomNav } from '@/components/owner/OwnerBottomNav';
 
 
 export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
@@ -109,10 +110,11 @@ export const OwnerLayout: React.FC<{ children?: React.ReactNode }> = ({ children
                 </div>
               </header>
 
-              <main className={`flex-1 ${isMobile ? 'p-4' : 'p-6'}`}>
+              <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-28' : 'p-6'}`}>
                 {children || <Outlet />}
               </main>
             </SidebarInset>
+            <OwnerBottomNav />
           </div>
           
           <HowItWorksModal 
