@@ -1109,16 +1109,17 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                   {occupancyRate.toFixed(0)}% occupato
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={toggleSessionVisibility}
                   disabled={toggleVisibilityLoading}
+                  aria-label={session.status === 'hidden' ? 'Mostra sessione' : 'Nascondi sessione'}
                   className={cn(
                     "gap-2",
-                    session.status === 'hidden' 
-                      ? "text-orange-600 hover:text-orange-700" 
+                    session.status === 'hidden'
+                      ? "text-orange-600 hover:text-orange-700"
                       : "text-blue-600 hover:text-blue-700"
                   )}
                 >
@@ -1129,16 +1130,19 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                   ) : (
                     <Eye className="h-4 w-4" />
                   )}
-                  {session.status === 'hidden' ? 'Mostra' : 'Nascondi'}
+                  <span className="hidden sm:inline">
+                    {session.status === 'hidden' ? 'Mostra' : 'Nascondi'}
+                  </span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCancelDialogOpen(true)}
-                  className="text-destructive hover:text-destructive"
+                  aria-label="Cancella sessione"
+                  className="text-destructive hover:text-destructive gap-2"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Cancella
+                  <span className="hidden sm:inline">Cancella</span>
                 </Button>
               </div>
             </div>
