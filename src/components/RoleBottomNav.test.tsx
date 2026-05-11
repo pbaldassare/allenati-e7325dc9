@@ -4,14 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import { Home, Calendar } from "lucide-react";
 import { setMobileViewport, setDesktopViewport } from "@/test/mobile-utils";
 
-// Mock viewport-dependent hooks BEFORE importing the component under test
 vi.mock("@/hooks/useScrollDirection", () => ({
   useScrollDirection: () => "up",
 }));
 
-const mocks = vi.hoisted(() => ({ keyboardState: { isVisible: false } }));
 vi.mock("@/hooks/useVirtualKeyboard", () => ({
-  useVirtualKeyboard: () => mocks.keyboardState,
+  useVirtualKeyboard: vi.fn(() => ({ isVisible: false })),
 }));
 
 vi.mock("@/components/ui/sidebar", async () => {
@@ -32,7 +30,10 @@ vi.mock("@/components/ui/sidebar", async () => {
   };
 });
 
+import { useVirtualKeyboard } from "@/hooks/useVirtualKeyboard";
 import { RoleBottomNav, RoleBottomNavTab } from "@/components/RoleBottomNav";
+
+const mockedKeyboard = vi.mocked(useVirtualKeyboard);
 
 const tabs: RoleBottomNavTab[] = [
   { id: "home", icon: Home, label: "Home", path: "/owner", exact: true },
@@ -48,7 +49,7 @@ const renderNav = (path = "/owner") =>
 
 describe("RoleBottomNav", () => {
   beforeEach(() => {
-    keyboardState.isVisible = false;
+    mockedKeyboard.mockReturnValue({ isVisible: false });
     setMobileViewport(390, 844);
   });
 
@@ -60,8 +61,7 @@ describe("RoleBottomNav", () => {
 
   it("renders all tabs and a Menu button on mobile", () => {
     renderNav();
-    const nav = screen.getByTestId("role-bottom-nav");
-    expect(nav).toBeInTheDocument();
+    expect(screen.getByTestId("role-bottom-nav")).toBeInTheDocument();
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Calendario")).toBeInTheDocument();
     expect(screen.getByLabelText("Apri menu")).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("RoleBottomNav", () => {
   });
 
   it("hides itself when the virtual keyboard is visible", () => {
-    keyboardState.isVisible = true;
+    mockedKeyboard.mockReturnValue({ isVisible: true });
     renderNav();
     const nav = screen.getByTestId("role-bottom-nav");
     expect(nav.className).toMatch(/translate-y-full/);
