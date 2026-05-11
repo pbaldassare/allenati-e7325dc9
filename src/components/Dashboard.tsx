@@ -48,7 +48,7 @@ export const Dashboard = () => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  
   const [userCredits, setUserCredits] = useState<number>(0);
   const [userSubscription, setUserSubscription] = useState<any>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
