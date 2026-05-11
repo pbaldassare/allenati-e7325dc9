@@ -250,7 +250,7 @@ const SessionCalendarMobile: React.FC = () => {
   }
 
   return (
-    <Card className="p-3 sm:p-4 overflow-hidden">
+    <Card className="p-3 sm:p-4 overflow-visible">
       {/* Navigation Header */}
       <div className="flex items-center justify-between gap-2 mb-6">
         <Button
