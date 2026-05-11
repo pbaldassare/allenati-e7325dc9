@@ -226,9 +226,13 @@ All colors MUST be HSL.
   .safe-area-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
-  /* Spacer applied to scrollable main containers so bottom nav never covers content */
+  /* Spacer applied to scrollable main containers so bottom nav never covers content.
+     Nav is h-16 (4rem) + py-2 (1rem) + safe-area + breathing room. */
   .pb-bottom-nav {
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+  .pb-bottom-nav-lg {
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
   }
   /* Apply on Drawer/Dialog footers so CTAs stay above the nav and notch */
   .mobile-action-safe {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -1069,6 +1069,14 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
             : "max-h-[90vh]"
         )}
       >
+        {isMobile && (
+          <DrawerClose
+            aria-label="Chiudi"
+            className="absolute right-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted/80 text-foreground shadow hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </DrawerClose>
+        )}
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
