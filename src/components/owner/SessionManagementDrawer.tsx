@@ -1377,16 +1377,14 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
 
           {/* Participants List */}
-          <ScrollArea className={cn(
-            "flex-1 p-4 overflow-y-scroll",
-            // Desktop: altezza fissa per scrollbar sempre visibile
-            !isMobile && "h-[300px]",
-            // Mobile: altezza dinamica basata sulla tastiera
-            isMobile && [
-              keyboardVisible ? "max-h-[30vh]" : "max-h-[50vh]",
-              "overscroll-behavior-contain"
-            ]
-          )} type="always">
+          <ScrollArea
+            className={cn(
+              "flex-1 min-h-0 p-4",
+              !isMobile && "h-[300px]",
+              isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
+            )}
+            type="always"
+          >
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
