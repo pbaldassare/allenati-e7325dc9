@@ -112,7 +112,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 }) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const { isVisible: keyboardVisible, viewportHeight } = useVirtualKeyboard();
+  const { isVisible: keyboardVisible } = useVirtualKeyboard();
   const [open, setOpen] = useState(false);
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -1061,19 +1061,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent 
+      <DrawerContent
         className={cn(
-          "flex flex-col transition-all duration-300",
-          isMobile ? [
-            keyboardVisible 
-              ? "max-h-[70vh] min-h-[50vh]" 
-              : "max-h-[90vh] min-h-[60vh]",
-            "safe-area-inset-bottom"
-          ] : "max-h-[85vh]"
+          "flex flex-col p-0 transition-all duration-300",
+          isMobile
+            ? "h-[100dvh] max-h-[100dvh] rounded-t-none"
+            : "max-h-[90vh]"
         )}
-        style={isMobile ? { 
-          height: keyboardVisible ? `${viewportHeight * 0.7}px` : `${viewportHeight * 0.9}px` 
-        } : undefined}
       >
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1149,7 +1143,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Session Settings Section */}
           <div className="p-4 border-b bg-muted/10">
             <div className="flex items-center justify-between mb-3">
@@ -1383,81 +1377,31 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
 
           {/* Participants List */}
-          <ScrollArea className={cn(
-            "flex-1 p-4 overflow-y-scroll",
-            // Desktop: altezza fissa per scrollbar sempre visibile
-            !isMobile && "h-[300px]",
-            // Mobile: altezza dinamica basata sulla tastiera
-            isMobile && [
-              keyboardVisible ? "max-h-[30vh]" : "max-h-[50vh]",
-              "overscroll-behavior-contain"
-            ]
-          )} type="always">
+          <ScrollArea
+            className={cn(
+              "flex-1 min-h-0 p-4",
+              !isMobile && "h-[300px]",
+              isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
+            )}
+            type="always"
+          >
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Partecipanti Iscritti ({participants.length})
               </h4>
-              {isMobile && (
-                <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                  📱 Mobile ({window.innerWidth}x{window.innerHeight})
-                </div>
-              )}
             </div>
-
-            {/* Mobile Debug Info */}
-            {isMobile && (
-              <div className="mb-4 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                Debug: Session {session.id.slice(0, 8)}... | 
-                Loading: {loading ? 'YES' : 'NO'} | 
-                Count: {participants.length} |
-                Viewport: {window.innerHeight}px
-              </div>
-            )}
 
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 <div className="animate-pulse">Caricamento partecipanti...</div>
-                <div className="text-xs mt-2">📱 {isMobile ? 'Mobile' : 'Desktop'}</div>
-                <div className="text-xs mt-1">Session: {session.id.slice(0, 8)}...</div>
               </div>
             ) : participants.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="font-medium">Nessun partecipante iscritto</p>
-                <p className="text-xs mt-1">📱 {isMobile ? 'Mobile' : 'Desktop'}</p>
-                <p className="text-xs">Session: {session.id}</p>
-                <p className="text-xs">Course: {session.course_name}</p>
-                {isMobile && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="mt-3 text-xs"
-                    onClick={() => {
-                      // Add mock data for testing
-                      const mockParticipant: Participant = {
-                        id: 'test-booking-' + Date.now(),
-                        user_id: 'test-user-' + Date.now(),
-                        status: 'confirmed',
-                        credits_used: 1,
-                        user: {
-                          first_name: 'Test',
-                          last_name: 'User',
-                          email: 'test@test.com',
-                          profile_picture_url: null,
-                          current_credits: 10
-                        },
-                        subscription: null,
-                        medical_certificate: null
-                      };
-                      setParticipants([mockParticipant]);
-                      console.log('🧪 [MOBILE DEBUG] Added mock participant for testing');
-                    }}
-                  >
-                    🧪 Test con dati mock
-                  </Button>
-                )}
               </div>
+
             ) : (
               <div className={cn(
                 "space-y-3",

@@ -1,95 +1,72 @@
 ## Obiettivo
+Rendere pienamente utilizzabili su mobile (iPhone, viewport 320–414px) tutti i pop-up che un Istruttore può aprire dall'app: drawer di gestione sessione, dialog di iscrizione manuale, dialog di conferma cancellazione partecipante, e i dialog condivisi (es. partecipanti corso, dettagli utente, certificato medico) raggiungibili dalle pagine istruttore.
 
-Ottimizzare l'esperienza mobile dell'area **Proprietario** e **Istruttore** (incluso Super Istruttore) con:
-- Bottom navigation dedicate per ruolo
-- Scroll corretto in tutte le pagine (oggi alcune pagine come `/owner/schedule` non scrollano)
-- Layout responsive su pagine con tabelle dense (Utenti, Prenotazioni, Abbonamenti, Calendario)
-- Nessuna perdita di funzionalità o dati
+## Problemi rilevati
+1. **DialogContent base** (`src/components/ui/dialog.tsx`) usa `max-w-lg`, `top/left 50%`, `p-6`, `max-h-[90vh]`. Su 390×595 il dialog risulta:
+   - largo quasi uguale al viewport ma con padding 24px che taglia i CTA
+   - non rispetta `safe-area-inset-bottom` né la BottomNav (z-40 vs dialog z-50: ok per layering, ma l'altezza interna non lascia spazio agli ultimi pulsanti)
+   - tastiera virtuale iOS: dialog non si rimpicciolisce, i campi finiscono sotto la tastiera
+2. **`InstructorManualEnrollment`** ha sezioni lunghe (ricerca utenti, lista risultati, conferma) dentro Card senza wrapping in Dialog mobile-friendly. Su mobile deve diventare un **Drawer bottom-sheet** o una pagina full-screen, non un dialog centrato.
+3. **`InstructorParticipants` → AlertDialog di cancellazione**: usa `AlertDialogContent` standard, footer con due pulsanti che vanno a capo male su 320px.
+4. **`SessionManagementDrawer`** (già condiviso owner/instructor): l'altezza `max-h-[90vh]` + header sticky lascia il footer CTA fuori vista; lo scroll interno funziona ma i pulsanti d'azione (Modifica/Elimina/Conferma) non sono sempre raggiungibili senza scroll esplicito, e l'area di input ricerca utenti finisce sotto la tastiera.
+5. **Dialog condivisi aperti dall'istruttore** (`CourseParticipantsViewModal`, `CourseParticipantsList`, `UserHistoryModal`, `MedicalCertificateUploadDialog`): tutti `DialogContent` desktop-first con `max-w-2xl/4xl` e `max-h-[80vh]`. Su mobile si schiacciano e i CTA footer escono dal viewport.
 
----
+## Soluzione
 
-## 1. Bottom Navigation dedicate (mobile)
+### A. Pattern responsive unificato per i pop-up
+Creare un wrapper `ResponsiveDialog` (`src/components/ui/responsive-dialog.tsx`) che:
+- su `md+` renderizza un `Dialog` Radix (comportamento attuale)
+- su mobile renderizza un `Drawer` (Vaul) bottom-sheet con `max-h-[92dvh]`, header sticky in alto, footer sticky in basso con `safe-area-inset-bottom`, body con `overflow-y-auto` e `pb-[env(safe-area-inset-bottom)]`
+- supporta gli stessi sotto-componenti (`Header`, `Title`, `Description`, `Body`, `Footer`)
+- gestisce `keyboardVisible` (hook esistente `useKeyboardVisible` o nuovo) riducendo l'altezza body quando la tastiera è aperta
 
-Oggi `BottomNavigation` è usata solo nell'area utente (`Index.tsx`, `BookingHistory.tsx`). Le aree owner/instructor hanno solo la sidebar sotto un `SheetContent` mobile, quindi su telefono mancano le scorciatoie rapide.
+### B. Migrazione dei pop-up istruttore
+Sostituire `Dialog/DialogContent` con `ResponsiveDialog` in:
+- `src/components/instructor/InstructorManualEnrollment.tsx` (dialog principale + eventuali sub-dialog di conferma)
+- `src/pages/instructor/InstructorParticipants.tsx` (AlertDialog cancellazione → `ResponsiveAlertDialog` analogo)
+- `src/components/CourseParticipantsViewModal.tsx`
+- `src/components/CourseParticipantsList.tsx`
+- `src/components/UserHistoryModal.tsx`
+- `src/components/MedicalCertificateUploadDialog.tsx`
+- `src/components/GymDocumentUploadDialog.tsx` (raggiungibile da istruttore in alcune sezioni)
 
-### `OwnerBottomNav` (nuovo componente)
-Voci principali (5 max, secondo le linee guida iOS/Android):
-- Dashboard → `/owner`
-- Calendario → `/owner/schedule`
-- Prenotazioni → `/owner/bookings`
-- Utenti → `/owner/users`
-- Menu → apre la `Sidebar` (SheetContent mobile) per accesso completo a tutte le altre voci (Corsi, Istruttori, Sale, Abbonamenti, Stripe, Report, Documenti, Profilo, Chat, Logout)
+Footer dei dialog: passare a `flex-col sm:flex-row gap-2`, pulsanti `w-full sm:w-auto`, ordine logico (azione primaria in basso su mobile, a destra su desktop).
 
-### `InstructorBottomNav` (nuovo componente)
-Voci principali:
-- Dashboard → `/instructor`
-- Corsi → `/instructor/courses`
-- Calendario → `/instructor/schedule`
-- Partecipanti → `/instructor/participants`
-- Menu → apre la sidebar per le altre voci (Statistiche, Shop, Profilo, Logout, e — se Super Istruttore — l'intero blocco owner)
+### C. Fix specifici `SessionManagementDrawer`
+- Footer CTA sempre sticky in basso (`sticky bottom-0 bg-background border-t`) con `pb-[env(safe-area-inset-bottom)]`
+- Body `flex-1 min-h-0 overflow-y-auto` per garantire scroll corretto sotto il footer
+- Quando `keyboardVisible`: `max-h-[60dvh]` invece di `[30vh]` solo sul body interno, mantenendo header+footer visibili
+- Scroll automatico al campo focusato (`scrollIntoView({ block: 'center' })`)
 
-Caratteristiche comuni:
-- Visibili solo su mobile (`useIsMobile`)
-- Si nascondono allo scroll-down e quando appare la tastiera virtuale (riuso di `useScrollDirection` + `useVirtualKeyboard`, come già fa `BottomNavigation`)
-- Stile coerente con `BottomNavigation` esistente (gradient primary su tab attivo, design tokens, safe-area-bottom)
-- Highlight automatico in base a `useLocation`
+### D. CSS / safe-area
+- Aggiungere classe utility `.dialog-mobile-safe` in `src/index.css` con `padding-bottom: max(1rem, env(safe-area-inset-bottom))`
+- Verificare che `dvh` sia usato al posto di `vh` per gestire la barra Safari iOS
 
-### Integrazione nei layout
-- `OwnerLayout.tsx`: aggiungere `<OwnerBottomNav />` prima della chiusura `SidebarInset`; aggiungere `pb-24` al `<main>` su mobile per evitare che il contenuto sia coperto.
-- `InstructorLayout.tsx`: stesso pattern con `<InstructorBottomNav />`.
-
----
-
-## 2. Fix scroll e layout mobile
-
-### Problema scroll calendario `/owner/schedule`
-Verificare il container: il main del layout è già `flex-1` ma il `SessionCalendarMobile` potrebbe usare `h-screen` o overflow nascosto. Garantire `overflow-y-auto` sul `<main>` (o sul wrapper interno) e `min-h-0` sui flex children. Aggiungere `pb-24` quando bottom nav presente.
-
-### Header mobile
-- Spostare il pulsante "Vista Utente" e "Logout" nel menu della sidebar; in header mobile lasciare solo: trigger sidebar, titolo compatto, gym selector. Riduce affollamento visibile nello screenshot.
-
-### Pagine con tabelle dense (già parzialmente responsive)
-Per ognuna verificare che esista una variante "card list" su mobile e che il padding/margine non causi overflow orizzontale:
-- `OwnerUsers.tsx` (1208 righe — già usa `useIsMobile`, controllare che il rendering mobile sia card-list e non tabella)
-- `OwnerBookings.tsx` (filtri Dal/Al appena aggiunti — verificare wrapping su mobile)
-- `OwnerSubscriptions.tsx`
-- `OwnerCoursesList.tsx`
-- `OwnerBookingsAnalytics.tsx`
-- `InstructorSchedule.tsx`
-
-Dove la versione mobile manca o è degradata, sostituire `<Table>` con elenco di `<Card>` compatte (pattern già usato in altre pagine del progetto).
-
-### `SessionCalendar` (owner)
-- Su mobile usa già `SessionCalendarMobile`, ma le card "Nascondi/Cancella" sforano (vedi screenshot: i bottoni escono a destra). Convertire la riga di azioni in un layout `flex-wrap` con bottoni `size="sm"` e icone-only sotto i 360px.
-
----
-
-## 3. Note tecniche
-
-- **Memoria progetto** rispettata: layout mobile identici tra ruoli (stessa struttura, varia solo la nav dedicata e le azioni). UI proprietario pulita (nessun debug).
-- Nessuna modifica a logica business, RPC o RLS. Solo presentazione.
-- Tutto via design tokens (no colori hardcoded).
-- `safe-area-bottom` per iOS notch.
-
----
+### E. QA
+- Test manuale via browser tool a 390×844 e 320×568: aprire ogni pop-up istruttore, verificare che header, scroll, ultimo CTA siano raggiungibili
+- Aggiungere test Vitest per `ResponsiveDialog` (rendering corretto Drawer su mobile, Dialog su desktop, presenza classi safe-area)
+- Estendere il `useBottomNavCollisionDetector` esistente perché ignori elementi dentro `[role="dialog"]` aperti (evita falsi positivi) ma segnali CTA tagliati fuori viewport dentro un dialog mobile
 
 ## File toccati
+**Nuovi**
+- `src/components/ui/responsive-dialog.tsx`
+- `src/components/ui/responsive-dialog.test.tsx`
+- `src/hooks/useKeyboardVisible.ts` (se non esiste già; altrimenti riuso)
 
-```text
-NUOVI
-  src/components/owner/OwnerBottomNav.tsx
-  src/components/instructor/InstructorBottomNav.tsx
+**Modificati**
+- `src/components/ui/dialog.tsx` (solo aggiunta `dvh` + safe-area come fallback)
+- `src/index.css`
+- `src/components/instructor/InstructorManualEnrollment.tsx`
+- `src/pages/instructor/InstructorParticipants.tsx`
+- `src/components/owner/SessionManagementDrawer.tsx` (sticky footer + keyboard handling)
+- `src/components/CourseParticipantsViewModal.tsx`
+- `src/components/CourseParticipantsList.tsx`
+- `src/components/UserHistoryModal.tsx`
+- `src/components/MedicalCertificateUploadDialog.tsx`
+- `src/components/GymDocumentUploadDialog.tsx`
+- `src/hooks/useBottomNavCollisionDetector.ts`
 
-MODIFICATI
-  src/layouts/OwnerLayout.tsx          (aggancio bottom nav, padding main, header snello)
-  src/layouts/InstructorLayout.tsx     (idem)
-  src/components/owner/SessionCalendarMobile.tsx  (azioni card responsive, scroll)
-  src/pages/owner/OwnerUsers.tsx       (verifica/migliora card list mobile)
-  src/pages/owner/OwnerBookings.tsx    (wrapping filtri Dal/Al)
-  src/pages/owner/OwnerSubscriptions.tsx
-  src/pages/owner/OwnerCoursesList.tsx
-  src/pages/owner/OwnerBookingsAnalytics.tsx
-  src/pages/instructor/InstructorSchedule.tsx
-```
-
-Lavoro fatto pagina per pagina, verificando in preview mobile (390px) dopo ogni step.
+## Fuori scopo
+- Modifiche alla logica di business (iscrizione, cancellazione, gestione crediti)
+- Refactor pop-up esclusivi dell'area Owner desktop
+- Cambi al BottomNav (già ottimizzato nel turno precedente)
