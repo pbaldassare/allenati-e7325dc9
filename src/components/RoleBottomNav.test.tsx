@@ -9,7 +9,7 @@ vi.mock("@/hooks/useScrollDirection", () => ({
 }));
 
 vi.mock("@/hooks/useVirtualKeyboard", () => ({
-  useVirtualKeyboard: vi.fn(() => ({ isVisible: false })),
+  useVirtualKeyboard: vi.fn(() => ({ isVisible: false, viewportHeight: 844 })),
 }));
 
 vi.mock("@/components/ui/sidebar", async () => {
@@ -49,7 +49,7 @@ const renderNav = (path = "/owner") =>
 
 describe("RoleBottomNav", () => {
   beforeEach(() => {
-    mockedKeyboard.mockReturnValue({ isVisible: false });
+    mockedKeyboard.mockReturnValue({ isVisible: false, viewportHeight: 844 });
     setMobileViewport(390, 844);
   });
 
@@ -83,7 +83,7 @@ describe("RoleBottomNav", () => {
   });
 
   it("hides itself when the virtual keyboard is visible", () => {
-    mockedKeyboard.mockReturnValue({ isVisible: true });
+    mockedKeyboard.mockReturnValue({ isVisible: true, viewportHeight: 400 });
     renderNav();
     const nav = screen.getByTestId("role-bottom-nav");
     expect(nav.className).toMatch(/translate-y-full/);
