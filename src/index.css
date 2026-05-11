@@ -217,3 +217,21 @@ All colors MUST be HSL.
     to { box-shadow: var(--shadow-glow); }
   }
 }
+
+/* iOS / mobile safe-area helpers */
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* Spacer applied to scrollable main containers so bottom nav never covers content */
+  .pb-bottom-nav {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Apply on Drawer/Dialog footers so CTAs stay above the nav and notch */
+  .mobile-action-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+  }
+}
