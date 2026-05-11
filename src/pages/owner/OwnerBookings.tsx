@@ -253,6 +253,22 @@ const OwnerBookings: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground">Dal</label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground">Al</label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="icon" className="mt-4" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
