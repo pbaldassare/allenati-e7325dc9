@@ -239,7 +239,7 @@ export const Dashboard = () => {
 
     loadAvailableSessions();
     loadUserCreditsAndSubscription();
-  }, [user, selectedGym, toast]);
+  }, [user, selectedGym, authLoading, gymLoading, toast]);
 
   const openBookingDialog = (session: any) => {
     setSelectedSession(session);
