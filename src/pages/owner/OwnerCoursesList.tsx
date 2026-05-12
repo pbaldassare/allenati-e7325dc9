@@ -670,9 +670,16 @@ const OwnerCoursesList: React.FC = () => {
                           </p>
                         )}
                       </div>
-                      <Badge variant={course.is_active ? "default" : "secondary"}>
-                        {course.is_active ? "Attivo" : "Disattivo"}
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-end">
+                        <Badge variant={course.is_active ? "default" : "secondary"}>
+                          {course.is_active ? "Attivo" : "Disattivo"}
+                        </Badge>
+                        {!course.has_valid_schedule && (
+                          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                            Senza orario
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
