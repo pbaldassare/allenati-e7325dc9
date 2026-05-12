@@ -95,7 +95,8 @@ export default {
 				'gradient-warm': 'var(--gradient-warm)',
 				'gradient-premium': 'var(--gradient-premium)',
 				'gradient-social': 'var(--gradient-social)',
-				'gradient-energy': 'var(--gradient-energy)'
+				'gradient-energy': 'var(--gradient-energy)',
+				'gradient-text': 'var(--gradient-primary)'
 			},
 			boxShadow: {
 				'primary': 'var(--shadow-primary)',
