@@ -28,8 +28,8 @@ import { processWaitlistBooking, cancelWaitlistBooking, getNextWaitlistPosition,
 import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
 export const Dashboard = () => {
-  const { user } = useAuth();
-  const { userGyms, selectedGym } = useGym();
+  const { user, loading: authLoading } = useAuth();
+  const { userGyms, selectedGym, loading: gymLoading } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { startTour } = useTour();
@@ -130,6 +130,8 @@ export const Dashboard = () => {
   // Load available sessions from Supabase
   useEffect(() => {
     const loadAvailableSessions = async () => {
+      // Aspetta che AuthContext e GymContext siano inizializzati
+      if (authLoading || gymLoading) return;
       if (!user || !selectedGym?.id) {
         setLoading(false);
         return;
@@ -237,7 +239,7 @@ export const Dashboard = () => {
 
     loadAvailableSessions();
     loadUserCreditsAndSubscription();
-  }, [user, selectedGym, toast]);
+  }, [user, selectedGym, authLoading, gymLoading, toast]);
 
   const openBookingDialog = (session: any) => {
     setSelectedSession(session);

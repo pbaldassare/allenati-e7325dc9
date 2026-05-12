@@ -36,9 +36,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
 
   // Load initial messages
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !user) return;
     loadMessages();
-  }, [roomId]);
+  }, [roomId, user?.id]);
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -89,7 +89,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
     };
   }, [roomId]);
 
-  const loadMessages = async () => {
+  const loadMessages = async (retry = 0) => {
     try {
       const { data, error } = await supabase
         .from('chat_messages')
@@ -133,7 +133,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error('Error loading messages:', error);
-      // Silenziato: errori transitori durante switch tab/room non devono mostrare toast
+      // Retry esponenziale per errori transitori (token refresh, race switch room)
+      if (retry < 2) {
+        setTimeout(() => { loadMessages(retry + 1).catch(() => {}); }, 600 * (retry + 1));
+        return;
+      }
+      // Toast solo dopo fallimento reale
+      toast({
+        title: 'Errore',
+        description: 'Impossibile caricare i messaggi. Riprova.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }

@@ -26,14 +26,14 @@ export interface SessionBooking {
 }
 
 export const useSessionBookings = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const retryCountRef = useRef(0);
 
   const fetchBookings = async () => {
-    if (!user) return;
+    if (!user || authLoading) return;
 
     try {
       const { data, error } = await supabase
@@ -101,11 +101,18 @@ export const useSessionBookings = () => {
       retryCountRef.current = 0;
     } catch (error) {
       console.error('Error fetching session bookings:', error);
-      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      // Retry esponenziale per errori transitori (token refresh)
       if (retryCountRef.current < 2) {
         retryCountRef.current += 1;
-        setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
+        setTimeout(() => { fetchBookings().catch(() => {}); }, 600 * retryCountRef.current);
+        return;
       }
+      // Toast solo dopo fallimento reale
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare le prenotazioni. Riprova.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -233,7 +240,8 @@ export const useSessionBookings = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
+    // Aspetta che AuthContext abbia finito di inizializzare per evitare race con token refresh
+    if (authLoading || !user) return;
 
     fetchBookings();
 
@@ -257,7 +265,7 @@ export const useSessionBookings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
 
   return {
     bookings,
