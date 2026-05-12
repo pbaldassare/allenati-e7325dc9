@@ -133,11 +133,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error('Error loading messages:', error);
-      toast({
-        title: 'Errore',
-        description: 'Impossibile caricare i messaggi',
-        variant: 'destructive'
-      });
+      // Silenziato: errori transitori durante switch tab/room non devono mostrare toast
     } finally {
       setLoading(false);
     }

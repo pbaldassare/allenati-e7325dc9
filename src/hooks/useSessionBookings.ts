@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ export const useSessionBookings = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const retryCountRef = useRef(0);
 
   const fetchBookings = async () => {
     if (!user) return;
@@ -97,13 +98,14 @@ export const useSessionBookings = () => {
       } else {
         setBookings([]);
       }
+      retryCountRef.current = 0;
     } catch (error) {
       console.error('Error fetching session bookings:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare le prenotazioni",
-        variant: "destructive"
-      });
+      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
+      }
     } finally {
       setLoading(false);
     }
