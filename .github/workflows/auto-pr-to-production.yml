@@ -1,0 +1,46 @@
+name: Auto PR from main to production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure production branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin production; then
+            echo "Creating production branch from main..."
+            git push origin main:production
+          fi
+
+      - name: Create or update Pull Request
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: main
+          destination_branch: production
+          pr_title: "🚀 Deploy: sync main → production"
+          pr_body: |
+            ## Automatic PR from Lovable
+
+            Questa PR raccoglie le modifiche pushate automaticamente da Lovable su `main`.
+
+            **Commit più recente:** ${{ github.event.head_commit.message }}
+            **Autore:** ${{ github.event.head_commit.author.name }}
+            **SHA:** ${{ github.sha }}
+
+            ---
+            Rivedi i cambiamenti e fai il merge per promuovere in produzione.
+          pr_label: "lovable-sync,automated"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
