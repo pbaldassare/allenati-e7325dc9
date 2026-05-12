@@ -46,6 +46,7 @@ interface CourseItem {
     end_time: string;
     room_name?: string;
   }>;
+  has_valid_schedule?: boolean;
 }
 
 const OwnerCoursesList: React.FC = () => {
