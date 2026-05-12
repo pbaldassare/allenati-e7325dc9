@@ -373,9 +373,12 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       navigate('/owner/courses');
     } catch (error) {
       console.error('Error saving course:', error);
+      const isActivationErr = isCourseActivationError(error);
       toast({
         title: 'Errore',
-        description: 'Errore nel salvataggio del corso',
+        description: isActivationErr
+          ? COURSE_ACTIVATION_ERROR_MESSAGE
+          : 'Errore nel salvataggio del corso',
         variant: 'destructive',
       });
     } finally {
