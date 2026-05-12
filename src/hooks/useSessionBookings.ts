@@ -100,8 +100,11 @@ export const useSessionBookings = () => {
       }
     } catch (error) {
       console.error('Error fetching session bookings:', error);
-      // Retry silenzioso una volta in caso di errore transitorio (race su switch tab)
-      setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
+      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
+      }
     } finally {
       setLoading(false);
     }
