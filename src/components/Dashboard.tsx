@@ -203,18 +203,14 @@ export const Dashboard = () => {
         setAvailableSessions(normalizedSessions);
         
         // Auto-select date only if none is selected and we have sessions
-        if (!selectedDate && sessionsData && sessionsData.length > 0) {
+        if (!selectedDate && normalizedSessions.length > 0) {
           const today = new Date().toISOString().slice(0, 10);
-          
-          // Check if today has any sessions
-          const todaySessions = sessionsData.filter(session => session.session_date === today);
-          
+          const todaySessions = normalizedSessions.filter((session: any) => session.session_date === today);
+
           if (todaySessions.length > 0) {
-            // Set to today if there are sessions today
             setSelectedDate(new Date());
           } else {
-            // Set to the first available session date
-            const firstSessionDate = sessionsData[0].session_date;
+            const firstSessionDate = normalizedSessions[0].session_date;
             setSelectedDate(new Date(firstSessionDate));
           }
         }
