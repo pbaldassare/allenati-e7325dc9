@@ -26,14 +26,14 @@ export interface SessionBooking {
 }
 
 export const useSessionBookings = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const retryCountRef = useRef(0);
 
   const fetchBookings = async () => {
-    if (!user) return;
+    if (!user || authLoading) return;
 
     try {
       const { data, error } = await supabase
