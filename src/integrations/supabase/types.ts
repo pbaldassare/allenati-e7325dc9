@@ -2333,6 +2333,10 @@ export type Database = {
       }
       recalculate_all_gym_credits: { Args: never; Returns: undefined }
       recalculate_all_gym_credits_fixed: { Args: never; Returns: undefined }
+      recalculate_session_available_spots: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
       refund_expired_waitlist: {
         Args: never
         Returns: {
