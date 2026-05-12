@@ -106,6 +106,7 @@ export const CourseCalendar = () => {
           .from('course_sessions')
           .select(`
             *,
+            instructor_override:instructors!course_sessions_instructor_id_override_fkey(id, first_name, last_name, profiles(first_name, last_name)),
             courses!inner(
               id,
               name,
@@ -148,6 +149,7 @@ export const CourseCalendar = () => {
           session_max_participants: session.max_participants,
           session_available_spots: session.available_spots,
           instructors: session.courses?.instructors || null,
+          instructor_override: (session as any).instructor_override || null,
           isFromEnrolledCourse: userCourseIds.includes(session.course_id)
         })) || [];
 

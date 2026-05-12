@@ -144,6 +144,10 @@ export const Dashboard = () => {
       .from('course_sessions')
       .select(`
         *,
+        instructor_override:instructors!course_sessions_instructor_id_override_fkey(
+          first_name,
+          last_name
+        ),
         courses!inner(
           id,
           name,
@@ -152,7 +156,7 @@ export const Dashboard = () => {
           difficulty_level,
           instructor_id,
           gym_id,
-          instructors(
+          instructors!courses_instructor_id_fkey(
             first_name,
             last_name
           ),
@@ -418,19 +422,19 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    let instructor = session.courses?.instructors;
-    
-    // Se instructors è un array, prendi il primo elemento
-    if (Array.isArray(instructor)) {
-      instructor = instructor[0];
+    // Session-level override takes priority
+    let override = session.instructor_override;
+    if (Array.isArray(override)) override = override[0];
+    if (override) {
+      const fullName = `${override.first_name || ''} ${override.last_name || ''}`.trim();
+      if (fullName) return fullName;
     }
-    
+
+    let instructor = session.courses?.instructors;
+    if (Array.isArray(instructor)) instructor = instructor[0];
     if (!instructor) return 'Istruttore non assegnato';
-    
-    const firstName = instructor.first_name || '';
-    const lastName = instructor.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim();
-    
+
+    const fullName = `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim();
     return fullName || 'Istruttore non assegnato';
   };
 
@@ -849,7 +853,10 @@ export const Dashboard = () => {
         <BookingConfirmDialog
           open={bookingDialogOpen}
           onOpenChange={setBookingDialogOpen}
-          course={selectedSession?.courses || {}}
+          course={selectedSession ? {
+            ...(selectedSession.courses || {}),
+            instructor_override: selectedSession.instructor_override,
+          } : {}}
           scheduledDate={selectedSession?.session_date || new Date().toISOString().split('T')[0]}
           scheduledTime={selectedSession?.start_time || "19:00"}
           onConfirm={handleBookingConfirm}
