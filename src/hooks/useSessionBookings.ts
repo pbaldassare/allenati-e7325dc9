@@ -98,6 +98,7 @@ export const useSessionBookings = () => {
       } else {
         setBookings([]);
       }
+      retryCountRef.current = 0;
     } catch (error) {
       console.error('Error fetching session bookings:', error);
       // Retry silenzioso (max 2) per errori transitori durante switch tab
