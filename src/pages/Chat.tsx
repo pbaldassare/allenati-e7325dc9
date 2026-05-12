@@ -21,8 +21,8 @@ interface ChatRoom {
 }
 
 export const Chat: React.FC = () => {
-  const { user } = useAuth();
-  const { selectedGym } = useGym();
+  const { user, loading: authLoading } = useAuth();
+  const { selectedGym, loading: gymLoading } = useGym();
   const isMobile = useIsMobile();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>();
@@ -30,10 +30,14 @@ export const Chat: React.FC = () => {
   const [showChatList, setShowChatList] = useState(true);
 
   useEffect(() => {
+    // Aspetta che auth e gym context siano completamente inizializzati
+    if (authLoading || gymLoading) return;
     if (user && selectedGym) {
       loadChatRooms();
+    } else {
+      setLoading(false);
     }
-  }, [user, selectedGym]);
+  }, [user, selectedGym, authLoading, gymLoading]);
 
   const loadChatRooms = async (retry = 0) => {
     try {
