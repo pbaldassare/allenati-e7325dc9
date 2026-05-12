@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 import { DateRangeSelector } from '@/components/ui/date-range-selector';
+import { isCourseActivationError, COURSE_ACTIVATION_ERROR_MESSAGE } from '@/lib/courseValidation';
 
 interface CourseFormData {
   name: string;
