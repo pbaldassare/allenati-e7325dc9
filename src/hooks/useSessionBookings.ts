@@ -99,11 +99,8 @@ export const useSessionBookings = () => {
       }
     } catch (error) {
       console.error('Error fetching session bookings:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare le prenotazioni",
-        variant: "destructive"
-      });
+      // Retry silenzioso una volta in caso di errore transitorio (race su switch tab)
+      setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
     } finally {
       setLoading(false);
     }
