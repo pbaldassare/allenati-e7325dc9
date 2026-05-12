@@ -240,7 +240,8 @@ export const useSessionBookings = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
+    // Aspetta che AuthContext abbia finito di inizializzare per evitare race con token refresh
+    if (authLoading || !user) return;
 
     fetchBookings();
 
