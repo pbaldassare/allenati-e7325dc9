@@ -15,6 +15,12 @@ import { CourseDeleteConfirmDialog } from "@/components/dialogs/CourseDeleteConf
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import {
+  isCourseActivationError,
+  COURSE_ACTIVATION_ERROR_MESSAGE,
+  loadValidSchedulesMap,
+} from '@/lib/courseValidation';
+
 
 interface CourseItem {
   id: string;
@@ -40,6 +46,7 @@ interface CourseItem {
     end_time: string;
     room_name?: string;
   }>;
+  has_valid_schedule?: boolean;
 }
 
 const OwnerCoursesList: React.FC = () => {
@@ -203,14 +210,15 @@ const OwnerCoursesList: React.FC = () => {
           console.log('Instructors Map:', instructorsMap);
           console.log('Schedules Map:', schedulesMap);
 
+          // Calcola validità schedule (orario attivo + sala assegnata)
+          const validMap = await loadValidSchedulesMap(courseIds);
+
           // Transform the data to match our interface
           const transformedCourses = data.map(course => {
             const category = course.category_id ? categoriesMap.get(course.category_id) || null : null;
             const instructorData = course.instructor_id ? instructorsMap.get(course.instructor_id) : null;
             const schedules = schedulesMap.get(course.id) || [];
-            
-            console.log(`Course ${course.name} - instructor_id: ${course.instructor_id}, found instructor:`, instructorData);
-            
+
             return {
               id: course.id,
               name: course.name,
@@ -224,7 +232,8 @@ const OwnerCoursesList: React.FC = () => {
               instructor: instructorData ? {
                 user: instructorData
               } : null,
-              schedules
+              schedules,
+              has_valid_schedule: validMap.get(course.id) === true,
             };
           });
           
@@ -455,16 +464,18 @@ const OwnerCoursesList: React.FC = () => {
   };
 
   const toggleCourseStatus = async (course: CourseItem) => {
+    // Blocco preventivo lato UI: se sto attivando un corso senza orari validi
+    // mostro subito il messaggio amichevole senza colpire il DB.
+    if (!course.is_active && !course.has_valid_schedule) {
+      toast({
+        title: 'Impossibile attivare',
+        description: COURSE_ACTIVATION_ERROR_MESSAGE,
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       setTogglingStatus(course.id);
-      
-      console.log('Toggling course status:', {
-        courseId: course.id,
-        courseName: course.name,
-        currentStatus: course.is_active,
-        newStatus: !course.is_active
-      });
-
       const newStatus = !course.is_active;
       
       // Update course status in database
@@ -533,9 +544,12 @@ const OwnerCoursesList: React.FC = () => {
 
     } catch (error) {
       console.error('Error toggling course status:', error);
+      const isActivationErr = isCourseActivationError(error);
       toast({
         title: 'Errore',
-        description: error instanceof Error ? error.message : 'Impossibile modificare lo stato del corso',
+        description: isActivationErr
+          ? COURSE_ACTIVATION_ERROR_MESSAGE
+          : (error instanceof Error ? error.message : 'Impossibile modificare lo stato del corso'),
         variant: 'destructive',
       });
     } finally {
@@ -656,9 +670,16 @@ const OwnerCoursesList: React.FC = () => {
                           </p>
                         )}
                       </div>
-                      <Badge variant={course.is_active ? "default" : "secondary"}>
-                        {course.is_active ? "Attivo" : "Disattivo"}
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-end">
+                        <Badge variant={course.is_active ? "default" : "secondary"}>
+                          {course.is_active ? "Attivo" : "Disattivo"}
+                        </Badge>
+                        {!course.has_valid_schedule && (
+                          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                            Senza orario
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -826,9 +847,16 @@ const OwnerCoursesList: React.FC = () => {
                       <Badge variant="secondary">{course.credits_required}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={course.is_active ? "default" : "secondary"}>
-                        {course.is_active ? "Attivo" : "Disattivo"}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={course.is_active ? "default" : "secondary"}>
+                          {course.is_active ? "Attivo" : "Disattivo"}
+                        </Badge>
+                        {!course.has_valid_schedule && (
+                          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                            Senza orario
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-2 justify-end">

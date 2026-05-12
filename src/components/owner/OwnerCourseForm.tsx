@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { autoGenerateSessionsIfNeeded } from '@/lib/sessionGenerator';
 import { DateRangeSelector } from '@/components/ui/date-range-selector';
+import { isCourseActivationError, COURSE_ACTIVATION_ERROR_MESSAGE } from '@/lib/courseValidation';
 
 interface CourseFormData {
   name: string;
@@ -297,9 +298,12 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       };
 
       if (mode === 'create') {
+        // I corsi nuovi vengono sempre creati come INATTIVI: il trigger DB
+        // impedisce l'attivazione finché non esiste almeno un orario con sala.
+        // L'attivazione avviene a fine wizard dopo il salvataggio degli orari.
         const { data: insertedData, error } = await supabase
           .from('courses')
-          .insert(courseData)
+          .insert({ ...courseData, is_active: false })
           .select()
           .single();
         
@@ -370,9 +374,12 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       navigate('/owner/courses');
     } catch (error) {
       console.error('Error saving course:', error);
+      const isActivationErr = isCourseActivationError(error);
       toast({
         title: 'Errore',
-        description: 'Errore nel salvataggio del corso',
+        description: isActivationErr
+          ? COURSE_ACTIVATION_ERROR_MESSAGE
+          : 'Errore nel salvataggio del corso',
         variant: 'destructive',
       });
     } finally {
