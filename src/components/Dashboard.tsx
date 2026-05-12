@@ -28,8 +28,8 @@ import { processWaitlistBooking, cancelWaitlistBooking, getNextWaitlistPosition,
 import { CourseParticipantsViewModal } from './CourseParticipantsViewModal';
 
 export const Dashboard = () => {
-  const { user } = useAuth();
-  const { userGyms, selectedGym } = useGym();
+  const { user, loading: authLoading } = useAuth();
+  const { userGyms, selectedGym, loading: gymLoading } = useGym();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { startTour } = useTour();
