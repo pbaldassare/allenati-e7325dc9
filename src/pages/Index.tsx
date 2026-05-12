@@ -69,6 +69,7 @@ const Index = () => {
     
     // Handle internal tabs
     setActiveTab(tab);
+    setSearchParams({ tab }, { replace: true });
   };
 
   const renderActiveTab = () => {
