@@ -49,16 +49,62 @@ export interface CourseWithRelations extends SupabaseCourse {
   };
 }
 
-// Helper function to get instructor name from profile data
-export const getInstructorName = (course: CourseWithRelations): string => {
-  const instructorProfile = course.instructors?.profiles;
-  if (!instructorProfile) {
-    return 'Istruttore non assegnato';
+// Helper to extract a usable name from any instructor-like object
+const extractName = (instructor: any): string | null => {
+  if (!instructor) return null;
+  // Handle arrays (Supabase nested selects sometimes return arrays)
+  if (Array.isArray(instructor)) {
+    for (const item of instructor) {
+      const name = extractName(item);
+      if (name) return name;
+    }
+    return null;
   }
-  
-  const { first_name, last_name } = instructorProfile;
-  const fullName = `${first_name || ''} ${last_name || ''}`.trim();
-  return fullName || 'Istruttore non assegnato';
+  // Try profiles nested
+  const profile = instructor.profiles;
+  if (profile) {
+    const profileName = extractName(profile);
+    if (profileName) return profileName;
+  }
+  const first = instructor.first_name || '';
+  const last = instructor.last_name || '';
+  const full = `${first} ${last}`.trim();
+  if (full) return full;
+  if (instructor.full_name) return String(instructor.full_name).trim() || null;
+  if (instructor.name) return String(instructor.name).trim() || null;
+  return null;
+};
+
+/**
+ * Get instructor name from any course/session-like object.
+ * Supports:
+ *  - course.instructors.profiles.{first_name,last_name}
+ *  - course.instructors.{first_name,last_name}
+ *  - arrays of instructors
+ *  - session-level override via course.instructor_override / course.instructor
+ *  - snapshot via course.instructor_name_snapshot
+ */
+export const getInstructorName = (course: any): string => {
+  if (!course) return 'Istruttore non assegnato';
+
+  // 1) Explicit session-level override (preferred)
+  const overrideName = extractName(course.instructor_override) || extractName(course.instructorOverride);
+  if (overrideName) return overrideName;
+
+  // 2) Direct instructor on the object (e.g. session-level resolved instructor)
+  const directName = extractName(course.instructor);
+  if (directName) return directName;
+
+  // 3) Course instructors relation
+  const instructorsName = extractName(course.instructors);
+  if (instructorsName) return instructorsName;
+
+  // 4) Snapshot fallback
+  if (course.instructor_name_snapshot && String(course.instructor_name_snapshot).trim()) {
+    return String(course.instructor_name_snapshot).trim();
+  }
+
+  return 'Istruttore non assegnato';
 };
 
 // Helper function to get difficulty level text
