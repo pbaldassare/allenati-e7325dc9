@@ -173,16 +173,34 @@ export const Dashboard = () => {
 
         if (sessionsError) throw sessionsError;
 
-        // Debug: verifica dati istruttore
-        if (sessionsData && sessionsData.length > 0) {
-          console.log('📊 First session instructor data:', {
-            course_name: sessionsData[0].courses?.name,
-            instructor: sessionsData[0].courses?.instructors,
-            full_data: sessionsData[0]
-          });
+        // Riallinea available_spots leggendo le bookings confermate in tempo reale,
+        // per evitare drift storico del campo memorizzato (vedi backfill DB).
+        let normalizedSessions = sessionsData || [];
+        const sessionIds = normalizedSessions.map((s: any) => s.id).filter(Boolean);
+        if (sessionIds.length > 0) {
+          const { data: bookingRows, error: bookingsErr } = await supabase
+            .from('bookings')
+            .select('session_id')
+            .in('session_id', sessionIds)
+            .eq('status', 'confirmed');
+
+          if (!bookingsErr && bookingRows) {
+            const counts = new Map<string, number>();
+            bookingRows.forEach((b: any) => {
+              counts.set(b.session_id, (counts.get(b.session_id) || 0) + 1);
+            });
+            normalizedSessions = normalizedSessions.map((s: any) => {
+              const confirmed = counts.get(s.id) || 0;
+              const max = s.max_participants || 0;
+              const realAvailable = Math.max(0, Math.min(max, max - confirmed));
+              return realAvailable !== s.available_spots
+                ? { ...s, available_spots: realAvailable }
+                : s;
+            });
+          }
         }
 
-        setAvailableSessions(sessionsData || []);
+        setAvailableSessions(normalizedSessions);
         
         // Auto-select date only if none is selected and we have sessions
         if (!selectedDate && sessionsData && sessionsData.length > 0) {
