@@ -20,7 +20,7 @@ import {
   COURSE_ACTIVATION_ERROR_MESSAGE,
   loadValidSchedulesMap,
 } from '@/lib/courseValidation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 interface CourseItem {
   id: string;
