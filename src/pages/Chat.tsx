@@ -79,10 +79,17 @@ export const Chat: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading chat rooms:', error);
-      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      // Retry esponenziale per errori transitori (token refresh, race switch tab)
       if (retry < 2) {
-        setTimeout(() => { loadChatRooms(retry + 1).catch(() => {}); }, 800);
+        setTimeout(() => { loadChatRooms(retry + 1).catch(() => {}); }, 600 * (retry + 1));
+        return;
       }
+      // Solo dopo 3 tentativi falliti mostra il toast
+      toast({
+        title: 'Errore',
+        description: 'Impossibile caricare le chat. Riprova.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
