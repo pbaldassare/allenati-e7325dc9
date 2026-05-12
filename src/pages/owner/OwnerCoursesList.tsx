@@ -464,16 +464,18 @@ const OwnerCoursesList: React.FC = () => {
   };
 
   const toggleCourseStatus = async (course: CourseItem) => {
+    // Blocco preventivo lato UI: se sto attivando un corso senza orari validi
+    // mostro subito il messaggio amichevole senza colpire il DB.
+    if (!course.is_active && !course.has_valid_schedule) {
+      toast({
+        title: 'Impossibile attivare',
+        description: COURSE_ACTIVATION_ERROR_MESSAGE,
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       setTogglingStatus(course.id);
-      
-      console.log('Toggling course status:', {
-        courseId: course.id,
-        courseName: course.name,
-        currentStatus: course.is_active,
-        newStatus: !course.is_active
-      });
-
       const newStatus = !course.is_active;
       
       // Update course status in database
