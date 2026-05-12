@@ -297,9 +297,12 @@ export const OwnerCourseForm: React.FC<OwnerCourseFormProps> = ({ mode, course, 
       };
 
       if (mode === 'create') {
+        // I corsi nuovi vengono sempre creati come INATTIVI: il trigger DB
+        // impedisce l'attivazione finché non esiste almeno un orario con sala.
+        // L'attivazione avviene a fine wizard dopo il salvataggio degli orari.
         const { data: insertedData, error } = await supabase
           .from('courses')
-          .insert(courseData)
+          .insert({ ...courseData, is_active: false })
           .select()
           .single();
         
