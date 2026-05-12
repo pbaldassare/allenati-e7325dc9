@@ -422,19 +422,19 @@ export const Dashboard = () => {
   };
 
   const getInstructorName = (session: any) => {
-    let instructor = session.courses?.instructors;
-    
-    // Se instructors è un array, prendi il primo elemento
-    if (Array.isArray(instructor)) {
-      instructor = instructor[0];
+    // Session-level override takes priority
+    let override = session.instructor_override;
+    if (Array.isArray(override)) override = override[0];
+    if (override) {
+      const fullName = `${override.first_name || ''} ${override.last_name || ''}`.trim();
+      if (fullName) return fullName;
     }
-    
+
+    let instructor = session.courses?.instructors;
+    if (Array.isArray(instructor)) instructor = instructor[0];
     if (!instructor) return 'Istruttore non assegnato';
-    
-    const firstName = instructor.first_name || '';
-    const lastName = instructor.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim();
-    
+
+    const fullName = `${instructor.first_name || ''} ${instructor.last_name || ''}`.trim();
     return fullName || 'Istruttore non assegnato';
   };
 
