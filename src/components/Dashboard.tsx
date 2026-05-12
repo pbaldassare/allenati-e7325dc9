@@ -853,7 +853,10 @@ export const Dashboard = () => {
         <BookingConfirmDialog
           open={bookingDialogOpen}
           onOpenChange={setBookingDialogOpen}
-          course={selectedSession?.courses || {}}
+          course={selectedSession ? {
+            ...(selectedSession.courses || {}),
+            instructor_override: selectedSession.instructor_override,
+          } : {}}
           scheduledDate={selectedSession?.session_date || new Date().toISOString().split('T')[0]}
           scheduledTime={selectedSession?.start_time || "19:00"}
           onConfirm={handleBookingConfirm}
