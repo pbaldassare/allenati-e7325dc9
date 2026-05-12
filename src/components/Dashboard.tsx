@@ -130,6 +130,8 @@ export const Dashboard = () => {
   // Load available sessions from Supabase
   useEffect(() => {
     const loadAvailableSessions = async () => {
+      // Aspetta che AuthContext e GymContext siano inizializzati
+      if (authLoading || gymLoading) return;
       if (!user || !selectedGym?.id) {
         setLoading(false);
         return;
