@@ -101,11 +101,18 @@ export const useSessionBookings = () => {
       retryCountRef.current = 0;
     } catch (error) {
       console.error('Error fetching session bookings:', error);
-      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      // Retry esponenziale per errori transitori (token refresh)
       if (retryCountRef.current < 2) {
         retryCountRef.current += 1;
-        setTimeout(() => { fetchBookings().catch(() => {}); }, 800);
+        setTimeout(() => { fetchBookings().catch(() => {}); }, 600 * retryCountRef.current);
+        return;
       }
+      // Toast solo dopo fallimento reale
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare le prenotazioni. Riprova.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
