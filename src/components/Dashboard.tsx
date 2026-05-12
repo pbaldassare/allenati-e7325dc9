@@ -144,6 +144,10 @@ export const Dashboard = () => {
       .from('course_sessions')
       .select(`
         *,
+        instructor_override:instructors!course_sessions_instructor_id_override_fkey(
+          first_name,
+          last_name
+        ),
         courses!inner(
           id,
           name,
@@ -152,7 +156,7 @@ export const Dashboard = () => {
           difficulty_level,
           instructor_id,
           gym_id,
-          instructors(
+          instructors!courses_instructor_id_fkey(
             first_name,
             last_name
           ),
