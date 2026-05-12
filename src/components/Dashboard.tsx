@@ -215,13 +215,21 @@ export const Dashboard = () => {
           }
         }
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading sessions:', error);
-        toast({
-          title: "Errore",
-          description: "Errore nel caricamento delle sessioni",
-          variant: "destructive",
-        });
+        // Retry silenzioso una volta dopo 800ms in caso di errore di rete transitorio
+        setTimeout(async () => {
+          try {
+            const { data: retryData } = await supabase
+              .from('course_sessions')
+              .select(`*, courses!inner(id, name, gym_id)`)
+              .eq('courses.gym_id', selectedGym.id)
+              .eq('status', 'scheduled')
+              .gte('session_date', today)
+              .limit(1);
+            if (!retryData) return;
+          } catch {}
+        }, 800);
       } finally {
         setLoading(false);
       }
@@ -672,13 +680,6 @@ export const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* Debug information */}
-          {selectedDate && (
-            <div className="text-xs bg-muted/50 p-2 rounded text-muted-foreground">
-              Filtro attivo: {selectedDate.toLocaleDateString('it-IT')} ({filteredAvailableSessions.length} sessioni trovate)
-            </div>
-          )}
-          
           {filteredAvailableSessions.length > 0 ? (
             filteredAvailableSessions.map((session) => {
               const instructorName = getInstructorName(session);

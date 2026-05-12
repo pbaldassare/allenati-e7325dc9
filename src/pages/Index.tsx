@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -22,8 +23,15 @@ import { HelpCircle } from "lucide-react";
 
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "home");
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+
+  // Sincronizza la tab con il query param ?tab=
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && t !== activeTab) setActiveTab(t);
+  }, [searchParams]);
   const navigate = useNavigate();
   const { showWelcomeModal, setShowWelcomeModal, user, isAuthenticated, loading, isAdmin } = useAuth();
   const { isOpen, defaultMode, openLogin, openRegister, close } = useAuthModal();

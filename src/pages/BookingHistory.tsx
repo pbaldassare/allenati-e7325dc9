@@ -410,9 +410,21 @@ const BookingHistory = () => {
       <BottomNavigation 
         activeTab="i-miei-corsi" 
         onTabChange={(tab) => {
-          if (tab !== 'i-miei-corsi') {
-            navigate(`/?tab=${tab}`, { replace: true });
+          if (tab === 'i-miei-corsi') return;
+          // Route esterne: stessa logica di Index.tsx
+          const externalRoutes: Record<string, string> = {
+            gyms: '/gyms',
+            shop: '/shop',
+            admin: '/admin',
+            owner: '/owner',
+            instructor: '/instructor',
+          };
+          if (externalRoutes[tab]) {
+            navigate(externalRoutes[tab]);
+            return;
           }
+          // Tab interne dell'Index (home, chat, profile, ...)
+          navigate(`/?tab=${tab}`);
         }} 
       />
     </div>

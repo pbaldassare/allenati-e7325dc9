@@ -8,6 +8,43 @@ interface MobileOptimizationsProps {
 export const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ children }) => {
   const isMobile = useIsMobile();
 
+  // Forza tutte le immagini su HTTPS (img.src e img.srcset)
+  React.useEffect(() => {
+    const upgrade = (el: HTMLImageElement) => {
+      try {
+        const src = el.getAttribute('src');
+        if (src && src.startsWith('http://')) {
+          el.setAttribute('src', 'https://' + src.slice(7));
+        }
+        const srcset = el.getAttribute('srcset');
+        if (srcset && srcset.includes('http://')) {
+          el.setAttribute('srcset', srcset.replace(/http:\/\//g, 'https://'));
+        }
+      } catch {}
+    };
+    document.querySelectorAll('img').forEach(upgrade);
+    const obs = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((n) => {
+          if (n instanceof HTMLImageElement) upgrade(n);
+          else if (n instanceof HTMLElement) {
+            n.querySelectorAll?.('img').forEach((img) => upgrade(img as HTMLImageElement));
+          }
+        });
+        if (m.type === 'attributes' && m.target instanceof HTMLImageElement) {
+          upgrade(m.target);
+        }
+      });
+    });
+    obs.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'srcset'],
+    });
+    return () => obs.disconnect();
+  }, []);
+
   // Detect Safari and add specific optimizations
   React.useEffect(() => {
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
