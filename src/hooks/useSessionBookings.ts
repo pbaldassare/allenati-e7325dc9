@@ -30,6 +30,7 @@ export const useSessionBookings = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const retryCountRef = useRef(0);
 
   const fetchBookings = async () => {
     if (!user) return;
