@@ -542,9 +542,12 @@ const OwnerCoursesList: React.FC = () => {
 
     } catch (error) {
       console.error('Error toggling course status:', error);
+      const isActivationErr = isCourseActivationError(error);
       toast({
         title: 'Errore',
-        description: error instanceof Error ? error.message : 'Impossibile modificare lo stato del corso',
+        description: isActivationErr
+          ? COURSE_ACTIVATION_ERROR_MESSAGE
+          : (error instanceof Error ? error.message : 'Impossibile modificare lo stato del corso'),
         variant: 'destructive',
       });
     } finally {
