@@ -179,7 +179,26 @@ const OwnerCourseNew: React.FC = () => {
       // Step 3: Trigger automatic session generation
       console.log('Triggering automatic session generation');
       const generated = await autoGenerateSessionsIfNeeded(courseData.id);
-      
+
+      // Step 4: Attiva il corso (creato come inattivo durante step 1).
+      // Ora che ci sono orari con sala il trigger DB consente l'attivazione.
+      if (courseData.is_active !== false) {
+        const { error: activateError } = await supabase
+          .from('courses')
+          .update({ is_active: true, updated_at: new Date().toISOString() })
+          .eq('id', courseData.id);
+        if (activateError) {
+          console.error('Error activating course:', activateError);
+          toast({
+            title: 'Attenzione',
+            description:
+              'Corso creato ma non attivato: verifica che almeno un orario abbia una sala assegnata.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       if (generated) {
         toast({
           title: 'Successo',
