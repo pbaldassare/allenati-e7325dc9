@@ -106,6 +106,7 @@ export const CourseCalendar = () => {
           .from('course_sessions')
           .select(`
             *,
+            instructor_override:instructors!course_sessions_instructor_id_override_fkey(id, first_name, last_name, profiles(first_name, last_name)),
             courses!inner(
               id,
               name,
