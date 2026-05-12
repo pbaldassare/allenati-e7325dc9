@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Settings, FileText, Calendar, TrendingUp, Award, LogOut, Coins, Star, CreditCard, ShoppingBag, Sparkles, Zap } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -50,9 +50,6 @@ export const Profile = ({ onTabChange }: ProfileProps) => {
     <div className="pb-20 px-3 sm:px-4 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="pt-6 sm:pt-8 pb-3 sm:pb-4 text-center relative">
-        <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-          <ThemeToggle />
-        </div>
         <div className="relative">
           <Avatar className="w-20 sm:w-24 h-20 sm:h-24 mx-auto mb-3 border-3 border-primary ring-4 ring-primary/20 shadow-glow transition-all duration-300 hover:scale-110">
             <AvatarImage src={user?.profile_picture_url || undefined} alt="Foto profilo" />
