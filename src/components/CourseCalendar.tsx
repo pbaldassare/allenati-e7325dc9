@@ -149,6 +149,7 @@ export const CourseCalendar = () => {
           session_max_participants: session.max_participants,
           session_available_spots: session.available_spots,
           instructors: session.courses?.instructors || null,
+          instructor_override: (session as any).instructor_override || null,
           isFromEnrolledCourse: userCourseIds.includes(session.course_id)
         })) || [];
 
