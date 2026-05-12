@@ -36,9 +36,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, roomName }) => {
 
   // Load initial messages
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !user) return;
     loadMessages();
-  }, [roomId]);
+  }, [roomId, user?.id]);
 
   // Subscribe to real-time updates
   useEffect(() => {
