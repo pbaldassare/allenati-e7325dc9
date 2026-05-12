@@ -265,7 +265,7 @@ export const useSessionBookings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
 
   return {
     bookings,
