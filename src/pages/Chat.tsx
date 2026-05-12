@@ -35,18 +35,15 @@ export const Chat: React.FC = () => {
     }
   }, [user, selectedGym]);
 
-  const loadChatRooms = async () => {
+  const loadChatRooms = async (retry = 0) => {
     try {
       setLoading(true);
-      console.log('Loading chat rooms for selected gym:', selectedGym?.id);
       
       if (!selectedGym?.id) {
-        console.log('No gym selected');
         setChatRooms([]);
         return;
       }
 
-      // Get chat rooms for the selected gym
       const { data: rooms, error: roomsError } = await supabase
         .from('chat_rooms')
         .select(`
@@ -61,8 +58,6 @@ export const Chat: React.FC = () => {
         .eq('is_active', true)
         .eq('gym_id', selectedGym.id);
 
-      console.log('Found chat rooms:', rooms, 'Error:', roomsError);
-
       if (roomsError) throw roomsError;
 
       const filteredRooms = rooms || [];
@@ -74,20 +69,16 @@ export const Chat: React.FC = () => {
         room_type: room.room_type as 'gym_general' | 'course' | 'direct'
       })));
 
-      console.log('Chat rooms loaded:', filteredRooms.length);
-
       // Auto-select first room only on desktop
       if (filteredRooms.length > 0 && !selectedRoomId && !isMobile) {
         setSelectedRoomId(filteredRooms[0].id);
-        console.log('Auto-selected room:', filteredRooms[0].id);
       }
     } catch (error) {
       console.error('Error loading chat rooms:', error);
-      toast({
-        title: 'Errore',
-        description: 'Impossibile caricare le chat',
-        variant: 'destructive'
-      });
+      // Retry silenzioso (max 2) per errori transitori durante switch tab
+      if (retry < 2) {
+        setTimeout(() => { loadChatRooms(retry + 1).catch(() => {}); }, 800);
+      }
     } finally {
       setLoading(false);
     }
