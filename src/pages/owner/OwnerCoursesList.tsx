@@ -15,6 +15,12 @@ import { CourseDeleteConfirmDialog } from "@/components/dialogs/CourseDeleteConf
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import {
+  isCourseActivationError,
+  COURSE_ACTIVATION_ERROR_MESSAGE,
+  loadValidSchedulesMap,
+} from '@/lib/courseValidation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CourseItem {
   id: string;
