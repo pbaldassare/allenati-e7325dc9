@@ -210,14 +210,15 @@ const OwnerCoursesList: React.FC = () => {
           console.log('Instructors Map:', instructorsMap);
           console.log('Schedules Map:', schedulesMap);
 
+          // Calcola validità schedule (orario attivo + sala assegnata)
+          const validMap = await loadValidSchedulesMap(courseIds);
+
           // Transform the data to match our interface
           const transformedCourses = data.map(course => {
             const category = course.category_id ? categoriesMap.get(course.category_id) || null : null;
             const instructorData = course.instructor_id ? instructorsMap.get(course.instructor_id) : null;
             const schedules = schedulesMap.get(course.id) || [];
-            
-            console.log(`Course ${course.name} - instructor_id: ${course.instructor_id}, found instructor:`, instructorData);
-            
+
             return {
               id: course.id,
               name: course.name,
@@ -231,7 +232,8 @@ const OwnerCoursesList: React.FC = () => {
               instructor: instructorData ? {
                 user: instructorData
               } : null,
-              schedules
+              schedules,
+              has_valid_schedule: validMap.get(course.id) === true,
             };
           });
           
