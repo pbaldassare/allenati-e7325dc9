@@ -1153,7 +1153,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Session Settings Section */}
-          <div className="p-4 border-b bg-muted/10">
+          <div className="p-4 border-b bg-muted/10 shrink-0">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium flex items-center gap-2">
                 <Signal className="h-4 w-4" />
@@ -1388,7 +1388,6 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           <ScrollArea
             className={cn(
               "flex-1 min-h-0 p-4",
-              !isMobile && "h-[300px]",
               isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
             )}
             type="always"
