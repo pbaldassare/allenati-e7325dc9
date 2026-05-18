@@ -1580,561 +1580,57 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   );
 
   return (
-    <Drawer 
-      open={open} 
-      onOpenChange={setOpen}
-    >
-      <DrawerTrigger asChild>
-        {children}
-      </DrawerTrigger>
-      <DrawerContent
-        className={cn(
-          "flex flex-col p-0",
-          isMobile
-            ? "h-[100dvh] max-h-[100dvh] rounded-t-none"
-            : "max-h-[90dvh]"
-        )}
-      >
-        {isMobile && (
-          <DrawerClose
-            aria-label="Chiudi"
-            className="absolute right-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted/80 text-foreground shadow hover:bg-muted"
-          >
-            <X className="h-4 w-4" />
-          </DrawerClose>
-        )}
-        <DrawerHeader className="border-b">
-          <DrawerTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold">{session.course_name}</h3>
-              {session.course_description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {session.course_description}
-                </p>
-              )}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatDateTime(session.session_date, session.start_time, session.end_time)}
-                </span>
-                {session.room_name && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {session.room_name}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="text-right">
-                <div className="flex items-center gap-2">
-                  <Badge variant={isFull ? "destructive" : isAlmostFull ? "secondary" : "default"}>
-                    {participants.length}/{session.max_participants} posti
-                  </Badge>
-                  {isFull && <AlertCircle className="h-4 w-4 text-destructive" />}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {occupancyRate.toFixed(0)}% occupato
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSessionVisibility}
-                  disabled={toggleVisibilityLoading}
-                  aria-label={session.status === 'hidden' ? 'Mostra sessione' : 'Nascondi sessione'}
-                  className={cn(
-                    "gap-2",
-                    session.status === 'hidden'
-                      ? "text-orange-600 hover:text-orange-700"
-                      : "text-blue-600 hover:text-blue-700"
-                  )}
-                >
-                  {toggleVisibilityLoading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : session.status === 'hidden' ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {session.status === 'hidden' ? 'Mostra' : 'Nascondi'}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCancelDialogOpen(true)}
-                  aria-label="Cancella sessione"
-                  className="text-destructive hover:text-destructive gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Cancella</span>
-                </Button>
-              </div>
-            </div>
-          </DrawerTitle>
-        </DrawerHeader>
-
-        <div
-          data-vaul-no-drag
-          className={cn(
-            "flex-1 min-h-0 overflow-y-auto overscroll-contain",
-            isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
-          )}
+    <>
+      {isMobile ? (
+        <Drawer 
+          open={open} 
+          onOpenChange={setOpen}
         >
-          {/* Session Settings Section */}
-          <div className="p-4 border-b bg-muted/10 shrink-0">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <Signal className="h-4 w-4" />
-                Impostazioni Sessione
-              </h4>
-              {!isEditingSession ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingSession(true)}
-                >
-                  Modifica
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setIsEditingSession(false);
-                      setEditMaxParticipants(session.max_participants);
-                      setEditDifficultyLevel(session.difficulty_level ?? null);
-                      setEditInstructorIdOverride(session.instructor_id_override ?? null);
-                    }}
-                  >
-                    Annulla
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={saveSessionChanges}
-                    disabled={savingSession}
-                    className="gap-1"
-                  >
-                    {savingSession ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    Salva
-                  </Button>
-                </div>
-              )}
+          <DrawerTrigger asChild>
+            {children}
+          </DrawerTrigger>
+          <DrawerContent className="flex h-[100dvh] max-h-[100dvh] flex-col rounded-t-none p-0">
+            <DrawerClose
+              aria-label="Chiudi"
+              className="absolute right-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted/80 text-foreground shadow hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </DrawerClose>
+            <DrawerHeader className="shrink-0 border-b pr-14">
+              <DrawerTitle className="flex flex-col gap-3 text-left">
+                <HeaderContent />
+              </DrawerTitle>
+            </DrawerHeader>
+
+            <div
+              data-vaul-no-drag
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]"
+            >
+              <BodyContent />
             </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Max Partecipanti</label>
-                {isEditingSession ? (
-                  <Input
-                    type="number"
-                    min={1}
-                    value={editMaxParticipants}
-                    onChange={(e) => setEditMaxParticipants(parseInt(e.target.value) || 1)}
-                    className="h-9"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{session.max_participants}</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Difficoltà</label>
-                {isEditingSession ? (
-                  <select
-                    value={editDifficultyLevel ?? ''}
-                    onChange={(e) => setEditDifficultyLevel(e.target.value ? parseInt(e.target.value) : null)}
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Non specificata</option>
-                    <option value="1">1 - Principiante</option>
-                    <option value="2">2 - Intermedio</option>
-                    <option value="3">3 - Avanzato</option>
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Signal className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {session.difficulty_level 
-                        ? difficultyLabels[session.difficulty_level] || `Livello ${session.difficulty_level}`
-                        : 'Non specificata'}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Istruttore</label>
-                {isEditingSession ? (
-                  <select
-                    value={editInstructorIdOverride || courseInstructorId || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Se seleziona l'istruttore del corso, rimuove l'override
-                      setEditInstructorIdOverride(value === courseInstructorId ? null : value || null);
-                    }}
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    disabled={loadingInstructors}
-                  >
-                    {loadingInstructors ? (
-                      <option>Caricamento...</option>
-                    ) : (
-                      availableInstructors.map(instructor => (
-                        <option key={instructor.id} value={instructor.id}>
-                          {instructor.firstName} {instructor.lastName}
-                          {instructor.id === courseInstructorId ? ' (default)' : ''}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">
-                      {(() => {
-                        const effectiveId = session.instructor_id_override || courseInstructorId;
-                        const instructor = availableInstructors.find(i => i.id === effectiveId);
-                        return instructor 
-                          ? `${instructor.firstName} ${instructor.lastName}`
-                          : session.instructor_name || 'N/D';
-                      })()}
-                    </span>
-                  </div>
-                )}
-              </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={open}
+          onOpenChange={setOpen}
+        >
+          <DialogTrigger asChild>
+            {children}
+          </DialogTrigger>
+          <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+            <DialogHeader className="shrink-0 border-b p-4 pr-12">
+              <DialogTitle className="flex flex-col gap-3 text-left md:flex-row md:items-center md:justify-between">
+                <HeaderContent />
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              <BodyContent />
             </div>
-          </div>
-
-          {/* Search Section */}
-          <div className="p-4 border-b bg-muted/30">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={setSearchInputRef}
-                  placeholder="Cerca utenti da iscrivere..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => {
-                    if (isMobile && keyboardVisible && searchInputRef) {
-                      setTimeout(() => {
-                        searchInputRef.scrollIntoView({ 
-                          behavior: 'smooth', 
-                          block: 'center' 
-                        });
-                      }, 300);
-                    }
-                  }}
-                  className={cn(
-                    "pl-9 transition-all duration-200",
-                    isMobile && [
-                      "h-12 text-base",
-                      "focus:ring-2 focus:ring-primary/20",
-                      "touch-manipulation"
-                    ]
-                  )}
-                />
-              </div>
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSearchResults([]);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* Search Results */}
-            {searchResults.length > 0 && (
-              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
-                {searchResults.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-2 bg-background rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.profile_picture_url} />
-                        <AvatarFallback className="text-xs">
-                          {user.first_name[0]}{user.last_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {user.first_name} {user.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {user.current_credits} crediti
-                      </Badge>
-                    <Button
-                      size={isMobile ? "default" : "sm"}
-                      onClick={() => isFull ? enrollToWaitlist(user.id) : enrollUser(user.id)}
-                      disabled={enrolling === user.id}
-                      variant={isFull ? "outline" : "default"}
-                      className={cn(
-                        isMobile && [
-                          "h-10 min-w-[44px]",
-                          "touch-manipulation",
-                          "active:scale-95 transition-transform"
-                        ],
-                        isFull && "border-warning text-warning hover:bg-warning/10"
-                      )}
-                    >
-                      {enrolling === user.id ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      ) : isFull ? (
-                        <>
-                          <ListOrdered className="h-4 w-4 mr-1" />
-                          <span className="text-xs">Waitlist</span>
-                        </>
-                      ) : (
-                        <UserPlus className="h-4 w-4" />
-                      )}
-                    </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Participants List */}
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Partecipanti Iscritti ({participants.length})
-              </h4>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <div className="animate-pulse">Caricamento partecipanti...</div>
-              </div>
-            ) : participants.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                <p className="font-medium">Nessun partecipante iscritto</p>
-              </div>
-
-            ) : (
-              <div className={cn(
-                "space-y-3",
-                isMobile && "space-y-4"
-              )}>
-                {participants.map((participant) => (
-                  <Card key={participant.id} className={cn(
-                    "border-l-4 border-l-primary/20 transition-all duration-200",
-                    isMobile && "bg-card/90 shadow-sm hover:shadow-md"
-                  )}>
-                    <CardContent className={cn(
-                      "p-3",
-                      isMobile && "p-4"
-                    )}>
-                      <div className={cn(
-                        "flex items-center justify-between",
-                        isMobile && "flex-col space-y-3"
-                      )}>
-                        <div className={cn(
-                          "flex items-center gap-3",
-                          isMobile && "w-full"
-                        )}>
-                          <Avatar className={cn(
-                            "h-10 w-10 ring-2 ring-background",
-                            isMobile && "h-12 w-12"
-                          )}>
-                            <AvatarImage src={participant.user.profile_picture_url} />
-                            <AvatarFallback className="font-semibold">
-                              {participant.user.first_name[0]}{participant.user.last_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "font-medium text-sm truncate",
-                              isMobile && "text-base"
-                            )}>
-                              {participant.user.first_name} {participant.user.last_name}
-                            </p>
-                            <p className={cn(
-                              "text-xs text-muted-foreground truncate",
-                              isMobile && "text-sm"
-                            )}>
-                              {participant.user.email}
-                            </p>
-                            <div className={cn(
-                              "space-y-2 mt-2",
-                              isMobile && "mt-3"
-                            )}>
-                              <div className={cn(
-                                "flex items-center gap-2",
-                                isMobile && "flex-wrap gap-3"
-                              )}>
-                                <Badge variant="outline" className={cn(
-                                  "text-xs font-medium",
-                                  isMobile && "text-sm px-3 py-1"
-                                )}>
-                                  {participant.user.current_credits} crediti
-                                </Badge>
-                                <Badge variant="secondary" className={cn(
-                                  "text-xs",
-                                  isMobile && "text-sm px-3 py-1"
-                                )}>
-                                  {participant.status}
-                                </Badge>
-                              </div>
-                              
-                              <div className={cn(
-                                "flex flex-col gap-1",
-                                isMobile && "gap-2"
-                              )}>
-                                <SubscriptionStatusBadge 
-                                  subscription={participant.subscription} 
-                                  onClick={!participant.subscription ? () => handleSubscriptionBadgeClick(participant) : undefined}
-                                  isClickable={!participant.subscription}
-                                />
-                                <MedicalCertificateStatusBadge certificate={participant.medical_certificate} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size={isMobile ? "default" : "sm"}
-                          onClick={() => removeParticipant(participant.id)}
-                          disabled={removing === participant.id}
-                          className={cn(
-                            "text-destructive hover:text-destructive shrink-0",
-                            isMobile && "w-full gap-2 h-10"
-                          )}
-                        >
-                          {removing === participant.id ? (
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          ) : (
-                            <UserMinus className="h-4 w-4" />
-                          )}
-                          {isMobile && "Rimuovi"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Waitlist Section */}
-            {waitlistParticipants.length > 0 && (
-              <div className="mt-6 pt-4 border-t">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <ListOrdered className="h-4 w-4 text-warning" />
-                    Lista d'Attesa ({waitlistParticipants.length})
-                  </h4>
-                </div>
-
-                <div className={cn("space-y-3", isMobile && "space-y-4")}>
-                  {waitlistParticipants.map((participant, index) => (
-                    <Card key={participant.id} className="border-l-4 border-l-warning/50">
-                      <CardContent className={cn("p-3", isMobile && "p-4")}>
-                        <div className={cn(
-                          "flex items-center justify-between",
-                          isMobile && "flex-col space-y-3"
-                        )}>
-                          <div className={cn(
-                            "flex items-center gap-3",
-                            isMobile && "w-full"
-                          )}>
-                            <Badge variant="secondary" className="font-bold text-sm">
-                              #{index + 1}
-                            </Badge>
-                            <Avatar className={cn("h-10 w-10", isMobile && "h-12 w-12")}>
-                              <AvatarImage src={participant.user.profile_picture_url} />
-                              <AvatarFallback className="font-semibold">
-                                {participant.user.first_name[0]}{participant.user.last_name[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className={cn("font-medium text-sm truncate", isMobile && "text-base")}>
-                                {participant.user.first_name} {participant.user.last_name}
-                              </p>
-                              <p className={cn("text-xs text-muted-foreground truncate", isMobile && "text-sm")}>
-                                {participant.user.email}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {participant.credits_used} crediti trattenuti
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className={cn(
-                            "flex gap-2",
-                            isMobile && "w-full"
-                          )}>
-                            <Button
-                              variant="outline"
-                              size={isMobile ? "default" : "sm"}
-                              onClick={() => handlePromoteFromWaitlist(participant.id)}
-                              disabled={promoting === participant.id}
-                              className={cn(
-                                "gap-1",
-                                isMobile && "flex-1 h-10",
-                                isFull && "border-warning text-warning hover:bg-warning/10"
-                              )}
-                              title={isFull ? "Promuovi (sovraprenotazione)" : "Promuovi a confermato"}
-                            >
-                              {promoting === participant.id ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              ) : (
-                                <ArrowUp className="h-4 w-4" />
-                              )}
-                              {isMobile && "Promuovi"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size={isMobile ? "default" : "sm"}
-                              onClick={() => handleRemoveFromWaitlist(participant.id, participant.user_id)}
-                              disabled={removing === participant.id}
-                              className={cn(
-                                "text-destructive hover:text-destructive",
-                                isMobile && "flex-1 h-10"
-                              )}
-                            >
-                              {removing === participant.id ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              ) : (
-                                <UserMinus className="h-4 w-4" />
-                              )}
-                              {isMobile && "Rimuovi"}
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </DrawerContent>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <CancelSessionDialog
         open={cancelDialogOpen}
@@ -2161,6 +1657,6 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         onActivated={handleSubscriptionActivated}
         preselectedUserId={selectedUserForSubscription?.id}
       />
-    </Drawer>
+    </>
   );
 };
