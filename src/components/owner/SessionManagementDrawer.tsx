@@ -1388,7 +1388,6 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           <ScrollArea
             className={cn(
               "flex-1 min-h-0 p-4",
-              isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]",
               isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
             )}
             type="always"
