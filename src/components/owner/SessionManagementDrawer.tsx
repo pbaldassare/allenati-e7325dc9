@@ -30,7 +30,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useVirtualKeyboard } from '@/hooks/useVirtualKeyboard';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CancelSessionDialog } from '@/components/dialogs/CancelSessionDialog';
 import { processRefund, getUserRole } from '@/lib/creditRefundHelpers';
 import { promoteFromWaitlist, cancelWaitlistBooking } from '@/lib/waitlistHelpers';
@@ -1066,7 +1065,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           "flex flex-col p-0 transition-all duration-300",
           isMobile
             ? "h-[100dvh] max-h-[100dvh] rounded-t-none"
-            : "max-h-[90vh]"
+            : "h-[90dvh] max-h-[90dvh]"
         )}
       >
         {isMobile && (
@@ -1151,7 +1150,13 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div
+          data-vaul-no-drag
+          className={cn(
+            "flex-1 min-h-0 overflow-y-auto overscroll-contain",
+            isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
+          )}
+        >
           {/* Session Settings Section */}
           <div className="p-4 border-b bg-muted/10 shrink-0">
             <div className="flex items-center justify-between mb-3">
@@ -1385,13 +1390,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </div>
 
           {/* Participants List */}
-          <ScrollArea
-            className={cn(
-              "flex-1 min-h-0 p-4",
-              isMobile && "pb-[max(1rem,env(safe-area-inset-bottom))]"
-            )}
-            type="always"
-          >
+          <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -1606,7 +1605,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </DrawerContent>
 
