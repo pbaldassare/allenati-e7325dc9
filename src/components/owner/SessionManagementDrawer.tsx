@@ -1055,17 +1055,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     <Drawer 
       open={open} 
       onOpenChange={setOpen}
-      shouldScaleBackground={false}
     >
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
       <DrawerContent
         className={cn(
-          "flex flex-col p-0 transition-all duration-300",
+          "flex flex-col p-0",
           isMobile
             ? "h-[100dvh] max-h-[100dvh] rounded-t-none"
-            : "h-[90dvh] max-h-[90dvh]"
+            : "max-h-[90dvh]"
         )}
       >
         {isMobile && (
