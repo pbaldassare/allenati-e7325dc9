@@ -105,7 +105,61 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* Dark mode disabled: app uses light theme only */
+  .dark {
+    /* Modern Dark Mode - Primary Design */
+    --background: 0 0% 6%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Digital Blue for dark mode */
+    --primary: 214 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 100% 30%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 68%;
+
+    --accent: 205 100% 70%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 16%;
+    --ring: 18 100% 60%;
+
+    /* Vibrant gradients for dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 60%), hsl(205 100% 70%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 100% 30%), hsl(214 100% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(205 100% 70%), hsl(214 100% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(78 92% 45%));
+    --gradient-warm: linear-gradient(135deg, hsl(30 100% 50%), hsl(25 95% 53%));
+    --gradient-premium: linear-gradient(135deg, hsl(260 84% 58%), hsl(280 75% 65%));
+    --gradient-social: linear-gradient(135deg, hsl(330 81% 60%), hsl(315 70% 70%));
+    --gradient-energy: linear-gradient(135deg, hsl(30 100% 50%), hsl(14 100% 57%));
+
+    /* Professional shadows for dark mode */
+    --shadow-primary: 0 10px 40px -12px hsla(214, 100%, 60%, 0.4);
+    --shadow-secondary: 0 10px 40px -12px hsla(220, 100%, 30%, 0.3);
+    --shadow-card: 0 4px 24px -4px hsla(0, 0%, 0%, 0.4);
+    --shadow-glow: 0 0 25px hsla(214, 100%, 60%, 0.2);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
 @layer base {
