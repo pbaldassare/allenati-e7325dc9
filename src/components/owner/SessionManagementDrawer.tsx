@@ -1597,9 +1597,10 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               <X className="h-4 w-4" />
             </DrawerClose>
             <DrawerHeader className="shrink-0 border-b pr-14">
-              <DrawerTitle className="flex flex-col gap-3 text-left">
+              <DrawerTitle className="sr-only">{session.course_name}</DrawerTitle>
+              <div className="flex flex-col gap-3 text-left">
                 <HeaderContent />
-              </DrawerTitle>
+              </div>
             </DrawerHeader>
 
             <div
@@ -1620,9 +1621,10 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           </DialogTrigger>
           <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
             <DialogHeader className="shrink-0 border-b p-4 pr-12">
-              <DialogTitle className="flex flex-col gap-3 text-left md:flex-row md:items-center md:justify-between">
+              <DialogTitle className="sr-only">{session.course_name}</DialogTitle>
+              <div className="flex flex-col gap-3 text-left md:flex-row md:items-center md:justify-between">
                 <HeaderContent />
-              </DialogTitle>
+              </div>
             </DialogHeader>
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
