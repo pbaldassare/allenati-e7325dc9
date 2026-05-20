@@ -1,51 +1,23 @@
-# Fix conteggio posti scheda lato utente (3/4 vs 4/4)
+## Causa del problema
 
-## Causa
+Nel file `src/components/owner/SessionManagementDrawer.tsx` si è creato un ciclo infinito di rendering che fa crashare React (`Maximum update depth exceeded`) e quindi blocca il caricamento delle pagine ovunque il drawer venga renderizzato (es. calendario owner, gestione sessioni).
 
-Sulla sessione `lezione di Gruppo Pilates Reformer` del 12/05 alle 18:30 (max 4):
+Due bug si combinano:
 
-- **Bookings reali in DB**: 4 confermate + 4 cancellate.
-- **Owner**: conta in tempo reale le booking `confirmed` → mostra correttamente **4/4**.
-- **Utente** (`src/components/Dashboard.tsx`): legge `session.available_spots` dal record `course_sessions` e calcola `participants = max_participants - available_spots`.
-- Per quella sessione `available_spots = 1` (dovrebbe essere `0`) → l'utente vede **3/4**.
+1. **`HeaderContent` e `BodyContent` sono definiti come componenti dentro il componente padre** (`const BodyContent = () => (...)`). Ad ogni render del padre vengono ricreati come funzioni nuove, quindi React li smonta e rimonta l'intero sottoalbero ad ogni render.
 
-Il trigger `update_session_spots_on_booking_change` esiste ed è corretto, ma il valore `available_spots` è andato in **drift storico** (probabilmente per booking inserite/modificate prima che il trigger esistesse o tramite path che lo ha bypassato). Il trigger nuovo non recupera il drift passato.
+2. **L'`<Input>` di ricerca usa `ref={setSearchInputRef}`** dove `setSearchInputRef` è il setter di un `useState` (riga 117). Combinato con il remount continuo del punto 1 (e con il `composeRefs` di Radix), il ref viene invocato con `null` → nuovo nodo ad ogni render, aggiornando lo state → nuovo render → loop infinito. Questo è esattamente lo stack trace visto (`setRef` → `dispatchSetState` → `checkForNestedUpdates`).
 
-## Fix in due parti
+## Fix
 
-### 1. Backfill una tantum (migration)
+In `src/components/owner/SessionManagementDrawer.tsx`:
 
-Funzione + UPDATE che ricalcola `available_spots` per **tutte** le sessioni:
+1. Sostituire `useState<HTMLInputElement | null>` per `searchInputRef` con un normale `useRef<HTMLInputElement>(null)`, e aggiornare l'uso (`searchInputRef.current.scrollIntoView(...)` invece di `searchInputRef.scrollIntoView(...)`).
+2. Spostare `HeaderContent` e `BodyContent` fuori dal corpo del componente padre (componenti separati che ricevono via props quello che serve), oppure — più semplice e meno invasivo — inlinarli direttamente dentro `<DialogContent>` / `<DrawerContent>` invece di estrarli come funzioni-componente dentro il padre.
 
-```text
-available_spots = max_participants - count(bookings WHERE session_id = cs.id AND status = 'confirmed')
-clamp tra 0 e max_participants
-```
+Il fix #1 da solo dovrebbe già rompere il ciclo; il #2 elimina il pattern fragile (remount continuo) e migliora le performance e il focus dell'input durante la digitazione.
 
-Includo anche una funzione utility `recalculate_session_available_spots(p_session_id uuid)` (SECURITY DEFINER, search_path=public) richiamabile per riallineare singole sessioni in caso di futuri drift (utile per cron o chiamate puntuali).
+## Verifica
 
-### 2. Hardening lato UI utente
-
-Nel `Dashboard.tsx` (utente) cambiare la fonte di verità del conteggio: invece di fidarsi di `session.available_spots`, contare in tempo reale le booking `confirmed` per le sessioni mostrate (stesso approccio dell'owner). Il campo `available_spots` resta valido per la logica di "posti rimasti" pre-prenotazione, ma il display "X/Y" diventa allineato a quello dell'owner.
-
-Implementazione:
-- Dopo aver caricato le sessioni del giorno, fare un'unica query `bookings` con `select('session_id', { count: 'exact' })` filtrata su `session_id IN (...)` e `status = 'confirmed'`, raggruppata client-side in una mappa `sessionId → confirmedCount`.
-- Il valore `participants` mostrato nelle card usa quella mappa, con fallback a `max_participants - available_spots` se la mappa non ha il dato.
-
-### 3. Cosa NON cambio
-
-- Non tocco il trigger `update_session_available_spots` (è corretto).
-- Non cambio la logica di prenotazione né le RLS.
-- Non rimuovo `available_spots` dallo schema (resta usato per altre views).
-
-## Risultato atteso
-
-- La sessione 18:30 mostrerà **4/4** anche all'utente.
-- Tutte le sessioni esistenti vengono allineate dal backfill.
-- Anche se in futuro dovesse ricomparire drift sul campo, il display utente resterà corretto perché basato sul count reale.
-
-## Test post-deploy
-
-1. Sessione di test con bookings miste → owner e utente mostrano lo stesso conteggio.
-2. Prenotare e cancellare → entrambi i lati aggiornati al refresh.
-3. Sessione del 12/05 18:30 → 4/4 anche lato utente.
+- Aprire `/owner/schedule`, cliccare su una sessione, controllare che il drawer si apra senza crash e senza errori in console.
+- Verificare che la ricerca utenti nel drawer funzioni e mantenga il focus mentre si digita.
