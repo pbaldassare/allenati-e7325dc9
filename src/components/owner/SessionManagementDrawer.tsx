@@ -1263,14 +1263,14 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              ref={setSearchInputRef}
+              ref={searchInputRef}
               placeholder="Cerca utenti da iscrivere..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => {
-                if (isMobile && keyboardVisible && searchInputRef) {
+                if (isMobile && keyboardVisible && searchInputRef.current) {
                   setTimeout(() => {
-                    searchInputRef.scrollIntoView({ 
+                    searchInputRef.current?.scrollIntoView({ 
                       behavior: 'smooth', 
                       block: 'center' 
                     });
