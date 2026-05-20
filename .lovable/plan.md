@@ -1,23 +1,34 @@
-## Causa del problema
+## Stato generale del sistema
 
-Nel file `src/components/owner/SessionManagementDrawer.tsx` si è creato un ciclo infinito di rendering che fa crashare React (`Maximum update depth exceeded`) e quindi blocca il caricamento delle pagine ovunque il drawer venga renderizzato (es. calendario owner, gestione sessioni).
+Ho controllato app web, log auth, log edge function e database linter.
 
-Due bug si combinano:
+### App / Frontend
+- Il fix del loop infinito in `SessionManagementDrawer` ha risolto il crash che bloccava il caricamento delle pagine. Console attuale: nessun errore, query partecipanti completata in 271 ms.
+- Ho cercato pattern simili (`ref={setXxx}` con `useState`, ref-callback fragili) in tutto `src/` — nessun altro caso trovato.
 
-1. **`HeaderContent` e `BodyContent` sono definiti come componenti dentro il componente padre** (`const BodyContent = () => (...)`). Ad ogni render del padre vengono ricreati come funzioni nuove, quindi React li smonta e rimonta l'intero sottoalbero ad ogni render.
+### Auth (Supabase)
+- Login normali e funzionanti negli ultimi minuti (più utenti diversi da IP diversi, status 200).
+- Un solo `400: Invalid login credentials` (utente che ha sbagliato password) e un `refresh_token_not_found` post-logout — entrambi attesi, non bug.
 
-2. **L'`<Input>` di ricerca usa `ref={setSearchInputRef}`** dove `setSearchInputRef` è il setter di un `useState` (riga 117). Combinato con il remount continuo del punto 1 (e con il `composeRefs` di Radix), il ref viene invocato con `null` → nuovo nodo ad ogni render, aggiornando lo state → nuovo render → loop infinito. Questo è esattamente lo stack trace visto (`setRef` → `dispatchSetState` → `checkForNestedUpdates`).
+### Edge functions
+- `send-booking-confirmation`: avviata e completata correttamente.
+- `send-push-notification`: risponde `All included players are not subscribed` — significa che l'utente target non ha registrato il device su OneSignal. Non è un errore del sistema, è uno stato dell'utente. Eventualmente vale la pena gestire questo caso come warning silenzioso lato edge function.
 
-## Fix
+### Database linter (187 warning, nessun errore)
+Sono quasi tutti warning di sicurezza ricorrenti, non bloccanti:
+- ~160 funzioni con `search_path` mutable o `SECURITY DEFINER` eseguibile da utenti autenticati.
+- `Auth OTP long expiry` (scadenza OTP troppo lunga).
+- `Leaked Password Protection Disabled`.
+- `Postgres version has security patches available` (upgrade DB disponibile).
 
-In `src/components/owner/SessionManagementDrawer.tsx`:
+Nessuna tabella senza RLS, nessuna policy permissiva, nessun problema critico.
 
-1. Sostituire `useState<HTMLInputElement | null>` per `searchInputRef` con un normale `useRef<HTMLInputElement>(null)`, e aggiornare l'uso (`searchInputRef.current.scrollIntoView(...)` invece di `searchInputRef.scrollIntoView(...)`).
-2. Spostare `HeaderContent` e `BodyContent` fuori dal corpo del componente padre (componenti separati che ricevono via props quello che serve), oppure — più semplice e meno invasivo — inlinarli direttamente dentro `<DialogContent>` / `<DrawerContent>` invece di estrarli come funzioni-componente dentro il padre.
+## Proposta
 
-Il fix #1 da solo dovrebbe già rompere il ciclo; il #2 elimina il pattern fragile (remount continuo) e migliora le performance e il focus dell'input durante la digitazione.
+Nessun intervento urgente. Se vuoi proseguire posso:
+1. **Hardening DB** — fixare in batch i `search_path` mancanti e rivedere i `SECURITY DEFINER` per restringere `EXECUTE` solo dove serve.
+2. **Auth hardening** — accorciare scadenza OTP e abilitare la Leaked Password Protection in Supabase Auth.
+3. **Upgrade Postgres** dalla dashboard Supabase per applicare le security patch.
+4. **Edge function push** — silenziare il caso "player not subscribed" così non sembra un errore nei log.
 
-## Verifica
-
-- Aprire `/owner/schedule`, cliccare su una sessione, controllare che il drawer si apra senza crash e senza errori in console.
-- Verificare che la ricerca utenti nel drawer funzioni e mantenga il focus mentre si digita.
+Fammi sapere quale (o quali) vuoi che io affronti adesso e procedo.
