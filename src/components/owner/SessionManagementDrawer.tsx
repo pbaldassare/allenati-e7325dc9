@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from '@/components/ui/drawer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -114,7 +114,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const isMobile = useIsMobile();
   const { isVisible: keyboardVisible } = useVirtualKeyboard();
   const [open, setOpen] = useState(false);
-  const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [waitlistParticipants, setWaitlistParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1263,14 +1263,14 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              ref={setSearchInputRef}
+              ref={searchInputRef}
               placeholder="Cerca utenti da iscrivere..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => {
-                if (isMobile && keyboardVisible && searchInputRef) {
+                if (isMobile && keyboardVisible && searchInputRef.current) {
                   setTimeout(() => {
-                    searchInputRef.scrollIntoView({ 
+                    searchInputRef.current?.scrollIntoView({ 
                       behavior: 'smooth', 
                       block: 'center' 
                     });
