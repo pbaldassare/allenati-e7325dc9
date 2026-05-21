@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { setExternalUserId, removeExternalUserId } from '@/lib/onesignal';
+import logger from '@/lib/logger';
 
 interface User {
   id: string;
@@ -66,9 +67,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch user profile and role data
   const fetchUserDataInternal = async (userId: string, userEmail?: string): Promise<User | null> => {
     try {
-      console.log('AuthContext: Fetching user data for ID:', userId);
-      console.log('AuthContext: Current session:', session);
-      
+      logger.debug('AuthContext: Fetching user data for ID:', userId);
+
       // Get profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -77,14 +77,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (profileError) {
-        console.error('AuthContext: Error fetching profile:', profileError);
+        logger.error('AuthContext: Error fetching profile:', profileError);
         return null;
       }
 
-      console.log('AuthContext: Profile data found:', profile);
-
       // Get role data using the new utility function
-      const { data: roleData, error: roleError } = await supabase
+      const { data: roleData } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
       const role = roleData || 'basic_user';
@@ -175,23 +173,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (cancelled) return;
         setSession(session);
-        
+
+        // Soft handling of invalid refresh tokens: silent sign out
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          logger.warn('AuthContext: token refresh failed, clearing session');
+          setUser(null);
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
+
         if (session?.user) {
           // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
             fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
+              if (cancelled) return;
               setUser(userData);
               setLoading(false);
               setInitialized(true);
 
-              // Link user to OneSignal
               setExternalUserId(session.user.id);
-              
-              // Check if it's a new user and show welcome modal  
+
               if (event === 'SIGNED_UP' as AuthChangeEvent) {
                 const hasSeenWelcome = localStorage.getItem(`hasSeenWelcome_${session.user.id}`);
                 if (!hasSeenWelcome) {
@@ -210,25 +219,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthContext: Initial session check:', session);
-      setSession(session);
-      
-      if (session?.user) {
-        console.log('AuthContext: Found existing session for user:', session.user.id);
-        fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
-          setUser(userData);
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (cancelled) return;
+        if (error) {
+          logger.warn('AuthContext: getSession error, treating as logged out', error.message);
           setLoading(false);
           setInitialized(true);
-        });
-      } else {
-        console.log('AuthContext: No existing session found');
+          return;
+        }
+        setSession(session);
+
+        if (session?.user) {
+          fetchUserDataInternal(session.user.id, session.user.email).then(userData => {
+            if (cancelled) return;
+            setUser(userData);
+            setLoading(false);
+            setInitialized(true);
+          });
+        } else {
+          setLoading(false);
+          setInitialized(true);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        logger.warn('AuthContext: getSession threw, treating as logged out', err);
         setLoading(false);
         setInitialized(true);
-      }
-    });
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
