@@ -13,6 +13,8 @@ import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
+import { format, startOfMonth, subMonths } from "date-fns";
 
 const OwnerBookings: React.FC = () => {
   const { selectedGym } = useOwnerGym();
@@ -28,6 +30,36 @@ const OwnerBookings: React.FC = () => {
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
+
+  // Auto-fix when dateFrom > dateTo: swap them
+  React.useEffect(() => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setDateTo(dateFrom);
+      setDateFrom(dateTo);
+    }
+  }, [dateFrom, dateTo]);
+
+  const applyPreset = (preset: 'today' | 'thisMonth' | 'last3Months' | 'all') => {
+    const today = new Date();
+    if (preset === 'all') {
+      setDateFrom('');
+      setDateTo('');
+      setDateFilter('all');
+      return;
+    }
+    if (preset === 'today') {
+      const d = format(today, 'yyyy-MM-dd');
+      setDateFrom(d);
+      setDateTo(d);
+    } else if (preset === 'thisMonth') {
+      setDateFrom(format(startOfMonth(today), 'yyyy-MM-dd'));
+      setDateTo(format(today, 'yyyy-MM-dd'));
+    } else if (preset === 'last3Months') {
+      setDateFrom(format(startOfMonth(subMonths(today, 2)), 'yyyy-MM-dd'));
+      setDateTo(format(today, 'yyyy-MM-dd'));
+    }
+    setDateFilter('all');
+  };
 
   // Helper functions for date filtering
   const getStartOfWeek = (date = new Date()) => {
@@ -248,20 +280,23 @@ const OwnerBookings: React.FC = () => {
             </Select>
           </div>
 
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Dal</label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => applyPreset('today')}>Oggi</Button>
+              <Button variant="outline" size="sm" onClick={() => applyPreset('thisMonth')}>Questo mese</Button>
+              <Button variant="outline" size="sm" onClick={() => applyPreset('last3Months')}>Ultimi 3 mesi</Button>
+              <Button variant="ghost" size="sm" onClick={() => applyPreset('all')}>Tutto</Button>
             </div>
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Al</label>
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Dal</label>
+                <DatePickerSingle value={dateFrom} onChange={setDateFrom} placeholder="Data inizio" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Al</label>
+                <DatePickerSingle value={dateTo} onChange={setDateTo} placeholder="Data fine" />
+              </div>
             </div>
-            {(dateFrom || dateTo) && (
-              <Button variant="ghost" size="icon" className="mt-4" onClick={() => { setDateFrom(''); setDateTo(''); }}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </div>
       )}
@@ -346,16 +381,15 @@ const OwnerBookings: React.FC = () => {
               <SelectItem value="cancelled">Cancellate</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Dal</span>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+            <DatePickerSingle value={dateFrom} onChange={setDateFrom} className="w-48" placeholder="Inizio" />
             <span className="text-sm text-muted-foreground">Al</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
-            {(dateFrom || dateTo) && (
-              <Button variant="ghost" size="icon" onClick={() => { setDateFrom(''); setDateTo(''); }}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+            <DatePickerSingle value={dateTo} onChange={setDateTo} className="w-48" placeholder="Fine" />
+            <Button variant="outline" size="sm" onClick={() => applyPreset('today')}>Oggi</Button>
+            <Button variant="outline" size="sm" onClick={() => applyPreset('thisMonth')}>Mese</Button>
+            <Button variant="outline" size="sm" onClick={() => applyPreset('last3Months')}>3 mesi</Button>
+            <Button variant="ghost" size="sm" onClick={() => applyPreset('all')}>Tutto</Button>
           </div>
         </div>
       )}
@@ -451,7 +485,12 @@ const OwnerBookings: React.FC = () => {
         /* Desktop view or mobile detailed view */
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Prenotazioni ({filteredBookings.length})</CardTitle>
+            <div className="flex flex-col">
+              <CardTitle>Prenotazioni ({filteredBookings.length})</CardTitle>
+              <span className="text-xs text-muted-foreground mt-1">
+                Caricate {bookings.length} · Filtrate {filteredBookings.length}
+              </span>
+            </div>
             {isMobile && showFullDetails && (
               <Button 
                 variant="outline" 

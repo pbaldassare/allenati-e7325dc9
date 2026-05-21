@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff, XCircle, Search, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
+import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth, parseISO } from "date-fns";
 import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { CourseParticipantCount } from "@/components/CourseParticipantCount";
@@ -14,6 +14,8 @@ import { SessionManagementDrawer } from "./SessionManagementDrawer";
 import SessionCalendarMobile from "./SessionCalendarMobile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { Input } from "@/components/ui/input";
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
 
 interface SessionData {
   id: string;
@@ -45,6 +47,7 @@ const SessionCalendar: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [showCancelled, setShowCancelled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Track last known update timestamp for cross-page sync
   const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
@@ -239,10 +242,21 @@ const SessionCalendar: React.FC = () => {
     return 'bg-success/20 border-success/30';
   };
 
+  const matchesSearch = (s: SessionData) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      s.courseName.toLowerCase().includes(q) ||
+      (s.room || '').toLowerCase().includes(q) ||
+      (s.instructor || '').toLowerCase().includes(q)
+    );
+  };
+
   const getSessionsForDay = (day: Date) => {
-    return sessions.filter(session => 
-      format(new Date(session.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-    ).sort((a, b) => a.time.localeCompare(b.time));
+    return sessions
+      .filter(session => format(new Date(session.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+      .filter(matchesSearch)
+      .sort((a, b) => a.time.localeCompare(b.time));
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -251,6 +265,19 @@ const SessionCalendar: React.FC = () => {
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => addMonths(prev, direction === 'next' ? 1 : -1));
+  };
+
+  const jumpToDate = (value: string) => {
+    if (!value) return;
+    const d = parseISO(value);
+    setCurrentWeek(d);
+    setCurrentMonth(d);
+  };
+
+  const goToToday = () => {
+    const d = new Date();
+    setCurrentWeek(d);
+    setCurrentMonth(d);
   };
 
   const getWeekRangeText = () => {
@@ -265,9 +292,9 @@ const SessionCalendar: React.FC = () => {
 
   // Month view helpers
   const getSessionsForDate = (date: Date) => {
-    return sessions.filter(session => 
-      format(new Date(session.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
+    return sessions
+      .filter(session => format(new Date(session.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+      .filter(matchesSearch);
   };
 
   const getDaySessionCount = (date: Date) => {
@@ -548,6 +575,33 @@ const SessionCalendar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Search + Jump to date */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca corso, sala, istruttore..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Vai a</span>
+          <DatePickerSingle
+            value={format(viewMode === 'week' ? currentWeek : currentMonth, 'yyyy-MM-dd')}
+            onChange={jumpToDate}
+            allowClear={false}
+            className="w-48"
+          />
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Oggi
+          </Button>
+        </div>
+      </div>
+
 
       {sessions.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">

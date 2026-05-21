@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
 import { toast } from 'sonner';
+
+// Splits an array into chunks of given size
+const chunk = <T,>(arr: T[], size: number): T[][] => {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+};
 
 export interface OwnerBooking {
   id: string;
@@ -48,20 +55,23 @@ export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { selectedGym } = useOwnerGym();
+  // Monotonic request id to prevent race conditions
+  const requestIdRef = useRef(0);
 
   const fetchOwnerBookings = async () => {
     if (!user?.id || !selectedGym) {
-      console.log('🚫 useOwnerBookings: No user or selected gym');
       setBookings([]);
       setLoading(false);
       return;
     }
 
+    const myRequest = ++requestIdRef.current;
+
     try {
       setLoading(true);
 
       const gymId = selectedGym.id;
-      console.log("🔍 Loading bookings for gym:", { gymId, dateFrom, dateTo });
+      console.log('🔍 useOwnerBookings:', { gymId, dateFrom, dateTo });
 
       // Paginated fetch to bypass the 1000-row PostgREST default
       const bookingsList: any[] = [];
@@ -82,9 +92,14 @@ export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
 
         if (error) {
           console.error('Error fetching bookings:', error);
-          toast.error('Errore nel caricamento delle prenotazioni');
+          if (myRequest === requestIdRef.current) {
+            toast.error('Errore nel caricamento delle prenotazioni');
+          }
           return;
         }
+
+        // Bail out if a newer request has started
+        if (myRequest !== requestIdRef.current) return;
 
         const page = data || [];
         bookingsList.push(...page);
@@ -92,53 +107,45 @@ export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
         offset += PAGE_SIZE;
       }
 
-      console.log("📋 Bookings loaded:", bookingsList.length);
-
       const userIds = [...new Set(bookingsList.map((b) => b.user_id).filter(Boolean))];
-      
-      // 2) Seconda query: profili utenti
-      let profilesById = new Map<string, any>();
+
+      // 2) Profili utenti — chunked by 500 ids to avoid URL/IN-list limits
+      const profilesById = new Map<string, any>();
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("user_id, first_name, last_name, email, phone, profile_picture_url, current_credits")
-          .in("user_id", userIds);
+        for (const ids of chunk(userIds, 500)) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, first_name, last_name, email, phone, profile_picture_url, current_credits')
+            .in('user_id', ids);
 
-        console.log('👤 User profiles loaded:', {
-          requestedUserIds: userIds,
-          foundProfiles: profilesData?.length || 0,
-          error: profilesError,
-          data: profilesData
-        });
+          if (myRequest !== requestIdRef.current) return;
 
-        if (!profilesError && profilesData) {
-          profilesById = new Map(
-            profilesData.map((p: any) => [p.user_id as string, p])
-          );
-        } else if (profilesError) {
-          console.warn("Errore caricamento profili utenti:", profilesError);
+          if (profilesError) {
+            console.warn('Errore caricamento profili utenti:', profilesError);
+            continue;
+          }
+          (profilesData || []).forEach((p: any) => profilesById.set(p.user_id, p));
         }
       }
 
-      // 3) Terza query: sale per le sessioni (se necessario)
+      // 3) Sale per le sessioni — chunked
       const sessionIds = [...new Set(bookingsList.map((b) => b.session_id).filter(Boolean))];
-      let roomsBySessionId = new Map<string, string>();
-      
+      const roomsBySessionId = new Map<string, string>();
       if (sessionIds.length > 0) {
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('course_sessions')
-          .select(`
-            id,
-            room_name,
-            gym_rooms (name)
-          `)
-          .in('id', sessionIds);
+        for (const ids of chunk(sessionIds, 500)) {
+          const { data: sessionsData, error: sessionsError } = await supabase
+            .from('course_sessions')
+            .select(`id, room_name, gym_rooms (name)`)
+            .in('id', ids);
 
-        console.log('🏠 Room data loaded:', sessionsData?.length || 0, sessionsData);
+          if (myRequest !== requestIdRef.current) return;
 
-        if (!sessionsError && sessionsData) {
-          sessionsData.forEach((s: any) => {
-            const roomName = s.room_name || (s.gym_rooms?.name) || 'Sala non assegnata';
+          if (sessionsError) {
+            console.warn('Errore caricamento sale:', sessionsError);
+            continue;
+          }
+          (sessionsData || []).forEach((s: any) => {
+            const roomName = s.room_name || s.gym_rooms?.name || 'Sala non assegnata';
             roomsBySessionId.set(s.id, roomName);
           });
         }
@@ -148,24 +155,28 @@ export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
       const formattedData: OwnerBooking[] = bookingsList.map((booking: any) => ({
         ...booking,
         user: profilesById.get(booking.user_id) || {
-          first_name: "Nome",
-          last_name: "Non Disponibile", 
+          first_name: 'Nome',
+          last_name: 'Non Disponibile',
           email: null,
           phone: null,
           profile_picture_url: null,
           current_credits: 0,
         },
         course: booking.courses,
-        room_name: roomsBySessionId.get(booking.session_id) || 'Sala non assegnata'
+        room_name: roomsBySessionId.get(booking.session_id) || 'Sala non assegnata',
       }));
 
-      console.log("✅ Final formatted bookings:", formattedData.length, formattedData);
-      setBookings(formattedData || []);
+      if (myRequest !== requestIdRef.current) return;
+
+      console.log(`✅ Prenotazioni caricate: ${formattedData.length}`);
+      setBookings(formattedData);
     } catch (error) {
       console.error('Unexpected error:', error);
-      toast.error('Errore imprevisto nel caricamento');
+      if (myRequest === requestIdRef.current) {
+        toast.error('Errore imprevisto nel caricamento');
+      }
     } finally {
-      setLoading(false);
+      if (myRequest === requestIdRef.current) setLoading(false);
     }
   };
 

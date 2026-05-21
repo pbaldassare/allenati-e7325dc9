@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Calendar, EyeOff, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, EyeOff, XCircle, Search, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfDay } from "date-fns";
+import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { Input } from "@/components/ui/input";
+import { Button as UIButton } from "@/components/ui/button";
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
 
 interface SessionData {
   id: string;
@@ -37,6 +40,7 @@ const SessionCalendarMobile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCancelled, setShowCancelled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Track last known update timestamp for cross-page sync
   const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
@@ -284,11 +288,35 @@ const SessionCalendarMobile: React.FC = () => {
         </Button>
       </div>
 
+      {/* Search + Jump to date + Today */}
+      <div className="space-y-2 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca corso, sala, istruttore..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePickerSingle
+            value={format(currentDate, 'yyyy-MM-dd')}
+            onChange={(v) => v && setCurrentDate(parseISO(v))}
+            allowClear={false}
+            className="flex-1"
+          />
+          <UIButton variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+            <CalendarIcon className="h-4 w-4 mr-1" /> Oggi
+          </UIButton>
+        </div>
+      </div>
+
       {/* Toggle Cancelled Sessions */}
       <div className="flex items-center justify-center gap-2 mb-4">
-        <Switch 
-          id="show-cancelled-mobile" 
-          checked={showCancelled} 
+        <Switch
+          id="show-cancelled-mobile"
+          checked={showCancelled}
           onCheckedChange={setShowCancelled}
         />
         <Label htmlFor="show-cancelled-mobile" className="text-sm cursor-pointer">
@@ -296,125 +324,128 @@ const SessionCalendarMobile: React.FC = () => {
         </Label>
       </div>
 
-      {/* Sessions List */}
-      {sessions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium mb-2">Nessuna sessione oggi</p>
-          <p className="text-sm">Usa i pulsanti per navigare tra i giorni</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {sessions.map((session) => (
-            <SessionManagementDrawer
-              key={session.id}
-              session={{
-                id: session.id,
-                course_id: session.course_id,
-                course_name: session.courseName,
-                course_description: session.course_description,
-                session_date: session.date,
-                start_time: session.start_time,
-                end_time: session.end_time,
-                room_name: session.room,
-                max_participants: session.maxParticipants,
-                available_spots: session.maxParticipants - session.participants,
-                participant_count: session.participants,
-                status: session.status,
-                difficulty_level: session.difficulty_level,
-                instructor_id_override: session.instructor_id_override
-              }}
-              onSessionUpdate={fetchSessions}
-            >
-              <Card 
-                className={cn(
-                  "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
-                  session.status === 'cancelled' 
-                    ? "bg-destructive/10 border-destructive/50 opacity-70"
-                    : getOccupancyColor(session.participants, session.maxParticipants),
-                  session.status === 'hidden' && "opacity-60 bg-muted/50"
-                )}
+      {(() => {
+        const q = searchTerm.trim().toLowerCase();
+        const visibleSessions = q
+          ? sessions.filter(s =>
+              s.courseName.toLowerCase().includes(q) ||
+              (s.room || '').toLowerCase().includes(q) ||
+              (s.instructor || '').toLowerCase().includes(q)
+            )
+          : sessions;
+        const isToday = format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+        return visibleSessions.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium mb-2">
+              {q ? 'Nessun risultato per la ricerca' : isToday ? 'Nessuna sessione oggi' : 'Nessuna sessione in questa data'}
+            </p>
+            <p className="text-sm">Usa il selettore data per cambiare giorno</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visibleSessions.map((session) => (
+              <SessionManagementDrawer
+                key={session.id}
+                session={{
+                  id: session.id,
+                  course_id: session.course_id,
+                  course_name: session.courseName,
+                  course_description: session.course_description,
+                  session_date: session.date,
+                  start_time: session.start_time,
+                  end_time: session.end_time,
+                  room_name: session.room,
+                  max_participants: session.maxParticipants,
+                  available_spots: session.maxParticipants - session.participants,
+                  participant_count: session.participants,
+                  status: session.status,
+                  difficulty_level: session.difficulty_level,
+                  instructor_id_override: session.instructor_id_override
+                }}
+                onSessionUpdate={fetchSessions}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={cn(
-                        "font-semibold text-base truncate",
-                        session.status === 'cancelled' && "line-through text-destructive"
-                      )}>
-                        {session.courseName}
-                      </h3>
-                      {session.status === 'cancelled' && (
-                        <Badge variant="destructive" className="text-xs">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Annullata
-                        </Badge>
-                      )}
-                      {session.status === 'hidden' && (
-                        <div className="flex items-center gap-1">
-                          <EyeOff className="h-4 w-4 text-orange-600" />
-                          <span className="text-xs text-orange-600 font-medium">Nascosta</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        🕐 {session.time}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        📍 {session.room}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        👤 {session.instructor}
-                      </p>
-                      {session.course_description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                          {session.course_description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2 ml-4">
-                    <Badge 
-                      variant={
-                        session.participants >= session.maxParticipants 
-                          ? "destructive" 
-                          : session.participants >= session.maxParticipants * 0.8 
-                            ? "secondary" 
-                            : "default"
-                      }
-                      className="text-xs"
-                    >
-                      {session.participants}/{session.maxParticipants}
-                    </Badge>
-                    
-                    <div className="text-xs text-muted-foreground text-right">
-                      {session.credits} {session.credits === 1 ? 'credito' : 'crediti'}
-                    </div>
-                    
-                    <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full transition-all duration-300",
-                          session.participants >= session.maxParticipants * 0.9 
-                            ? "bg-destructive" 
-                            : session.participants >= session.maxParticipants * 0.7 
-                              ? "bg-warning" 
-                              : "bg-primary"
+                <Card
+                  className={cn(
+                    "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
+                    session.status === 'cancelled'
+                      ? "bg-destructive/10 border-destructive/50 opacity-70"
+                      : getOccupancyColor(session.participants, session.maxParticipants),
+                    session.status === 'hidden' && "opacity-60 bg-muted/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className={cn(
+                          "font-semibold text-base truncate",
+                          session.status === 'cancelled' && "line-through text-destructive"
+                        )}>
+                          {session.courseName}
+                        </h3>
+                        {session.status === 'cancelled' && (
+                          <Badge variant="destructive" className="text-xs">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Annullata
+                          </Badge>
                         )}
-                        style={{ 
-                          width: `${Math.min((session.participants / session.maxParticipants) * 100, 100)}%` 
-                        }}
-                      />
+                        {session.status === 'hidden' && (
+                          <div className="flex items-center gap-1">
+                            <EyeOff className="h-4 w-4 text-orange-600" />
+                            <span className="text-xs text-orange-600 font-medium">Nascosta</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">🕐 {session.time}</p>
+                        <p className="text-sm text-muted-foreground">📍 {session.room}</p>
+                        <p className="text-sm text-muted-foreground">👤 {session.instructor}</p>
+                        {session.course_description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                            {session.course_description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <Badge
+                        variant={
+                          session.participants >= session.maxParticipants
+                            ? "destructive"
+                            : session.participants >= session.maxParticipants * 0.8
+                              ? "secondary"
+                              : "default"
+                        }
+                        className="text-xs"
+                      >
+                        {session.participants}/{session.maxParticipants}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground text-right">
+                        {session.credits} {session.credits === 1 ? 'credito' : 'crediti'}
+                      </div>
+                      <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-300",
+                            session.participants >= session.maxParticipants * 0.9
+                              ? "bg-destructive"
+                              : session.participants >= session.maxParticipants * 0.7
+                                ? "bg-warning"
+                                : "bg-primary"
+                          )}
+                          style={{
+                            width: `${Math.min((session.participants / session.maxParticipants) * 100, 100)}%`
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            </SessionManagementDrawer>
-          ))}
-        </div>
-      )}
+                </Card>
+              </SessionManagementDrawer>
+            ))}
+          </div>
+        );
+      })()}
     </Card>
   );
 };
