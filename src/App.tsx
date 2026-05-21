@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { initOneSignal } from "@/lib/onesignal";
@@ -13,77 +13,92 @@ import AppTour from "@/components/AppTour";
 import { GymProvider } from "@/contexts/GymContext";
 import { InstructorGymProvider } from "@/contexts/InstructorGymContext";
 import { OwnerGymProvider } from "@/contexts/OwnerGymContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import RouteFallback from "@/components/RouteFallback";
+
+// Eager: landing/auth routes
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
-import AdminDashboard from "./pages/AdminDashboard";
-import Shop from "./pages/Shop";
-import BookingHistory from "./pages/BookingHistory";
 import NotFound from "./pages/NotFound";
-import { AdminLayout } from "./layouts/AdminLayout";
-import OwnerLayout from "./layouts/OwnerLayout";
-import InstructorLayout from "./layouts/InstructorLayout";
-
-// Admin Course Management Pages
-import AdminCoursesList from "./pages/admin/AdminCoursesList";
-import AdminCourseNew from "./pages/admin/AdminCourseNew";
-import AdminCourseDetail from "./pages/admin/AdminCourseDetail";
-import AdminCourseEdit from "./pages/admin/AdminCourseEdit";
-import AdminCourseSchedules from "./pages/admin/AdminCourseSchedules";
-import AdminCourseSessions from "./pages/admin/AdminCourseSessions";
-
-
-import AdminRooms from "./pages/admin/AdminRooms";
-import AdminSchedule from "./pages/admin/AdminSchedule";
-import AdminGyms from "./pages/admin/AdminGyms";
-import { AdminGymApplications } from "./pages/admin/AdminGymApplications";
-import AdminGymRequests from "./pages/admin/AdminGymRequests";
-import AdminGymDetail from "./pages/admin/AdminGymDetail";
-import AdminGymEdit from "./pages/admin/AdminGymEdit";
-
-// Admin User Management Pages
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminChat from "./pages/admin/AdminChat";
-
-// Owner Pages
-import OwnerDashboard from "./pages/owner/OwnerDashboard";
-import OwnerUsers from "./pages/owner/OwnerUsers";
-import OwnerInstructors from "./pages/owner/OwnerInstructors";
-import OwnerRooms from "./pages/owner/OwnerRooms";
-import OwnerCoursesList from "./pages/owner/OwnerCoursesList";
-import OwnerCourseNew from "./pages/owner/OwnerCourseNew";
-import OwnerSubscriptions from "./pages/owner/OwnerSubscriptions";
-import OwnerSubscriptionPlans from "./pages/owner/OwnerSubscriptionPlans";
-import OwnerSchedule from "./pages/owner/OwnerSchedule";
-import OwnerBookings from "./pages/owner/OwnerBookings";
-import OwnerBookingsAnalytics from "./pages/owner/OwnerBookingsAnalytics";
-import OwnerReports from "./pages/owner/OwnerReports";
-import OwnerChat from "./pages/owner/OwnerChat";
-import OwnerCourseEdit from "./pages/owner/OwnerCourseEdit";
-import OwnerCourseDetail from "./pages/owner/OwnerCourseDetail";
-import OwnerCourseSchedules from "./pages/owner/OwnerCourseSchedules";
-import OwnerCourseSessions from "./pages/owner/OwnerCourseSessions";
-
-import OwnerStripeSetup from "./pages/owner/OwnerStripeSetup";
-import OwnerProfile from "./pages/owner/OwnerProfile";
-import OwnerDocuments from "./pages/owner/OwnerDocuments";
-import MedicalCertificate from "./pages/MedicalCertificate";
-import GymDocuments from "./pages/GymDocuments";
-import Subscriptions from "./pages/Subscriptions";
-import UserSettings from "./pages/UserSettings";
-import Gyms from "./pages/Gyms";
-import ResetPassword from "./pages/ResetPassword";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-
-// Instructor Pages
-import InstructorDashboard from "./pages/instructor/InstructorDashboard";
-import InstructorCourses from "./pages/instructor/InstructorCourses";
-import InstructorParticipants from "./pages/instructor/InstructorParticipants";
-import InstructorSchedule from "./pages/instructor/InstructorSchedule";
 import { PaymentVerification } from "./components/PaymentVerification";
 import { MobileOptimizations } from "./components/MobileOptimizations";
-import GymLanding from "./pages/GymLanding";
 
-const queryClient = new QueryClient();
+// Lazy layouts
+const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const OwnerLayout = lazy(() => import("./layouts/OwnerLayout"));
+const InstructorLayout = lazy(() => import("./layouts/InstructorLayout"));
+
+// Lazy pages — Admin
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminCoursesList = lazy(() => import("./pages/admin/AdminCoursesList"));
+const AdminCourseNew = lazy(() => import("./pages/admin/AdminCourseNew"));
+const AdminCourseDetail = lazy(() => import("./pages/admin/AdminCourseDetail"));
+const AdminCourseEdit = lazy(() => import("./pages/admin/AdminCourseEdit"));
+const AdminCourseSchedules = lazy(() => import("./pages/admin/AdminCourseSchedules"));
+const AdminCourseSessions = lazy(() => import("./pages/admin/AdminCourseSessions"));
+const AdminRooms = lazy(() => import("./pages/admin/AdminRooms"));
+const AdminSchedule = lazy(() => import("./pages/admin/AdminSchedule"));
+const AdminGyms = lazy(() => import("./pages/admin/AdminGyms"));
+const AdminGymApplications = lazy(() => import("./pages/admin/AdminGymApplications").then(m => ({ default: m.AdminGymApplications })));
+const AdminGymRequests = lazy(() => import("./pages/admin/AdminGymRequests"));
+const AdminGymDetail = lazy(() => import("./pages/admin/AdminGymDetail"));
+const AdminGymEdit = lazy(() => import("./pages/admin/AdminGymEdit"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
+
+// Lazy pages — Owner
+const OwnerDashboard = lazy(() => import("./pages/owner/OwnerDashboard"));
+const OwnerUsers = lazy(() => import("./pages/owner/OwnerUsers"));
+const OwnerInstructors = lazy(() => import("./pages/owner/OwnerInstructors"));
+const OwnerRooms = lazy(() => import("./pages/owner/OwnerRooms"));
+const OwnerCoursesList = lazy(() => import("./pages/owner/OwnerCoursesList"));
+const OwnerCourseNew = lazy(() => import("./pages/owner/OwnerCourseNew"));
+const OwnerSubscriptions = lazy(() => import("./pages/owner/OwnerSubscriptions"));
+const OwnerSubscriptionPlans = lazy(() => import("./pages/owner/OwnerSubscriptionPlans"));
+const OwnerSchedule = lazy(() => import("./pages/owner/OwnerSchedule"));
+const OwnerBookings = lazy(() => import("./pages/owner/OwnerBookings"));
+const OwnerBookingsAnalytics = lazy(() => import("./pages/owner/OwnerBookingsAnalytics"));
+const OwnerReports = lazy(() => import("./pages/owner/OwnerReports"));
+const OwnerChat = lazy(() => import("./pages/owner/OwnerChat"));
+const OwnerCourseEdit = lazy(() => import("./pages/owner/OwnerCourseEdit"));
+const OwnerCourseDetail = lazy(() => import("./pages/owner/OwnerCourseDetail"));
+const OwnerCourseSchedules = lazy(() => import("./pages/owner/OwnerCourseSchedules"));
+const OwnerCourseSessions = lazy(() => import("./pages/owner/OwnerCourseSessions"));
+const OwnerStripeSetup = lazy(() => import("./pages/owner/OwnerStripeSetup"));
+const OwnerProfile = lazy(() => import("./pages/owner/OwnerProfile"));
+const OwnerDocuments = lazy(() => import("./pages/owner/OwnerDocuments"));
+
+// Lazy pages — Instructor
+const InstructorDashboard = lazy(() => import("./pages/instructor/InstructorDashboard"));
+const InstructorCourses = lazy(() => import("./pages/instructor/InstructorCourses"));
+const InstructorParticipants = lazy(() => import("./pages/instructor/InstructorParticipants"));
+const InstructorSchedule = lazy(() => import("./pages/instructor/InstructorSchedule"));
+
+// Lazy pages — Shared user
+const Shop = lazy(() => import("./pages/Shop"));
+const BookingHistory = lazy(() => import("./pages/BookingHistory"));
+const MedicalCertificate = lazy(() => import("./pages/MedicalCertificate"));
+const GymDocuments = lazy(() => import("./pages/GymDocuments"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
+const UserSettings = lazy(() => import("./pages/UserSettings"));
+const Gyms = lazy(() => import("./pages/Gyms"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const GymLanding = lazy(() => import("./pages/GymLanding"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 const App = () => {
   useEffect(() => {
@@ -91,120 +106,130 @@ const App = () => {
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="light"
-      forcedTheme="light"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
-      <AuthProvider>
-        <GymProvider>
-          <InstructorGymProvider>
-            <AppDataProvider>
-            <MobileOptimizations>
-              <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-              <TourProvider>
-              <AppTour />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                
-                {/* Admin Routes with persistent sidebar */}
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  
-                  {/* Course Management */}
-                  <Route path="courses" element={<AdminCoursesList />} />
-                  <Route path="courses/new" element={<AdminCourseNew />} />
-                  <Route path="courses/:id" element={<AdminCourseDetail />} />
-                  <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
-                  <Route path="courses/:id/schedules" element={<AdminCourseSchedules />} />
-                  <Route path="courses/:id/sessions" element={<AdminCourseSessions />} />
-                  
-                  
-                  {/* User Management */}
-                  <Route path="users" element={<AdminUsers />} />
-                  
-                  {/* Structure Management */}
-                  <Route path="gyms" element={<AdminGyms />} />
-                  <Route path="gyms/:id" element={<AdminGymDetail />} />
-                  <Route path="gyms/:id/edit" element={<AdminGymEdit />} />
-                  <Route path="gym-applications" element={<AdminGymApplications />} />
-                  <Route path="gym-requests" element={<AdminGymRequests />} />
-                  
-                  <Route path="rooms" element={<AdminRooms />} />
-                  <Route path="schedule" element={<AdminSchedule />} />
-                  
-                  {/* Communication */}
-                  <Route path="chat" element={<AdminChat />} />
-                  
-                  {/* Settings */}
-                  <Route path="settings" element={<UserSettings />} />
-                </Route>
+    <ErrorBoundary scope="root">
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          forcedTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <GymProvider>
+              <InstructorGymProvider>
+                <AppDataProvider>
+                  <MobileOptimizations>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
+                        <TourProvider>
+                          <AppTour />
+                          <ErrorBoundary scope="routes">
+                            <Suspense fallback={<RouteFallback />}>
+                              <Routes>
+                                <Route path="/" element={<Index />} />
+                                <Route path="/auth" element={<Auth />} />
+                                <Route path="/reset-password" element={<ResetPassword />} />
+                                <Route path="/privacy" element={<PrivacyPolicy />} />
 
-                {/* Owner Routes */}
-                <Route path="/owner" element={<OwnerGymProvider><OwnerLayout /></OwnerGymProvider>}>
-                  <Route index element={<OwnerDashboard />} />
-                  <Route path="users" element={<OwnerUsers />} />
-                  <Route path="instructors" element={<OwnerInstructors />} />
-                  <Route path="rooms" element={<OwnerRooms />} />
-                  <Route path="courses" element={<OwnerCoursesList />} />
-                  <Route path="courses/new" element={<OwnerCourseNew />} />
-                  <Route path="courses/:id" element={<OwnerCourseDetail />} />
-                  <Route path="courses/:id/edit" element={<OwnerCourseEdit />} />
-                  <Route path="courses/:id/schedules" element={<OwnerCourseSchedules />} />
-                  <Route path="courses/:id/sessions" element={<OwnerCourseSessions />} />
-                  
-                  <Route path="schedule" element={<OwnerSchedule />} />
-                  <Route path="bookings" element={<OwnerBookings />} />
-                  <Route path="bookings-analytics" element={<OwnerBookingsAnalytics />} />
-                  <Route path="subscriptions" element={<OwnerSubscriptions />} />
-                  <Route path="subscription-plans" element={<OwnerSubscriptionPlans />} />
-                  <Route path="stripe" element={<OwnerStripeSetup />} />
-                  <Route path="chat" element={<OwnerChat />} />
-                  <Route path="reports" element={<OwnerReports />} />
-                  <Route path="documents" element={<OwnerDocuments />} />
-                  <Route path="profile" element={<OwnerProfile />} />
-                  <Route path="settings" element={<UserSettings />} />
-                </Route>
+                                {/* Admin */}
+                                <Route
+                                  path="/admin"
+                                  element={
+                                    <ErrorBoundary scope="admin"><AdminLayout /></ErrorBoundary>
+                                  }
+                                >
+                                  <Route index element={<AdminDashboard />} />
+                                  <Route path="courses" element={<AdminCoursesList />} />
+                                  <Route path="courses/new" element={<AdminCourseNew />} />
+                                  <Route path="courses/:id" element={<AdminCourseDetail />} />
+                                  <Route path="courses/:id/edit" element={<AdminCourseEdit />} />
+                                  <Route path="courses/:id/schedules" element={<AdminCourseSchedules />} />
+                                  <Route path="courses/:id/sessions" element={<AdminCourseSessions />} />
+                                  <Route path="users" element={<AdminUsers />} />
+                                  <Route path="gyms" element={<AdminGyms />} />
+                                  <Route path="gyms/:id" element={<AdminGymDetail />} />
+                                  <Route path="gyms/:id/edit" element={<AdminGymEdit />} />
+                                  <Route path="gym-applications" element={<AdminGymApplications />} />
+                                  <Route path="gym-requests" element={<AdminGymRequests />} />
+                                  <Route path="rooms" element={<AdminRooms />} />
+                                  <Route path="schedule" element={<AdminSchedule />} />
+                                  <Route path="chat" element={<AdminChat />} />
+                                  <Route path="settings" element={<UserSettings />} />
+                                </Route>
 
-                {/* Instructor Routes */}
-                <Route path="/instructor" element={<InstructorLayout />}>
-                  <Route index element={<InstructorDashboard />} />
-                  <Route path="courses" element={<InstructorCourses />} />
-                  <Route path="participants" element={<InstructorParticipants />} />
-                  <Route path="schedule" element={<InstructorSchedule />} />
-                  <Route path="settings" element={<UserSettings />} />
-                </Route>
+                                {/* Owner */}
+                                <Route
+                                  path="/owner"
+                                  element={
+                                    <ErrorBoundary scope="owner">
+                                      <OwnerGymProvider><OwnerLayout /></OwnerGymProvider>
+                                    </ErrorBoundary>
+                                  }
+                                >
+                                  <Route index element={<OwnerDashboard />} />
+                                  <Route path="users" element={<OwnerUsers />} />
+                                  <Route path="instructors" element={<OwnerInstructors />} />
+                                  <Route path="rooms" element={<OwnerRooms />} />
+                                  <Route path="courses" element={<OwnerCoursesList />} />
+                                  <Route path="courses/new" element={<OwnerCourseNew />} />
+                                  <Route path="courses/:id" element={<OwnerCourseDetail />} />
+                                  <Route path="courses/:id/edit" element={<OwnerCourseEdit />} />
+                                  <Route path="courses/:id/schedules" element={<OwnerCourseSchedules />} />
+                                  <Route path="courses/:id/sessions" element={<OwnerCourseSessions />} />
+                                  <Route path="schedule" element={<OwnerSchedule />} />
+                                  <Route path="bookings" element={<OwnerBookings />} />
+                                  <Route path="bookings-analytics" element={<OwnerBookingsAnalytics />} />
+                                  <Route path="subscriptions" element={<OwnerSubscriptions />} />
+                                  <Route path="subscription-plans" element={<OwnerSubscriptionPlans />} />
+                                  <Route path="stripe" element={<OwnerStripeSetup />} />
+                                  <Route path="chat" element={<OwnerChat />} />
+                                  <Route path="reports" element={<OwnerReports />} />
+                                  <Route path="documents" element={<OwnerDocuments />} />
+                                  <Route path="profile" element={<OwnerProfile />} />
+                                  <Route path="settings" element={<UserSettings />} />
+                                </Route>
 
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/i-miei-corsi" element={<BookingHistory />} />
-                <Route path="/subscriptions" element={<Subscriptions />} />
-                <Route path="/payment-verification" element={<PaymentVerification />} />
-                <Route path="/gyms" element={<Gyms />} />
-                <Route path="/impostazioni" element={<UserSettings />} />
-                <Route path="/certificato-medico" element={<MedicalCertificate />} />
-                <Route path="/documenti" element={<GymDocuments />} />
-                <Route path="/landing" element={<GymLanding />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              </TourProvider>
-            </BrowserRouter>
-          </TooltipProvider>
-            </MobileOptimizations>
-          </AppDataProvider>
-          </InstructorGymProvider>
-        </GymProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+                                {/* Instructor */}
+                                <Route
+                                  path="/instructor"
+                                  element={
+                                    <ErrorBoundary scope="instructor"><InstructorLayout /></ErrorBoundary>
+                                  }
+                                >
+                                  <Route index element={<InstructorDashboard />} />
+                                  <Route path="courses" element={<InstructorCourses />} />
+                                  <Route path="participants" element={<InstructorParticipants />} />
+                                  <Route path="schedule" element={<InstructorSchedule />} />
+                                  <Route path="settings" element={<UserSettings />} />
+                                </Route>
+
+                                <Route path="/shop" element={<Shop />} />
+                                <Route path="/i-miei-corsi" element={<BookingHistory />} />
+                                <Route path="/subscriptions" element={<Subscriptions />} />
+                                <Route path="/payment-verification" element={<PaymentVerification />} />
+                                <Route path="/gyms" element={<Gyms />} />
+                                <Route path="/impostazioni" element={<UserSettings />} />
+                                <Route path="/certificato-medico" element={<MedicalCertificate />} />
+                                <Route path="/documenti" element={<GymDocuments />} />
+                                <Route path="/landing" element={<GymLanding />} />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </Suspense>
+                          </ErrorBoundary>
+                        </TourProvider>
+                      </BrowserRouter>
+                    </TooltipProvider>
+                  </MobileOptimizations>
+                </AppDataProvider>
+              </InstructorGymProvider>
+            </GymProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

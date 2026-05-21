@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import logger from '@/lib/logger';
 
 /**
  * Hook per gestire i redirect automatici basati sullo stato di autenticazione
@@ -14,44 +15,22 @@ export const useAuthRedirect = () => {
 
   useEffect(() => {
     // Wait for auth to be fully loaded AND user data to be complete
-    if (loading) {
-      console.log('AuthRedirect: Still loading auth...');
-      return;
-    }
-    
-    // If user is authenticated but we don't have complete user data yet, wait
-    if (isAuthenticated && (!user || user.role === undefined)) {
-      console.log('AuthRedirect: User authenticated but role not loaded yet, waiting...', { 
-        isAuthenticated, 
-        hasUser: !!user, 
-        userRole: user?.role 
-      });
-      return;
-    }
+    if (loading) return;
 
-    console.log('AuthRedirect: Processing redirect', { 
-      isAuthenticated, 
-      userRole: user?.role, 
-      currentPath: location.pathname,
-      isMobile 
-    });
+    // If user is authenticated but we don't have complete user data yet, wait
+    if (isAuthenticated && (!user || user.role === undefined)) return;
+
+    logger.debug('AuthRedirect:', { isAuthenticated, userRole: user?.role, path: location.pathname, isMobile });
 
     const currentPath = location.pathname;
-    
-    // Pagine pubbliche accessibili a tutti gli utenti autenticati
-    const publicPaths = ['/auth', '/', '/shop', '/i-miei-corsi', '/subscriptions', '/chat', '/medical-certificate', '/booking-history', '/user-settings'];
-    
+
     // Se l'utente è autenticato e si trova sulla pagina auth, redirect basato sul ruolo
     if (isAuthenticated && currentPath === '/auth') {
       if (user?.role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (user?.role === 'gym_owner') {
-        // Redirect alla dashboard owner sia su mobile che desktop
-        const targetRoute = '/owner';
-        console.log('AuthRedirect: Redirecting gym_owner to', targetRoute);
-        navigate(targetRoute, { replace: true });
+        navigate('/owner', { replace: true });
       } else {
-        // Instructors and regular users go to home page
         navigate('/', { replace: true });
       }
       return;
@@ -63,13 +42,9 @@ export const useAuthRedirect = () => {
         navigate('/admin', { replace: true });
         return;
       } else if (user?.role === 'gym_owner') {
-        // Redirect alla dashboard owner sia su mobile che desktop
-        const targetRoute = '/owner';
-        console.log('AuthRedirect: Redirecting gym_owner from homepage to', targetRoute);
-        navigate(targetRoute, { replace: true });
+        navigate('/owner', { replace: true });
         return;
       }
-      // Instructors and regular users stay on homepage - no automatic redirect
     }
 
     // Se l'utente non è autenticato e non si trova su una pagina pubblica limitata
