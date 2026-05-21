@@ -40,6 +40,7 @@ const SessionCalendarMobile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCancelled, setShowCancelled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Track last known update timestamp for cross-page sync
   const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
