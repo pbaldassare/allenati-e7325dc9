@@ -243,12 +243,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   }, [session.max_participants, session.difficulty_level, session.instructor_id_override]);
 
   useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 1) {
+      setSearchResults([]);
+      setSearchPerformed(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
     const debounceTimer = setTimeout(() => {
-      if (searchTerm.trim().length >= 2) {
-        searchUsers();
-      } else {
-        setSearchResults([]);
-      }
+      searchUsers();
     }, 300);
 
     return () => clearTimeout(debounceTimer);
