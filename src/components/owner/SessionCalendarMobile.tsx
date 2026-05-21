@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Calendar, EyeOff, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, EyeOff, XCircle, Search, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfDay } from "date-fns";
+import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { SessionManagementDrawer } from "./SessionManagementDrawer";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { Input } from "@/components/ui/input";
+import { Button as UIButton } from "@/components/ui/button";
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
 
 interface SessionData {
   id: string;
