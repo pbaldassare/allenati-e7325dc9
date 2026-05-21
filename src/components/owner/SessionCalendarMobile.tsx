@@ -288,11 +288,35 @@ const SessionCalendarMobile: React.FC = () => {
         </Button>
       </div>
 
+      {/* Search + Jump to date + Today */}
+      <div className="space-y-2 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca corso, sala, istruttore..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePickerSingle
+            value={format(currentDate, 'yyyy-MM-dd')}
+            onChange={(v) => v && setCurrentDate(parseISO(v))}
+            allowClear={false}
+            className="flex-1"
+          />
+          <UIButton variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+            <CalendarIcon className="h-4 w-4 mr-1" /> Oggi
+          </UIButton>
+        </div>
+      </div>
+
       {/* Toggle Cancelled Sessions */}
       <div className="flex items-center justify-center gap-2 mb-4">
-        <Switch 
-          id="show-cancelled-mobile" 
-          checked={showCancelled} 
+        <Switch
+          id="show-cancelled-mobile"
+          checked={showCancelled}
           onCheckedChange={setShowCancelled}
         />
         <Label htmlFor="show-cancelled-mobile" className="text-sm cursor-pointer">
@@ -300,16 +324,25 @@ const SessionCalendarMobile: React.FC = () => {
         </Label>
       </div>
 
-      {/* Sessions List */}
-      {sessions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium mb-2">Nessuna sessione oggi</p>
-          <p className="text-sm">Usa i pulsanti per navigare tra i giorni</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {sessions.map((session) => (
+      {(() => {
+        const q = searchTerm.trim().toLowerCase();
+        const visibleSessions = q
+          ? sessions.filter(s =>
+              s.courseName.toLowerCase().includes(q) ||
+              (s.room || '').toLowerCase().includes(q) ||
+              (s.instructor || '').toLowerCase().includes(q)
+            )
+          : sessions;
+        const isToday = format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+        return visibleSessions.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium mb-2">
+              {q ? 'Nessun risultato per la ricerca' : isToday ? 'Nessuna sessione oggi' : 'Nessuna sessione in questa data'}
+            </p>
+            <p className="text-sm">Usa il selettore data per cambiare giorno</p>
+          </div>
+        ) : (
             <SessionManagementDrawer
               key={session.id}
               session={{
