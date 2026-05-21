@@ -1079,7 +1079,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const isAlmostFull = session.available_spots <= 3 && session.available_spots > 0;
   const isFull = session.available_spots <= 0;
 
-  const HeaderContent = () => (
+  const headerContent = (
     <>
       <div>
         <h3 className="text-lg font-semibold">{session.course_name}</h3>
@@ -1153,7 +1153,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
     </>
   );
 
-  const BodyContent = () => (
+  const bodyContent = (
     <>
       {/* Session Settings Section */}
       <div className="p-4 border-b bg-muted/10 shrink-0">
@@ -1630,7 +1630,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
             <DrawerHeader className="shrink-0 border-b pr-14">
               <DrawerTitle className="sr-only">{session.course_name}</DrawerTitle>
               <div className="flex flex-col gap-3 text-left">
-                <HeaderContent />
+                {headerContent}
               </div>
             </DrawerHeader>
 
@@ -1638,7 +1638,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               data-vaul-no-drag
               className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
-              <BodyContent />
+              {bodyContent}
             </div>
           </DrawerContent>
         </Drawer>
@@ -1654,12 +1654,12 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
             <DialogHeader className="shrink-0 border-b p-4 pr-12">
               <DialogTitle className="sr-only">{session.course_name}</DialogTitle>
               <div className="flex flex-col gap-3 text-left md:flex-row md:items-center md:justify-between">
-                <HeaderContent />
+                {headerContent}
               </div>
             </DialogHeader>
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              <BodyContent />
+              {bodyContent}
             </div>
           </DialogContent>
         </Dialog>
