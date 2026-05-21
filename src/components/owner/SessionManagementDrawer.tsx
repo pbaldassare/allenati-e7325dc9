@@ -1386,7 +1386,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               </div>
             ))}
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Participants List */}
