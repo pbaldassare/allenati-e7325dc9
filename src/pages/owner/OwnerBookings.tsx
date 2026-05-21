@@ -31,6 +31,36 @@ const OwnerBookings: React.FC = () => {
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
 
+  // Auto-fix when dateFrom > dateTo: swap them
+  React.useEffect(() => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setDateTo(dateFrom);
+      setDateFrom(dateTo);
+    }
+  }, [dateFrom, dateTo]);
+
+  const applyPreset = (preset: 'today' | 'thisMonth' | 'last3Months' | 'all') => {
+    const today = new Date();
+    if (preset === 'all') {
+      setDateFrom('');
+      setDateTo('');
+      setDateFilter('all');
+      return;
+    }
+    if (preset === 'today') {
+      const d = format(today, 'yyyy-MM-dd');
+      setDateFrom(d);
+      setDateTo(d);
+    } else if (preset === 'thisMonth') {
+      setDateFrom(format(startOfMonth(today), 'yyyy-MM-dd'));
+      setDateTo(format(today, 'yyyy-MM-dd'));
+    } else if (preset === 'last3Months') {
+      setDateFrom(format(startOfMonth(subMonths(today, 2)), 'yyyy-MM-dd'));
+      setDateTo(format(today, 'yyyy-MM-dd'));
+    }
+    setDateFilter('all');
+  };
+
   // Helper functions for date filtering
   const getStartOfWeek = (date = new Date()) => {
     const start = new Date(date);
