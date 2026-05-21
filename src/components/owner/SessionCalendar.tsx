@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, CalendarDays, EyeOff, XCircle, Search, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth } from "date-fns";
+import { format, startOfISOWeek as startOfWeek, endOfISOWeek as endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, eachWeekOfInterval, isSameMonth, parseISO } from "date-fns";
 import { it } from "date-fns/locale/it";
 import { cn } from "@/lib/utils";
 import { CourseParticipantCount } from "@/components/CourseParticipantCount";
@@ -14,6 +14,8 @@ import { SessionManagementDrawer } from "./SessionManagementDrawer";
 import SessionCalendarMobile from "./SessionCalendarMobile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { Input } from "@/components/ui/input";
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
 
 interface SessionData {
   id: string;
