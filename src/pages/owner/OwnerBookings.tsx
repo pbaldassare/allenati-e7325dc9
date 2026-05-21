@@ -16,12 +16,15 @@ import { useOwnerGym } from '@/contexts/OwnerGymContext';
 
 const OwnerBookings: React.FC = () => {
   const { selectedGym } = useOwnerGym();
-  const { bookings, loading, cancelOwnerBooking } = useOwnerBookings();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('confirmed');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const { bookings, loading, cancelOwnerBooking } = useOwnerBookings({
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  });
   const [cancellationReason, setCancellationReason] = useState('');
   const [showFullDetails, setShowFullDetails] = useState(false);
   const isMobile = useIsMobile();
