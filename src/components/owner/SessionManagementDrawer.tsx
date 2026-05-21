@@ -23,7 +23,8 @@ import {
   Signal,
   Save,
   ArrowUp,
-  ListOrdered
+  ListOrdered,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -119,6 +120,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   const [waitlistParticipants, setWaitlistParticipants] = useState<Participant[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -241,12 +244,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
   }, [session.max_participants, session.difficulty_level, session.instructor_id_override]);
 
   useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 1) {
+      setSearchResults([]);
+      setSearchPerformed(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
     const debounceTimer = setTimeout(() => {
-      if (searchTerm.trim().length >= 2) {
-        searchUsers();
-      } else {
-        setSearchResults([]);
-      }
+      searchUsers();
     }, 300);
 
     return () => clearTimeout(debounceTimer);
@@ -539,6 +546,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
   const searchUsers = async () => {
     try {
+      // Sanitize input for PostgREST .or() syntax (escape % , ( ) )
+      const raw = searchTerm.trim();
+      const safe = raw.replace(/[\\%,()]/g, ' ').trim();
+      if (!safe) {
+        setSearchResults([]);
+        setSearchPerformed(true);
+        setSearching(false);
+        return;
+      }
+
       // First get the gym_id from the session's course
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
@@ -549,6 +566,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       if (courseError || !courseData?.gym_id) {
         console.error('Error fetching gym_id:', courseError);
         toast.error('Errore nel recupero della palestra');
+        setSearching(false);
         return;
       }
 
@@ -565,6 +583,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
       if (!memberships || memberships.length === 0) {
         setSearchResults([]);
+        setSearchPerformed(true);
+        setSearching(false);
         return;
       }
 
@@ -575,40 +595,47 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .from('profiles')
         .select('user_id, first_name, last_name, email, profile_picture_url')
         .in('user_id', memberUserIds)
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(8);
 
       if (profilesError) throw profilesError;
 
-      // Get gym-specific credits for filtered users
-      const users = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          const { data: gymCredits } = await supabase
-            .from('gym_credits')
-            .select('credits')
-            .eq('user_id', profile.user_id)
-            .eq('gym_id', gymId)
-            .maybeSingle();
-          
-          return {
-            id: profile.user_id,
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            email: profile.email || '',
-            current_credits: gymCredits?.credits || 0,
-            profile_picture_url: profile.profile_picture_url
-          };
-        })
-      );
+      const profileList = profiles || [];
+
+      // Batch credits in a single query (no N+1)
+      let creditsByUser = new Map<string, number>();
+      if (profileList.length > 0) {
+        const ids = profileList.map(p => p.user_id);
+        const { data: creditsRows } = await supabase
+          .from('gym_credits')
+          .select('user_id, credits')
+          .eq('gym_id', gymId)
+          .in('user_id', ids);
+        creditsByUser = new Map((creditsRows || []).map(r => [r.user_id, r.credits || 0]));
+      }
+
+      const users: User[] = profileList.map(profile => ({
+        id: profile.user_id,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        current_credits: creditsByUser.get(profile.user_id) || 0,
+        profile_picture_url: profile.profile_picture_url,
+      }));
 
       // Filter out already enrolled users
       const enrolledUserIds = participants.map(p => p.user_id);
       const availableUsers = users.filter(u => !enrolledUserIds.includes(u.id));
 
       setSearchResults(availableUsers);
+      setSearchPerformed(true);
     } catch (error) {
       console.error('Error searching users:', error);
       toast.error('Errore nella ricerca utenti');
+      setSearchResults([]);
+      setSearchPerformed(true);
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -1294,12 +1321,26 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               onClick={() => {
                 setSearchTerm('');
                 setSearchResults([]);
+                setSearchPerformed(false);
               }}
             >
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
+
+        {/* Feedback states */}
+        {searchTerm.trim().length > 0 && searching && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Ricerca in corso…
+          </div>
+        )}
+        {searchTerm.trim().length > 0 && !searching && searchPerformed && searchResults.length === 0 && (
+          <div className="mt-3 text-sm text-muted-foreground">
+            Nessun utente trovato in questa palestra
+          </div>
+        )}
 
         {/* Search Results */}
         {searchResults.length > 0 && (
