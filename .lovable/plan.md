@@ -1,90 +1,40 @@
-# Audit & Robustness — Allenati WebApp
+# Fix — Cerca utenti da iscrivere non funziona
 
-## Cosa ho trovato nell'analisi
+## Cosa ho trovato
 
-**Routing & Pagine (App.tsx)**
-- ~100 route importate **staticamente**: bundle iniziale gigantesco → caricamento iniziale lento, soprattutto su mobile/3G. Una pagina lenta blocca tutta la app.
-- Nessun **ErrorBoundary**: un errore runtime in qualunque pagina produce schermata bianca (è il sintomo che hai visto nei giorni scorsi su `SessionManagementDrawer`).
-- Nessun `<Suspense>` né `React.lazy` → impossibile mostrare uno spinner per pagina.
+Nella drawer `SessionManagementDrawer` (sezione "Cerca utenti da iscrivere"):
 
-**React Query (`new QueryClient()` senza opzioni)**
-- Nessun retry intelligente, nessun `staleTime`, nessun `refetchOnWindowFocus: false`. Risultato: ad ogni focus la app rifà decine di query → carico inutile su Supabase e flicker UI.
+1. **Soglia silenziosa di 2 caratteri**
+   `searchUsers()` parte solo se `searchTerm.length >= 2`. Con 1 carattere (come la "r" nello screenshot) non parte nessuna query e non viene mostrato alcun messaggio → l'utente vede una casella vuota e pensa che sia rotta.
 
-**Auth/Session**
-- `useAuthRedirect` logga molto su console (rumore in produzione) e fa redirect anche durante caricamenti parziali → micro-loop di navigazione.
-- Errore ricorrente nei log: `Invalid Refresh Token: Refresh Token Not Found` non gestito in modo "soft" (l'utente vede errore console). Va intercettato e ridotto a logout silenzioso.
+2. **Nessun feedback per "0 risultati"**
+   Anche con ≥2 caratteri, il blocco risultati viene renderizzato solo se `searchResults.length > 0`. Quando la query gira ma non trova nulla (es. utente già iscritto, oppure nome non presente nella palestra), non viene mostrato niente — stesso effetto "rotto".
 
-**Gestione errori asincroni**
-- 28 `console.error/throw` in `SessionManagementDrawer`, 19 in `OwnerCoursesList`, 17 in `OwnerUsers`: nessuno bubble-uppa a un boundary, nessun toast utente uniforme.
-- Mancano abort/cleanup nei `fetch` quando il componente si smonta → "Can't perform state update on unmounted" sporadici.
+3. **Nessuno stato di "caricamento"**
+   Non c'è uno spinner durante la chiamata: con rete lenta sembra che nulla stia succedendo.
 
-**Supabase Linter**
-- Restano 71 warning (giù da 187 ieri). I bloccanti reali sono:
-  - 1 extension nello schema `public`
-  - 1 bucket pubblico con SELECT troppo aperto
-  - ~60 `SECURITY DEFINER` chiamabili da `authenticated` — la maggior parte sono usati dalle policy RLS e devono restare; vanno revisionati solo quelli non referenziati.
+4. **Query N+1 sui crediti**
+   Per ogni profilo trovato viene fatta una query separata su `gym_credits` (Promise.all): con 8 risultati = 9 round-trip. Rende la ricerca percepita lenta su mobile.
 
----
+5. RLS e schema sono OK (verificato): `profiles.email` esiste, le policy per `gym_owner` permettono di leggere i membri della palestra, le funzioni `SECURITY DEFINER` referenziate hanno ancora `EXECUTE` per `authenticated`. Quindi il backend non è il problema.
 
-## Piano di lavoro (in ordine di impatto)
+## Cosa farò
 
-### 1. Stabilità runtime (priorità massima)
-- Aggiungere un **`<ErrorBoundary>` globale** che cattura crash di pagina e mostra un fallback "Qualcosa è andato storto / Ricarica" invece dello schermo bianco.
-- Wrappare anche le aree `admin/owner/instructor` con boundary **per-area** (un crash in `/owner` non rompe `/`).
+In `src/components/owner/SessionManagementDrawer.tsx`:
 
-### 2. Performance di caricamento
-- Convertire le route in `React.lazy` + `<Suspense fallback={Spinner}>`: bundle iniziale −60/70%, time-to-interactive molto più rapido.
-- Mantenere eager solo `Index`, `Auth`, `NotFound` (le rotte d'ingresso).
+- Aggiungere uno stato `searching` (boolean) e mostrare uno spinner inline mentre la query è in corso.
+- Sotto la search box, mostrare sempre un messaggio chiaro:
+  - 1 carattere → "Digita almeno 2 caratteri…"
+  - in corso → spinner "Ricerca in corso…"
+  - 0 risultati → "Nessun utente trovato in questa palestra"
+  - risultati → la lista (comportamento attuale)
+- Abbassare la soglia da 2 a **1 carattere** (più tollerante; il debounce a 300 ms evita il flood) — è sicuro perché la query è già scoped per `gym_id`.
+- Ottimizzare la query crediti: una sola SELECT `IN (...)` invece del `Promise.all` N+1.
+- Sanitizzare l'input nella clausola `.or(...)` (escape di `%`, `,` e `()` per evitare PostgREST syntax errors quando l'utente digita caratteri speciali).
 
-### 3. React Query stabilità
-- Configurare `QueryClient` con:
-  - `staleTime: 30_000`
-  - `refetchOnWindowFocus: false`
-  - `retry: 1` (evita raffica di richieste su 401/403)
-- Evita refetch a cascata su tab change, riduce errori "rate limit" e flicker.
+## Cosa NON tocco
+- RLS / migrazioni DB (non servono).
+- Logica di enrollment, conteggio posti, waitlist — invariata.
+- Altre parti del drawer.
 
-### 4. Auth resilience
-- Listener `supabase.auth.onAuthStateChange`: su `TOKEN_REFRESHED` failed o `SIGNED_OUT`, pulire sessione e portare a `/auth` senza errori in console.
-- Rimuovere i `console.log` rumorosi di `useAuthRedirect` (mantengo solo errori).
-- Throttle dei redirect: niente navigate finché `loading || (isAuthenticated && !user?.role)`.
-
-### 5. Sanitizzazione fetch & memory leak
-- Sweep dei top-5 file ad alto rischio (`SessionManagementDrawer`, `OwnerCoursesList`, `OwnerUsers`, `Dashboard`, `OwnerInstructors`):
-  - aggiungere `isMounted` / `AbortController` ai `useEffect` con async.
-  - sostituire `console.error` "muti" con `toast` utente + log centralizzato.
-
-### 6. Pulizia Supabase (warning residui, basso rischio)
-- Verificare il bucket pubblico segnalato e restringere la policy `SELECT` solo a file effettivamente pubblici.
-- Spostare l'extension fuori dallo schema `public` se non è `pg_trgm` (alcune sono "false positive" e vanno lasciate — verifico una per una).
-- Lascio così i `SECURITY DEFINER` chiamati dalle RLS (rompere sarebbe peggio).
-
-### 7. Monitoraggio
-- Logger centralizzato `src/lib/logger.ts` con livelli (debug/info/error). In produzione solo `error`. Predispone integrazione futura con Sentry/Logflare.
-
----
-
-## Dettagli tecnici (per riferimento)
-
-```text
-src/
-  components/ErrorBoundary.tsx          [NEW] class component + fallback UI
-  lib/logger.ts                         [NEW] log centralizzato
-  App.tsx                               lazy() + Suspense + QueryClient config
-                                        + <ErrorBoundary> root
-  hooks/useAuthRedirect.ts              ripulito + guard refresh-token
-  contexts/AuthContext.tsx              gestione onAuthStateChange robusta
-```
-
-Migrazione SQL solo se l'utente conferma il punto 6 (rischio rottura).
-
----
-
-## Cosa NON faccio in questo giro
-- Refactor visivi o cambi UX.
-- Nessuna modifica a edge functions / business logic / RLS esistenti.
-- Nessun aggiornamento di Postgres (richiede dashboard Supabase).
-
----
-
-## Fammi sapere
-Procedo con **punti 1-5 + 7** (frontend hardening, zero rischio di rottura dati)? Il punto 6 lo affrontiamo dopo, una warning alla volta, perché tocca il DB.
+Procedo?
