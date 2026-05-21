@@ -343,115 +343,109 @@ const SessionCalendarMobile: React.FC = () => {
             <p className="text-sm">Usa il selettore data per cambiare giorno</p>
           </div>
         ) : (
-            <SessionManagementDrawer
-              key={session.id}
-              session={{
-                id: session.id,
-                course_id: session.course_id,
-                course_name: session.courseName,
-                course_description: session.course_description,
-                session_date: session.date,
-                start_time: session.start_time,
-                end_time: session.end_time,
-                room_name: session.room,
-                max_participants: session.maxParticipants,
-                available_spots: session.maxParticipants - session.participants,
-                participant_count: session.participants,
-                status: session.status,
-                difficulty_level: session.difficulty_level,
-                instructor_id_override: session.instructor_id_override
-              }}
-              onSessionUpdate={fetchSessions}
-            >
-              <Card 
-                className={cn(
-                  "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
-                  session.status === 'cancelled' 
-                    ? "bg-destructive/10 border-destructive/50 opacity-70"
-                    : getOccupancyColor(session.participants, session.maxParticipants),
-                  session.status === 'hidden' && "opacity-60 bg-muted/50"
-                )}
+          <div className="space-y-3">
+            {visibleSessions.map((session) => (
+              <SessionManagementDrawer
+                key={session.id}
+                session={{
+                  id: session.id,
+                  course_id: session.course_id,
+                  course_name: session.courseName,
+                  course_description: session.course_description,
+                  session_date: session.date,
+                  start_time: session.start_time,
+                  end_time: session.end_time,
+                  room_name: session.room,
+                  max_participants: session.maxParticipants,
+                  available_spots: session.maxParticipants - session.participants,
+                  participant_count: session.participants,
+                  status: session.status,
+                  difficulty_level: session.difficulty_level,
+                  instructor_id_override: session.instructor_id_override
+                }}
+                onSessionUpdate={fetchSessions}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={cn(
-                        "font-semibold text-base truncate",
-                        session.status === 'cancelled' && "line-through text-destructive"
-                      )}>
-                        {session.courseName}
-                      </h3>
-                      {session.status === 'cancelled' && (
-                        <Badge variant="destructive" className="text-xs">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Annullata
-                        </Badge>
-                      )}
-                      {session.status === 'hidden' && (
-                        <div className="flex items-center gap-1">
-                          <EyeOff className="h-4 w-4 text-orange-600" />
-                          <span className="text-xs text-orange-600 font-medium">Nascosta</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        🕐 {session.time}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        📍 {session.room}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        👤 {session.instructor}
-                      </p>
-                      {session.course_description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                          {session.course_description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2 ml-4">
-                    <Badge 
-                      variant={
-                        session.participants >= session.maxParticipants 
-                          ? "destructive" 
-                          : session.participants >= session.maxParticipants * 0.8 
-                            ? "secondary" 
-                            : "default"
-                      }
-                      className="text-xs"
-                    >
-                      {session.participants}/{session.maxParticipants}
-                    </Badge>
-                    
-                    <div className="text-xs text-muted-foreground text-right">
-                      {session.credits} {session.credits === 1 ? 'credito' : 'crediti'}
-                    </div>
-                    
-                    <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full transition-all duration-300",
-                          session.participants >= session.maxParticipants * 0.9 
-                            ? "bg-destructive" 
-                            : session.participants >= session.maxParticipants * 0.7 
-                              ? "bg-warning" 
-                              : "bg-primary"
+                <Card
+                  className={cn(
+                    "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4",
+                    session.status === 'cancelled'
+                      ? "bg-destructive/10 border-destructive/50 opacity-70"
+                      : getOccupancyColor(session.participants, session.maxParticipants),
+                    session.status === 'hidden' && "opacity-60 bg-muted/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className={cn(
+                          "font-semibold text-base truncate",
+                          session.status === 'cancelled' && "line-through text-destructive"
+                        )}>
+                          {session.courseName}
+                        </h3>
+                        {session.status === 'cancelled' && (
+                          <Badge variant="destructive" className="text-xs">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Annullata
+                          </Badge>
                         )}
-                        style={{ 
-                          width: `${Math.min((session.participants / session.maxParticipants) * 100, 100)}%` 
-                        }}
-                      />
+                        {session.status === 'hidden' && (
+                          <div className="flex items-center gap-1">
+                            <EyeOff className="h-4 w-4 text-orange-600" />
+                            <span className="text-xs text-orange-600 font-medium">Nascosta</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">🕐 {session.time}</p>
+                        <p className="text-sm text-muted-foreground">📍 {session.room}</p>
+                        <p className="text-sm text-muted-foreground">👤 {session.instructor}</p>
+                        {session.course_description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                            {session.course_description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <Badge
+                        variant={
+                          session.participants >= session.maxParticipants
+                            ? "destructive"
+                            : session.participants >= session.maxParticipants * 0.8
+                              ? "secondary"
+                              : "default"
+                        }
+                        className="text-xs"
+                      >
+                        {session.participants}/{session.maxParticipants}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground text-right">
+                        {session.credits} {session.credits === 1 ? 'credito' : 'crediti'}
+                      </div>
+                      <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-300",
+                            session.participants >= session.maxParticipants * 0.9
+                              ? "bg-destructive"
+                              : session.participants >= session.maxParticipants * 0.7
+                                ? "bg-warning"
+                                : "bg-primary"
+                          )}
+                          style={{
+                            width: `${Math.min((session.participants / session.maxParticipants) * 100, 100)}%`
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            </SessionManagementDrawer>
-          ))}
-        </div>
-      )}
+                </Card>
+              </SessionManagementDrawer>
+            ))}
+          </div>
+        );
+      })()}
     </Card>
   );
 };
