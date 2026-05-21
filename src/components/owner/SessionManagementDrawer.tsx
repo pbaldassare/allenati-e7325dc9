@@ -1294,16 +1294,6 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
               placeholder="Cerca utenti da iscrivere..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => {
-                if (isMobile && keyboardVisible && searchInputRef.current) {
-                  setTimeout(() => {
-                    searchInputRef.current?.scrollIntoView({ 
-                      behavior: 'smooth', 
-                      block: 'center' 
-                    });
-                  }, 300);
-                }
-              }}
               className={cn(
                 "pl-9 transition-all duration-200",
                 isMobile && [
