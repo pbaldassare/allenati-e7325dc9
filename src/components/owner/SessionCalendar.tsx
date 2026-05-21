@@ -242,10 +242,21 @@ const SessionCalendar: React.FC = () => {
     return 'bg-success/20 border-success/30';
   };
 
+  const matchesSearch = (s: SessionData) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      s.courseName.toLowerCase().includes(q) ||
+      (s.room || '').toLowerCase().includes(q) ||
+      (s.instructor || '').toLowerCase().includes(q)
+    );
+  };
+
   const getSessionsForDay = (day: Date) => {
-    return sessions.filter(session => 
-      format(new Date(session.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-    ).sort((a, b) => a.time.localeCompare(b.time));
+    return sessions
+      .filter(session => format(new Date(session.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+      .filter(matchesSearch)
+      .sort((a, b) => a.time.localeCompare(b.time));
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -254,6 +265,19 @@ const SessionCalendar: React.FC = () => {
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => addMonths(prev, direction === 'next' ? 1 : -1));
+  };
+
+  const jumpToDate = (value: string) => {
+    if (!value) return;
+    const d = parseISO(value);
+    setCurrentWeek(d);
+    setCurrentMonth(d);
+  };
+
+  const goToToday = () => {
+    const d = new Date();
+    setCurrentWeek(d);
+    setCurrentMonth(d);
   };
 
   const getWeekRangeText = () => {
