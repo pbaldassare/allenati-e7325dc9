@@ -251,8 +251,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       setSearching(false);
       return;
     }
-    setSearching(true);
     const debounceTimer = setTimeout(() => {
+      setSearching(true);
       searchUsers();
     }, 300);
 
