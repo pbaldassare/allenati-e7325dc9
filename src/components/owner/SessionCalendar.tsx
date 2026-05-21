@@ -576,6 +576,33 @@ const SessionCalendar: React.FC = () => {
         </div>
       </div>
 
+      {/* Search + Jump to date */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca corso, sala, istruttore..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Vai a</span>
+          <DatePickerSingle
+            value={format(viewMode === 'week' ? currentWeek : currentMonth, 'yyyy-MM-dd')}
+            onChange={jumpToDate}
+            allowClear={false}
+            className="w-48"
+          />
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Oggi
+          </Button>
+        </div>
+      </div>
+
+
       {sessions.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           {viewMode === 'week' 
