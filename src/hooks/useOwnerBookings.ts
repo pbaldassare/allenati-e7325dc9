@@ -290,7 +290,7 @@ export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, selectedGym]);
+  }, [user?.id, selectedGym, dateFrom, dateTo]);
 
   return {
     bookings,
