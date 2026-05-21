@@ -485,7 +485,12 @@ const OwnerBookings: React.FC = () => {
         /* Desktop view or mobile detailed view */
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Prenotazioni ({filteredBookings.length})</CardTitle>
+            <div className="flex flex-col">
+              <CardTitle>Prenotazioni ({filteredBookings.length})</CardTitle>
+              <span className="text-xs text-muted-foreground mt-1">
+                Caricate {bookings.length} · Filtrate {filteredBookings.length}
+              </span>
+            </div>
             {isMobile && showFullDetails && (
               <Button 
                 variant="outline" 
