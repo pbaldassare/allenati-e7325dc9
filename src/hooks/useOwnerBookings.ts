@@ -34,7 +34,16 @@ export interface OwnerBooking {
   };
 }
 
-export const useOwnerBookings = () => {
+export interface UseOwnerBookingsOptions {
+  dateFrom?: string; // YYYY-MM-DD
+  dateTo?: string;   // YYYY-MM-DD
+}
+
+const PAGE_SIZE = 1000;
+const MAX_ROWS = 20000;
+
+export const useOwnerBookings = (options: UseOwnerBookingsOptions = {}) => {
+  const { dateFrom, dateTo } = options;
   const [bookings, setBookings] = useState<OwnerBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -50,37 +59,41 @@ export const useOwnerBookings = () => {
 
     try {
       setLoading(true);
-      
+
       const gymId = selectedGym.id;
-      console.log("🔍 Loading bookings for gym:", {
-        gymId,
-        gymName: selectedGym.name
-      });
+      console.log("🔍 Loading bookings for gym:", { gymId, dateFrom, dateTo });
 
-      // 1) Prima query: bookings con corsi
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          courses!inner (
-            name,
-            deadline_hours,
-            gym_id
-          )
-        `)
-        .eq('courses.gym_id', gymId)
-        .order('scheduled_date', { ascending: false })
-        .order('scheduled_time', { ascending: false });
+      // Paginated fetch to bypass the 1000-row PostgREST default
+      const bookingsList: any[] = [];
+      let offset = 0;
+      while (offset < MAX_ROWS) {
+        let q = supabase
+          .from('bookings')
+          .select(`*, courses!inner (name, deadline_hours, gym_id)`)
+          .eq('courses.gym_id', gymId);
 
-      console.log("📋 Bookings loaded:", bookingsData?.length || 0, bookingsData);
+        if (dateFrom) q = q.gte('scheduled_date', dateFrom);
+        if (dateTo) q = q.lte('scheduled_date', dateTo);
 
-      if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError);
-        toast.error('Errore nel caricamento delle prenotazioni');
-        return;
+        const { data, error } = await q
+          .order('scheduled_date', { ascending: false })
+          .order('scheduled_time', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('Error fetching bookings:', error);
+          toast.error('Errore nel caricamento delle prenotazioni');
+          return;
+        }
+
+        const page = data || [];
+        bookingsList.push(...page);
+        if (page.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
       }
 
-      const bookingsList = (bookingsData || []) as any[];
+      console.log("📋 Bookings loaded:", bookingsList.length);
+
       const userIds = [...new Set(bookingsList.map((b) => b.user_id).filter(Boolean))];
       
       // 2) Seconda query: profili utenti
@@ -277,7 +290,7 @@ export const useOwnerBookings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, selectedGym]);
+  }, [user?.id, selectedGym, dateFrom, dateTo]);
 
   return {
     bookings,
