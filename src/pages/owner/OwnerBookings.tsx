@@ -13,6 +13,8 @@ import { useOwnerBookings, type OwnerBooking } from "@/hooks/useOwnerBookings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import { DatePickerSingle } from "@/components/ui/date-picker-single";
+import { format, startOfMonth, subMonths } from "date-fns";
 
 const OwnerBookings: React.FC = () => {
   const { selectedGym } = useOwnerGym();
