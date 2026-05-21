@@ -110,20 +110,11 @@ const OwnerBookings: React.FC = () => {
       });
     }
 
-    if (dateFrom) {
-      const from = new Date(dateFrom);
-      from.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(b => new Date(b.scheduled_date) >= from);
-    }
-
-    if (dateTo) {
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(b => new Date(b.scheduled_date) <= to);
-    }
+    // Note: dateFrom/dateTo are applied server-side in useOwnerBookings,
+    // so we don't re-filter them here.
 
     return filtered;
-  }, [bookings, searchTerm, statusFilter, dateFilter, dateFrom, dateTo]);
+  }, [bookings, searchTerm, statusFilter, dateFilter]);
 
   const handleCancelBooking = async (bookingId: string) => {
     await cancelOwnerBooking(bookingId, cancellationReason || undefined);
