@@ -381,16 +381,15 @@ const OwnerBookings: React.FC = () => {
               <SelectItem value="cancelled">Cancellate</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Dal</span>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+            <DatePickerSingle value={dateFrom} onChange={setDateFrom} className="w-48" placeholder="Inizio" />
             <span className="text-sm text-muted-foreground">Al</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
-            {(dateFrom || dateTo) && (
-              <Button variant="ghost" size="icon" onClick={() => { setDateFrom(''); setDateTo(''); }}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+            <DatePickerSingle value={dateTo} onChange={setDateTo} className="w-48" placeholder="Fine" />
+            <Button variant="outline" size="sm" onClick={() => applyPreset('today')}>Oggi</Button>
+            <Button variant="outline" size="sm" onClick={() => applyPreset('thisMonth')}>Mese</Button>
+            <Button variant="outline" size="sm" onClick={() => applyPreset('last3Months')}>3 mesi</Button>
+            <Button variant="ghost" size="sm" onClick={() => applyPreset('all')}>Tutto</Button>
           </div>
         </div>
       )}
