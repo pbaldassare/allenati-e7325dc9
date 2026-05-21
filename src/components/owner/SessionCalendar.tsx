@@ -47,6 +47,7 @@ const SessionCalendar: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [showCancelled, setShowCancelled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Track last known update timestamp for cross-page sync
   const [lastUpdateCheck, setLastUpdateCheck] = useState(Date.now());
