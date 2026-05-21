@@ -280,20 +280,23 @@ const OwnerBookings: React.FC = () => {
             </Select>
           </div>
 
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Dal</label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => applyPreset('today')}>Oggi</Button>
+              <Button variant="outline" size="sm" onClick={() => applyPreset('thisMonth')}>Questo mese</Button>
+              <Button variant="outline" size="sm" onClick={() => applyPreset('last3Months')}>Ultimi 3 mesi</Button>
+              <Button variant="ghost" size="sm" onClick={() => applyPreset('all')}>Tutto</Button>
             </div>
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Al</label>
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Dal</label>
+                <DatePickerSingle value={dateFrom} onChange={setDateFrom} placeholder="Data inizio" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Al</label>
+                <DatePickerSingle value={dateTo} onChange={setDateTo} placeholder="Data fine" />
+              </div>
             </div>
-            {(dateFrom || dateTo) && (
-              <Button variant="ghost" size="icon" className="mt-4" onClick={() => { setDateFrom(''); setDateTo(''); }}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </div>
       )}
