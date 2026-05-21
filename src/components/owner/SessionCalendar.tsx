@@ -292,9 +292,9 @@ const SessionCalendar: React.FC = () => {
 
   // Month view helpers
   const getSessionsForDate = (date: Date) => {
-    return sessions.filter(session => 
-      format(new Date(session.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
+    return sessions
+      .filter(session => format(new Date(session.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+      .filter(matchesSearch);
   };
 
   const getDaySessionCount = (date: Date) => {
