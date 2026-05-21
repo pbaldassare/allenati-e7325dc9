@@ -1,46 +1,74 @@
-# Fix vero — la ricerca perde focus ad ogni carattere
+# Fix — filtri date prenotazioni + gestione ricerche calendario
 
-## Causa root (confermata)
+## Problemi individuati
 
-In `src/components/owner/SessionManagementDrawer.tsx` ci sono due **componenti definiti DENTRO il corpo della funzione del drawer**:
+1. **Le date in /owner/bookings non caricano correttamente i dati vecchi**
+   - Il filtro `Dal/Al` ora passa valori direttamente al hook, ma resta legato a `input type="date"` nativo.
+   - Su mobile/iOS e locale italiana il campo può mostrare `gg/mm/aaaa`, ma internamente può restare vuoto o non aggiornarsi finché la data non è completa.
+   - In più, il filtro periodo rapido (`Oggi`, `Questa settimana`, `Questo mese`) resta client-side: se lo combini con un range server-side può dare risultati percepiti come incoerenti.
 
-```tsx
-const HeaderContent = () => ( ... );   // riga 1082
-const BodyContent   = () => ( ... );   // riga 1156
-```
+2. **Dati vecchi e query pesanti**
+   - La paginazione che ho aggiunto è corretta secondo la documentazione Supabase: il limite default è 1000 righe e va usato `.range()` per paginare.
+   - Però la query profili usa `.in("user_id", userIds)` con potenzialmente migliaia di ID: può diventare instabile o superare limiti URL/PostgREST.
+   - Stesso rischio per le sessioni/stanze quando i risultati sono tanti.
 
-e poi vengono usati come componenti JSX:
+3. **Calendario owner poco gestibile**
+   - Il calendario desktop e mobile permettono solo avanti/indietro.
+   - Non c’è un “vai alla data”, né ricerca per corso/sala/istruttore.
+   - Su mobile, per trovare una data vecchia bisogna cliccare giorno per giorno.
 
-```tsx
-<HeaderContent />
-<BodyContent />
-```
+## Implementazione proposta
 
-Questo è un classico anti-pattern React: ad ogni render del drawer (es. ad ogni `setSearchTerm`), `HeaderContent` e `BodyContent` sono **nuove function reference**. React vede un "tipo di componente diverso" e **smonta + rimonta l'intero sottoalbero** — compreso l'`<Input>` della ricerca. Risultato: la tastiera si chiude e perdi il focus ad ogni carattere → "uno alla volta".
+### A. Prenotazioni owner: filtro date robusto
+File: `src/pages/owner/OwnerBookings.tsx`
 
-I miei fix precedenti (rimozione di `scrollIntoView`, debounce, ecc.) erano corretti come pulizia ma **non potevano risolvere** questo, perché il vero remount avviene a livello di tipo componente.
+- Sostituire gli `input type="date"` con un selettore date via `Popover + Calendar` shadcn, usando `date-fns` per convertire sempre in `YYYY-MM-DD`.
+- Mantenere due stati interni come stringa `YYYY-MM-DD`, ma far scegliere le date da calendario per evitare input incompleti tipo `gg/mm/aaaa`.
+- Quando l’utente seleziona `Dal` o `Al`, passare il range al hook in modo stabile.
+- Se `Dal > Al`, correggere automaticamente il range o mostrare feedback chiaro.
+- Aggiungere pulsanti rapidi: `Oggi`, `Questo mese`, `Ultimi 3 mesi`, `Tutto`.
+- Mostrare un indicatore chiaro: `Caricate X prenotazioni` e `Filtrate Y`.
 
-## Soluzione
+### B. Hook prenotazioni: caricamento vecchi dati affidabile
+File: `src/hooks/useOwnerBookings.ts`
 
-Trasformare `HeaderContent` e `BodyContent` da **componenti** a **espressioni JSX**:
+- Mantenere la paginazione `.range()`.
+- Applicare date server-side su `scheduled_date`.
+- Dividere le query correlate in chunk:
+  - profili utenti: blocchi da 500 ID
+  - sessioni/stanze: blocchi da 500 ID
+- Evitare `console.log` pesanti con migliaia di oggetti in produzione/dev preview, lasciando log sintetici.
+- Aggiungere protezione da race condition: se cambio data velocemente, una risposta vecchia non deve sovrascrivere quella nuova.
 
-```tsx
-const headerContent = ( ... );   // niente arrow function, solo JSX
-const bodyContent   = ( ... );
-```
+### C. Calendario owner: ricerca e salto data
+File desktop: `src/components/owner/SessionCalendar.tsx`
 
-e usarle come valori, non come tag:
+- Aggiungere in alto:
+  - campo ricerca `Cerca corso, sala, istruttore...`
+  - date picker `Vai alla data`
+  - pulsante `Oggi`
+- In vista settimana: il date picker porta alla settimana della data scelta.
+- In vista mese: il date picker porta al mese della data scelta.
+- Filtrare localmente le sessioni caricate per nome corso, sala, istruttore.
 
-```tsx
-{headerContent}
-{bodyContent}
-```
+File mobile: `src/components/owner/SessionCalendarMobile.tsx`
 
-In questo modo React vede sempre lo stesso albero, non rimonta nulla e l'`<Input>` mantiene il focus → si può digitare normalmente, incluse stringhe multi-carattere.
+- Aggiungere:
+  - date picker `Vai alla data`
+  - pulsante `Oggi`
+  - ricerca testuale sopra la lista sessioni del giorno
+- La ricerca filtra le sessioni del giorno corrente per corso/sala/istruttore.
+- Correggere il testo vuoto: se sei su una data diversa da oggi, mostrare `Nessuna sessione in questa data` invece di `Nessuna sessione oggi`.
 
-## File toccato
-- `src/components/owner/SessionManagementDrawer.tsx` (solo rinomina + rimozione `() =>` + cambio di `<HeaderContent />`/`<BodyContent />` in `{headerContent}`/`{bodyContent}` nei 4 punti di utilizzo).
+## Cosa non modifico
 
-Nessuna modifica a logica, RLS, DB o ad altri file.
+- Nessuna migrazione DB.
+- Nessuna modifica RLS.
+- Nessuna modifica a cancellazioni, crediti, waitlist o lifecycle sessioni.
+- Nessuna modifica ai dati esistenti.
 
-Procedo?
+## Validazione
+
+- Verifico che il range date venga passato come `YYYY-MM-DD`.
+- Verifico che i dati vecchi non vengano tagliati a 1000 righe.
+- Verifico che ricerca calendario e salto data funzionino sia desktop sia mobile.
