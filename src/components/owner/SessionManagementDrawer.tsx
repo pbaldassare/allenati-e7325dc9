@@ -1319,22 +1319,21 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
           )}
         </div>
 
-        {/* Feedback states */}
-        {searchTerm.trim().length > 0 && searching && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Ricerca in corso…
-          </div>
-        )}
-        {searchTerm.trim().length > 0 && !searching && searchPerformed && searchResults.length === 0 && (
-          <div className="mt-3 text-sm text-muted-foreground">
-            Nessun utente trovato in questa palestra
-          </div>
-        )}
-
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+        {/* Stable results area — reserves space to avoid layout shifts while typing */}
+        <div className={cn("mt-3", searchTerm.trim().length > 0 && "min-h-[3rem]")}>
+          {searchTerm.trim().length > 0 && searching && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Ricerca in corso…
+            </div>
+          )}
+          {searchTerm.trim().length > 0 && !searching && searchPerformed && searchResults.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              Nessun utente trovato in questa palestra
+            </div>
+          )}
+          {searchResults.length > 0 && (
+            <div className="space-y-2 max-h-56 overflow-y-auto">
             {searchResults.map((user) => (
               <div
                 key={user.id}
