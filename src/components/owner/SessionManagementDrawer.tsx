@@ -545,6 +545,16 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
   const searchUsers = async () => {
     try {
+      // Sanitize input for PostgREST .or() syntax (escape % , ( ) )
+      const raw = searchTerm.trim();
+      const safe = raw.replace(/[\\%,()]/g, ' ').trim();
+      if (!safe) {
+        setSearchResults([]);
+        setSearchPerformed(true);
+        setSearching(false);
+        return;
+      }
+
       // First get the gym_id from the session's course
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
@@ -555,6 +565,7 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
       if (courseError || !courseData?.gym_id) {
         console.error('Error fetching gym_id:', courseError);
         toast.error('Errore nel recupero della palestra');
+        setSearching(false);
         return;
       }
 
@@ -571,6 +582,8 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
 
       if (!memberships || memberships.length === 0) {
         setSearchResults([]);
+        setSearchPerformed(true);
+        setSearching(false);
         return;
       }
 
@@ -581,40 +594,47 @@ export const SessionManagementDrawer: React.FC<SessionManagementDrawerProps> = (
         .from('profiles')
         .select('user_id, first_name, last_name, email, profile_picture_url')
         .in('user_id', memberUserIds)
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(8);
 
       if (profilesError) throw profilesError;
 
-      // Get gym-specific credits for filtered users
-      const users = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          const { data: gymCredits } = await supabase
-            .from('gym_credits')
-            .select('credits')
-            .eq('user_id', profile.user_id)
-            .eq('gym_id', gymId)
-            .maybeSingle();
-          
-          return {
-            id: profile.user_id,
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            email: profile.email || '',
-            current_credits: gymCredits?.credits || 0,
-            profile_picture_url: profile.profile_picture_url
-          };
-        })
-      );
+      const profileList = profiles || [];
+
+      // Batch credits in a single query (no N+1)
+      let creditsByUser = new Map<string, number>();
+      if (profileList.length > 0) {
+        const ids = profileList.map(p => p.user_id);
+        const { data: creditsRows } = await supabase
+          .from('gym_credits')
+          .select('user_id, credits')
+          .eq('gym_id', gymId)
+          .in('user_id', ids);
+        creditsByUser = new Map((creditsRows || []).map(r => [r.user_id, r.credits || 0]));
+      }
+
+      const users: User[] = profileList.map(profile => ({
+        id: profile.user_id,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        current_credits: creditsByUser.get(profile.user_id) || 0,
+        profile_picture_url: profile.profile_picture_url,
+      }));
 
       // Filter out already enrolled users
       const enrolledUserIds = participants.map(p => p.user_id);
       const availableUsers = users.filter(u => !enrolledUserIds.includes(u.id));
 
       setSearchResults(availableUsers);
+      setSearchPerformed(true);
     } catch (error) {
       console.error('Error searching users:', error);
       toast.error('Errore nella ricerca utenti');
+      setSearchResults([]);
+      setSearchPerformed(true);
+    } finally {
+      setSearching(false);
     }
   };
 
