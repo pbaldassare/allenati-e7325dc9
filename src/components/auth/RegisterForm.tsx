@@ -444,57 +444,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
               <div className="space-y-2">
                 <Label htmlFor="gym" className="text-lg sm:text-base">Palestra *</Label>
-                <Select
+                <select
                   value={formData.gymId}
-                  onValueChange={(value) => setFormData({ ...formData, gymId: value })}
+                  onChange={(event) => setFormData({ ...formData, gymId: event.target.value })}
                   required
                   disabled={gymsLoading}
+                  className="h-14 w-full rounded-md border border-input bg-background px-3 text-base text-foreground transition-all duration-200 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12"
                 >
-                  <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
-                    <SelectValue 
-                      placeholder={
-                        gymsLoading 
-                          ? "Caricamento palestre..." 
-                          : gyms.length === 0 
-                            ? "Nessuna palestra disponibile" 
-                            : "Seleziona la tua palestra"
-                      } 
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {gymsLoading ? (
-                      <SelectItem value="loading" disabled className="justify-center">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Caricamento palestre...</span>
-                        </div>
-                      </SelectItem>
-                    ) : gyms.length === 0 ? (
-                      <SelectItem value="empty" disabled className="justify-center">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          <span>Nessuna palestra disponibile</span>
-                        </div>
-                      </SelectItem>
-                    ) : (
-                      gyms.map((gym) => (
-                        <SelectItem 
-                          key={gym.id} 
-                          value={gym.id}
-                          className="cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary" />
-                            <div className="flex flex-col">
-                              <span className="font-medium">{gym.name}</span>
-                              <span className="text-xs text-muted-foreground">{gym.city}</span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  <option value="" disabled>
+                    {gymsLoading
+                      ? 'Caricamento palestre...'
+                      : gyms.length === 0
+                        ? 'Nessuna palestra disponibile'
+                        : 'Seleziona la tua palestra'}
+                  </option>
+                  {gyms.map((gym) => (
+                    <option key={gym.id} value={gym.id}>
+                      {gym.name} — {gym.city}
+                    </option>
+                  ))}
+                </select>
                 {gyms.length === 0 && !gymsLoading && (
                   <div className="p-3 border border-dashed border-muted-foreground/20 rounded-lg bg-muted/30">
                     <p className="text-sm text-muted-foreground text-center">
