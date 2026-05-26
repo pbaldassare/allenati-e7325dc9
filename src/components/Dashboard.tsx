@@ -112,7 +112,7 @@ export const Dashboard = () => {
               variant="outline" 
               size="sm" 
               onClick={() => navigate('/subscriptions')}
-              className="border-white text-white hover:bg-white hover:text-destructive"
+              className="shrink-0 border-white bg-white text-destructive hover:bg-white/90 hover:text-destructive"
             >
               Vai agli Abbonamenti
             </Button>
