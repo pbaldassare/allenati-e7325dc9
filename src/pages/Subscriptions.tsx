@@ -56,6 +56,21 @@ export default function Subscriptions() {
     loadData();
   }, [user, selectedGym]);
 
+  // Refresh on focus / visibility (mobile returns from external checkout)
+  useEffect(() => {
+    const refresh = () => loadData();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedGym]);
+
   // Auto-refresh data if user just returned from payment
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -63,10 +78,15 @@ export default function Subscriptions() {
     const cancelled = urlParams.get('cancelled');
     
     if (success === 'true') {
-      // Remove query parameters from URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      // Reload data to show updated subscription
-      loadData();
+      // Poll for the new subscription to appear (webhook/reconciliation race)
+      let attempts = 0;
+      const poll = async () => {
+        attempts++;
+        await loadData();
+        if (attempts < 8) setTimeout(poll, 2000);
+      };
+      poll();
       toast({
         title: "Pagamento completato!",
         description: "Il tuo abbonamento è stato attivato con successo.",
