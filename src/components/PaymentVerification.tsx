@@ -50,9 +50,9 @@ export const PaymentVerification = () => {
           variant: "destructive",
         });
       } finally {
-        // Redirect to appropriate page
         const from = searchParams.get('from');
-        navigate(from === 'shop' ? '/shop' : '/subscriptions', { replace: true });
+        const target = from === 'shop' ? '/shop?success=true' : '/subscriptions?success=true';
+        navigate(target, { replace: true });
       }
     };
 
