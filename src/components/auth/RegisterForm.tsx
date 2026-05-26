@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, UserPlus, Building2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GymApplicationForm } from '@/components/GymApplicationForm';
@@ -382,22 +381,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-lg sm:text-base">Telefono *</Label>
                 <div className="flex gap-2">
-                  <Select
+                  <select
                     value={phonePrefix}
-                    onValueChange={setPhonePrefix}
+                    onChange={(event) => setPhonePrefix(event.target.value)}
+                    className="h-14 w-24 rounded-md border border-input bg-background px-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:h-12"
                   >
-                    <SelectTrigger className="w-24 h-14 sm:h-12 text-base">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="+39">🇮🇹 +39</SelectItem>
-                      <SelectItem value="+33">🇫🇷 +33</SelectItem>
-                      <SelectItem value="+49">🇩🇪 +49</SelectItem>
-                      <SelectItem value="+34">🇪🇸 +34</SelectItem>
-                      <SelectItem value="+44">🇬🇧 +44</SelectItem>
-                      <SelectItem value="+1">🇺🇸 +1</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="+39">🇮🇹 +39</option>
+                    <option value="+33">🇫🇷 +33</option>
+                    <option value="+49">🇩🇪 +49</option>
+                    <option value="+34">🇪🇸 +34</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+1">🇺🇸 +1</option>
+                  </select>
                   <Input
                     id="phone"
                     type="tel"
@@ -432,22 +427,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
               {shouldShowBelt && (
                 <div className="space-y-2">
                   <Label htmlFor="belt" className="text-lg sm:text-base">Cintura</Label>
-                  <Select
+                  <select
                     value={formData.belt}
-                    onValueChange={(value) => setFormData({ ...formData, belt: value })}
+                    onChange={(event) => setFormData({ ...formData, belt: event.target.value })}
+                    className="h-14 w-full rounded-md border border-input bg-background px-3 text-base text-foreground transition-all duration-200 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:h-12"
                   >
-                    <SelectTrigger className="transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 sm:h-12 text-base">
-                      <SelectValue placeholder="Cintura selezionata" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Nessuna">🚫 Nessuna cintura</SelectItem>
-                      <SelectItem value="Bianca">🥋 Bianca</SelectItem>
-                      <SelectItem value="Blu">🥋 Blu</SelectItem>
-                      <SelectItem value="Viola">🥋 Viola</SelectItem>
-                      <SelectItem value="Marrone">🥋 Marrone</SelectItem>
-                      <SelectItem value="Nera">🥋 Nera</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="Nessuna">🚫 Nessuna cintura</option>
+                    <option value="Bianca">🥋 Bianca</option>
+                    <option value="Blu">🥋 Blu</option>
+                    <option value="Viola">🥋 Viola</option>
+                    <option value="Marrone">🥋 Marrone</option>
+                    <option value="Nera">🥋 Nera</option>
+                  </select>
                 </div>
               )}
 
