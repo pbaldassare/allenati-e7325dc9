@@ -177,7 +177,8 @@ export default function Subscriptions() {
       if (error) throw error;
       
       if (data?.url) {
-        window.open(data.url, '_blank');
+        await openCheckoutUrl(data.url);
+        
         
         toast({
           title: "Pagamento in corso",
