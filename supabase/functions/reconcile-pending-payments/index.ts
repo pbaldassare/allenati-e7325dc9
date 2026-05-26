@@ -96,9 +96,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Idempotency: insert payment FIRST. The UNIQUE constraint on
-        // transaction_id (= stripe payment_intent) guarantees that two
-        // concurrent reconciliations cannot both create a subscription.
         const paymentIntent = session.payment_intent as string | null;
         if (!paymentIntent) {
           results.push({ sessionId, skipped: "no_payment_intent" });
@@ -111,119 +108,24 @@ serve(async (req) => {
           continue;
         }
 
-        const { data: paymentData, error: paymentErr } = await supabase
-          .from("payments")
-          .insert({
-            user_id: user.id,
-            amount: (session.amount_total ?? 0) / 100,
-            currency: session.currency?.toUpperCase() || "EUR",
-            status: "completed",
-            payment_method: "stripe",
-            transaction_id: paymentIntent,
-            reference_type: plan_id ? "subscription" : "credits",
-            reference_id: plan_id || gym_id,
-            processed_at: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-
-        if (paymentErr) {
-          // 23505 = unique_violation → another worker already processed this
-          if ((paymentErr as any).code === "23505") {
-            results.push({ sessionId, already_processed: true });
-            continue;
+        const { data: finalized, error: finalizeErr } = await supabase.rpc(
+          "finalize_stripe_payment",
+          {
+            _user_id: user.id,
+            _gym_id: gym_id,
+            _plan_id: plan_id || null,
+            _credits_amount: credits_amount ? parseInt(credits_amount as string, 10) : null,
+            _amount: (session.amount_total ?? 0) / 100,
+            _currency: session.currency?.toUpperCase() || "EUR",
+            _payment_intent: paymentIntent,
+            _session_id: sessionId,
+            _reconciled: true,
           }
-          throw paymentErr;
-        }
+        );
 
-        const paymentId = paymentData?.id ?? null;
-        let subscriptionId: string | null = null;
+        if (finalizeErr) throw finalizeErr;
 
-        if (plan_id) {
-          const { data: planData } = await supabase
-            .from("subscription_plans")
-            .select("*")
-            .eq("id", plan_id)
-            .single();
-
-          if (planData) {
-            const startsAt = new Date();
-            const expiresAt = new Date();
-            if (planData.duration_months > 0) {
-              expiresAt.setMonth(expiresAt.getMonth() + planData.duration_months);
-            } else if (planData.duration_days > 0) {
-              expiresAt.setDate(expiresAt.getDate() + planData.duration_days);
-            } else {
-              expiresAt.setDate(expiresAt.getDate() + 30);
-            }
-
-            const { data: subData } = await supabase
-              .from("user_subscriptions")
-              .insert({
-                user_id: user.id,
-                plan_id,
-                gym_id,
-                status: "active",
-                starts_at: startsAt.toISOString(),
-                expires_at: expiresAt.toISOString(),
-                activated_at: startsAt.toISOString(),
-              })
-              .select("id")
-              .single();
-
-            subscriptionId = subData?.id ?? null;
-
-            if (paymentId && subscriptionId) {
-              await supabase
-                .from("payments")
-                .update({ reference_id: subscriptionId })
-                .eq("id", paymentId);
-            }
-
-            if (planData.credits_included > 0) {
-              await supabase.from("credits_transactions").insert({
-                user_id: user.id,
-                gym_id,
-                amount: planData.credits_included,
-                balance_after: planData.credits_included,
-                transaction_type: "subscription",
-                description: `Crediti inclusi nell'abbonamento ${planData.name}`,
-                reference_id: subscriptionId,
-              });
-            }
-          }
-        } else if (credits_amount) {
-          const creditsNum = parseInt(credits_amount as string);
-          await supabase.from("credits_transactions").insert({
-            user_id: user.id,
-            gym_id,
-            amount: creditsNum,
-            balance_after: creditsNum,
-            transaction_type: "purchase",
-            description: `Acquisto di ${creditsNum} crediti`,
-            reference_id: paymentId,
-          });
-        }
-
-        await supabase.from("admin_action_logs").insert({
-          action: "payment_completed",
-          admin_id: user.id,
-          target_type: plan_id ? "subscription" : "credits",
-          target_id: subscriptionId || paymentId || gym_id,
-          new_data: {
-            session_id: sessionId,
-            payment_id: paymentId,
-            subscription_id: subscriptionId,
-            gym_id,
-            amount: (session.amount_total ?? 0) / 100,
-            currency: session.currency?.toUpperCase() || "EUR",
-            stripe_payment_intent: paymentIntent,
-            completed_at: new Date().toISOString(),
-            reconciled: true,
-          },
-        });
-
-        results.push({ sessionId, processed: true, type: plan_id ? "subscription" : "credits" });
+        results.push({ sessionId, processed: true, result: finalized });
       } catch (e) {
         console.error("Reconcile error for session", sessionId, e);
         results.push({ sessionId, error: (e as Error).message });
