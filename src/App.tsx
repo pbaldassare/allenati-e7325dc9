@@ -132,6 +132,7 @@ const App = () => {
                       <BrowserRouter>
                         <TourProvider>
                           <AppTour />
+                          <PaymentReconciler />
                           <ErrorBoundary scope="routes">
                             <Suspense fallback={<RouteFallback />}>
                               <Routes>
