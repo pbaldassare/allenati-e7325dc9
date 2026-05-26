@@ -22,6 +22,12 @@ import { Auth } from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PaymentVerification } from "./components/PaymentVerification";
 import { MobileOptimizations } from "./components/MobileOptimizations";
+import { usePaymentReconciliation } from "./hooks/usePaymentReconciliation";
+
+const PaymentReconciler = () => {
+  usePaymentReconciliation();
+  return null;
+};
 
 // Lazy layouts
 const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(m => ({ default: m.AdminLayout })));
@@ -126,6 +132,7 @@ const App = () => {
                       <BrowserRouter>
                         <TourProvider>
                           <AppTour />
+                          <PaymentReconciler />
                           <ErrorBoundary scope="routes">
                             <Suspense fallback={<RouteFallback />}>
                               <Routes>
