@@ -10,13 +10,15 @@ interface CreditsBalanceProps {
   onPurchaseClick?: () => void;
 }
 
+interface ActiveSubscription {
+  plan_name: string;
+  expires_at: string;
+  unlimited_access: boolean;
+}
+
 interface UserCredits {
   current_credits: number;
-  active_subscription?: {
-    plan_name: string;
-    expires_at: string;
-    unlimited_access: boolean;
-  };
+  active_subscriptions: ActiveSubscription[];
 }
 
 export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
@@ -38,9 +40,9 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .eq('gym_id', selectedGym.id)
           .single();
 
-        // Get most recent active subscription for selected gym
-        // (user may have multiple active subscriptions, e.g. Quota Iscrizione + Mensile)
-        const { data: subscription } = await supabase
+        // Get all active subscriptions for selected gym
+        // (user may have multiple active subscriptions, e.g. Mensile + Quota Iscrizione)
+        const { data: subscriptions } = await supabase
           .from('user_subscriptions')
           .select(`
             expires_at,
@@ -53,17 +55,25 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .eq('gym_id', selectedGym.id)
           .eq('status', 'active')
           .gt('expires_at', new Date().toISOString())
-          .order('expires_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('expires_at', { ascending: false });
+
+        const activeSubscriptions = (subscriptions || [])
+          .map((subscription) => ({
+            plan_name: subscription.subscription_plans.name,
+            expires_at: subscription.expires_at,
+            unlimited_access: subscription.subscription_plans.unlimited_access,
+          }))
+          .sort((a, b) => {
+            if (a.unlimited_access !== b.unlimited_access) {
+              return a.unlimited_access ? -1 : 1;
+            }
+
+            return new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime();
+          });
 
         setCreditsData({
           current_credits: gymCredits?.credits || 0,
-          active_subscription: subscription ? {
-            plan_name: subscription.subscription_plans.name,
-            expires_at: subscription.expires_at,
-            unlimited_access: subscription.subscription_plans.unlimited_access
-          } : undefined
+          active_subscriptions: activeSubscriptions,
         });
       } catch (error) {
         console.error('Error fetching credits:', error);
@@ -102,29 +112,33 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           </Badge>
         </div>
 
-        {/* Active Subscription */}
-        {creditsData?.active_subscription && (
-          <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-            <div className="flex items-center gap-2">
-              {creditsData.active_subscription.unlimited_access ? (
-                <Infinity className="h-4 w-4 text-primary" />
-              ) : (
-                <Calendar className="h-4 w-4 text-primary" />
-              )}
-              <span className="font-medium text-sm">
-                {creditsData.active_subscription.plan_name}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Scade il {new Date(creditsData.active_subscription.expires_at).toLocaleDateString('it-IT')}
-            </div>
-            {creditsData.active_subscription.unlimited_access && (
-              <Badge variant="default" className="text-xs">
-                Accesso Illimitato
-              </Badge>
-            )}
+        {/* Active Subscriptions */}
+        {creditsData?.active_subscriptions.length ? (
+          <div className="space-y-2">
+            {creditsData.active_subscriptions.map((subscription) => (
+              <div key={`${subscription.plan_name}-${subscription.expires_at}`} className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  {subscription.unlimited_access ? (
+                    <Infinity className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Calendar className="h-4 w-4 text-primary" />
+                  )}
+                  <span className="font-medium text-sm">
+                    {subscription.plan_name}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Scade il {new Date(subscription.expires_at).toLocaleDateString('it-IT')}
+                </div>
+                {subscription.unlimited_access && (
+                  <Badge variant="default" className="text-xs">
+                    Accesso Illimitato
+                  </Badge>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+        ) : null}
 
         {/* Purchase Button */}
         {onPurchaseClick && (
