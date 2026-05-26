@@ -96,19 +96,13 @@ serve(async (req) => {
           continue;
         }
 
-        // Double-check idempotency by transaction_id
+        // Idempotency: insert payment FIRST. The UNIQUE constraint on
+        // transaction_id (= stripe payment_intent) guarantees that two
+        // concurrent reconciliations cannot both create a subscription.
         const paymentIntent = session.payment_intent as string | null;
-        if (paymentIntent) {
-          const { data: existingPayment } = await supabase
-            .from("payments")
-            .select("id")
-            .eq("transaction_id", paymentIntent)
-            .eq("status", "completed")
-            .maybeSingle();
-          if (existingPayment) {
-            results.push({ sessionId, already_processed: true });
-            continue;
-          }
+        if (!paymentIntent) {
+          results.push({ sessionId, skipped: "no_payment_intent" });
+          continue;
         }
 
         const { user_id, plan_id, gym_id, credits_amount } = session.metadata || {};
@@ -117,8 +111,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Insert payment record
-        const { data: paymentData } = await supabase
+        const { data: paymentData, error: paymentErr } = await supabase
           .from("payments")
           .insert({
             user_id: user.id,
@@ -133,6 +126,15 @@ serve(async (req) => {
           })
           .select("id")
           .single();
+
+        if (paymentErr) {
+          // 23505 = unique_violation → another worker already processed this
+          if ((paymentErr as any).code === "23505") {
+            results.push({ sessionId, already_processed: true });
+            continue;
+          }
+          throw paymentErr;
+        }
 
         const paymentId = paymentData?.id ?? null;
         let subscriptionId: string | null = null;
