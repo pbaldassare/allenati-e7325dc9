@@ -38,7 +38,8 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .eq('gym_id', selectedGym.id)
           .single();
 
-        // Get active subscription for selected gym
+        // Get most recent active subscription for selected gym
+        // (user may have multiple active subscriptions, e.g. Quota Iscrizione + Mensile)
         const { data: subscription } = await supabase
           .from('user_subscriptions')
           .select(`
@@ -52,7 +53,9 @@ export const CreditsBalance = ({ onPurchaseClick }: CreditsBalanceProps) => {
           .eq('gym_id', selectedGym.id)
           .eq('status', 'active')
           .gt('expires_at', new Date().toISOString())
-          .single();
+          .order('expires_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         setCreditsData({
           current_credits: gymCredits?.credits || 0,
