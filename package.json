@@ -15,6 +15,7 @@
     "@capacitor/cli": "^7.5.0",
     "@capacitor/core": "^7.5.0",
     "@capacitor/ios": "^7.5.0",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "^7.0.5",
     "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
     "@fontsource/inter": "^5.2.6",

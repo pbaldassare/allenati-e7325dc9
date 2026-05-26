@@ -9,6 +9,7 @@
         "@capacitor/cli": "^7.5.0",
         "@capacitor/core": "^7.5.0",
         "@capacitor/ios": "^7.5.0",
+        "@capacitor/preferences": "^8.0.1",
         "@capacitor/status-bar": "^7.0.5",
         "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
         "@fontsource/inter": "^5.2.6",
@@ -119,6 +120,8 @@
     "@capacitor/core": ["@capacitor/core@7.5.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-4Y4trISe2Bp3lwsoGFoQIvgX4hiZO8S1Slmbz6oFaMxAuEc4noipQGCQx974PF4glwVVe/8+H3P9iEmCXtrUgA=="],
 
     "@capacitor/ios": ["@capacitor/ios@7.5.0", "", { "peerDependencies": { "@capacitor/core": "^7.5.0" } }, "sha512-HlEWLjmPMSyjD8pM2FSTYF7a7aoYDdrlUoA3Ybm8OnmOaby3R7L8jpzJr96igh/i2SpsHvDI7v3sO2FhSNKCKA=="],
+
+    "@capacitor/preferences": ["@capacitor/preferences@8.0.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/preferences/-/preferences-8.0.1.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-T6no3ebi79XJCk91U3Jp/liJUwgBdvHR+s6vhvPkPxSuch7z3zx5Rv1bdWM6sWruNx+pViuEGqZvbfCdyBvcHQ=="],
 
     "@capacitor/status-bar": ["@capacitor/status-bar@7.0.5", "", { "peerDependencies": { "@capacitor/core": ">=7.0.0" } }, "sha512-d0DI/Usy4RrNiV5xfnypXNRLmWYMixC2yAUAwe6sCQQ0HF7oskDf4RpCxcZqbxnpc4H4A0qqiOSltfJLFAYshg=="],
 
