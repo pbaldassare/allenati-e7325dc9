@@ -2223,6 +2223,20 @@ export type Database = {
         Returns: boolean
       }
       demote_super_instructor: { Args: { _user_id: string }; Returns: boolean }
+      finalize_stripe_payment: {
+        Args: {
+          _amount?: number
+          _credits_amount?: number
+          _currency?: string
+          _gym_id: string
+          _payment_intent?: string
+          _plan_id?: string
+          _reconciled?: boolean
+          _session_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       fix_instructor_privilege_inconsistencies: {
         Args: never
         Returns: {
