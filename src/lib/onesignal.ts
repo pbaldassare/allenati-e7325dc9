@@ -11,25 +11,34 @@ const ONESIGNAL_APP_ID = '2936021b-a20f-44bb-81dd-0cba1d64c481';
 
 let isInitialized = false;
 
+const canUseOneSignal = () =>
+  typeof window !== 'undefined' &&
+  ['allenati.me', 'www.allenati.me', 'admin.allenati.me', 'localhost'].includes(window.location.hostname);
+
 /**
  * Initialize OneSignal SDK
  */
 export const initOneSignal = (): void => {
   if (isInitialized) return;
+  if (!canUseOneSignal()) return;
   
   try {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        safari_web_id: 'web.onesignal.auto.2900aeea-27da-4bc5-9f95-2e3d9a76781c',
-        notifyButton: {
-          enable: false, // We handle this in-app
-        },
-        allowLocalhostAsSecureOrigin: true,
-      });
-      console.log('OneSignal: SDK initialized');
-      isInitialized = true;
+      try {
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          safari_web_id: 'web.onesignal.auto.2900aeea-27da-4bc5-9f95-2e3d9a76781c',
+          notifyButton: {
+            enable: false, // We handle this in-app
+          },
+          allowLocalhostAsSecureOrigin: true,
+        });
+        console.log('OneSignal: SDK initialized');
+        isInitialized = true;
+      } catch (error) {
+        console.warn('OneSignal: Initialization skipped', error);
+      }
     });
   } catch (error) {
     console.error('OneSignal: Initialization error', error);

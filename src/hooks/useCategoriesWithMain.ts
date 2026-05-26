@@ -1,15 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CategoryWithMainCategory } from '@/types/categories';
 
-export const useCategoriesWithMain = (gymId?: string) => {
+export const useCategoriesWithMain = (gymId?: string, enabled = true) => {
   const [categories, setCategories] = useState<CategoryWithMainCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
+      if (!enabled) {
+        setCategories([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       try {
+        setLoading(true);
+        setError(null);
         let query = supabase
           .from('course_categories')
           .select(`
@@ -31,10 +39,11 @@ export const useCategoriesWithMain = (gymId?: string) => {
       } finally {
         setLoading(false);
       }
-    };
+    }, [gymId, enabled]);
 
+  useEffect(() => {
     fetchCategories();
-  }, [gymId]);
+  }, [fetchCategories]);
 
-  return { categories, loading, error, refetch: () => setLoading(true) };
+  return { categories, loading, error, refetch: fetchCategories };
 };
