@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { openCheckoutUrl } from '@/lib/openCheckout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +78,7 @@ export const CreditsPurchase = ({ onPurchaseComplete }: CreditsPurchaseProps) =>
         if (error) throw error;
         
         if (data?.url) {
-          window.open(data.url, '_blank');
+          await openCheckoutUrl(data.url);
           
           toast({
             title: "Pagamento in corso",

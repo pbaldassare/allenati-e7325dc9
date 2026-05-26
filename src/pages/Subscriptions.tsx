@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { openCheckoutUrl } from '@/lib/openCheckout';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -177,7 +178,8 @@ export default function Subscriptions() {
       if (error) throw error;
       
       if (data?.url) {
-        window.open(data.url, '_blank');
+        await openCheckoutUrl(data.url);
+        
         
         toast({
           title: "Pagamento in corso",
