@@ -61,7 +61,9 @@ export default function CreditsSubscriptionCard() {
         .eq('gym_id', selectedGym.id)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
-        .single();
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       setCredits(creditsData?.credits || 0);
       setSubscription(subscriptionData);
