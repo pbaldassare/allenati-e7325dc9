@@ -71,6 +71,7 @@ export const Dashboard = () => {
         .single();
 
       // Carica abbonamento attivo per la palestra selezionata
+      // NB: usa order + limit per gestire eventuali duplicati senza errori
       const { data: subscriptionData } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -86,7 +87,9 @@ export const Dashboard = () => {
         .eq('gym_id', gymId)
         .eq('status', 'active')
         .gte('expires_at', new Date().toISOString())
-        .single();
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       setUserCredits(creditsData?.credits || 0);
       setUserSubscription(subscriptionData);
