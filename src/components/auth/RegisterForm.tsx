@@ -54,7 +54,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const { register } = useAuth();
   const { toast } = useToast();
   const [shouldShowBelt, setShouldShowBelt] = useState(false);
-  const { categories } = useCategoriesWithMain();
+  const { categories } = useCategoriesWithMain(formData.gymId, Boolean(formData.gymId));
 
   const [gymsLoading, setGymsLoading] = useState(true);
   const [emailValidation, setEmailValidation] = useState<EmailValidationResult>({ isValid: true });
