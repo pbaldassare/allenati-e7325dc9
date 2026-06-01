@@ -1,36 +1,46 @@
-## Problema trovato
-La query di registrazione verso `gyms` fallisce ancora con:
+## Obiettivo
 
-```text
-permission denied for function has_role
-```
+Quando un utente prova a registrarsi con un codice fiscale (o email) già presente nel database, mostrare un messaggio chiaro tipo **"Account già esistente. Accedi o recupera la password."** invece del generico "Database error saving new user".
 
-La causa non è più la policy owner già corretta, ma la policy esistente **"Admins can manage all gyms"**: è definita per il ruolo `public`, quindi viene valutata anche dagli utenti non loggati durante la registrazione. Questa policy chiama `has_role(...)`, ma `anon` non ha permesso di eseguire quella funzione, quindi Supabase blocca tutta la lettura delle palestre.
+## Approccio
 
-## Piano di correzione
-1. Aggiornare le policy RLS su `public.gyms`:
-   - mantenere una policy separata per utenti non loggati che mostra solo palestre attive;
-   - mantenere una policy separata per utenti autenticati che mostra le palestre attive;
-   - ricreare **"Admins can manage all gyms"** limitandola a `authenticated`, così `anon` non valuta più `has_role(...)`.
+Due livelli di difesa, entrambi solo lato frontend (nessuna modifica DB / trigger):
 
-2. Verificare con una chiamata anonima alla REST API Supabase che:
-   - `/gyms?select=id,name,city&is_active=eq.true` risponda `200`;
-   - vengano restituite le 10 palestre attive già presenti nel database.
+### 1. Pre-check prima della signup (preventivo)
 
-3. Non modificare il frontend: `RegisterForm.tsx` sta già chiamando correttamente `gyms` con `id`, `name`, `city` e `is_active = true`; il problema è solo RLS.
+In `src/components/auth/RegisterForm.tsx`, prima di chiamare `supabase.auth.signUp`:
 
-## Dettaglio tecnico
-La migrazione applicherà questa logica:
+- Query a `public.profiles` su `fiscal_code` (normalizzato uppercase) → se esiste, blocca subito con messaggio "Esiste già un account con questo codice fiscale. Accedi o usa 'Password dimenticata'."
+- Opzionale: stesso check su `email`.
 
-```sql
-DROP POLICY IF EXISTS "Admins can manage all gyms" ON public.gyms;
+Questo evita di creare un auth user fantasma e dà feedback immediato.
 
-CREATE POLICY "Admins can manage all gyms"
-ON public.gyms
-FOR ALL
-TO authenticated
-USING (has_role(auth.uid(), 'admin'::app_role))
-WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-```
+### 2. Traduzione errori post-signup (fallback)
 
-Le policy anon/auth per la lettura delle palestre attive resteranno separate, evitando che funzioni riservate agli utenti loggati vengano valutate durante la registrazione.
+Nel `catch` della signup, mappare i messaggi Supabase più comuni in italiano user-friendly:
+
+| Errore originale | Messaggio mostrato |
+|---|---|
+| `Database error saving new user` / `duplicate key … fiscal_code` | "Account già esistente con questo codice fiscale. Effettua il login." |
+| `User already registered` | "Email già registrata. Effettua il login." |
+| `duplicate key … profiles_user_id_key` | stesso messaggio account esistente |
+| altri | messaggio generico già presente |
+
+### 3. CTA "Vai al login" nel banner di errore
+
+Quando il messaggio è "account già esistente", il banner rosso include un bottone/link **"Accedi"** che chiama `onSwitchToLogin()` (prop già presente nel form), così l'utente passa al login con un click.
+
+## File toccati
+
+- `src/components/auth/RegisterForm.tsx` — unico file modificato:
+  - aggiunta funzione `checkExistingAccount(fiscalCode, email)` 
+  - mapper `translateSignupError(err)` 
+  - rendering condizionale del CTA "Accedi" nel banner errore
+
+## Cosa NON viene toccato
+
+- Nessuna migration, nessun trigger DB.
+- Nessuna modifica a `handle_new_user`.
+- Nessuna modifica al caso Danila specifico (account con email typo "hormail.it") — quello resta da gestire separatamente se serve.
+
+Confermi e procedo?
