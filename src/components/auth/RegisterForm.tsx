@@ -42,6 +42,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     privacyAccepted: false,
   });
   const [error, setError] = useState('');
+  const [errorIsExistingAccount, setErrorIsExistingAccount] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [showGymApplication, setShowGymApplication] = useState(false);
@@ -184,6 +185,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
     setIsLoading(true);
     setError('');
+    setErrorIsExistingAccount(false);
 
     try {
       // Register the user
@@ -243,15 +245,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
       
     } catch (err: any) {
       console.error('Registration error:', err);
-      if (err.message?.includes('User already registered')) {
-        setError('Un utente con questa email è già registrato');
-      } else if (err.message?.includes('Password should be at least 6 characters')) {
+      const msg = (err?.message || '').toLowerCase();
+      const isExisting =
+        msg.includes('user already registered') ||
+        msg.includes('already been registered') ||
+        msg.includes('database error saving new user') ||
+        (msg.includes('duplicate key') && msg.includes('fiscal_code')) ||
+        (msg.includes('duplicate key') && msg.includes('profiles_user_id_key')) ||
+        msg.includes('email_exists');
+
+      if (isExisting) {
+        setErrorIsExistingAccount(true);
+        setError('Account già esistente. Effettua il login o recupera la password.');
+      } else if (msg.includes('password should be at least 6 characters')) {
+        setErrorIsExistingAccount(false);
         setError('La password deve essere di almeno 6 caratteri');
-      } else if (err.message?.includes('Invalid email')) {
+      } else if (msg.includes('invalid email')) {
+        setErrorIsExistingAccount(false);
         setError('Formato email non valido');
-      } else if (err.message?.includes('duplicate key value') && err.message?.includes('fiscal_code')) {
-        setError('Questo codice fiscale è già registrato nel sistema');
       } else {
+        setErrorIsExistingAccount(false);
         setError(err.message || 'Errore durante la registrazione');
       }
     } finally {
@@ -317,7 +330,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="space-y-2">
+                    <p>{error}</p>
+                    {errorIsExistingAccount && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={onSwitchToLogin}
+                        className="mt-1"
+                      >
+                        Vai al login
+                      </Button>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
               
