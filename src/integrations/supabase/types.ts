@@ -2208,6 +2208,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_registration_account_exists: {
+        Args: { _email?: string; _fiscal_code?: string }
+        Returns: Json
+      }
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       create_course_chat: {
         Args: { _course_id: string; _course_name: string; _created_by: string }
