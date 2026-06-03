@@ -25,6 +25,12 @@ interface RegisterFormProps {
   onShowGymApplication?: (show: boolean) => void;
 }
 
+type ExistingAccountCheck = {
+  exists?: boolean;
+  email_exists?: boolean;
+  fiscal_code_exists?: boolean;
+};
+
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onShowGymApplication }) => {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -59,6 +65,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
   const [gymsLoading, setGymsLoading] = useState(true);
   const [emailValidation, setEmailValidation] = useState<EmailValidationResult>({ isValid: true });
   const [emailValidator] = useState(() => createEmailValidator(setEmailValidation));
+
+  const checkExistingAccount = async (email: string, fiscalCode: string): Promise<ExistingAccountCheck> => {
+    const { data, error } = await (supabase as any).rpc('check_registration_account_exists', {
+      _email: email.trim().toLowerCase(),
+      _fiscal_code: fiscalCode.trim().toUpperCase(),
+    });
+
+    if (error) {
+      console.warn('Existing account pre-check failed:', error);
+      return { exists: false };
+    }
+
+    return data ?? { exists: false };
+  };
 
   useEffect(() => {
     loadGyms();
@@ -117,6 +137,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setErrorIsExistingAccount(false);
     
     // Validazione accettazione privacy
     if (!formData.privacyAccepted) {
@@ -184,10 +206,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     }
 
     setIsLoading(true);
-    setError('');
-    setErrorIsExistingAccount(false);
 
     try {
+      const existingAccount = await checkExistingAccount(formData.email, formData.fiscalCode);
+
+      if (existingAccount.exists) {
+        setErrorIsExistingAccount(true);
+        setError(
+          existingAccount.fiscal_code_exists
+            ? 'Account già esistente con questo codice fiscale. Effettua il login o recupera la password.'
+            : 'Email già registrata. Effettua il login o recupera la password.'
+        );
+        return;
+      }
+
       // Register the user
       const { data: authData, error: registerError } = await supabase.auth.signUp({
         email: formData.email,
