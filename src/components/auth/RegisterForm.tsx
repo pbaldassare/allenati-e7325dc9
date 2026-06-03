@@ -206,10 +206,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     }
 
     setIsLoading(true);
-    setError('');
-    setErrorIsExistingAccount(false);
 
     try {
+      const existingAccount = await checkExistingAccount(formData.email, formData.fiscalCode);
+
+      if (existingAccount.exists) {
+        setErrorIsExistingAccount(true);
+        setError(
+          existingAccount.fiscal_code_exists
+            ? 'Account già esistente con questo codice fiscale. Effettua il login o recupera la password.'
+            : 'Email già registrata. Effettua il login o recupera la password.'
+        );
+        return;
+      }
+
       // Register the user
       const { data: authData, error: registerError } = await supabase.auth.signUp({
         email: formData.email,
