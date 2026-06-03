@@ -278,7 +278,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     } catch (err: any) {
       console.error('Registration error:', err);
       const msg = (err?.message || '').toLowerCase();
-      const fallbackExistingAccount = msg.includes('database error saving new user')
+      const fallbackExistingAccount: ExistingAccountCheck = msg.includes('database error saving new user')
         ? await checkExistingAccount(formData.email, formData.fiscalCode)
         : { exists: false };
       const isExisting =
