@@ -278,7 +278,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     } catch (err: any) {
       console.error('Registration error:', err);
       const msg = (err?.message || '').toLowerCase();
+      const fallbackExistingAccount: ExistingAccountCheck = msg.includes('database error saving new user')
+        ? await checkExistingAccount(formData.email, formData.fiscalCode)
+        : { exists: false };
       const isExisting =
+        fallbackExistingAccount.exists ||
         msg.includes('user already registered') ||
         msg.includes('already been registered') ||
         msg.includes('database error saving new user') ||
@@ -288,7 +292,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
 
       if (isExisting) {
         setErrorIsExistingAccount(true);
-        setError('Account già esistente. Effettua il login o recupera la password.');
+        setError(
+          fallbackExistingAccount.fiscal_code_exists
+            ? 'Account già esistente con questo codice fiscale. Effettua il login o recupera la password.'
+            : 'Account già esistente. Effettua il login o recupera la password.'
+        );
       } else if (msg.includes('password should be at least 6 characters')) {
         setErrorIsExistingAccount(false);
         setError('La password deve essere di almeno 6 caratteri');

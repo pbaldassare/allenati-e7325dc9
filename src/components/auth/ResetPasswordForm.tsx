@@ -53,51 +53,8 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps) 
     setIsLoading(true);
     
     try {
-      console.log('Validating token and updating password');
-      
-      // First, validate the token
-      const { data: tokenData, error: tokenError } = await supabase
-        .from('password_reset_tokens')
-        .select('user_id, email, expires_at, used_at')
-        .eq('token', token)
-        .single();
-      
-      if (tokenError || !tokenData) {
-        console.error('Token validation error:', tokenError);
-        toast({
-          title: "Errore",
-          description: "Token non valido o scaduto",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if token is expired
-      if (new Date(tokenData.expires_at) < new Date()) {
-        toast({
-          title: "Errore",
-          description: "Il token è scaduto. Richiedi un nuovo reset password.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if token has already been used
-      if (tokenData.used_at) {
-        toast({
-          title: "Errore",
-          description: "Il token è già stato utilizzato. Richiedi un nuovo reset password.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Use user_id from token validation (no need for native auth call)
-
-      // Update password using admin endpoint - we need to create a function for this
-      const { error: updateError } = await supabase.functions.invoke('update-user-password', {
+      const { data, error: updateError } = await supabase.functions.invoke('update-user-password', {
         body: {
-          user_id: tokenData.user_id,
           new_password: password,
           token: token
         }
@@ -107,17 +64,20 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps) 
         console.error('Password update error:', updateError);
         toast({
           title: "Errore",
-          description: "Errore durante l'aggiornamento della password",
+          description: "Link non valido o scaduto. Richiedi un nuovo reset password.",
           variant: "destructive"
         });
         return;
       }
 
-      // Mark token as used
-      await supabase
-        .from('password_reset_tokens')
-        .update({ used_at: new Date().toISOString() })
-        .eq('token', token);
+      if (data?.error) {
+        toast({
+          title: "Errore",
+          description: data.error,
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: "Successo",

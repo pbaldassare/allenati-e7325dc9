@@ -14,7 +14,6 @@ const corsHeaders = {
 };
 
 interface UpdatePasswordRequest {
-  user_id: string;
   new_password: string;
   token: string;
 }
@@ -26,16 +25,25 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { user_id, new_password, token }: UpdatePasswordRequest = await req.json();
+    const { new_password, token }: UpdatePasswordRequest = await req.json();
 
-    console.log("Processing password update for user:", user_id);
+    if (!token || !new_password || new_password.length < 6) {
+      return new Response(
+        JSON.stringify({ error: "Token o password non validi" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Processing password update from reset token");
 
     // Validate the token one more time
     const { data: tokenData, error: tokenError } = await supabase
       .from('password_reset_tokens')
       .select('user_id, expires_at, used_at')
       .eq('token', token)
-      .eq('user_id', user_id)
       .single();
 
     if (tokenError || !tokenData) {
@@ -73,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Update user password using admin API
     const { error: updateError } = await supabase.auth.admin.updateUserById(
-      user_id,
+      tokenData.user_id,
       { password: new_password }
     );
 
@@ -88,7 +96,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Password updated successfully for user:", user_id);
+    const { error: markUsedError } = await supabase
+      .from('password_reset_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('token', token);
+
+    if (markUsedError) {
+      console.error('Error marking reset token as used:', markUsedError);
+    }
+
+    console.log("Password updated successfully for user:", tokenData.user_id);
 
     return new Response(
       JSON.stringify({ message: "Password updated successfully" }),
