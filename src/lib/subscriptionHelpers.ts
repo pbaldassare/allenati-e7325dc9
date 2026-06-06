@@ -37,9 +37,8 @@ export const hasActiveUnlimitedSubscription = async (userId: string, gymId: stri
  */
 export const getUserActiveSubscriptions = async (userId: string, gymId: string): Promise<ActiveSubscription[]> => {
   try {
-    console.log('🔍 [getUserActiveSubscriptions] Checking subscriptions for user:', userId, 'gym:', gymId);
-    
-    const { data, error } = await supabase
+    // 1) Subscriptions whose subscription.gym_id matches directly
+    const { data: directData, error: directError } = await supabase
       .from('user_subscriptions')
       .select(`
         id,
@@ -52,7 +51,8 @@ export const getUserActiveSubscriptions = async (userId: string, gymId: string):
         subscription_plans!inner(
           unlimited_access,
           credits_included,
-          name
+          name,
+          is_multi_gym
         )
       `)
       .eq('user_id', userId)
@@ -61,16 +61,58 @@ export const getUserActiveSubscriptions = async (userId: string, gymId: string):
       .gt('expires_at', new Date().toISOString())
       .order('activated_at', { ascending: false });
 
-    console.log('🔍 [getUserActiveSubscriptions] Active subscriptions:', data);
-
-    if (error) {
-      console.error('🔍 [getUserActiveSubscriptions] Error:', error);
-      return [];
+    if (directError) {
+      console.error('[getUserActiveSubscriptions] direct error:', directError);
     }
 
-    return (data || []) as ActiveSubscription[];
+    // 2) Multi-gym subscriptions where the gym is included via subscription_plan_gyms,
+    //    even if subscription.gym_id != gymId
+    const { data: linkedPlanRows } = await supabase
+      .from('subscription_plan_gyms')
+      .select('plan_id')
+      .eq('gym_id', gymId);
+
+    const linkedPlanIds = (linkedPlanRows || []).map(r => r.plan_id);
+
+    let multiData: any[] = [];
+    if (linkedPlanIds.length > 0) {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select(`
+          id,
+          plan_id,
+          gym_id,
+          expires_at,
+          starts_at,
+          status,
+          activated_at,
+          subscription_plans!inner(
+            unlimited_access,
+            credits_included,
+            name,
+            is_multi_gym
+          )
+        `)
+        .eq('user_id', userId)
+        .in('plan_id', linkedPlanIds)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString())
+        .order('activated_at', { ascending: false });
+
+      if (error) {
+        console.error('[getUserActiveSubscriptions] multi error:', error);
+      } else {
+        multiData = data || [];
+      }
+    }
+
+    // Merge unique by id
+    const byId = new Map<string, any>();
+    [...(directData || []), ...multiData].forEach(s => byId.set(s.id, s));
+
+    return Array.from(byId.values()) as ActiveSubscription[];
   } catch (error) {
-    console.error('🔍 [getUserActiveSubscriptions] Error getting active subscriptions:', error);
+    console.error('[getUserActiveSubscriptions] error:', error);
     return [];
   }
 };
