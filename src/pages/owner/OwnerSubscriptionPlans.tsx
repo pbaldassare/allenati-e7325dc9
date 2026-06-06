@@ -247,8 +247,20 @@ const OwnerSubscriptionPlans: React.FC = () => {
                   <TableRow key={plan.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{plan.name}</div>
+                        <div className="font-medium flex items-center gap-2 flex-wrap">
+                          {plan.name}
+                          {plan.is_multi_gym && (
+                            <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+                              Multi-palestra ({plan.multi_gyms?.length || 0})
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">{plan.description}</div>
+                        {plan.is_multi_gym && (plan.multi_gyms?.length ?? 0) > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {plan.multi_gyms!.map(g => g.name).join(' · ')}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>€{plan.price.toFixed(2)}</TableCell>
