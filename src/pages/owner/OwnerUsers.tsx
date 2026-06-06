@@ -1227,6 +1227,14 @@ const OwnerUsers = () => {
           setUploadDialogOpen(false);
         }}
       />
+      {/* Manage user gyms dialog */}
+      <ManageUserGymsDialog
+        open={manageGymsOpen}
+        onOpenChange={(o) => { setManageGymsOpen(o); if (!o) setManageGymsUser(null); }}
+        userId={manageGymsUser?.user_id ?? null}
+        userName={manageGymsUser ? `${manageGymsUser.first_name} ${manageGymsUser.last_name}` : ''}
+        onSaved={() => reloadMembers()}
+      />
     </div>
   );
 };
