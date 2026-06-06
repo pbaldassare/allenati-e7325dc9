@@ -45,31 +45,63 @@ const OwnerSubscriptionPlans: React.FC = () => {
   const loadPlans = async () => {
     try {
       if (!selectedGym) {
-        console.log('🚫 OwnerSubscriptionPlans: No selected gym');
         setPlans([]);
         return;
       }
 
-      console.log('📋 OwnerSubscriptionPlans: Loading plans for gym:', {
-        gymId: selectedGym.id,
-        gymName: selectedGym.name
-      });
-
-      // Load only gym-specific plans
-      const { data, error } = await supabase
+      // 1) Plans whose primary gym is the selected one
+      const { data: primaryPlans, error: primaryError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('gym_id', selectedGym.id)
         .order('created_at', { ascending: false });
+      if (primaryError) throw primaryError;
 
-      if (error) throw error;
-      
-      console.log('✅ OwnerSubscriptionPlans: Plans loaded:', {
-        count: data?.length || 0,
-        plans: data?.map(p => ({ id: p.id, name: p.name }))
-      });
-      
-      setPlans(data || []);
+      // 2) Multi-gym plans that include the selected gym (but whose primary gym is different)
+      const { data: linkedRows, error: linkedError } = await supabase
+        .from('subscription_plan_gyms')
+        .select('plan_id')
+        .eq('gym_id', selectedGym.id);
+      if (linkedError) throw linkedError;
+
+      const linkedIds = (linkedRows || []).map(r => r.plan_id);
+      const extraIds = linkedIds.filter(
+        id => !(primaryPlans || []).some(p => p.id === id)
+      );
+
+      let extraPlans: any[] = [];
+      if (extraIds.length > 0) {
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .in('id', extraIds);
+        if (error) throw error;
+        extraPlans = data || [];
+      }
+
+      const all = [...(primaryPlans || []), ...extraPlans];
+
+      // Load multi-gym labels for the plans that are multi-gym
+      const multiPlanIds = all.filter(p => p.is_multi_gym).map(p => p.id);
+      let labelsByPlan: Record<string, { id: string; name: string }[]> = {};
+      if (multiPlanIds.length > 0) {
+        const { data: links } = await supabase
+          .from('subscription_plan_gyms')
+          .select('plan_id, gym:gyms(id, name)')
+          .in('plan_id', multiPlanIds);
+        (links || []).forEach((row: any) => {
+          if (!row.gym) return;
+          if (!labelsByPlan[row.plan_id]) labelsByPlan[row.plan_id] = [];
+          labelsByPlan[row.plan_id].push({ id: row.gym.id, name: row.gym.name });
+        });
+      }
+
+      const enriched = all.map(p => ({
+        ...p,
+        multi_gyms: labelsByPlan[p.id] || [],
+      }));
+
+      setPlans(enriched);
     } catch (error) {
       console.error('Error loading plans:', error);
       toast({
