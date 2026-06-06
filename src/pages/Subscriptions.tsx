@@ -105,41 +105,62 @@ export default function Subscriptions() {
     if (!user || !selectedGym) return;
 
     try {
-      // Carica solo i piani specifici della palestra selezionata
-      const { data: plansData, error: plansError } = await supabase
+      // 1) Plans primary to the selected gym
+      const { data: primaryPlans, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('is_active', true)
         .eq('is_trial', false)
         .eq('gym_id', selectedGym.id)
         .order('price');
-
       if (plansError) throw plansError;
 
-      // Carica TUTTI gli abbonamenti attivi per la palestra selezionata
-      console.log('Loading subscriptions for user:', user.id, 'gym:', selectedGym.id);
-      const { data: subscriptionsData, error: subscriptionsError } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          *,
-          plan:subscription_plans(*)
-        `)
-        .eq('user_id', user.id)
-        .eq('gym_id', selectedGym.id)
-        .eq('status', 'active')
-        .gte('expires_at', new Date().toISOString())
-        .order('activated_at', { ascending: false });
+      // 2) Multi-gym plans that include the selected gym (primary gym different)
+      const { data: linkedRows } = await supabase
+        .from('subscription_plan_gyms')
+        .select('plan_id')
+        .eq('gym_id', selectedGym.id);
+      const linkedIds = (linkedRows || []).map(r => r.plan_id);
+      const extraIds = linkedIds.filter(id => !(primaryPlans || []).some(p => p.id === id));
 
-      if (subscriptionsError) {
-        console.error('Subscriptions query error:', subscriptionsError);
-        if (subscriptionsError.code !== 'PGRST116') {
-          throw subscriptionsError;
-        }
+      let extraPlans: any[] = [];
+      if (extraIds.length > 0) {
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .in('id', extraIds)
+          .eq('is_active', true)
+          .eq('is_trial', false);
+        if (error) throw error;
+        extraPlans = data || [];
       }
-      
-      console.log('Active subscriptions loaded:', subscriptionsData);
 
-      // Carica crediti utente per la palestra selezionata
+      const allPlans = [...(primaryPlans || []), ...extraPlans].sort(
+        (a, b) => (a.price ?? 0) - (b.price ?? 0)
+      );
+
+      // Active subscriptions (direct + multi-gym)
+      const activeSubs = await getUserActiveSubscriptions(user.id, selectedGym.id);
+      // Hydrate plan details for UI
+      const planIds = Array.from(new Set(activeSubs.map(s => s.plan_id)));
+      let planMap: Record<string, any> = {};
+      if (planIds.length > 0) {
+        const { data: planFull } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .in('id', planIds);
+        (planFull || []).forEach(p => { planMap[p.id] = p; });
+      }
+      const subscriptionsData = activeSubs.map(s => ({
+        id: s.id,
+        status: 'active',
+        starts_at: s.starts_at,
+        expires_at: s.expires_at,
+        auto_renew: false,
+        plan: planMap[s.plan_id] || s.subscription_plans,
+      })) as UserSubscription[];
+
+      // Crediti utente per la palestra selezionata
       const { data: creditsData, error: creditsError } = await supabase
         .from('gym_credits')
         .select('credits')
@@ -151,8 +172,8 @@ export default function Subscriptions() {
         console.error('Credits error:', creditsError);
       }
 
-      setPlans(plansData || []);
-      setActiveSubscriptions(subscriptionsData || []);
+      setPlans(allPlans);
+      setActiveSubscriptions(subscriptionsData);
       setUserCredits(creditsData?.credits || 0);
     } catch (error) {
       console.error('Errore nel caricamento dati:', error);
