@@ -23,6 +23,8 @@ interface SubscriptionPlan {
   features: string[];
   gym_id: string | null;
   created_at: string;
+  is_multi_gym?: boolean;
+  multi_gyms?: { id: string; name: string }[];
 }
 
 const OwnerSubscriptionPlans: React.FC = () => {
