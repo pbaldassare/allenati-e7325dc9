@@ -1,58 +1,46 @@
-# Piani Multi-Palestra
+## Collegamento manuale utenti a più palestre (owner multi-gym)
 
-Aggiungiamo la possibilità per un owner con più palestre di creare abbonamenti (mensili illimitati o a crediti) validi su più palestre del suo gruppo. I crediti sono un **pool unico condiviso** tra tutte le palestre collegate al piano.
+Aggiungiamo all'owner la possibilità di abilitare un utente esistente di una sua palestra anche alle altre palestre del suo gruppo, senza obbligare l'utente a registrarsi/iscriversi di nuovo.
 
-## 1. Database
+### 1. UI Owner — `OwnerUsers.tsx`
 
-### Nuova tabella `subscription_plan_gyms` (ponte)
-- `plan_id` → `subscription_plans.id` (cascade)
-- `gym_id` → `gyms.id` (cascade)
-- PK composta `(plan_id, gym_id)`
-- RLS: lettura pubblica (come `subscription_plans`); insert/update/delete solo per owner delle palestre coinvolte.
+Per ogni utente nella lista, accanto alle azioni esistenti aggiungiamo:
 
-### `subscription_plans`
-- Nuova colonna `is_multi_gym BOOLEAN DEFAULT false`.
-- Il campo `gym_id` esistente resta come **palestra "primaria"** (palestra dove il piano è stato creato / mostrato di default). Per piani multi-gym la lista vera delle palestre abilitate vive in `subscription_plan_gyms`.
+- **Badge "Palestre"**: mostra le palestre dell'owner a cui l'utente è già collegato (es. `Charme`, `Charme Frosinone`).
+- **Pulsante "Gestisci palestre"** (icona `Building2`): apre un dialog.
 
-### `user_subscriptions`
-Nessuna modifica strutturale: `gym_id` resta la palestra di "origine" dell'acquisto. La validità multi-palestra viene determinata via join su `subscription_plan_gyms`.
+**Dialog `ManageUserGymsDialog`**:
+- Lista checkbox di tutte le palestre dell'owner corrente (da `OwnerGymContext.ownedGyms`, solo dove `membership_type = 'owner'`).
+- Per ogni palestra mostra lo stato attuale (`active` / non collegato).
+- L'owner spunta/deseleziona le palestre e preme "Salva".
+- Visibile solo se l'owner ha ≥2 palestre.
 
-### `user_gym_memberships`
-Trigger / funzione: quando viene creata una `user_subscriptions` su un piano `is_multi_gym=true`, inseriamo automaticamente righe `user_gym_memberships` (status `active`, type `member`) per ogni `gym_id` collegato al piano, se non esistenti.
+### 2. Logica salvataggio
 
-## 2. Logica crediti (pool unico)
+Il salvataggio gira su una nuova edge function `owner-manage-user-gyms` (riusa il pattern di `owner-link-member`):
 
-I crediti restano memorizzati come oggi (per subscription), ma la **lettura/spesa** considera l'intera subscription, non la singola palestra.
+Input: `{ user_id, gym_ids: string[] }`
 
-`subscriptionHelpers.ts`:
-- `getUserActiveSubscriptions(userId, gymId)`: oltre alle subscription con `gym_id = gymId`, includere anche quelle di piani `is_multi_gym=true` collegati a quel `gymId` via `subscription_plan_gyms`.
-- `getTotalAvailableCredits` / `hasActiveUnlimitedSubscription` / `isSessionCoveredBySubscription`: nessuna modifica di logica, beneficiano automaticamente del cambio sopra.
-- I crediti spesi (booking) decrementano la stessa subscription qualunque palestra venga prenotata → pool unico naturale.
+Per ogni `gym_id`:
+- verifica che il caller sia effettivamente `owner` in `user_gym_memberships` per quella palestra (sicurezza),
+- upsert riga `user_gym_memberships (user_id, gym_id, status='active', membership_type='member')` se selezionata,
+- per le palestre **deselezionate** dell'owner: set `status = 'inactive'` (non eliminiamo, per preservare storico bookings/subscription).
 
-## 3. UI Owner – creazione/modifica piano
+Non tocchiamo `subscription_plan_gyms` né le subscription esistenti: questo flusso è solo abilitazione/disabilitazione della membership.
 
-In `OwnerSubscriptionPlans` aggiungiamo:
-- Toggle "**Piano multi-palestra**" (visibile solo se l'owner possiede ≥2 palestre).
-- Quando attivo: multi-select con le palestre dove l'owner corrente è `owner` in `user_gym_memberships`. Pre-selezionata la palestra corrente.
-- Su salvataggio: scriviamo `subscription_plans` (con `is_multi_gym=true`, `gym_id` = palestra corrente) e popoliamo `subscription_plan_gyms` con le palestre selezionate.
+### 3. Vincoli e sicurezza
 
-## 4. UI Cliente
+- L'owner può collegare/scollegare **solo** alle palestre di cui è owner.
+- Disabilitare una palestra dove l'utente ha una subscription attiva multi-gym mostra un warning ("L'utente ha un abbonamento attivo valido in questa palestra"), ma resta possibile.
+- Nessun effetto su crediti/abbonamenti esistenti: la membership disattivata blocca solo la prenotazione futura via RLS.
 
-`UserSubscriptionSelector` / pagina `Subscriptions`:
-- Mostra i piani della palestra corrente **+** i piani multi-gym che includono la palestra corrente.
-- Badge "**Valido in più palestre**" + lista palestre incluse.
+### File toccati
 
-Dopo l'acquisto di un piano multi-gym, il trigger crea automaticamente le membership: la palestra extra appare in "Le mie palestre" senza ulteriori azioni.
+- **Nuovo**: `supabase/functions/owner-manage-user-gyms/index.ts`
+- **Nuovo**: `src/components/owner/ManageUserGymsDialog.tsx`
+- **Modificato**: `src/pages/owner/OwnerUsers.tsx` (colonna palestre + bottone + dialog)
+- **Modificato**: `supabase/config.toml` (registra la nuova edge function)
 
-## 5. Migrazione dati esistenti
-Nessuna conversione retroattiva: i piani esistenti restano single-gym (`is_multi_gym=false`). I nuovi piani multi-gym vanno creati dall'owner.
+Nessuna migration DB necessaria: usiamo le tabelle e RLS già esistenti.
 
-## Dettagli tecnici / file toccati
-- **Migration**: nuova tabella `subscription_plan_gyms` + GRANT + RLS + colonna `is_multi_gym` + trigger `on_multi_gym_subscription_insert` che popola `user_gym_memberships`.
-- **Frontend**:
-  - `src/pages/owner/OwnerSubscriptionPlans.tsx` (toggle + multi-select palestre)
-  - `src/lib/subscriptionHelpers.ts` (query estesa multi-gym)
-  - `src/components/UserSubscriptionSelector.tsx` + `src/pages/Subscriptions.tsx` (lista piani estesa + badge)
-- **Context**: `OwnerGymContext` già espone `ownedGyms`, riusato per il multi-select.
-
-Confermi e procedo con migration + codice?
+Confermi e procedo?

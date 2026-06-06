@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard, Eye, Trash2 } from 'lucide-react';
+import { Plus, UserCheck, UserMinus, Crown, Shield, Users, FileText, Phone, CreditCard, Eye, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MedicalCertificateUploadDialog from '@/components/MedicalCertificateUploadDialog';
 import { OwnerUserStats } from '@/components/owner/OwnerUserStats';
@@ -20,6 +20,7 @@ import UserDetailsModal from '@/components/owner/UserDetailsModal';
 import { ManualCreditAssignmentDialog } from '@/components/owner/ManualCreditAssignmentDialog';
 import { DeleteUserConfirmDialog } from '@/components/dialogs/DeleteUserConfirmDialog';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
+import ManageUserGymsDialog from '@/components/owner/ManageUserGymsDialog';
 
 interface MemberProfile {
   user_id: string;
@@ -42,7 +43,7 @@ interface MemberProfile {
 
 const OwnerUsers = () => {
   const isMobile = useIsMobile();
-  const { selectedGym } = useOwnerGym();
+  const { selectedGym, ownedGyms } = useOwnerGym();
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
@@ -72,6 +73,11 @@ const OwnerUsers = () => {
   
   // User credits state
   const [userCredits, setUserCredits] = useState<Map<string, number>>(new Map());
+
+  // Multi-gym membership management dialog
+  const [manageGymsOpen, setManageGymsOpen] = useState(false);
+  const [manageGymsUser, setManageGymsUser] = useState<MemberProfile | null>(null);
+  const hasMultipleGyms = ownedGyms.length >= 2;
 
   useEffect(() => {
     document.title = 'Utenti Palestra | Gym Manager';
@@ -893,6 +899,16 @@ const OwnerUsers = () => {
                             >
                               <FileText className="h-3 w-3" />
                             </Button>
+                            {hasMultipleGyms && !isAdminOrOwner && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setManageGymsUser(m); setManageGymsOpen(true); }}
+                                title="Gestisci palestre"
+                              >
+                                <Building2 className="h-3 w-3" />
+                              </Button>
+                            )}
                             {!isAdminOrOwner && (
                               <DeleteUserConfirmDialog
                                 userEmail={m.email || ''}
@@ -1113,6 +1129,16 @@ const OwnerUsers = () => {
                                   )}
                                  </Button>
                                )}
+                               {hasMultipleGyms && !isAdminOrOwner && (
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   onClick={() => { setManageGymsUser(m); setManageGymsOpen(true); }}
+                                 >
+                                   <Building2 className="h-3 w-3 mr-1" />
+                                   Palestre
+                                 </Button>
+                               )}
                                {!isAdminOrOwner && (
                                   <DeleteUserConfirmDialog
                                     userEmail={m.email || ''}
@@ -1200,6 +1226,14 @@ const OwnerUsers = () => {
           loadMembers();
           setUploadDialogOpen(false);
         }}
+      />
+      {/* Manage user gyms dialog */}
+      <ManageUserGymsDialog
+        open={manageGymsOpen}
+        onOpenChange={(o) => { setManageGymsOpen(o); if (!o) setManageGymsUser(null); }}
+        userId={manageGymsUser?.user_id ?? null}
+        userName={manageGymsUser ? `${manageGymsUser.first_name} ${manageGymsUser.last_name}` : ''}
+        onSaved={() => reloadMembers()}
       />
     </div>
   );
