@@ -27,6 +27,7 @@ interface SubscriptionPlan {
   is_active: boolean;
   features: string[];
   gym_id: string | null;
+  is_multi_gym?: boolean;
 }
 
 interface UserSubscription {
