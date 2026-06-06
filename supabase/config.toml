@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.owner-link-member]
 verify_jwt = true
 
+[functions.owner-manage-user-gyms]
+verify_jwt = true
+
 [functions.create-connect-account]
 verify_jwt = true
 
