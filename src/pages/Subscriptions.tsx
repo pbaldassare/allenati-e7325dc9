@@ -338,6 +338,11 @@ export default function Subscriptions() {
                         {getPlanIcon(plan)}
                       </div>
                       <CardTitle className="text-base sm:text-lg">{plan.name}</CardTitle>
+                      {plan.is_multi_gym && (
+                        <Badge variant="outline" className="mx-auto border-primary/40 text-primary text-xs">
+                          Valido in più palestre
+                        </Badge>
+                      )}
                       <CardDescription className="text-sm">{plan.description}</CardDescription>
                       <div className="text-xl sm:text-2xl font-bold text-primary">
                         {formatPrice(plan.price)}
