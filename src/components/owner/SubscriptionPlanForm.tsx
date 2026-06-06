@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { X, Plus, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useOwnerGym } from '@/contexts/OwnerGymContext';
@@ -23,6 +24,7 @@ interface SubscriptionPlan {
   is_active: boolean;
   features: string[];
   gym_id: string | null;
+  is_multi_gym?: boolean;
 }
 
 interface SubscriptionPlanFormProps {
@@ -81,7 +83,7 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
   onSuccess,
   editingPlan,
 }) => {
-  const { selectedGym } = useOwnerGym();
+  const { selectedGym, ownedGyms } = useOwnerGym();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -92,52 +94,67 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
     is_trial: false,
     is_active: true,
     features: [] as string[],
+    is_multi_gym: false,
   });
+  const [selectedGymIds, setSelectedGymIds] = useState<string[]>([]);
   const [newFeature, setNewFeature] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const hasMultipleGyms = ownedGyms.length >= 2;
+
   useEffect(() => {
-    if (editingPlan) {
-      setFormData({
-        name: editingPlan.name,
-        description: editingPlan.description || '',
-        price: editingPlan.price,
-        duration_days: editingPlan.duration_days,
-        credits_included: editingPlan.credits_included,
-        unlimited_access: editingPlan.unlimited_access,
-        is_trial: editingPlan.is_trial,
-        is_active: editingPlan.is_active,
-        features: editingPlan.features || [],
-      });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        price: 0,
-        duration_days: 30,
-        credits_included: 0,
-        unlimited_access: false,
-        is_trial: false,
-        is_active: true,
-        features: [],
-      });
-    }
-  }, [editingPlan, isOpen]);
+    const init = async () => {
+      if (editingPlan) {
+        setFormData({
+          name: editingPlan.name,
+          description: editingPlan.description || '',
+          price: editingPlan.price,
+          duration_days: editingPlan.duration_days,
+          credits_included: editingPlan.credits_included,
+          unlimited_access: editingPlan.unlimited_access,
+          is_trial: editingPlan.is_trial,
+          is_active: editingPlan.is_active,
+          features: editingPlan.features || [],
+          is_multi_gym: !!editingPlan.is_multi_gym,
+        });
+
+        if (editingPlan.is_multi_gym) {
+          const { data } = await supabase
+            .from('subscription_plan_gyms')
+            .select('gym_id')
+            .eq('plan_id', editingPlan.id);
+          setSelectedGymIds((data || []).map(r => r.gym_id));
+        } else {
+          setSelectedGymIds(selectedGym?.id ? [selectedGym.id] : []);
+        }
+      } else {
+        setFormData({
+          name: '',
+          description: '',
+          price: 0,
+          duration_days: 30,
+          credits_included: 0,
+          unlimited_access: false,
+          is_trial: false,
+          is_active: true,
+          features: [],
+          is_multi_gym: false,
+        });
+        setSelectedGymIds(selectedGym?.id ? [selectedGym.id] : []);
+      }
+    };
+    if (isOpen) init();
+  }, [editingPlan, isOpen, selectedGym?.id]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      
-      // Validation: if unlimited_access is true, force credits_included to 0
       if (field === 'unlimited_access' && value === true) {
         updated.credits_included = 0;
       }
-      
-      // If setting credits_included > 0, force unlimited_access to false
       if (field === 'credits_included' && value > 0) {
         updated.unlimited_access = false;
       }
-      
       return updated;
     });
   };
@@ -166,20 +183,23 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
     }));
   };
 
+  const toggleGymSelection = (gymId: string) => {
+    setSelectedGymIds(prev =>
+      prev.includes(gymId) ? prev.filter(id => id !== gymId) : [...prev, gymId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Debug logging
-      console.log('🔍 DEBUG - Form submission started');
-      console.log('📍 User auth state:', { uid: (await supabase.auth.getUser()).data.user?.id });
-      console.log('🏃 Selected gym:', selectedGym);
-      console.log('📋 Form data:', formData);
-      
       if (!selectedGym?.id) {
-        console.error('❌ No gym selected');
         throw new Error('Nessuna palestra selezionata');
+      }
+
+      if (formData.is_multi_gym && selectedGymIds.length === 0) {
+        throw new Error('Seleziona almeno una palestra per il piano multi-palestra');
       }
 
       const planData = {
@@ -187,38 +207,53 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
         gym_id: selectedGym.id,
         features: formData.features,
       };
-      
-      console.log('📦 Plan data to be sent:', planData);
 
-      let error, data;
+      let savedPlanId: string;
+
       if (editingPlan) {
-        console.log('✏️ Updating existing plan:', editingPlan.id);
-        ({ error, data } = await supabase
+        const { data, error } = await supabase
           .from('subscription_plans')
           .update(planData)
           .eq('id', editingPlan.id)
-          .select());
+          .select()
+          .single();
+        if (error) throw error;
+        savedPlanId = data.id;
       } else {
-        console.log('🆕 Creating new plan');
-        ({ error, data } = await supabase
+        const { data, error } = await supabase
           .from('subscription_plans')
           .insert([planData])
-          .select());
+          .select()
+          .single();
+        if (error) throw error;
+        savedPlanId = data.id;
       }
 
-      console.log('📤 Supabase response:', { error, data });
+      // Sync subscription_plan_gyms
+      if (formData.is_multi_gym) {
+        // Delete existing links and insert fresh
+        await supabase
+          .from('subscription_plan_gyms')
+          .delete()
+          .eq('plan_id', savedPlanId);
 
-      if (error) {
-        console.error('❌ Supabase error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        throw error;
+        const rows = selectedGymIds.map(gym_id => ({
+          plan_id: savedPlanId,
+          gym_id,
+        }));
+        if (rows.length > 0) {
+          const { error: linkError } = await supabase
+            .from('subscription_plan_gyms')
+            .insert(rows);
+          if (linkError) throw linkError;
+        }
+      } else {
+        // Not multi-gym: cleanup any leftover links
+        await supabase
+          .from('subscription_plan_gyms')
+          .delete()
+          .eq('plan_id', savedPlanId);
       }
-
-      console.log('✅ Plan saved successfully:', data);
 
       toast({
         title: editingPlan ? 'Piano aggiornato' : 'Piano creato',
@@ -227,14 +262,9 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
 
       onSuccess();
     } catch (error) {
-      console.error('💥 Error saving plan:', error);
-      
-      // More detailed error message
+      console.error('Error saving plan:', error);
       let errorMessage = `Impossibile ${editingPlan ? 'aggiornare' : 'creare'} il piano`;
-      if (error instanceof Error) {
-        errorMessage += `: ${error.message}`;
-      }
-      
+      if (error instanceof Error) errorMessage += `: ${error.message}`;
       toast({
         title: 'Errore',
         description: errorMessage,
@@ -260,7 +290,6 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Preset Selection - Only show for new plans */}
         {!editingPlan && (
           <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
             <h3 className="font-semibold text-sm">Modelli Rapidi</h3>
@@ -284,7 +313,6 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome Piano *</Label>
@@ -321,7 +349,6 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
             />
           </div>
 
-          {/* Duration and Access */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="duration">Durata (giorni) *</Label>
@@ -358,7 +385,6 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
             </div>
           </div>
 
-          {/* Toggles */}
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
               <div className="space-y-1">
@@ -372,12 +398,53 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
                 onCheckedChange={(checked) => handleInputChange('unlimited_access', checked)}
               />
             </div>
-            
-            {formData.unlimited_access && formData.credits_included > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
-                  ⚠️ Attenzione: Non puoi avere accesso illimitato E crediti inclusi contemporaneamente
-                </p>
+
+            {/* Multi-gym toggle */}
+            {hasMultipleGyms && (
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Piano Multi-Palestra
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.unlimited_access
+                        ? 'Accesso illimitato in tutte le palestre selezionate'
+                        : 'Pool unico di crediti spendibili in tutte le palestre selezionate'}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.is_multi_gym}
+                    onCheckedChange={(checked) => handleInputChange('is_multi_gym', checked)}
+                  />
+                </div>
+
+                {formData.is_multi_gym && (
+                  <div className="space-y-2 pt-2 border-t border-primary/10">
+                    <Label className="text-xs font-medium">Palestre incluse</Label>
+                    <div className="space-y-2">
+                      {ownedGyms.map((gym) => (
+                        <label
+                          key={gym.id}
+                          className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedGymIds.includes(gym.id)}
+                            onCheckedChange={() => toggleGymSelection(gym.id)}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{gym.name}</span>
+                            <span className="text-xs text-muted-foreground">{gym.city}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedGymIds.length === 0 && (
+                      <p className="text-xs text-destructive">Seleziona almeno una palestra</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -408,7 +475,6 @@ const SubscriptionPlanForm: React.FC<SubscriptionPlanFormProps> = ({
             </div>
           </div>
 
-          {/* Features */}
           <div className="space-y-3">
             <Label>Caratteristiche del Piano</Label>
             <div className="flex gap-2">
