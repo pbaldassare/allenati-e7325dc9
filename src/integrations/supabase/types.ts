@@ -1939,6 +1939,39 @@ export type Database = {
           },
         ]
       }
+      subscription_plan_gyms: {
+        Row: {
+          created_at: string
+          gym_id: string
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          gym_id: string
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          gym_id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plan_gyms_gym_id_fkey"
+            columns: ["gym_id"]
+            isOneToOne: false
+            referencedRelation: "gyms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_plan_gyms_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -1949,6 +1982,7 @@ export type Database = {
           gym_id: string | null
           id: string
           is_active: boolean
+          is_multi_gym: boolean
           is_trial: boolean
           name: string
           price: number
@@ -1964,6 +1998,7 @@ export type Database = {
           gym_id?: string | null
           id?: string
           is_active?: boolean
+          is_multi_gym?: boolean
           is_trial?: boolean
           name: string
           price: number
@@ -1979,6 +2014,7 @@ export type Database = {
           gym_id?: string | null
           id?: string
           is_active?: boolean
+          is_multi_gym?: boolean
           is_trial?: boolean
           name?: string
           price?: number
