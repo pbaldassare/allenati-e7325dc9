@@ -899,6 +899,16 @@ const OwnerUsers = () => {
                             >
                               <FileText className="h-3 w-3" />
                             </Button>
+                            {hasMultipleGyms && !isAdminOrOwner && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setManageGymsUser(m); setManageGymsOpen(true); }}
+                                title="Gestisci palestre"
+                              >
+                                <Building2 className="h-3 w-3" />
+                              </Button>
+                            )}
                             {!isAdminOrOwner && (
                               <DeleteUserConfirmDialog
                                 userEmail={m.email || ''}
@@ -1117,6 +1127,16 @@ const OwnerUsers = () => {
                                       Promuovi Istruttore
                                     </>
                                   )}
+                                 </Button>
+                               )}
+                               {hasMultipleGyms && !isAdminOrOwner && (
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   onClick={() => { setManageGymsUser(m); setManageGymsOpen(true); }}
+                                 >
+                                   <Building2 className="h-3 w-3 mr-1" />
+                                   Palestre
                                  </Button>
                                )}
                                {!isAdminOrOwner && (
