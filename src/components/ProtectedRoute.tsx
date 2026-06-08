@@ -19,11 +19,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   requiredRoles
 }) => {
-  const { isAuthenticated, isAdmin, isGymOwner, isInstructor, loading, user } = useAuth();
+  const { isAuthenticated, isAdmin, isGymOwner, isInstructor, loading, user, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading) {
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
