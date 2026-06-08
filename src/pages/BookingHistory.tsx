@@ -172,7 +172,13 @@ const BookingHistory = () => {
 
   const BookingCard = ({ booking }: { booking: any }) => {
     const course = booking.courses || booking.course;
-    if (!course) return null;
+    const courseName = getCourseName(booking);
+    const instructorLabel = getInstructorDisplay(booking);
+    const gymLabel = course
+      ? getGymInfo(course)
+      : (booking.gym_name_snapshot || 'Palestra non specificata');
+    const roomLabel = booking.room_name_snapshot;
+    const categoryLabel = course?.course_categories?.name;
 
     const canCancel = booking.status === 'confirmed' || booking.status === 'waitlist';
     const bookingDate = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
@@ -181,35 +187,32 @@ const BookingHistory = () => {
     return (
       <Card className="hover:shadow-card transition-all duration-300">
         <CardContent className="p-4 md:p-6">
-          {/* Mobile-optimized layout: vertical stack on mobile, horizontal on desktop */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-4 md:space-y-0">
-            {/* Main content area */}
             <div className="flex items-start space-x-3 md:space-x-4 flex-1">
               <img 
-                src={course.image_url || '/placeholder.svg'} 
-                alt={course.name}
-                className="w-12 h-12 md:w-16 md:h-16 rounded-lg object-cover flex-shrink-0"
+                src={course?.image_url || '/placeholder.svg'} 
+                alt={courseName}
+                className="w-12 h-12 md:w-16 md:h-16 rounded-lg object-cover flex-shrink-0 bg-muted"
               />
               
               <div className="space-y-2 md:space-y-3 flex-1 min-w-0">
-                {/* Course title */}
                 <div>
-                  <h3 className="font-medium text-sm md:text-base leading-tight">{course.name}</h3>
+                  <h3 className="font-medium text-sm md:text-base leading-tight">{courseName}</h3>
                   
-                  {/* Instructor and gym info - stack vertically on mobile */}
                   <div className="space-y-1 mt-1">
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <User className="mr-1 h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{course.description || 'Nessuna descrizione'}</span>
+                      <span className="truncate">{instructorLabel}</span>
                     </p>
                     <p className="text-xs md:text-sm text-muted-foreground flex items-center">
                       <MapPin className="mr-1 h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{getGymInfo(course)}</span>
+                      <span className="truncate">
+                        {gymLabel}{roomLabel ? ` · ${roomLabel}` : ''}
+                      </span>
                     </p>
                   </div>
                 </div>
                 
-                {/* Date and time - horizontal layout on all screens */}
                 <div className="flex items-center space-x-3 md:space-x-4 text-xs md:text-sm text-muted-foreground">
                   <div className="flex items-center">
                     <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
@@ -221,17 +224,17 @@ const BookingHistory = () => {
                   </div>
                 </div>
 
-                {/* Status and category badges */}
                 <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <Badge className={`${getStatusColor(booking.status)} text-xs`}>
                     {getStatusText(booking.status)}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {course.course_categories?.name || 'Categoria non disponibile'}
-                  </Badge>
+                  {categoryLabel && (
+                    <Badge variant="outline" className="text-xs">
+                      {categoryLabel}
+                    </Badge>
+                  )}
                 </div>
 
-                {/* Completion indicator */}
                 {booking.status === 'completed' && (
                   <div className="flex items-center text-xs md:text-sm text-success">
                     <Star className="mr-1 h-3 w-3 fill-current flex-shrink-0" />
@@ -240,6 +243,7 @@ const BookingHistory = () => {
                 )}
               </div>
             </div>
+
 
             {/* Credits and action area */}
             <div className="flex items-center justify-between md:flex-col md:items-end md:space-y-2 md:ml-4">
