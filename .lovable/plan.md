@@ -1,51 +1,48 @@
+## Problema
 
-# Ricollega prenotazioni "orfane" alle sessioni (e prevenzione futura)
+Caterina Lorenzi ha 1 prenotazione confermata futura (12/06/2026 11:30, Pilates Reformer) ma non la vede nell'app.
 
-## Problema confermato dai dati
+**Causa:** il corso collegato (`a9bddce9-…`) ha `is_active = false`. La RLS attuale su `courses` permette agli utenti di leggere solo i corsi con `is_active = true`. Quando il client carica le prenotazioni con il join `bookings → courses`, il corso torna `null` e la UI scarta/non mostra la riga (nome corso mancante, calendario non lo include).
 
-Sulla sessione "Pilates reformer" 08/06 10:30:
-- 4 prenotazioni confermate per quella data/ora
-- Solo 3 hanno `session_id` valorizzato → la UI mostra 3/5
-- 1 prenotazione ha `session_id = NULL` (è quella "invisibile")
+Questo può accadere a qualunque utente con prenotazioni su corsi che vengono disattivati: le prenotazioni restano nel DB ma "spariscono" dall'app.
 
-In totale nel DB: **5.081 prenotazioni con `session_id = NULL`** (di cui 5 future + ~3.600 passate confermate). Stessa rottura su altre sessioni (es. 08/06 16:30: 5 prenotazioni reali, solo 3 collegate).
+## Soluzione
 
-**Causa**: quando l'RPC `smart_generate_sessions_with_weeks` elimina/ricrea una sessione, le prenotazioni perdono il puntamento (`session_id` diventa NULL o punta a una sessione cancellata). Non vengono mai ricollegate alla nuova sessione equivalente (stesso corso + stessa data + stessa ora).
+Aggiungere una RLS difensiva su `courses` che consenta all'utente autenticato di leggere i corsi per i quali ha almeno una prenotazione (anche se il corso non è più attivo). Non rende il corso prenotabile, serve solo a far apparire le prenotazioni esistenti nello storico e nel calendario personale.
 
-## 1. Backfill: ricollega tutte le prenotazioni orfane
+Non riattivo il corso automaticamente: se era stato disattivato per errore, lo riattivi tu dall'UI Owner; se era voluto, la prenotazione resta visibile e Caterina (o tu) può cancellarla normalmente.
 
-Migrazione UPDATE che per ogni `bookings` con `session_id IS NULL` cerca una `course_sessions` con stesso `course_id` + `session_date = scheduled_date` + `start_time = scheduled_time` e la collega. Vale sia per prenotazioni future (immediato beneficio nell'UI) che passate (storico coerente).
+## Cambiamenti
+
+### 1) Migrazione DB
+
+Nuova policy SELECT su `public.courses`:
 
 ```sql
-UPDATE bookings b
-   SET session_id = s.id
-  FROM course_sessions s
- WHERE b.session_id IS NULL
-   AND s.course_id = b.course_id
-   AND s.session_date = b.scheduled_date
-   AND s.start_time  = b.scheduled_time;
+CREATE POLICY "Users can view courses they booked"
+ON public.courses
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.bookings b
+    WHERE b.course_id = courses.id
+      AND b.user_id = auth.uid()
+  )
+);
 ```
 
-## 2. Auto-link al rigenero sessioni
+La policy è additiva (OR con quelle esistenti): non riduce permessi, aggiunge solo lettura per i corsi prenotati dall'utente. Nessuna ricorsione: `bookings` non ha policy che leggano `courses`.
 
-Trigger `AFTER INSERT` su `course_sessions`: appena una nuova sessione viene creata, collega automaticamente tutte le prenotazioni orfane che combaciano per corso+data+ora. Così quando l'owner modifica/rigenera gli orari, le prenotazioni esistenti restano "agganciate" alla nuova sessione senza intervento manuale.
+### 2) Nessuna modifica codice
 
-## 3. Patch RPC `smart_generate_sessions_with_weeks`
+`useBookings` e `useSessionBookings` già fanno il join verso `courses` — con la nuova policy il corso non sarà più `null` e l'elemento apparirà.
 
-Prima di eliminare una sessione futura, spostare le sue prenotazioni sulla sessione "equivalente" che si sta per creare (stesso course_id + day_of_week + start_time). Oggi la RPC cancella la sessione e le prenotazioni restano scollegate. Aggiunta di un `UPDATE bookings SET session_id = <new> WHERE session_id = <old>` prima della DELETE.
+### 3) Verifica
 
-## 4. Aggiornamento `available_spots` post-backfill
+Dopo la migrazione: query come Caterina e confermare che la prenotazione del 12/06 ora viene restituita con `courses.name` valorizzato.
 
-Dopo il backfill, ricalcolare `available_spots` di tutte le sessioni future:
-```sql
-UPDATE course_sessions s
-   SET available_spots = s.max_participants -
-       (SELECT COUNT(*) FROM bookings b WHERE b.session_id = s.id AND b.status='confirmed')
- WHERE s.session_date >= CURRENT_DATE;
-```
+## Fuori scope
 
-## Aspetti tecnici
-
-- Migrazione unica con: backfill bookings, trigger auto-link, ricalcolo `available_spots`, riscrittura RPC.
-- Nessun cambio a RLS, nessuna nuova colonna, nessun impatto su prenotazioni cancellate.
-- Idempotente: il trigger non duplica nulla, il backfill aggiorna solo dove `session_id IS NULL`.
+- Riattivare il corso: decisione tua dall'UI Owner.
+- Cancellare la prenotazione + rimborso: se vuoi farlo, dimmelo e procedo separatamente.
