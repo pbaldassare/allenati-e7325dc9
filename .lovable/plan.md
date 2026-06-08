@@ -1,32 +1,26 @@
 ## Problema
 
-`/admin/courses/new` mostra "Accesso Negato" perché `AdminLayout` richiede ruolo `admin` e la sessione corrente in preview non lo ha. Oggi la card di errore non dà alcuna informazione utile per capire perché.
+La query delle prenotazioni funziona: nei log c'è 1 prenotazione confermata per il 12/06/2026. Però la card non viene renderizzata perché `booking.courses` arriva `null` dopo la rimozione della policy ricorsiva su `courses`, e il componente fa `if (!course) return null`.
 
-## Soluzione
+## Piano
 
-Migliorare la card "Accesso Negato" in `ProtectedRoute` per renderla auto-diagnostica, così la prossima volta vedi subito cosa non torna senza chiedere a me.
+1. Aggiornare `BookingHistory.tsx` per usare i campi snapshot già presenti nella prenotazione quando `courses` è `null`:
+   - `course_name_snapshot`
+   - `instructor_name_snapshot`
+   - `gym_name_snapshot`
+   - `room_name_snapshot`
 
-### Cambiamenti UI in `src/components/ProtectedRoute.tsx`
+2. Modificare filtri e ricerca in modo che funzionino anche con i dati snapshot, non solo con `booking.courses.name`.
 
-Quando l'accesso viene negato, mostrare:
+3. Modificare la card prenotazione per non nascondere più la prenotazione quando manca la relazione `courses`:
+   - titolo corso da snapshot
+   - istruttore da snapshot
+   - palestra/sala da snapshot
+   - immagine placeholder se manca `image_url`
+   - categoria opzionale solo se disponibile
 
-- **Email** dell'utente attualmente loggato (`user?.email`).
-- **Ruolo rilevato** (`user?.role`) con badge colorato.
-- **Ruoli richiesti** dalla rotta (`requireAdmin` → "admin", oppure lista `requiredRoles`).
-- Bottone **"Vai alla mia area"** che reindirizza alla home appropriata per il ruolo attuale (`/admin`, `/owner`, `/instructor`, oppure `/`).
-- Bottone **"Esci e accedi con altro account"** che chiama `signOut()` e apre il modale di login.
+4. Lasciare invariata la parte database/RLS: non riaggiungo policy su `courses`, così evitiamo di reintrodurre la ricorsione infinita.
 
-Inoltre `console.warn` con: route corrente, email, ruolo, ruoli richiesti — così resta traccia anche nei log per debug futuro.
+## Verifica
 
-### Nessuna modifica backend/RLS
-
-Nessun cambiamento al DB o ai ruoli. Se davvero sei admin ma non risulta loggato come tale nella preview, ti basterà fare logout/login dall'apposito bottone.
-
-### Verifica
-
-Aprire `/admin/courses/new` da una sessione non-admin: la card mostra email, ruolo attuale, ruolo richiesto e i due bottoni operativi.
-
-## Fuori scope
-
-- Non tocco le route né i requisiti di ruolo: `/admin/*` resta admin-only.
-- Se confermi che con un certo account dovresti essere admin ma `get_user_role` restituisce altro, lo correggiamo come task separato controllando `user_roles` per quell'email.
+Aprire `/i-miei-corsi`: la prenotazione esistente deve comparire nella sezione “Corsi Prenotati” anche se `courses` resta `null`.
