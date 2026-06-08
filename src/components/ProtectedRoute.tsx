@@ -143,3 +143,91 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   return <>{children}</>;
 };
+
+interface AccessDeniedCardProps {
+  email?: string;
+  currentRole?: string;
+  requiredLabels: string[];
+  pathname: string;
+  onGoHome: () => void;
+  onSwitchAccount: () => void;
+}
+
+const roleLabel: Record<string, string> = {
+  admin: 'Amministratore',
+  gym_owner: 'Proprietario palestra',
+  instructor: 'Istruttore',
+  basic_user: 'Utente',
+};
+
+const AccessDeniedCard: React.FC<AccessDeniedCardProps> = ({
+  email,
+  currentRole,
+  requiredLabels,
+  pathname,
+  onGoHome,
+  onSwitchAccount,
+}) => {
+  useEffect(() => {
+    console.warn('[ProtectedRoute] Access denied', {
+      pathname,
+      email,
+      currentRole,
+      requiredRoles: requiredLabels,
+    });
+  }, [pathname, email, currentRole, requiredLabels]);
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-destructive">
+            Accesso Negato
+          </CardTitle>
+          <CardDescription>
+            Non hai i permessi necessari per accedere a questa sezione
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-2">
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Pagina</span>
+              <span className="font-mono text-xs truncate">{pathname}</span>
+            </div>
+            <div className="flex justify-between gap-2 items-center">
+              <span className="text-muted-foreground">Account</span>
+              <span className="font-medium truncate">{email || '—'}</span>
+            </div>
+            <div className="flex justify-between gap-2 items-center">
+              <span className="text-muted-foreground">Ruolo attuale</span>
+              <Badge variant="secondary">
+                {currentRole ? (roleLabel[currentRole] ?? currentRole) : 'Sconosciuto'}
+              </Badge>
+            </div>
+            <div className="flex justify-between gap-2 items-center">
+              <span className="text-muted-foreground">Ruolo richiesto</span>
+              <div className="flex flex-wrap gap-1 justify-end">
+                {requiredLabels.length > 0 ? (
+                  requiredLabels.map((r) => (
+                    <Badge key={r} variant="default">{roleLabel[r] ?? r}</Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline">—</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={onGoHome} className="w-full">
+            <Home className="mr-2 h-4 w-4" />
+            Vai alla mia area
+          </Button>
+          <Button onClick={onSwitchAccount} variant="outline" className="w-full">
+            <LogOut className="mr-2 h-4 w-4" />
+            Esci e accedi con un altro account
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
