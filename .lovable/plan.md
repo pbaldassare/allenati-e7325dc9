@@ -1,46 +1,40 @@
-## Collegamento manuale utenti a più palestre (owner multi-gym)
 
-Aggiungiamo all'owner la possibilità di abilitare un utente esistente di una sua palestra anche alle altre palestre del suo gruppo, senza obbligare l'utente a registrarsi/iscriversi di nuovo.
+# Fix sala collegata a sessioni e prenotazioni
 
-### 1. UI Owner — `OwnerUsers.tsx`
+## Problema
+- `course_schedules` contiene la sala corretta (es. OPEN GYM → Sala Pesi).
+- `course_sessions` generate hanno `room_id = NULL` → sessioni mostrano "Non specificata".
+- ~1.823 sessioni future + 214 prenotazioni passate hanno la sala mancante.
 
-Per ogni utente nella lista, accanto alle azioni esistenti aggiungiamo:
+## 1. Fix RPC di generazione sessioni
+Patchare `smart_generate_sessions_with_weeks` perché, ad ogni `INSERT` in `course_sessions`, copi `room_id` e `room_name` (joinando `gym_rooms`) dallo `course_schedules` di origine. Da questo momento ogni nuova sessione nasce con la sala corretta.
 
-- **Badge "Palestre"**: mostra le palestre dell'owner a cui l'utente è già collegato (es. `Charme`, `Charme Frosinone`).
-- **Pulsante "Gestisci palestre"** (icona `Building2`): apre un dialog.
+## 2. Backfill sessioni esistenti (automatico, no mappa manuale)
+Una migrazione UPDATE che, matchando per `course_id` + `day_of_week` + `start_time`, ripopola `room_id` e `room_name` di tutte le sessioni rotte usando i dati già presenti negli schedule:
 
-**Dialog `ManageUserGymsDialog`**:
-- Lista checkbox di tutte le palestre dell'owner corrente (da `OwnerGymContext.ownedGyms`, solo dove `membership_type = 'owner'`).
-- Per ogni palestra mostra lo stato attuale (`active` / non collegato).
-- L'owner spunta/deseleziona le palestre e preme "Salva".
-- Visibile solo se l'owner ha ≥2 palestre.
+```sql
+UPDATE course_sessions cs
+   SET room_id   = sch.room_id,
+       room_name = r.name
+  FROM course_schedules sch
+  JOIN gym_rooms r ON r.id = sch.room_id
+ WHERE cs.course_id = sch.course_id
+   AND EXTRACT(DOW FROM cs.session_date) = sch.day_of_week
+   AND cs.start_time = sch.start_time
+   AND (cs.room_id IS NULL OR cs.room_name IS NULL OR cs.room_name = 'Sala non specificata');
+```
 
-### 2. Logica salvataggio
+## 3. Snapshot storico immutabile su prenotazioni
+- Aggiungere colonna `room_id_snapshot uuid` su `bookings`.
+- Trigger `BEFORE INSERT` che copia `room_id` + `room_name` dalla `course_sessions` collegata. Una volta inserita, la prenotazione **non cambia mai più**: se domani la sala del corso viene modificata o cancellata, le prenotazioni vecchie continuano a mostrare la sala originale.
+- Backfill `room_name_snapshot` + `room_id_snapshot` **solo sulle prenotazioni future** (status = confirmed, scheduled_date ≥ oggi) usando i dati appena sistemati al punto 2.
+- Le prenotazioni passate con "Sala non specificata" restano com'erano (storico fedele a com'era allora).
 
-Il salvataggio gira su una nuova edge function `owner-manage-user-gyms` (riusa il pattern di `owner-link-member`):
+## 4. Validazione preventiva nell'UI Owner
+In `CourseScheduleManager` / `CourseFormWithSessions`: rendere il campo "Sala" obbligatorio. Il pulsante Salva è disabilitato finché ogni riga di schedule non ha una sala selezionata, con messaggio chiaro.
 
-Input: `{ user_id, gym_ids: string[] }`
-
-Per ogni `gym_id`:
-- verifica che il caller sia effettivamente `owner` in `user_gym_memberships` per quella palestra (sicurezza),
-- upsert riga `user_gym_memberships (user_id, gym_id, status='active', membership_type='member')` se selezionata,
-- per le palestre **deselezionate** dell'owner: set `status = 'inactive'` (non eliminiamo, per preservare storico bookings/subscription).
-
-Non tocchiamo `subscription_plan_gyms` né le subscription esistenti: questo flusso è solo abilitazione/disabilitazione della membership.
-
-### 3. Vincoli e sicurezza
-
-- L'owner può collegare/scollegare **solo** alle palestre di cui è owner.
-- Disabilitare una palestra dove l'utente ha una subscription attiva multi-gym mostra un warning ("L'utente ha un abbonamento attivo valido in questa palestra"), ma resta possibile.
-- Nessun effetto su crediti/abbonamenti esistenti: la membership disattivata blocca solo la prenotazione futura via RLS.
-
-### File toccati
-
-- **Nuovo**: `supabase/functions/owner-manage-user-gyms/index.ts`
-- **Nuovo**: `src/components/owner/ManageUserGymsDialog.tsx`
-- **Modificato**: `src/pages/owner/OwnerUsers.tsx` (colonna palestre + bottone + dialog)
-- **Modificato**: `supabase/config.toml` (registra la nuova edge function)
-
-Nessuna migration DB necessaria: usiamo le tabelle e RLS già esistenti.
-
-Confermi e procedo?
+## Aspetti tecnici
+- Migrazione unica con: nuova colonna, trigger, UPDATE backfill sessioni, UPDATE backfill prenotazioni future.
+- RPC `smart_generate_sessions_with_weeks` riscritta mantenendo firma e comportamento attuale (idempotenza, gestione exceptions), aggiungendo solo i due campi sala nell'INSERT.
+- Frontend: edit puntuale di `CourseScheduleManager.tsx` per validazione + disable Salva.
+- Nessun cambio a RLS, nessun impatto su autenticazione, nessun impatto sulle prenotazioni passate.
