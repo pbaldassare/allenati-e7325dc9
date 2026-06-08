@@ -231,6 +231,7 @@ export type Database = {
           instructor_name_snapshot: string | null
           is_consolidated: boolean | null
           notes: string | null
+          room_id_snapshot: string | null
           room_name_snapshot: string | null
           scheduled_date: string
           scheduled_time: string
@@ -253,6 +254,7 @@ export type Database = {
           instructor_name_snapshot?: string | null
           is_consolidated?: boolean | null
           notes?: string | null
+          room_id_snapshot?: string | null
           room_name_snapshot?: string | null
           scheduled_date: string
           scheduled_time: string
@@ -275,6 +277,7 @@ export type Database = {
           instructor_name_snapshot?: string | null
           is_consolidated?: boolean | null
           notes?: string | null
+          room_id_snapshot?: string | null
           room_name_snapshot?: string | null
           scheduled_date?: string
           scheduled_time?: string
