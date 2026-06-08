@@ -112,19 +112,32 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   };
 
   if (!hasRequiredRole()) {
+    const requiredLabels: string[] = requireAdmin
+      ? ['admin']
+      : (requiredRoles ?? []);
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-destructive">
-              Accesso Negato
-            </CardTitle>
-            <CardDescription>
-              Non hai i permessi necessari per accedere a questa sezione
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <>
+        <AccessDeniedCard
+          email={user?.email}
+          currentRole={user?.role}
+          requiredLabels={requiredLabels}
+          pathname={location.pathname}
+          onGoHome={() => {
+            const home = isAdmin ? '/admin' : isGymOwner ? '/owner' : isInstructor ? '/instructor' : '/';
+            navigate(home, { replace: true });
+          }}
+          onSwitchAccount={async () => {
+            await logout();
+            setAuthMode('login');
+            setShowAuthModal(true);
+          }}
+        />
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          defaultMode={authMode}
+        />
+      </>
     );
   }
 
