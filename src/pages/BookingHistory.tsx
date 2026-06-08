@@ -106,6 +106,16 @@ const BookingHistory = () => {
   };
 
 
+  // Helpers: usa snapshot quando la relazione courses è nascosta da RLS
+  const getCourseName = (booking: any): string =>
+    booking.courses?.name || booking.course?.name || booking.course_name_snapshot || 'Corso';
+  const getInstructorDisplay = (booking: any): string => {
+    const course = booking.courses || booking.course;
+    const fromRelation = course ? getInstructorName(course) : null;
+    if (fromRelation && fromRelation !== 'Istruttore non assegnato') return fromRelation;
+    return booking.instructor_name_snapshot || 'Istruttore non assegnato';
+  };
+
   // Filter bookings
   const activeBookings = bookings?.filter(booking => {
     const isActive = ['confirmed', 'waitlist'].includes(booking.status);
@@ -118,12 +128,11 @@ const BookingHistory = () => {
     
     if (!searchTerm) return shouldBeActive;
     
-    const searchTermLower = searchTerm.toLowerCase();
-    const course = booking.courses || booking.course;
-    const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
-    
-    return shouldBeActive && (courseNameMatch || instructorMatch);
+    const s = searchTerm.toLowerCase();
+    return shouldBeActive && (
+      getCourseName(booking).toLowerCase().includes(s) ||
+      getInstructorDisplay(booking).toLowerCase().includes(s)
+    );
   }) || [];
 
   const completedBookings = bookings?.filter(booking => {
@@ -137,12 +146,11 @@ const BookingHistory = () => {
     
     if (!searchTerm) return shouldBeInHistory;
     
-    const searchTermLower = searchTerm.toLowerCase();
-    const course = booking.courses || booking.course;
-    const courseNameMatch = course?.name?.toLowerCase().includes(searchTermLower);
-    const instructorMatch = getInstructorName(course)?.toLowerCase().includes(searchTermLower);
-    
-    return shouldBeInHistory && (courseNameMatch || instructorMatch);
+    const s = searchTerm.toLowerCase();
+    return shouldBeInHistory && (
+      getCourseName(booking).toLowerCase().includes(s) ||
+      getInstructorDisplay(booking).toLowerCase().includes(s)
+    );
   }) || [];
 
   const openCancellationDialog = (booking: any) => {
