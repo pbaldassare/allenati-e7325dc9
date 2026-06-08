@@ -1,40 +1,51 @@
 
-# Fix sala collegata a sessioni e prenotazioni
+# Ricollega prenotazioni "orfane" alle sessioni (e prevenzione futura)
 
-## Problema
-- `course_schedules` contiene la sala corretta (es. OPEN GYM → Sala Pesi).
-- `course_sessions` generate hanno `room_id = NULL` → sessioni mostrano "Non specificata".
-- ~1.823 sessioni future + 214 prenotazioni passate hanno la sala mancante.
+## Problema confermato dai dati
 
-## 1. Fix RPC di generazione sessioni
-Patchare `smart_generate_sessions_with_weeks` perché, ad ogni `INSERT` in `course_sessions`, copi `room_id` e `room_name` (joinando `gym_rooms`) dallo `course_schedules` di origine. Da questo momento ogni nuova sessione nasce con la sala corretta.
+Sulla sessione "Pilates reformer" 08/06 10:30:
+- 4 prenotazioni confermate per quella data/ora
+- Solo 3 hanno `session_id` valorizzato → la UI mostra 3/5
+- 1 prenotazione ha `session_id = NULL` (è quella "invisibile")
 
-## 2. Backfill sessioni esistenti (automatico, no mappa manuale)
-Una migrazione UPDATE che, matchando per `course_id` + `day_of_week` + `start_time`, ripopola `room_id` e `room_name` di tutte le sessioni rotte usando i dati già presenti negli schedule:
+In totale nel DB: **5.081 prenotazioni con `session_id = NULL`** (di cui 5 future + ~3.600 passate confermate). Stessa rottura su altre sessioni (es. 08/06 16:30: 5 prenotazioni reali, solo 3 collegate).
+
+**Causa**: quando l'RPC `smart_generate_sessions_with_weeks` elimina/ricrea una sessione, le prenotazioni perdono il puntamento (`session_id` diventa NULL o punta a una sessione cancellata). Non vengono mai ricollegate alla nuova sessione equivalente (stesso corso + stessa data + stessa ora).
+
+## 1. Backfill: ricollega tutte le prenotazioni orfane
+
+Migrazione UPDATE che per ogni `bookings` con `session_id IS NULL` cerca una `course_sessions` con stesso `course_id` + `session_date = scheduled_date` + `start_time = scheduled_time` e la collega. Vale sia per prenotazioni future (immediato beneficio nell'UI) che passate (storico coerente).
 
 ```sql
-UPDATE course_sessions cs
-   SET room_id   = sch.room_id,
-       room_name = r.name
-  FROM course_schedules sch
-  JOIN gym_rooms r ON r.id = sch.room_id
- WHERE cs.course_id = sch.course_id
-   AND EXTRACT(DOW FROM cs.session_date) = sch.day_of_week
-   AND cs.start_time = sch.start_time
-   AND (cs.room_id IS NULL OR cs.room_name IS NULL OR cs.room_name = 'Sala non specificata');
+UPDATE bookings b
+   SET session_id = s.id
+  FROM course_sessions s
+ WHERE b.session_id IS NULL
+   AND s.course_id = b.course_id
+   AND s.session_date = b.scheduled_date
+   AND s.start_time  = b.scheduled_time;
 ```
 
-## 3. Snapshot storico immutabile su prenotazioni
-- Aggiungere colonna `room_id_snapshot uuid` su `bookings`.
-- Trigger `BEFORE INSERT` che copia `room_id` + `room_name` dalla `course_sessions` collegata. Una volta inserita, la prenotazione **non cambia mai più**: se domani la sala del corso viene modificata o cancellata, le prenotazioni vecchie continuano a mostrare la sala originale.
-- Backfill `room_name_snapshot` + `room_id_snapshot` **solo sulle prenotazioni future** (status = confirmed, scheduled_date ≥ oggi) usando i dati appena sistemati al punto 2.
-- Le prenotazioni passate con "Sala non specificata" restano com'erano (storico fedele a com'era allora).
+## 2. Auto-link al rigenero sessioni
 
-## 4. Validazione preventiva nell'UI Owner
-In `CourseScheduleManager` / `CourseFormWithSessions`: rendere il campo "Sala" obbligatorio. Il pulsante Salva è disabilitato finché ogni riga di schedule non ha una sala selezionata, con messaggio chiaro.
+Trigger `AFTER INSERT` su `course_sessions`: appena una nuova sessione viene creata, collega automaticamente tutte le prenotazioni orfane che combaciano per corso+data+ora. Così quando l'owner modifica/rigenera gli orari, le prenotazioni esistenti restano "agganciate" alla nuova sessione senza intervento manuale.
+
+## 3. Patch RPC `smart_generate_sessions_with_weeks`
+
+Prima di eliminare una sessione futura, spostare le sue prenotazioni sulla sessione "equivalente" che si sta per creare (stesso course_id + day_of_week + start_time). Oggi la RPC cancella la sessione e le prenotazioni restano scollegate. Aggiunta di un `UPDATE bookings SET session_id = <new> WHERE session_id = <old>` prima della DELETE.
+
+## 4. Aggiornamento `available_spots` post-backfill
+
+Dopo il backfill, ricalcolare `available_spots` di tutte le sessioni future:
+```sql
+UPDATE course_sessions s
+   SET available_spots = s.max_participants -
+       (SELECT COUNT(*) FROM bookings b WHERE b.session_id = s.id AND b.status='confirmed')
+ WHERE s.session_date >= CURRENT_DATE;
+```
 
 ## Aspetti tecnici
-- Migrazione unica con: nuova colonna, trigger, UPDATE backfill sessioni, UPDATE backfill prenotazioni future.
-- RPC `smart_generate_sessions_with_weeks` riscritta mantenendo firma e comportamento attuale (idempotenza, gestione exceptions), aggiungendo solo i due campi sala nell'INSERT.
-- Frontend: edit puntuale di `CourseScheduleManager.tsx` per validazione + disable Salva.
-- Nessun cambio a RLS, nessun impatto su autenticazione, nessun impatto sulle prenotazioni passate.
+
+- Migrazione unica con: backfill bookings, trigger auto-link, ricalcolo `available_spots`, riscrittura RPC.
+- Nessun cambio a RLS, nessuna nuova colonna, nessun impatto su prenotazioni cancellate.
+- Idempotente: il trigger non duplica nulla, il backfill aggiorna solo dove `session_id IS NULL`.
