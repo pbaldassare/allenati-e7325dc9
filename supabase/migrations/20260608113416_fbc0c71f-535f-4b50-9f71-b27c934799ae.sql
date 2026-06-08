@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Users can view courses they booked" ON public.courses;
